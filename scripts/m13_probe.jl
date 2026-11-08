@@ -11,6 +11,10 @@
 #   init  -> prep   ppmain.mod L1-248, preppm.mod L1-217 (with prep_ext.vda)
 #   prep  -> prelv  preppm.mod L218-253, ppmain.mod L249-615 (with pp_prelv.vda)
 #   prelv -> ppm    ppmain.mod L616-1357, maindrv.mod L58 (ppm_ext.dsc, ppm_ext.vda)
+#   coef -> presolve  maindrv.mod L76-98: mod_vars.mod, eqmain.mod (with the
+#                   eqobj*.mod preparation), equ_ext, bndmain.mod, pp_qack.mod
+#                   (M1.3 change 25, in parts; the coef dump comes after the
+#                   M1.2 coefficient stage)
 #
 # A step is compared on the symbols it settles that nothing later in its
 # segment changes (`symbols`, plus `extra(tm)` for those that depend on the
@@ -30,11 +34,12 @@ using TIMES: DumpData, layer1, init_ext!, ppmain_head!, ppmain_head_symbols, ppm
              ppmain_bnd!, ppmain_bnd_symbols, ppmain_cum!, ppmain_cum_symbols,
              ppmain_stg!, ppmain_stg_symbols, ppmain_uc!, ppmain_uc_symbols,
              ppmain_ucmap!, ppmain_ucmap_symbols, ppmain_blend!, ppmain_blend_symbols,
-             ppmain_reduce!, ppmain_reduce_symbols, ppm_ext_actef!, ppm_ext_actef_symbols, ppm_ext!, ppm_ext_symbols
+             ppmain_reduce!, ppmain_reduce_symbols, ppm_ext_actef!, ppm_ext_actef_symbols, ppm_ext!, ppm_ext_symbols,
+             prepret_decl!, prepret_decl_symbols, eqobjinv_prep!, eqobjinv_prep_symbols
 using TIMES.Reference: ispass
 
-"The four segments: (first checkpoint, next checkpoint)."
-const M13_SEGMENTS = [("input", "init"), ("init", "prep"), ("prep", "prelv"), ("prelv", "ppm")]
+"The segments: (first checkpoint, next checkpoint)."
+const M13_SEGMENTS = [("input", "init"), ("init", "prep"), ("prep", "prelv"), ("prelv", "ppm"), ("coef", "presolve")]
 
 "Every set and parameter of the dump `tm` started from."
 all_symbols(tm) = sort([i.name for i in values(tm.data.dump.symbols) if i.kind in (:set, :parameter)])
@@ -68,6 +73,8 @@ const M13_STEPS = Tuple{String,String,Function,Vector{String},Function}[
     ("prelv", "ppmain_reduce", ppmain_reduce!, String[], ppmain_reduce_symbols),   # ppmain.mod L1336-1357, pp_reduce.red
     ("prelv", "ppm_ext_actef", ppm_ext_actef!, String[], ppm_ext_actef_symbols),   # maindrv.mod L58: ppm_ext.dsc, ppm_ext.vda L11-58 with pp_actef.vda
     ("prelv", "ppm_ext", ppm_ext!, String[], ppm_ext_symbols),   # ppm_ext.vda L59-169 with equcrtp.vda PPM_EXT: the whole prelv -> ppm segment
+    ("coef", "prepret_decl", prepret_decl!, String[], prepret_decl_symbols),   # mod_vars.mod L94: prepret.dsc DECL (data)
+    ("coef", "eqobjinv_prep", eqobjinv_prep!, String[], eqobjinv_prep_symbols),   # eqmain.mod L34: eqobj.mod L14-39, eqobjinv.mod L18-274
 ]
 
 function probe13(refdir, model; roots=Dict{String,String}(), variant="reduce_off", steps=M13_STEPS)

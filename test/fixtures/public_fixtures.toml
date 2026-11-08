@@ -257,3 +257,17 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 3509
 cols = 4893
 nonzeros = 19311
+
+# Crafted case TIMES_Demo-demo12_objinv (reference/crafted.toml: demo12 + objinv.dd), 8 Nov 2026
+# (GAMS 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): investment
+# case 2b, repeated investments and decommissioning (M1.3 change 25-1), the whole model. Its
+# coef and presolve dumps also feed test_m13_coef_presolve.jl. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_objinv"
+model    = "TIMES_Demo-demo12_objinv"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3233
+cols = 4495
+nonzeros = 18366

@@ -1,0 +1,48 @@
+* TIMES.jl crafted case demo12_objinv (reference/crafted.toml, 8 Nov 2026): investment cases
+* and decommissioning (eqobjinv.mod L52-274; M1.3 change 25-1, docs/m13-plan.md) added to
+* TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0). No public suite model has
+* investment case 2b or decommissioning costs:
+* - ELCNNNUC01 (REG1): decommissioning cost, lifetime and lag (NCAP_DCOST, NCAP_DLIFE,
+*   NCAP_DLAG), so OBJ_SUMS3, the decommissioning spreads (INVSPRED with the '0' header,
+*   OBJ_SUMIII) and OBJ_DIVIII; and its own discount rate (NCAP_DRATE, COR_SALVI).
+* - ELCREHYD00 (both regions, past investments): decommissioning cost and lifetime.
+* - ELCRNSOL01: a 6-year technical life, so investments repeat within the longer periods
+*   (COEF_RPTI > 1, case 1b, the FOR loop of L155); in REG2 also a 2-year lead time
+*   (NCAP_ILED), case 2b (L198-214) with interest during construction (L219-229).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER
+NCAP_DCOST ' '/
+REG1.2005.ELCNNNUC01.MEuro05 400
+REG1.2005.ELCREHYD00.MEuro05 50
+REG2.2005.ELCREHYD00.MEuro05 50
+/
+
+PARAMETER
+NCAP_DLIFE ' '/
+REG1.2005.ELCNNNUC01 5
+REG1.2005.ELCREHYD00 3
+REG2.2005.ELCREHYD00 3
+/
+
+PARAMETER
+NCAP_DLAG ' '/
+REG1.2005.ELCNNNUC01 2
+/
+
+PARAMETER
+NCAP_DRATE ' '/
+REG1.2005.ELCNNNUC01 0.08
+/
+
+PARAMETER
+NCAP_TLIFE ' '/
+REG1.2005.ELCRNSOL01 6
+REG2.2005.ELCRNSOL01 6
+/
+
+PARAMETER
+NCAP_ILED ' '/
+REG2.2005.ELCRNSOL01 2
+/
