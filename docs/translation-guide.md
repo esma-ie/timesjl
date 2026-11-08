@@ -585,3 +585,7 @@ those checks, their figures and their crafted cases are not published
   ANNUL and ONLINE stay refused. Crafted case TIMES_Demo-demo12_ucattr (CI
   fixtures) passes the M1.3 chain and layers 1-3; the core models' UC rows
   are unchanged.
+- 9 Nov 2026: M1.3 (23): eqflomrk.mod L56-105, EQ(l)_FLOMRK. Every TIMES-NZ
+  market-share row matches CONVERT; crafted case TIMES_Demo-demo12_flomrk
+  (CI fixtures) reaches the exchange and storage branches and all three
+  bound types.

@@ -175,6 +175,26 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 ## Findings so far
 
+- (23) eqflomrk.mod L56-105, EQ(l)_FLOMRK (`src/model/eqflomrk.jl`,
+  9 Nov 2026): the market share of a process, or of a group ITEM of
+  processes, in the production of a commodity (VAR_COMPRD over the
+  commodity group): the standard flows (cal_red, times COM_IE for an
+  output), exchange flows (imports with IRE_FLOSUM and COM_IE when
+  PRC_MARK >= 0, exports when <= 0; under REDUCE an RPC_AIRE flow is the
+  activity times PRC_ACTFLO) and storage output and input, each weighted by
+  RS_FR and RTCS_FR, times POWER(PRC_MARK, 1$RX_MARK(R,'0',...)-1), against
+  the production times the RX_MARK/LASTLL product of a process ITEM. The
+  preparation half (L13-52) came with change 11b. Checked: TIMES-NZ steady,
+  the 6,720 EQG_FLOMRK rows against CONVERT on both variants (47,042
+  checks; TIMES-NZ now waits only for change 24); the crafted case
+  TIMES_Demo-demo12_flomrk (`reference/dd/demo12_flomrk/`: demo12 with the
+  oil store of demo12_ips, FLO_MARK on the gas plant, a negative own share
+  of a coal plant, so the flows are divided by PRC_MARK and the right-hand
+  side is 0, a group ITEM of hydro and wind, FX on coal imports and UP on
+  the store): the 23 rows against CONVERT on both variants, the M1.3 probe
+  54 of 54 and chain PASS on both variants, and the whole model 38 of 38
+  checks (objective 23,960,715.70 by CPLEX and HiGHS); CI fixtures `demo12_flomrk` and `test_eqflomrk.jl`. No exports in
+  demo12, so the EXP term is checked only through its code path.
 - (22) uc_*.mod, the user-constraint attribute factors (`_uc_perdisc`,
   `_uc_perds`, `_uc_fcost` and the term functions in
   `src/model/equserco.jl`, 9 Nov 2026): PERDISC (several-period terms,
