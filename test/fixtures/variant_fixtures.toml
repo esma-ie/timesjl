@@ -53,3 +53,14 @@ reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
 partial = { generators = ["eq_ret!", "eq_cpt!", "eq_capact!", "eq_peak!", "eq_caflac!"], families = ["EQ_CUMRET", "EQL_SCAP", "EQL_REFIT", "EQE_CPT", "EQL_CAPACT", "EQ_PEAK", "EQL_CAPFLO"], bounds = ["VAR_RCAP", "VAR_SCAP"] }
+
+# Crafted case demo12_curex (8 Nov 2026): demo12 plus costs in three more currencies (curex.dd),
+# for M1.3 change 26: currency conversion, preppm.mod L27-28 and curex.gms. The preprocessing
+# from the input dump to ppm on every symbol; nothing left untranslated.
+[[variant]]
+prefix   = "demo12_curex"
+model    = "TIMES_Demo-demo12_curex"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []

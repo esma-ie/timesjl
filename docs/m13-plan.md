@@ -175,6 +175,27 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 ## Findings so far
 
+- (26) curex.gms (preppm.mod L27-28; `src/prep/curex.jl`, 8 Nov 2026,
+  moved ahead of 21-25b by James): R_CUREX filled from G_CUREX, the
+  currency map CURMAP and the reduced RDCUR (L18-26), the two-step chains
+  (RXX, L29-32), and the 29 cost attributes converted into the RDCUR
+  currencies, with or without a temporary copy (L35-82). Checked against
+  GAMS on a crafted demo12 state run through ppmain.mod L1-247, preppm.mod
+  L1-212 and curex.gms by GAMS 54.6.1 (`preppm_unit_gams/curex`, 138
+  symbols, CI), and on the crafted case TIMES_Demo-demo12_curex (demo12 +
+  curex.dd): the M1.3 probe (54 of 54 steps) and chain PASS on both
+  variants, and the whole model passes layers 1-3 (33 checks; objective
+  23,974,183.74 by CPLEX and HiGHS); CI fixtures. New GAMS semantics: G51
+  (a self-referencing assignment reads the values from before it; EPS
+  counts in `$=`). coef_obj.mod L99 (`$IF DEFINED R_CUREX`, %TAKE% 1) is
+  now read from R_CUREX's data, since curex.gms always gives it records
+  (L26), which lifts the refusal there; after curex.gms every investment,
+  fixed and decommissioning cost is in an RDCUR currency, so dropping the
+  filter changes no record. `gset_opt` and `gparam_opt` now return a set
+  or parameter TIMES.jl has computed even when the dump does not declare
+  it (CURMAP on demo12, which curex.gms declares only when it runs).
+  Refused, with data: the blending costs (L59-60) and the ETL and
+  stochastic costs (L66, L68-69).
 - (7 Nov 2026, probe) JRC-EU-TIMES-cli_ll in the nightly runs of 5 and
   6 Nov: the chain stopped, as it should, at the curex.gms refusal
   (preppm.mod L27-28), but `m13_probe.jl` showed FAIL on the steps of the

@@ -1,0 +1,2064 @@
+{
+ "format": "timesjl-dump",
+ "format_version": 1,
+ "source": "<ppmain.mod L1-247, preppm.mod L1-212 on test/unit/preppm_case.jl: curex>",
+ "uels": "uels.arrow",
+ "symbols": [
+  {
+   "name": "MODLYEAR",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "ALLYEAR"
+   ],
+   "description": "",
+   "records": 9,
+   "file": "MODLYEAR.arrow"
+  },
+  {
+   "name": "DATAYEAR",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "ALLYEAR"
+   ],
+   "description": "",
+   "records": 50,
+   "file": "DATAYEAR.arrow"
+  },
+  {
+   "name": "DM_YEAR",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "ALLYEAR"
+   ],
+   "description": "",
+   "records": 49,
+   "file": "DM_YEAR.arrow"
+  },
+  {
+   "name": "FIL2",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "ALLYEAR"
+   ],
+   "description": "",
+   "records": 46,
+   "file": "FIL2.arrow"
+  },
+  {
+   "name": "MY_FIL",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "ALLYEAR"
+   ],
+   "description": "",
+   "records": 40,
+   "file": "MY_FIL.arrow"
+  },
+  {
+   "name": "OBJ_VFLO",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "R",
+    "P",
+    "C",
+    "CUR",
+    "UC_COST"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "RPC_CUR",
+   "kind": "set",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "PRC",
+    "COM",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "IE_DEFAULT",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "*"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "PRC_YMIN",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 2,
+   "domain": [
+    "REG",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "PASTSUM",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "P"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "PRC_SIMV",
+   "kind": "set",
+   "type": "",
+   "dimension": 2,
+   "domain": [
+    "REG",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "PRC_VINT",
+   "kind": "set",
+   "type": "",
+   "dimension": 2,
+   "domain": [
+    "REG",
+    "PRC"
+   ],
+   "description": "",
+   "records": 2,
+   "file": "PRC_VINT.arrow"
+  },
+  {
+   "name": "G_RFRIR",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 2,
+   "domain": [
+    "REG",
+    "ALLYEAR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "UC_TIME",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "UC_N",
+    "ALL_R",
+    "ALLYEAR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "RCAP_BND",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "LIM"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "PRC_RCAP",
+   "kind": "set",
+   "type": "",
+   "dimension": 2,
+   "domain": [
+    "REG",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "RCAP_BLK",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "RCAP_OCAP",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "R",
+    "YEAR",
+    "P",
+    "C"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_OLIFE",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "RTP_VARP",
+   "kind": "set",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "R",
+    "T",
+    "P"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "PRC_CAP",
+   "kind": "set",
+   "type": "",
+   "dimension": 2,
+   "domain": [
+    "REG",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "INT_DEFAULT",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "*"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "RTP",
+   "kind": "set",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "P"
+   ],
+   "description": "",
+   "records": 1985,
+   "file": "RTP.arrow"
+  },
+  {
+   "name": "RVP",
+   "kind": "set",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "P"
+   ],
+   "description": "",
+   "records": 1910,
+   "file": "RVP.arrow"
+  },
+  {
+   "name": "TRACKP",
+   "kind": "set",
+   "type": "",
+   "dimension": 2,
+   "domain": [
+    "R",
+    "P"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "UNCD7",
+   "kind": "set",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "MY_ARRAY",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "ALLYEAR"
+   ],
+   "description": "",
+   "records": 1,
+   "file": "MY_ARRAY.arrow"
+  },
+  {
+   "name": "MY_FIL2",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "ALLYEAR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "CNT",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 0,
+   "domain": [],
+   "description": "",
+   "records": 1,
+   "file": "CNT.arrow"
+  },
+  {
+   "name": "DFUNC",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 0,
+   "domain": [],
+   "description": "",
+   "records": 1,
+   "file": "DFUNC.arrow"
+  },
+  {
+   "name": "MY_F",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 0,
+   "domain": [],
+   "description": "",
+   "records": 1,
+   "file": "MY_F.arrow"
+  },
+  {
+   "name": "F",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 0,
+   "domain": [],
+   "description": "",
+   "records": 1,
+   "file": "F.arrow"
+  },
+  {
+   "name": "Z",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 0,
+   "domain": [],
+   "description": "",
+   "records": 1,
+   "file": "Z.arrow"
+  },
+  {
+   "name": "LAST_VAL",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 0,
+   "domain": [],
+   "description": "",
+   "records": 1,
+   "file": "LAST_VAL.arrow"
+  },
+  {
+   "name": "FIRST_VAL",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 0,
+   "domain": [],
+   "description": "",
+   "records": 1,
+   "file": "FIRST_VAL.arrow"
+  },
+  {
+   "name": "MY_FYEAR",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 0,
+   "domain": [],
+   "description": "",
+   "records": 1,
+   "file": "MY_FYEAR.arrow"
+  },
+  {
+   "name": "NCAP_COST",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "CUR"
+   ],
+   "description": "",
+   "records": 100,
+   "file": "NCAP_COST.arrow"
+  },
+  {
+   "name": "NCAP_DCOST",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_DLAGC",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_FOM",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "CUR"
+   ],
+   "description": "",
+   "records": 103,
+   "file": "NCAP_FOM.arrow"
+  },
+  {
+   "name": "NCAP_FSUB",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_FTAX",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_ISUB",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_ITAX",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_VALU",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "COM",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_ISPCT",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "OBJ_COMNT",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "C",
+    "S",
+    "COSTYPE",
+    "CUR"
+   ],
+   "description": "",
+   "records": 1,
+   "file": "OBJ_COMNT.arrow"
+  },
+  {
+   "name": "OBJ_COMPD",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "C",
+    "S",
+    "COSTYPE",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "ACT_COST",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "CUR"
+   ],
+   "description": "",
+   "records": 33,
+   "file": "ACT_COST.arrow"
+  },
+  {
+   "name": "FLO_COST",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "COM",
+    "TS",
+    "CUR"
+   ],
+   "description": "",
+   "records": 1,
+   "file": "FLO_COST.arrow"
+  },
+  {
+   "name": "FLO_DELIV",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "COM",
+    "TS",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "FLO_SUB",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "COM",
+    "TS",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "FLO_TAX",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "COM",
+    "TS",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "IRE_PRICE",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "COM",
+    "TS",
+    "ALL_R",
+    "IE",
+    "CUR"
+   ],
+   "description": "",
+   "records": 66,
+   "file": "IRE_PRICE.arrow"
+  },
+  {
+   "name": "DAM_COST",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "CUR"
+   ],
+   "description": "",
+   "records": 6,
+   "file": "DAM_COST.arrow"
+  },
+  {
+   "name": "NCAP_AF",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "TS",
+    "BD"
+   ],
+   "description": "",
+   "records": 192,
+   "file": "NCAP_AF.arrow"
+  },
+  {
+   "name": "NCAP_AFA",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "BD"
+   ],
+   "description": "",
+   "records": 1148,
+   "file": "NCAP_AFA.arrow"
+  },
+  {
+   "name": "NCAP_AFS",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "TS",
+    "BD"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_BPME",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_CDME",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_CEH",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_CHPR",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "LIM"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_CLED",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "COM"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_CLAG",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "COM",
+    "IO"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_COM",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "COM",
+    "IO"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_DELIF",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_DLAG",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_DLIFE",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_DRATE",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_FDR",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_ELIFE",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_ICOM",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "COM"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_ILED",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_OCOM",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "COM"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_PKCNT",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "ALL_TS"
+   ],
+   "description": "",
+   "records": 201,
+   "file": "NCAP_PKCNT.arrow"
+  },
+  {
+   "name": "NCAP_TLIFE",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC"
+   ],
+   "description": "",
+   "records": 1566,
+   "file": "NCAP_TLIFE.arrow"
+  },
+  {
+   "name": "COM_AGG",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "COM"
+   ],
+   "description": "",
+   "records": 72,
+   "file": "COM_AGG.arrow"
+  },
+  {
+   "name": "COM_ELAST",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "TS",
+    "LIM"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "COM_FR",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "TS"
+   ],
+   "description": "",
+   "records": 432,
+   "file": "COM_FR.arrow"
+  },
+  {
+   "name": "COM_IE",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "TS"
+   ],
+   "description": "",
+   "records": 12,
+   "file": "COM_IE.arrow"
+  },
+  {
+   "name": "COM_PKFLX",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "TS"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "COM_PKRSV",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM"
+   ],
+   "description": "",
+   "records": 6,
+   "file": "COM_PKRSV.arrow"
+  },
+  {
+   "name": "COM_PROJ",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM"
+   ],
+   "description": "",
+   "records": 800,
+   "file": "COM_PROJ.arrow"
+  },
+  {
+   "name": "COM_VOC",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "BD"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "ACT_CSTUP",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "P",
+    "TSLVL",
+    "CUR"
+   ],
+   "description": "",
+   "records": 7,
+   "file": "ACT_CSTUP.arrow"
+  },
+  {
+   "name": "ACT_CSTSD",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "P",
+    "UPT",
+    "BD",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "ACT_CSTRMP",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "P",
+    "L",
+    "CUR"
+   ],
+   "description": "",
+   "records": 7,
+   "file": "ACT_CSTRMP.arrow"
+  },
+  {
+   "name": "ACT_TIME",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "P",
+    "L"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "FLO_FUNC",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "CG",
+    "CG",
+    "TS"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "FLO_PKCOI",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "COM",
+    "ALL_TS"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "FLO_SUM",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "CG",
+    "C",
+    "CG",
+    "TS"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "PRC_ACTFLO",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "CG"
+   ],
+   "description": "",
+   "records": 304,
+   "file": "PRC_ACTFLO.arrow"
+  },
+  {
+   "name": "FLO_MARK",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "COM",
+    "BD"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "PRC_MARK",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "ITEM",
+    "C",
+    "LIM"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "IRE_FLO",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "ALL_R",
+    "ALLYEAR",
+    "PRC",
+    "COM",
+    "ALL_R",
+    "COM",
+    "TS"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "IRE_FLOSUM",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "COM",
+    "TS",
+    "IE",
+    "COM",
+    "IO"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "STG_CHRG",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "S"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "STG_EFF",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "STG_LOSS",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "S"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "STG_SIFT",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "P",
+    "C",
+    "S"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "UC_ACT",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "UC_N",
+    "SIDE",
+    "ALL_REG",
+    "ALLYEAR",
+    "PRC",
+    "ALL_TS"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "UC_CAP",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "UC_N",
+    "SIDE",
+    "ALL_REG",
+    "ALLYEAR",
+    "PRC"
+   ],
+   "description": "",
+   "records": 24,
+   "file": "UC_CAP.arrow"
+  },
+  {
+   "name": "UC_COM",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "UC_N",
+    "COM_VAR",
+    "SIDE",
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "S",
+    "UC_GRPTYPE"
+   ],
+   "description": "",
+   "records": 12,
+   "file": "UC_COM.arrow"
+  },
+  {
+   "name": "UC_FLO",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "UC_N",
+    "SIDE",
+    "ALL_REG",
+    "ALLYEAR",
+    "PRC",
+    "COM",
+    "TS"
+   ],
+   "description": "",
+   "records": 90,
+   "file": "UC_FLO.arrow"
+  },
+  {
+   "name": "UC_IRE",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "UC_N",
+    "SIDE",
+    "ALL_REG",
+    "ALLYEAR",
+    "PRC",
+    "COM",
+    "TS",
+    "IE"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "UC_NCAP",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "UC_N",
+    "SIDE",
+    "ALL_REG",
+    "ALLYEAR",
+    "PRC"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "UC_UCN",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "UC_N",
+    "SIDE",
+    "ALL_R",
+    "ALLYEAR",
+    "UC_N"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "CAP_BND",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "BD"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "NCAP_BND",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "LIM"
+   ],
+   "description": "",
+   "records": 528,
+   "file": "NCAP_BND.arrow"
+  },
+  {
+   "name": "COM_BNDNET",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "TS",
+    "LIM"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "COM_BNDPRD",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "TS",
+    "LIM"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "ACT_BND",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "TS",
+    "BD"
+   ],
+   "description": "",
+   "records": 252,
+   "file": "ACT_BND.arrow"
+  },
+  {
+   "name": "FLO_BND",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "CG",
+    "TS",
+    "BD"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "FLO_BDLVL",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "CG",
+    "S",
+    "BD"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "FLO_FR",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "COM",
+    "TS",
+    "LIM"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "FLO_SHAR",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "C",
+    "CG",
+    "TS",
+    "BD"
+   ],
+   "description": "",
+   "records": 516,
+   "file": "FLO_SHAR.arrow"
+  },
+  {
+   "name": "IRE_BND",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "ALL_R",
+    "ALLYEAR",
+    "COM",
+    "TS",
+    "ALL_REG",
+    "IE",
+    "BD"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "IRE_XBND",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "ALL_REG",
+    "ALLYEAR",
+    "COM",
+    "TS",
+    "IE",
+    "BD"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "STGIN_BND",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "C",
+    "S",
+    "BD"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "STGOUT_BND",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "PRC",
+    "C",
+    "S",
+    "BD"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "UC_RHSRT",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "ALL_REG",
+    "UC_N",
+    "ALLYEAR",
+    "LIM"
+   ],
+   "description": "",
+   "records": 8,
+   "file": "UC_RHSRT.arrow"
+  },
+  {
+   "name": "UC_RHSRTS",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "ALL_REG",
+    "UC_N",
+    "ALLYEAR",
+    "TS",
+    "LIM"
+   ],
+   "description": "",
+   "records": 6,
+   "file": "UC_RHSRTS.arrow"
+  },
+  {
+   "name": "UC_RHST",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "UC_N",
+    "ALLYEAR",
+    "LIM"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "UC_RHSTS",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "UC_N",
+    "ALLYEAR",
+    "TS",
+    "LIM"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "REG_BNDCST",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COSTAGG",
+    "CUR",
+    "BD"
+   ],
+   "description": "",
+   "records": 1,
+   "file": "REG_BNDCST.arrow"
+  },
+  {
+   "name": "R_CUREX",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "ALL_REG",
+    "CUR",
+    "CUR"
+   ],
+   "description": "",
+   "records": 11,
+   "file": "R_CUREX.arrow"
+  },
+  {
+   "name": "RDCUR",
+   "kind": "set",
+   "type": "",
+   "dimension": 2,
+   "domain": [
+    "REG",
+    "CUR"
+   ],
+   "description": "",
+   "records": 2,
+   "file": "RDCUR.arrow"
+  },
+  {
+   "name": "CURMAP",
+   "kind": "set",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "REG",
+    "CUR",
+    "CUR"
+   ],
+   "description": "",
+   "records": 6,
+   "file": "CURMAP.arrow"
+  },
+  {
+   "name": "RXX",
+   "kind": "set",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "ALL_R",
+    "*",
+    "*"
+   ],
+   "description": "",
+   "records": 1,
+   "file": "RXX.arrow"
+  },
+  {
+   "name": "COM_BPRICE",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "TS",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "COM_CSTNET",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "TS",
+    "CUR"
+   ],
+   "description": "",
+   "records": 1,
+   "file": "COM_CSTNET.arrow"
+  },
+  {
+   "name": "COM_TAXNET",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "TS",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "COM_SUBNET",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "TS",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "COM_CSTPRD",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "TS",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "COM_TAXPRD",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "TS",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "COM_SUBPRD",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "TS",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "REG_CUMCST",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "ALLYEAR",
+    "COSTAGG",
+    "CUR",
+    "BD"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "ACT_CSTPL",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "P",
+    "CUR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  }
+ ]
+}

@@ -29,7 +29,7 @@ include("preppm_case.jl")
         foreach(f -> f(tm), (ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!))
         # with G_NOINTERP no macro runs, so Z and MY_F keep what ppmain.mod L215 and timslice.mod L71-77 left,
         # scratch that ppmain_rtp! and timslice! do not keep
-        outs = name == "nointerp" ? filter(n -> !(n in ("Z", "MY_F")), PREPPM_OUTPUTS) : PREPPM_OUTPUTS
+        outs = name == "nointerp" ? filter(n -> !(n in ("Z", "MY_F")), PREPPM_OUTPUTS) : preppm_outputs(name)
         r = layer1(tm, DumpData(joinpath(FIXTURES, "preppm_unit_gams", name)), outs)
         foreach(d -> ispass(d) || println(name, ": ", d, " ", d.examples), r)
         @test all(ispass, r)
@@ -83,6 +83,27 @@ include("preppm_case.jl")
             @test all(p -> ("REG1", p) in rc, ["COTEBIO", "COTECOA", "COTEELC", "COTNOIL1"])
             @test v("NCAP_ILED")[("REG1", "2015", "COTNELC1")] == -1.0 && isempty(gset(tm, "PRC_CAP").keys)
             @test !any(k -> k[3] == "COTEGAS", keys(v("RCAP_OCAP")))
+        elseif name == "curex"
+            # curex.gms L21-26: MUSD (one target) leaves RDCUR, MGBP (two targets in REG1) is mapped nowhere there
+            @test gset(tm, "RDCUR").members == Set([("REG1", "MEuro05"), ("REG2", "MEuro05")])
+            cm = gset(tm, "CURMAP").members
+            @test ("REG1", "MEuro05", "MUSD") in cm && !any(k -> k[1] == "REG1" && "MGBP" in k, cm) && ("REG2", "MEuro05", "MGBP") in cm
+            # L29-32: MJPY -> MUSD -> MEuro05 chained in REG1 (RXX), not in REG2 (MUSD has no discount rate there)
+            rx = v("R_CUREX")
+            @test gset(tm, "RXX").members == Set([("REG1", "MUSD", "MJPY")]) && rx[("REG1", "MJPY", "MEuro05")] ≈ 0.007 * 0.9
+            @test ("REG1", "MEuro05", "MJPY") in cm && !(("REG1", "MUSD", "MJPY") in cm) && rx[("REG1", "MEuro05", "MEuro05")] == 1.0
+            # L77-81 (temporary attribute): summed per target, the option record carried over, an option -13 series gone,
+            #   EPS kept, MGBP dropped in REG1; REG2's own rate (preppm.mod L27 leaves it); only RDCUR currencies remain
+            c = v("NCAP_COST")
+            @test c[("REG1", "2010", "COTEBIO", "MEuro05")] ≈ 100 + 50 * 0.9 && c[("REG1", "2010", "COTEGAS", "MEuro05")] ≈ 1000 * 0.0063
+            @test !any(k -> k[3] in ("COTECOA", "COTEELC"), keys(c)) && c[("REG1", "2010", "COTEOIL", "MEuro05")] == 0.0
+            @test c[("REG2", "2010", "ELCTEGAS00", "MEuro05")] ≈ 20 * 1.15 && c[("REG2", "2020", "ELCTEGAS00", "MEuro05")] ≈ 10 * 0.8
+            @test all(k -> k[4] == "MEuro05", keys(c))
+            # L81-82 (no temporary attribute): the MEuro05 record plus the converted one; MGBP outside RDCUR removed
+            @test v("ACT_CSTUP")[("REG1", "2010", "ELCTEGAS00", "DAYNITE", "MEuro05")] ≈ 1 + 10 * 0.9
+            @test !any(k -> k[5] != "MEuro05", keys(v("ACT_CSTUP"))) && v("REG_BNDCST")[("REG2", "2020", "INV", "MEuro05", "UP")] ≈ 50 + 100 * 1.15
+            # preppm.mod L34 reads the converted COM_CSTNET
+            @test v("OBJ_COMNT")[("REG1", "2010", "DAOT", "ANNUAL", "COST", "MEuro05")] ≈ 1 + 10 * 0.9
         else
             # G_NOINTERP: no interpolation, no option reset; prepparm clears its parameter from INT_DEFAULT
             @test v("NCAP_AFA")[("REG1", "0", "COTEGAS", "LO")] == 2.0 && !haskey(v("NCAP_AFA"), ("REG1", "2015", "COTEGAS", "LO"))

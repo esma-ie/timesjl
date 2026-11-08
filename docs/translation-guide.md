@@ -566,3 +566,8 @@ those checks, their figures and their crafted cases are not published
   demo12_refit and demo12_refit_afc pass layers 2-3 (CI fixtures, whole
   model). OTUS9r's whole model is generated for the first time and passes
   layer 2 on both variants (2,174,010 rows reduce_off).
+- 8 Nov 2026: M1.3 (26): curex.gms, currency conversion (preppm.mod
+  L27-28), moved ahead of changes 21-25b (James). A crafted demo12 state
+  checked against GAMS's own run of curex.gms, and the crafted case
+  TIMES_Demo-demo12_curex: the M1.3 chain and the whole model (layers 1-3)
+  PASS on both variants; CI fixtures. New GAMS semantics: G51.

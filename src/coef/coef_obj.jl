@@ -13,8 +13,11 @@
 # Not translated (UnportedError): `%ANNCOST%` LEV (L31-32), VALIDATE (L114,
 # L137, L191-201), elastic demand shapes under TIMESED/MICRO (L184-189) and
 # blending (L93-94, BLE_OPR) - no reference run has any of them. `$IF
-# DEFINED R_CUREX` (L99) cannot be read from a dump; it only matters when
-# investment cost data uses a currency outside RDCUR, which is refused.
+# DEFINED R_CUREX` (L99) holds exactly when R_CUREX has data at this stage:
+# curex.gms runs whenever R_CUREX is defined (preppm.mod L27-28) and sets
+# R_CUREX(RDCUR(R,CUR),CUR) = 1 (curex.gms L26), and nothing else assigns it.
+# The investment, fixed and decommissioning costs are then taken in every
+# currency (%TAKE% 1), not only RDCUR (M1.3 change 26).
 #
 # GAMS semantics this relies on (docs/discrepancies.md): a lead by a
 # non-integer is rounded to the nearest integer (G29); a LOOP's $-condition
@@ -31,11 +34,6 @@ function coef_obj_unported(tm)
     (sw("TIMESED") == "YES" || sw("MICRO") == "YES") &&
         push!(out, "coef_obj.mod L184-189 (elastic demand shapes, TIMESED/MICRO)")
     isempty(gset_opt(tm.data, "BLE_OPR", 3)) || push!(out, "coef_obj.mod L93-94 (blending: BLE_OPR has data)")
-    rdcur = gset(tm, "RDCUR")
-    for n in ("NCAP_COST", "NCAP_ISUB", "NCAP_ITAX", "NCAP_FOM", "NCAP_FSUB", "NCAP_FTAX", "NCAP_DCOST", "NCAP_DLAGC")
-        any(k -> !((k[1], k[4]) in rdcur), keys(gparam_opt(tm.data, n, 4).values)) &&
-            push!(out, "coef_obj.mod L96-99 ($n in a currency outside RDCUR: the filter depends on \$IF DEFINED R_CUREX)")
-    end
     return out
 end
 
@@ -464,7 +462,9 @@ function coef_obj!(tm)
     dm_year = [k[1] for k in S1("DM_YEAR").keys]
 
     # L120-133: investment, fixed and decommissioning costs into the OB_* caches
-    take_rd(t) = (t[1], t[3]) in rdcur
+    # L96-99: %TAKE% is RDCUR(R,CUR), or 1 with $IF DEFINED R_CUREX (R_CUREX has data here, see the header)
+    curex = !isempty(gparam_opt(tm.data, "R_CUREX", 3).keys)
+    take_rd(t) = curex || (t[1], t[3]) in rdcur
     bext(t, y) = y >= pymin(t[1], t[2])
     fext(t, y) = y <= pymax(t[1], t[2])
     for (n, cache) in (("NCAP_COST", "OB_ICOST"), ("NCAP_ISUB", "OB_ISUB"), ("NCAP_ITAX", "OB_ITAX"))

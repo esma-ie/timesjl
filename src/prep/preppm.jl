@@ -2,7 +2,7 @@
 # ppmain.mod L248. L213-217 (the extensions' prep_ext, then the prep
 # checkpoint) are M1.3 (6b).
 #
-# GAMS: preppm.mod L1-212 with prepxtra.mod SAVE (L79-86), curex.gms (refused),
+# GAMS: preppm.mod L1-212 with prepxtra.mod SAVE (L79-86), curex.gms (curex.jl),
 # prepret.dsc PREP (prepret.jl), fillvint.gms L14-20, filparam.gms,
 # prepparm.gms and fillparm.gms (interp.jl), v4.9.7.
 #
@@ -14,10 +14,9 @@
 # $IF DEFINED is decided at compile time from the DD data (G35, G40).
 #
 # Refused: %INTEXT_ONLY% YES (L10, L218: prepxtra.mod XTIE and POST) and
-# %PREP_ANS% YES (L12-13); currency conversion (L27-28, curex.gms, when
-# G_CUREX or R_CUREX has data: no core model has it, JRC-EU-TIMES-cli_ll
-# does; M1.3 change 26); %RETIRE% other than YES
-# (prepret.jl). L11 (%DATAGDX% YES, every suite run) runs prepxtra.mod SAVE:
+# %PREP_ANS% YES (L12-13); the curex.gms paths `curex_unported` lists;
+# %RETIRE% other than YES (prepret.jl). Currency conversion (L27-28) is
+# curex.jl (M1.3 change 26). L11 (%DATAGDX% YES, every suite run) runs prepxtra.mod SAVE:
 # it sets the scratch Z to the length of "%GDXPATH%%RUN_NAME%" plus 16 (CARD
 # of a string, G41) and renames the data GDX file with a shell command, which
 # has no data effect and is not translated.
@@ -28,7 +27,7 @@ function preppm_unported(tm)
     yes(n) = uppercase(gswitch(tm, n, "")) == "YES"
     yes("INTEXT_ONLY") && push!(out, "preppm.mod L10 (INTEXT_ONLY YES: prepxtra.mod)")
     yes("PREP_ANS") && push!(out, "preppm.mod L12-13 (PREP_ANS YES)")
-    (hasdata(tm, "G_CUREX", 2) || hasdata(tm, "R_CUREX", 3)) && push!(out, "preppm.mod L27-28 (currency conversion: curex.gms)")
+    append!(out, curex_unported(tm))
     append!(out, prepret_unported(tm))
     return out
 end
@@ -44,7 +43,7 @@ them), NCAP_BND when it has 'N' records (prep_ext.vda L80-83), RTP and RVP
 with %POWERFLO% YES (powerflo.vda), and the scratch (UNCD7, MY_ARRAY, MY_FIL2,
 TRACKP and the scalars), which prep_ext.vda uses again. PRC_CAP when
 NCAP_OLIFE has data (prepret.dsc L29 clears it); INT_DEFAULT with G_NOINTERP
-(prepparm.gms L25).
+(prepparm.gms L25). With currency conversion, what `curex_symbols` lists.
 """
 function preppm_symbols(tm)
     d = tm.data
@@ -55,6 +54,7 @@ function preppm_symbols(tm)
     uppercase(gswitch(tm, "POWERFLO", "")) == "YES" || append!(out, ["RTP", "RVP"])
     hasdata(tm, "NCAP_OLIFE", 3) && push!(out, "PRC_CAP")
     iszero(gscalar(tm, "G_NOINTERP")) || push!(out, "INT_DEFAULT")
+    append!(out, curex_symbols(tm))
     return unique!(out)
 end
 
@@ -132,6 +132,9 @@ function preppm!(tm)
         (!iszero(gv(fil2, (y,))) && !(y in tmem)) && push!(my_fil, (y,))
     end
     gput!(tm, "MY_FIL", my_fil)
+
+    # --- L27-28: currency conversion (curex.gms) ----------------------------------------
+    curex!(tm)
 
     # --- L31-32: special case user attributes merged into the generic case ----------
     rpc, rc = gset(tm, "RPC").members, gset(tm, "RC").members

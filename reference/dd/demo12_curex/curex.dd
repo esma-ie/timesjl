@@ -1,0 +1,57 @@
+* TIMES.jl crafted case demo12_curex (reference/crafted.toml, 8 Nov 2026): currency
+* conversion, preppm.mod L27-28 and curex.gms (M1.3 change 26, docs/m13-plan.md), which no
+* public suite model reaches. TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0)
+* plus three currencies besides MEuro05:
+* - REG1 discounts in MEuro05 and MUSD (G_DRATE), so MUSD, with one rate to a discounted
+*   currency, is converted to MEuro05 and leaves RDCUR (curex.gms L21-26); MGBP has rates to
+*   both, so it is mapped nowhere in REG1 and its costs are dropped; MJPY reaches MEuro05
+*   through MUSD (the chain of L29-32).
+* - REG2 has its own MUSD rate (R_CUREX, kept by preppm.mod L27) and converts MGBP too.
+* Costs in those currencies are added on top of demo12's MEuro05 costs of the same
+* processes (ACT_COST, NCAP_FOM, FLO_DELIV: converted and summed per target, L81).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET CUR
+/
+MUSD
+MGBP
+MJPY
+/;
+
+PARAMETER
+G_DRATE ' '/
+REG1.2005.MUSD 0.05
+/
+
+PARAMETER
+G_CUREX ' '/
+MUSD.MEuro05 0.9
+MGBP.MEuro05 1.15
+MGBP.MUSD 1.3
+MJPY.MUSD 0.007
+/
+
+PARAMETER
+R_CUREX ' '/
+REG2.MUSD.MEuro05 0.8
+/
+
+PARAMETER
+ACT_COST ' '/
+REG1.2005.ELCTEGAS00.MUSD 0.2
+REG2.2005.ELCTEGAS00.MUSD 0.5
+REG1.2005.ELCREBIO00.MJPY 20
+REG1.2005.ELCNENUC00.MGBP 9
+/
+
+PARAMETER
+NCAP_FOM ' '/
+REG2.2005.ELCTEGAS00.MGBP 10
+REG1.2010.ELCNENUC00.MUSD 3
+/
+
+PARAMETER
+FLO_DELIV ' '/
+REG2.2005.ELCTEGAS00.ELCGAS.ANNUAL.MUSD 0.1
+/

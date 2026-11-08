@@ -91,5 +91,15 @@ end
     tm = mk(Dict{String,String}())
     add_uels!(tm, "TJLX")
     cost = gvalues(tm, "NCAP_COST", 4); cost[("REG1", "2010", "CSHNOIL1", "TJLX")] = 1.0; gput!(tm, "NCAP_COST", cost)
-    @test occursin("R_CUREX", only(coef_obj_unported(tm)))
+    # L96-99: $IF DEFINED R_CUREX is read from R_CUREX's data (M1.3 change 26): without it %TAKE% is
+    # RDCUR(R,CUR) and a cost outside RDCUR is not taken; with it (curex.gms ran) %TAKE% is 1
+    @test isempty(coef_obj_unported(tm))
+    coef_obj!(tm)
+    @test !any(k -> k[3] == "TJLX", keys(gparam(tm, "OB_ICOST").values))
+    tm = mk(Dict{String,String}())
+    add_uels!(tm, "TJLX")
+    gput!(tm, "NCAP_COST", cost)
+    gput!(tm, "R_CUREX", Dict(("REG1", "MEuro05", "MEuro05") => 1.0))
+    coef_obj!(tm)
+    @test any(k -> k[3] == "TJLX", keys(gparam(tm, "OB_ICOST").values))
 end
