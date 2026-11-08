@@ -176,7 +176,7 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 ## Findings so far
 
 - (23) eqflomrk.mod L56-105, EQ(l)_FLOMRK (`src/model/eqflomrk.jl`,
-  9 Nov 2026): the market share of a process, or of a group ITEM of
+  8 Nov 2026): the market share of a process, or of a group ITEM of
   processes, in the production of a commodity (VAR_COMPRD over the
   commodity group): the standard flows (cal_red, times COM_IE for an
   output), exchange flows (imports with IRE_FLOSUM and COM_IE when
@@ -197,7 +197,7 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
   demo12, so the EXP term is checked only through its code path.
 - (22) uc_*.mod, the user-constraint attribute factors (`_uc_perdisc`,
   `_uc_perds`, `_uc_fcost` and the term functions in
-  `src/model/equserco.jl`, 9 Nov 2026): PERDISC (several-period terms,
+  `src/model/equserco.jl`, 8 Nov 2026): PERDISC (several-period terms,
   FPD + (COEF_PVT - FPD) for a cumulative constraint), PERIOD and NEWFLO
   (FPD, and for NEWFLO 1/FPD only for the period's vintage or one RVPT
   commissions in it; on NCAP, PERIOD adds the RVPT investments and
@@ -224,7 +224,7 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
   OTUS9r reduce_off, every UC row against CONVERT).
 - (21) equserco.mod L80-106 with uc_pasti.mod, dynamic user constraints in
   the RHS direction (`uc_dyn_rhs!`, `uc_pasti!`, `uc_tmap` in
-  `src/model/equserco.jl`, 9 Nov 2026). A dynamic constraint takes the RHS
+  `src/model/equserco.jl`, 8 Nov 2026). A dynamic constraint takes the RHS
   direction when SUM(UC_DYNDIR(R,UC_N,'RHS'),1) holds, with R the row's
   region or, for EQE_UCSU and EQE_UCSUS, any region. Its terms come from
   UC_TMAP(T,LL,TT,SIDE,UC_DYNT) (eqmain.mod L211-215, built here and equal

@@ -1,4 +1,4 @@
-* TIMES.jl crafted case demo12_flomrk (reference/crafted.toml, 9 Nov 2026): market-share
+* TIMES.jl crafted case demo12_flomrk (reference/crafted.toml, 8 Nov 2026): market-share
 * constraints (eqflomrk.mod L56-105; M1.3 change 23, docs/m13-plan.md) added to TIMES_Demo
 * demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0) with the inter-period oil store of
 * demo12_ips (ips.dd). TIMES-NZ reaches only LO rows of single processes; this case reaches:

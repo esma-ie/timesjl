@@ -1,4 +1,4 @@
-* TIMES.jl crafted case demo12_ucdyn (reference/crafted.toml, 9 Nov 2026): dynamic user
+* TIMES.jl crafted case demo12_ucdyn (reference/crafted.toml, 8 Nov 2026): dynamic user
 * constraints in the RHS direction (equserco.mod L80-106, uc_pasti.mod; M1.3 change 21,
 * docs/m13-plan.md) added to TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0).
 * OTCGEN reaches only the CAP terms with GROWTH, TIMES-NZ the CAP terms with GROWTH and SYNC;

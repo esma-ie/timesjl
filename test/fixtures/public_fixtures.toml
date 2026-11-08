@@ -192,7 +192,7 @@ rows = 3233
 cols = 4485
 nonzeros = 18375
 
-# Crafted case TIMES_Demo-demo12_ucdyn (reference/crafted.toml: demo12 + ucdyn.dd), 9 Nov 2026
+# Crafted case TIMES_Demo-demo12_ucdyn (reference/crafted.toml: demo12 + ucdyn.dd), 8 Nov 2026
 # (GAMS 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): dynamic user
 # constraints in the RHS direction (M1.3 change 21), the whole model. The presolve and matrix
 # dumps are shared with test/fixtures/variant_fixtures.toml. Layers 2 and 3 only.
@@ -206,7 +206,7 @@ rows = 3279
 cols = 4537
 nonzeros = 18524
 
-# Crafted case TIMES_Demo-demo12_ucattr (reference/crafted.toml: demo12 + ucattr.dd), 9 Nov 2026
+# Crafted case TIMES_Demo-demo12_ucattr (reference/crafted.toml: demo12 + ucattr.dd), 8 Nov 2026
 # (GAMS 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): user-constraint
 # attributes (M1.3 change 22), the whole model. The presolve and matrix dumps are shared with
 # test/fixtures/variant_fixtures.toml. Layers 2 and 3 only.
@@ -221,7 +221,7 @@ cols = 4520
 nonzeros = 18758
 
 # Crafted case TIMES_Demo-demo12_flomrk (reference/crafted.toml: demo12 + demo12_ips/ips.dd +
-# flomrk.dd), 9 Nov 2026 (GAMS 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7
+# flomrk.dd), 8 Nov 2026 (GAMS 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7
 # @ d9a6a25): market-share constraints (M1.3 change 23), the whole model. The presolve and
 # matrix dumps are shared with test/fixtures/variant_fixtures.toml. Layers 2 and 3 only.
 [[fixture]]

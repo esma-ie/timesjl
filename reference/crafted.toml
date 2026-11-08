@@ -109,7 +109,7 @@ kind = "run"
 run_file = "{crafted}/demo12_curex/demo12_curex.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_curex"]
 
-# TIMES_Demo demo12 + ucdyn.dd (9 Nov 2026): M1.3 change 21, dynamic user constraints in the
+# TIMES_Demo demo12 + ucdyn.dd (8 Nov 2026): M1.3 change 21, dynamic user constraints in the
 # RHS direction (equserco.mod L80-106, uc_pasti.mod): the four dynamic families with every
 # term type, GROWTH, SYNC, UC_TIME and past investments in the first period.
 [[model]]
@@ -124,7 +124,7 @@ kind = "run"
 run_file = "{crafted}/demo12_ucdyn/demo12_ucdyn.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_ucdyn"]
 
-# TIMES_Demo demo12 + ucattr.dd (9 Nov 2026): M1.3 change 22, user-constraint attributes
+# TIMES_Demo demo12 + ucattr.dd (8 Nov 2026): M1.3 change 22, user-constraint attributes
 # (uc_*.mod): PERIOD, NEWFLO (with RVPT), PERDISC, EFF, CAPACT, BUILDUP, COST, DELIV, TAX,
 # SUB, and the CUMSUM and CUM+ entries of UC_TMAP.
 [[model]]
@@ -139,7 +139,7 @@ kind = "run"
 run_file = "{crafted}/demo12_ucattr/demo12_ucattr.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_ucattr"]
 
-# TIMES_Demo demo12 + demo12_ips/ips.dd + flomrk.dd (9 Nov 2026): M1.3 change 23, market-share
+# TIMES_Demo demo12 + demo12_ips/ips.dd + flomrk.dd (8 Nov 2026): M1.3 change 23, market-share
 # constraints (eqflomrk.mod L56-105): FLO_MARK, a negative share, a group ITEM, an exchange
 # and a storage process, and the three bound types.
 [[model]]
