@@ -5,6 +5,38 @@
  "uels": "uels.arrow",
  "symbols": [
   {
+   "name": "FIL",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "ALLYEAR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "STARTOFF",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 0,
+   "domain": [],
+   "description": "",
+   "records": 1,
+   "file": "STARTOFF.arrow"
+  },
+  {
+   "name": "ENDOFF",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 0,
+   "domain": [],
+   "description": "",
+   "records": 1,
+   "file": "ENDOFF.arrow"
+  },
+  {
    "name": "TS_GROUP",
    "kind": "set",
    "type": "",

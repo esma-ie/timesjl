@@ -335,9 +335,10 @@ function ppmain_life!(tm)
     foreach(k -> (onT(k) && !haskey(aoff, (k[1], k[3]))) && push!(vara, k), rtp)
     # L560-565: LOOP(TRACKP(R,P), MY_FIL(T) = YES; $BATINCLUDE pp_off.mod PRC_AOFF P "" "MY_FIL(T)$(" NO;
     #   RTP_VARA(RTP(R,MY_FIL(T),P)) = YES)   in GAMS order
+    offsc = PPOffScratch()                                              # pp_off.mod's scratch over L560-581
     for (r, p) in gams_sort!(collect(keys(aoff)), d)
         foreach(t -> push!(my_fil, (t,)), tset)
-        foreach(t -> delete!(my_fil, (t,)), pp_off_periods(tm, pp_off_fil(tm, aoff[(r, p)]), tset))
+        foreach(t -> delete!(my_fil, (t,)), pp_off_periods(tm, pp_off_fil(tm, aoff[(r, p)], offsc), tset))
         for t in tset
             ((t,) in my_fil && (r, t, p) in rtp) && push!(vara, (r, t, p))
         end
@@ -365,7 +366,7 @@ function ppmain_life!(tm)
         for (r, p, c, s) in gams_sort!([k for k in gset(tm, "RPCS_VAR").keys if haskey(foff, (k[1], k[2], k[3]))], d)
             foreach(t -> delete!(my_fil, (t,)), tset)
             ranges = [(b, e) for (ts, b, e) in foff[(r, p, c)] if (r, ts, s) in tsmap]
-            foreach(t -> push!(my_fil, (t,)), pp_off_periods(tm, pp_off_fil(tm, ranges), tset))
+            foreach(t -> push!(my_fil, (t,)), pp_off_periods(tm, pp_off_fil(tm, ranges, offsc), tset))
             for t in tset
                 ((t,) in my_fil && (r, t, p) in vara) && push!(outs, (r, t, p, c, s))
             end
@@ -373,6 +374,7 @@ function ppmain_life!(tm)
     end
     gput!(tm, "RTPCS_OUT", outs)
     gput!(tm, "MY_FIL", my_fil)
+    pp_off_keep!(tm, offsc)
 
     # --- Simulated vintages (L590) -------------------------------------------------------------------
     # $IF DEFINED PRC_SIMV LOOP(T,NO_RVP(R,TT-1,P)$(RTP_CPTYR(R,TT,T,P)$PRC_SIMV(R,P))=YES); NO_RVP(RTP(R,T,P))=NO; RTP(NO_RVP)=YES

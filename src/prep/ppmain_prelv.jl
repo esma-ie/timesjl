@@ -397,13 +397,16 @@ function ppmain_tslvl!(tm)
     # L358-363: LOOP(TRACKC(R,C), $BATINCLUDE pp_off.mod COM_OFF C "" "RTC(R,T,C)$(" NO;
     #   COM_BNDPRD(R,T,C,S,'FX')$(COM_TS(R,C,S)$(NOT RTC(R,T,C))) = EPS)
     bndprd = gvalues(tm, "COM_BNDPRD", 5)
-    for ((r, c), rs) in ranges
-        foreach(t -> delete!(rtc, (r, t, c)), pp_off_periods(tm, pp_off_fil(tm, rs), tset))
+    offsc = PPOffScratch()
+    for (r, c) in gams_sort!(collect(keys(ranges)), d)                 # in GAMS order (pp_off.mod's scratch)
+        rs = ranges[(r, c)]
+        foreach(t -> delete!(rtc, (r, t, c)), pp_off_periods(tm, pp_off_fil(tm, rs, offsc), tset))
         for t in tset, s in get(ts_of, (r, c), ())
             (r, t, c) in rtc || (bndprd[(r, t, c, s, "FX")] = 0.0)        # a stored 0.0 is EPS
         end
     end
     isempty(ranges) || gput!(tm, "COM_BNDPRD", bndprd)
+    pp_off_keep!(tm, offsc)
     # L364: RTCS_VARC(RTC(R,T,C),S)$COM_TS(R,C,S) = YES
     rtcs_varc = gmembers(tm, "RTCS_VARC", 4)
     for (r, t, c) in rtc

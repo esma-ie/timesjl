@@ -175,6 +175,18 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 ## Findings so far
 
+- (8 Nov 2026, pp_off.mod scratch) The gate compares every set and
+  parameter at each checkpoint, scratch included, but the translation of
+  pp_off.mod (changes 4, 5, 7b, 8a) did not keep its scratch: FIL, which
+  L17 clears at every call, and the scalars STARTOFF and ENDOFF of the last
+  range (L18). A model with OFF ranges (TS_OFF, PRC_NOFF, COM_OFF,
+  PRC_AOFF, PRC_FOFF) therefore failed the all-symbols check at prep,
+  prelv and ppm on those three symbols alone; in the public core models
+  GAMS leaves them empty at every checkpoint, so the check passed. Fixed:
+  `PPOffScratch` and `pp_off_keep!` leave them as GAMS does, the PRC_NOFF
+  and COM_OFF loops now run in GAMS order, and the crafted OFF-range
+  states (timslice, ppmain_rtp, ppmain_tslvl, ppmain_life, pp_prelv)
+  compare the three symbols against GAMS (they fail without the fix).
 - (26) curex.gms (preppm.mod L27-28; `src/prep/curex.jl`, 8 Nov 2026,
   moved ahead of 21-25b by James): R_CUREX filled from G_CUREX, the
   currency map CURMAP and the reduced RDCUR (L18-26), the two-step chains

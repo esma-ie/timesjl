@@ -84,7 +84,7 @@ function timslice_case!(tm, name)
 end
 
 "What timslice.mod writes, compared after it."
-const TIMSLICE_OUTPUTS = ["TS_GROUP", "TS_MAP", "STOAL", "RS_BELOW", "RS_BELOW1", "NORTS", "G_YRFR", "FINEST", "RS_TREE", "RJLVL",
+const TIMSLICE_OUTPUTS = ["FIL", "STARTOFF", "ENDOFF", "TS_GROUP", "TS_MAP", "STOAL", "RS_BELOW", "RS_BELOW1", "NORTS", "G_YRFR", "FINEST", "RS_TREE", "RJLVL",
                           "RLUP", "G_CYCLE", "TS_CYCLE", "RS_STGPRD", "RS_TSLVL", "RS_STG", "RS_STGAV", "STOA", "RS_HR", "JS",
                           "RJ_SL", "RS_UP", "JS_CCL", "RS_MODUS"]
 

@@ -122,12 +122,13 @@ function timslice!(tm)
     miyr_1 = Set(k[1] for k in gset(tm, "MIYR_1").keys)
     tmx = dynts ? tset : filter(t -> t in miyr_1, tset)              # T%MX%
     # L35: LOOP(RS_BELOW1(R,ANNUAL,S)$SUM(TS_OFF(R,S,BOHYEAR,EOHYEAR),1), ...)   (TS_MAP is as after L22)
+    offsc = PPOffScratch()
     for (r, a, s) in sorted(RS_BELOW1)
         (r in regset && a == ann) || continue
         ranges = [(b, e) for (r2, s2, b, e) in TS_OFF.keys if r2 == r && s2 == s]
         isempty(ranges) && continue
         # L36: $BATINCLUDE pp_off.mod TS_OFF S "" "NORTS(R,T%MX%,S)$(" 1
-        fil = pp_off_fil(tm, ranges)
+        fil = pp_off_fil(tm, ranges, offsc)
         foreach(t -> gassign!(NORTS, (r, t, s), 1.0), pp_off_periods(tm, fil, tmx))
         # L37-38: IF(PROD(T%MX%,FIL(T)), G_YRFR(R,TS)$TS_MAP(R,S,TS) = 0; ELSE NORTS(R,T(FIL%MX%),TS)$TS_MAP(R,S,TS) = -INF)
         if all(t -> (t,) in fil, tmx)
@@ -138,6 +139,7 @@ function timslice!(tm)
             end
         end
     end
+    pp_off_keep!(tm, offsc)
 
     # --- Year fractions (L43-46) -------------------------------------------------------
     # L43: G_YRFR(ALL_R,ANNUAL) = 1
