@@ -64,3 +64,14 @@ variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
+
+# Crafted case demo12_ucdyn (9 Nov 2026): demo12 plus five dynamic user constraints in the RHS
+# direction (ucdyn.dd), for M1.3 change 21: equserco.mod L80-106 and uc_pasti.mod. The
+# preprocessing from the input dump to ppm on every symbol; nothing left untranslated.
+[[variant]]
+prefix   = "demo12_ucdyn"
+model    = "TIMES_Demo-demo12_ucdyn"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []

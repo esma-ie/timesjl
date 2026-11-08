@@ -108,3 +108,18 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_curex/demo12_curex.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_curex"]
+
+# TIMES_Demo demo12 + ucdyn.dd (9 Nov 2026): M1.3 change 21, dynamic user constraints in the
+# RHS direction (equserco.mod L80-106, uc_pasti.mod): the four dynamic families with every
+# term type, GROWTH, SYNC, UC_TIME and past investments in the first period.
+[[model]]
+name = "TIMES_Demo-demo12_ucdyn"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_ucdyn/demo12_ucdyn.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_ucdyn"]

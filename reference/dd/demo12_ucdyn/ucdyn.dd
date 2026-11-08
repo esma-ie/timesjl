@@ -1,0 +1,135 @@
+* TIMES.jl crafted case demo12_ucdyn (reference/crafted.toml, 9 Nov 2026): dynamic user
+* constraints in the RHS direction (equserco.mod L80-106, uc_pasti.mod; M1.3 change 21,
+* docs/m13-plan.md) added to TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0).
+* OTCGEN reaches only the CAP terms with GROWTH, TIMES-NZ the CAP terms with GROWTH and SYNC;
+* this case reaches the four families and every term type:
+* - GRW_HYD (EQE_UCRSU, REG1 and REG2): hydro capacity grows by at most 2% a year (4% from
+*   2030) plus a constant; GROWTH on the RHS CAP term, the past investments of ELCREHYD00
+*   subtracted in the first period (uc_pasti.mod); UC_TIME in REG2 (the LEAD(T) factor of
+*   equserco.mod L118).
+* - GRW_NUC (EQE_UCSU, summed over REG1 and REG2): new nuclear capacity, GROWTH on NCAP.
+* - SYN_GAS (EQE_UCRSU, REG1): gas-plant activity against coal-plant activity in the same
+*   period (SYNC on the RHS ACT term, so ppmain.mod L1168 adds the N attribute and the N
+*   entry of UC_TMAP is left out) and the coal plant's electricity output in the previous
+*   period (the RHS FLO term without attributes, the N entry).
+* - GRW_ELCTS (EQE_UCRSUS, REG1, slice WD): electricity production (COMPRD) by slice,
+*   GROWTH on the RHS COMPRD term.
+* - GRW_IMP (EQE_UCSUS, summed over REG1, ANNUAL): coal imports (IRE) with GROWTH, against
+*   the net coal production (COMNET) of the previous period.
+* The constants are loose, so the model stays feasible.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET UC_N
+/
+GRW_HYD 'Growth of hydro capacity'
+GRW_NUC 'Growth of nuclear investment'
+SYN_GAS 'Gas activity against coal'
+GRW_ELCTS 'Growth of electricity production by slice'
+GRW_IMP 'Growth of coal imports'
+/
+
+SET UC_R_EACH
+/
+REG1.GRW_HYD
+REG2.GRW_HYD
+REG1.SYN_GAS
+REG1.GRW_ELCTS
+/
+
+SET UC_R_SUM
+/
+REG1.GRW_NUC
+REG2.GRW_NUC
+REG1.GRW_IMP
+/
+
+SET UC_ATTR
+/
+REG1.GRW_HYD.RHS.CAP.GROWTH
+REG2.GRW_HYD.RHS.CAP.GROWTH
+REG1.GRW_NUC.RHS.NCAP.GROWTH
+REG2.GRW_NUC.RHS.NCAP.GROWTH
+REG1.SYN_GAS.RHS.ACT.SYNC
+REG1.GRW_ELCTS.RHS.COMPRD.GROWTH
+REG1.GRW_IMP.RHS.IRE.GROWTH
+/
+
+PARAMETER
+UC_CAP ' '/
+GRW_HYD.LHS.REG1.2005.ELCREHYD00 1
+GRW_HYD.LHS.REG2.2005.ELCREHYD00 1
+GRW_HYD.RHS.REG1.2005.ELCREHYD00 1.02
+GRW_HYD.RHS.REG1.2030.ELCREHYD00 1.04
+GRW_HYD.RHS.REG2.2005.ELCREHYD00 1.02
+/
+
+PARAMETER
+UC_NCAP ' '/
+GRW_NUC.LHS.REG1.2005.ELCNNNUC01 1
+GRW_NUC.LHS.REG2.2005.ELCNNNUC01 1
+GRW_NUC.RHS.REG1.2005.ELCNNNUC01 1.1
+GRW_NUC.RHS.REG2.2005.ELCNNNUC01 1.05
+/
+
+PARAMETER
+UC_ACT ' '/
+SYN_GAS.LHS.REG1.2005.ELCTEGAS00.ANNUAL 1
+SYN_GAS.RHS.REG1.2005.ELCTECOA00.ANNUAL 2
+/
+
+PARAMETER
+UC_FLO ' '/
+SYN_GAS.RHS.REG1.2005.ELCTECOA00.ELC.ANNUAL 0.5
+/
+
+PARAMETER
+UC_COMPRD ' '/
+GRW_ELCTS.LHS.REG1.2005.ELC.WD 1
+GRW_ELCTS.RHS.REG1.2005.ELC.WD 1.03
+/
+
+PARAMETER
+UC_IRE ' '/
+GRW_IMP.LHS.REG1.2005.MINCOA1.COA.ANNUAL.IMP 1
+GRW_IMP.RHS.REG1.2005.MINCOA1.COA.ANNUAL.IMP 1.1
+/
+
+PARAMETER
+UC_COMNET ' '/
+GRW_IMP.RHS.REG1.2005.COA.ANNUAL 0.01
+/
+
+PARAMETER
+UC_TIME ' '/
+GRW_HYD.REG2.2005 0.1
+GRW_HYD.REG2.2050 0.3
+/
+
+PARAMETER
+UC_RHSRT ' '/
+REG1.GRW_HYD.0.UP 5
+REG1.GRW_HYD.2005.UP 5
+REG2.GRW_HYD.0.UP 5
+REG2.GRW_HYD.2005.UP 8
+REG1.SYN_GAS.0.UP 5
+REG1.SYN_GAS.2005.UP 1000
+/
+
+PARAMETER
+UC_RHSRTS ' '/
+REG1.GRW_ELCTS.0.WD.UP 5
+REG1.GRW_ELCTS.2005.WD.UP 200
+/
+
+PARAMETER
+UC_RHST ' '/
+GRW_NUC.0.UP 5
+GRW_NUC.2005.UP 50
+/
+
+PARAMETER
+UC_RHSTS ' '/
+GRW_IMP.0.ANNUAL.UP 5
+GRW_IMP.2005.ANNUAL.UP 2000
+/

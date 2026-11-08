@@ -124,16 +124,14 @@ function untranslated_families(tm::TimesModel)
         k === nothing || note!("EQ(l)_ASHAR of storage processes", "eqashar.vda L51, L75-76",
                                "RPCG_ASHAR$(P("RPCG_ASHAR", 5).keys[k])")
     end
-    # Dynamic user constraints (equcwrap.mod L34-40) are translated in the LHS
-    # direction with the GROWTH attribute; the RHS direction, nested UCs and
-    # the other attributes are not (equserco.jl).
-    any(k -> k[3] == "RHS", gset(tm, "UC_DYNDIR")) &&
-        note!("user constraints, dynamic RHS direction (EQ(l)_UCSU/UCRSU/UCRSUS/UCSUS)", "equserco.mod L80-106",
-              "UC_DYNDIR has an 'RHS' entry")
+    # Dynamic user constraints (equcwrap.mod L34-40) are translated in both
+    # directions with the GROWTH attribute and the UC_DYNT types (N, CUMSUM,
+    # CUM+, SYNC); nested UCs and the other attributes are not (equserco.jl).
     isempty(S("UC_GMAP_U", 3)) ||
         note!("user constraints, nested (UC_UCN terms)", "equserco.mod L76, L99", "UC_GMAP_U is not empty")
-    let other = [k for k in gset(tm, "UC_ATTR") if k[5] != "GROWTH"]
-        isempty(other) || note!("user-constraint attributes other than GROWTH", "uc_*.mod", "UC_ATTR$(first(other))")
+    let other = [k for k in gset(tm, "UC_ATTR") if !(k[5] in UC_ATTR_TRANSLATED)]
+        isempty(other) || note!("user-constraint attributes other than GROWTH, N, CUMSUM, CUM+, SYNC", "uc_*.mod",
+                                "UC_ATTR$(first(other))")
     end
     # EQ(l)_IREBND (eqirebnd.mod L18) and EQ(l)_XBND (eqxbnd.mod L17)
     ire_rc = Set((k[1], k[3], k[4]) for k in gset(tm, "RPC_IRE"))      # (R,C,IE) with some RPC_IRE(R,P,C,IE)

@@ -1,10 +1,10 @@
 # User constraints (the EQ(l)_UC* families) with VAR_UC = YES: eqmain.mod
 # L195-232, equcwrap.mod, equserco.mod and the uc_*.mod term files.
 #
-# GAMS: eqmain.mod L208-226 (the generation maps UC_RHSMAP, UC_UT, UC_UTS,
-# UC_RTSUC) and L229 (`$BATINCLUDE equcwrap.mod E BD '' SUM(BD$ ,1) NOT`);
-# equcwrap.mod L13-32; equserco.mod L23-50 and L108-120; uc_flo.mod,
-# uc_ncap.mod, uc_cap.mod, uc_act.mod, uc_com.mod and uc_ire.mod, v4.9.7.
+# GAMS: eqmain.mod L208-226 (the generation maps UC_TMAP, UC_RHSMAP, UC_UT,
+# UC_UTS, UC_RTSUC) and L229 (`$BATINCLUDE equcwrap.mod E BD '' SUM(BD$ ,1)
+# NOT`); equcwrap.mod L13-42; equserco.mod L23-120; uc_flo.mod, uc_ncap.mod,
+# uc_cap.mod, uc_act.mod, uc_com.mod, uc_ire.mod and uc_pasti.mod, v4.9.7.
 #
 # With VAR_UC = YES only the first equcwrap include runs (equcwrap.mod L13:
 # `$IF NOT YES==YES $EXIT` does not exit; the FX/LO/UP includes at eqmain.mod
@@ -24,7 +24,11 @@
 #   equcwrap L32  EQE_UCRTS(R,T,UC_N,S)  no sum
 # and the four dynamic (UC_T_SUCC) families whose %8 is 1, in the LHS
 # direction (equserco.mod L52-78: terms at T on the LHS, at T+1 on the RHS,
-# through UC_TMAP 'N'), with the GROWTH attribute:
+# through UC_TMAP 'N'; `uc_dyn!`) or, when UC_DYNDIR has an 'RHS' entry, in
+# the RHS direction (L80-106: terms at T on the LHS, at T-1 on the RHS, or
+# at the periods the CUMSUM, CUM+ and SYNC attributes pick through UC_TMAP,
+# less the past investments of uc_pasti.mod in the first period;
+# `uc_dyn_rhs!`, M1.3 change 21), with the GROWTH attribute:
 #   equcwrap L34  EQE_UCSU(UC_N,T)       region sum, timeslice sum
 #   equcwrap L36  EQE_UCRSU(R,T,UC_N)    timeslice sum
 #   equcwrap L38  EQE_UCRSUS(R,T,UC_N,S) no sum
@@ -46,18 +50,19 @@
 #
 # Not translated; data that needs them raises UnportedError:
 # - VAR_UC not YES (the typed FX/LO/UP includes, eqmain.mod L230-232);
-# - dynamic constraints in the RHS direction (equserco.mod L80-106:
-#   UC_DYNDIR(R,UC_N,'RHS'), with the CUMSUM/SYNC/CUM+ maps and uc_pasti.mod)
-#   and nested constraints (L76, L99: UC_GMAP_U/UC_UCN);
-# - every UC_ATTR attribute except GROWTH (PERDISC, PERIOD, EFF, CAPACT,
-#   BUILDUP, COST/DELIV/TAX/SUB, ANNUL, ONLINE, NEWFLO, CUMSUM, ...): without
-#   them the PROD factors of the term files are 1 and the uc_com EFF switch
-#   is false;
+# - nested constraints (equserco.mod L76, L99: UC_GMAP_U/UC_UCN) and the
+#   climate terms of the RHS direction (L101, uc_cli.mod; %CLI% is refused
+#   by the generation driver);
+# - every UC_ATTR attribute except GROWTH and the UC_DYNT types N, CUMSUM,
+#   CUM+ and SYNC (PERDISC, PERIOD, EFF, CAPACT, BUILDUP, COST/DELIV/TAX/SUB,
+#   ANNUL, ONLINE, NEWFLO, ...): without them the PROD factors of the term
+#   files are 1 and the uc_com EFF switch is false;
 # - capacity-related flows in uc_flo.mod L35-49 (UC_CAPFLO, cal_caps.mod).
 # Read from the pre-solve dump (computed elsewhere): UC_RHS*, UC_ON,
 # UC_R_*/UC_T_*/UC_TS_* maps, UC_GMAP_*/UC_MAP_*, UC_ATTR, UC_DYNDIR, LAGT,
 # UC_SIGN, RHS_COMBAL/RHS_COMPRD, RTP_OFF (eqmain.mod L199-202 add to it;
-# read after those changes).
+# read after those changes), LEAD, M, B, MIYR_1, RTP_CPTYR, COEF_CPT,
+# NCAP_PASTI.
 
 "VAR_UC as eqmain.mod L197 leaves it: the run's value, or YES if UC_TIME/UC_UCN has data."
 function var_uc(tm::TimesModel)
@@ -135,16 +140,22 @@ function uc_setup(tm::TimesModel)
     end
 end
 
+"""
+UC_ATTR attributes translated: GROWTH (the uc_*.mod factors of dynamic terms,
+uc_pasti.mod) and the UC_DYNT types N, CUMSUM, CUM+ and SYNC (initsys.mod
+L142), which only pick UC_TMAP entries in the RHS direction (equserco.mod
+L83) and set UC_DYNDIR (ppmain.mod L1167).
+"""
+const UC_ATTR_TRANSLATED = ("GROWTH", "N", "CUMSUM", "CUM+", "SYNC")
+
 function uc_unported(tm::TimesModel, setup)
     var_uc(tm) || throw(UnportedError("user constraints with VAR_UC not YES (eqmain.mod L230-232, equcwrap.mod L13)"))
     d = tm.data
-    # Dynamic families (equcwrap L34-40): the RHS direction and nested UCs.
-    any(k -> k[3] == "RHS", gset(tm, "UC_DYNDIR")) &&
-        throw(UnportedError("equserco.mod L80-106: dynamic user constraints in the RHS direction (UC_DYNDIR 'RHS')"))
+    # Dynamic families (equcwrap L34-40): nested UCs.
     isempty(gset_opt(d, "UC_GMAP_U", 3)) ||
         throw(UnportedError("equserco.mod L76/L99: nested user constraints (UC_GMAP_U, UC_UCN)"))
-    any(k -> k[5] != "GROWTH", gset(tm, "UC_ATTR")) &&
-        throw(UnportedError("uc_*.mod: user-constraint attributes other than GROWTH (UC_ATTR: PERIOD, EFF, CAPACT, COST, ...)"))
+    any(k -> !(k[5] in UC_ATTR_TRANSLATED), gset(tm, "UC_ATTR")) &&
+        throw(UnportedError("uc_*.mod: user-constraint attributes other than GROWTH, N, CUMSUM, CUM+ and SYNC (UC_ATTR: PERIOD, EFF, CAPACT, COST, ...)"))
     isempty(gset(tm, "UC_CAPFLO")) ||
         throw(UnportedError("uc_flo.mod L35-49: capacity-related flows in user constraints (UC_CAPFLO, cal_caps.mod)"))
     return nothing
@@ -214,9 +225,12 @@ function _uc_growth(x, r, n, side, grp, coef::GNum, lagt)
 end
 
 # Every term function below takes the term's period `t` (%4: T, or TT in the
-# dynamic block) and, as keywords, the side (%5: 'LHS', or SIDE), a factor
-# `k0` that multiplies the whole term (the dynamic block's UC_SIGN(SIDE)) and
-# `lagt`, LAGT of the row's period for a dynamic term (%6 = 1) or `nothing`.
+# dynamic blocks; the period of the variables) and, as keywords, the side
+# (%5: 'LHS', or SIDE), a factor `k0` that multiplies the whole term (the
+# dynamic blocks' UC_SIGN(SIDE)), `lagt`, the GROWTH exponent's period length
+# of a dynamic term (%6 = 1: LAGT(T) in the LHS direction, -LEAD(T) in the
+# RHS direction) or `nothing`, and `tc`, the period of the UC_* coefficient
+# (%7: T, TT, or LL in the RHS direction; `t` by default).
 
 """
     uc_flo!(expr, tm, n, r, t, s; side="LHS", k0=1, lagt=nothing) -> expr
@@ -229,14 +243,14 @@ end
 GAMS: uc_flo.mod L4-59, v4.9.7 (%6 = 0 or 1; L35-49 UC_CAPFLO refused).
 """
 function uc_flo!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String, s::String;
-                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing)
+                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t)
     x = uc_context(tm)
     for (_, _, _, p, c) in get(x.mapflo_of_nr, (n, side, r), _NO5)
         for (_, v, _, _) in get(x.vint_of_rtp, (r, t, p), _NO4)
             (v,) in x.modlyear || continue
             for (_, _, _, _, ts) in get(x.varf_of_rtpc, (r, t, p, c), _NO5)
                 haskey(x.rs_fr, (r, s, ts)) || continue
-                coef = gv(x.uc_flo, (n, side, r, t, p, c, ts))
+                coef = gv(x.uc_flo, (n, side, r, tc, p, c, ts))
                 k = k0 * coef * _uc_tsw(x, r, t, c, s, ts) * _uc_growth(x, r, n, side, "FLO", coef, lagt)
                 cal_nored!(expr, tm, k, r, v, t, p, c, ts)
             end
@@ -255,11 +269,11 @@ end
 GAMS: uc_ncap.mod L3-36, v4.9.7 (%3 = %6, so L25 is not compiled).
 """
 function uc_ncap!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String;
-                  side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing)
+                  side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t)
     x = uc_context(tm)
     for (_, _, _, p) in get(x.gmapp_of_rnk, (r, n, "NCAP"), _NO4)
         ((r, t, p) in x.rtp && !((r, t, p) in x.rtp_off)) || continue
-        coef = gv(x.uc_ncap, (n, side, r, t, p))
+        coef = gv(x.uc_ncap, (n, side, r, tc, p))
         addterm!(expr, k0 * coef * _uc_growth(x, r, n, side, "NCAP", coef, lagt), tm, "VAR_NCAP", r, t, p)
     end
     return expr
@@ -277,11 +291,11 @@ The GROWTH line is compiled for %5 = 1 only. GAMS: uc_cap.mod L3-34, v4.9.7
 (L36-50, VDA ONLINE and ABS reserves, only for the RS family).
 """
 function uc_cap!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String;
-                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing)
+                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t)
     x = uc_context(tm)
     for (_, _, _, p) in get(x.gmapp_of_rnk, (r, n, "CAP"), _NO4)
         (r, t, p) in x.rtp || continue
-        coef = gv(x.uc_cap, (n, side, r, t, p))
+        coef = gv(x.uc_cap, (n, side, r, tc, p))
         addterm!(expr, k0 * coef * _uc_growth(x, r, n, side, "CAP", coef, lagt), tm, "VAR_CAP", r, t, p)
     end
     return expr
@@ -298,7 +312,7 @@ end
 GAMS: uc_act.mod L4-37, v4.9.7.
 """
 function uc_act!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String, s::String;
-                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing)
+                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t)
     x = uc_context(tm)
     for (_, _, _, p) in get(x.gmapp_of_rnk, (r, n, "ACT"), _NO4)
         (r, t, p) in x.rtp_vara || continue
@@ -306,7 +320,7 @@ function uc_act!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::St
             (v,) in x.modlyear || continue
             for (_, _, ts) in get(x.ts_of_rp, (r, p), _NO3)
                 haskey(x.rs_fr, (r, s, ts)) || continue
-                coef = gv(x.uc_act, (n, side, r, t, p, ts))
+                coef = gv(x.uc_act, (n, side, r, tc, p, ts))
                 k = k0 * coef * gv(x.rs_fr, (r, s, ts)) * _uc_growth(x, r, n, side, "ACT", coef, lagt)
                 addterm!(expr, k, tm, "VAR_ACT", r, v, t, p, ts)
             end
@@ -335,7 +349,7 @@ is set; EFF is never set here (refused with the other attributes).
 GAMS: uc_com.mod L4-32, v4.9.7.
 """
 function uc_com!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String, s::String, kind::String;
-                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing)
+                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t)
     x = uc_context(tm)
     kind in ("NET", "PRD") || throw(ArgumentError("uc_com kind must be NET or PRD, got $kind"))
     rhs_of = kind == "NET" ? x.rhs_combal_of_rtc : x.rhs_comprd_of_rtc
@@ -345,7 +359,7 @@ function uc_com!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::St
         for (_, _, _, ts) in get(rhs_of, (r, t, c), _NO4)
             haskey(x.rs_fr, (r, s, ts)) || continue
             f = ie_div ? 1 + (GNum(1.0) / gv(x.com_ie, (r, t, c, ts)) - 1) : GNum(1.0)
-            coef = gv(x.uc_com, (n, kind, side, r, t, c, ts, grptype))
+            coef = gv(x.uc_com, (n, kind, side, r, tc, c, ts, grptype))
             k = k0 * coef * f * _uc_tsw(x, r, t, c, s, ts) * _uc_growth(x, r, n, side, grptype, coef, lagt)
             addterm!(expr, k, tm, var, r, t, c, ts)
         end
@@ -366,14 +380,14 @@ UC_MAP_IRE has no side index: the same exchanges enter both sides.
 GAMS: uc_ire.mod L4-43, v4.9.7.
 """
 function uc_ire!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String, s::String;
-                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing)
+                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t)
     x = uc_context(tm)
     for (_, _, p, c, ie) in get(x.mapire_of_nr, (n, r), _NO5)
         for (_, v, _, _) in get(x.vint_of_rtp, (r, t, p), _NO4)
             (v,) in x.modlyear || continue
             for (_, _, _, _, ts) in get(x.varf_of_rtpc, (r, t, p, c), _NO5)
                 haskey(x.rs_fr, (r, s, ts)) || continue
-                coef = gv(x.uc_ire, (n, side, r, t, p, c, ts, ie))
+                coef = gv(x.uc_ire, (n, side, r, tc, p, c, ts, ie))
                 k = k0 * coef * _uc_tsw(x, r, t, c, s, ts) * _uc_growth(x, r, n, side, "IRE", coef, lagt)
                 if !((r, p, c) in x.rpc_aire)
                     addterm!(expr, k, tm, "VAR_IRE", r, v, t, p, c, ts, ie)
@@ -452,7 +466,8 @@ The dynamic body in the LHS direction, equserco.mod L56-78 (%8 = 1):
       + [nested UCN terms, refused] )\$(NOT SUM(UC_DYNDIR(R,UC_N,'RHS'),1))
 
 summed over `regions` (%4%7) and the timeslice terms over `ts_of(r)` (%6).
-The RHS-direction block (L80-106) is refused, so the condition holds.
+The caller takes this block or [`uc_dyn_rhs!`](@ref), by the UC_DYNDIR
+condition (`uc_rhsdir`).
 """
 function uc_dyn!(expr::JuMP.AffExpr, tm::TimesModel, n::String, regions, t::String, ts_of)
     x = uc_context(tm)
@@ -476,6 +491,168 @@ function uc_dyn!(expr::JuMP.AffExpr, tm::TimesModel, n::String, regions, t::Stri
     end
     for r in regions, (tt, side) in pairs, s in ts_of(r)
         uc_ire!(expr, tm, n, r, tt, s; kw(tt, side)...)
+    end
+    return expr
+end
+
+"""
+    uc_tmap(tm) -> GamsSet{5}
+
+UC_TMAP(YEAR,YEAR,T,SIDE,UC_DYNT), the period maps of the dynamic user
+constraints, eqmain.mod L211-215:
+
+    UC_TMAP(T,TT(T-DIAG(SIDE,'RHS')),TT,SIDE,'N') = YES;
+    UC_TMAP(T,TT(T-DIAG(SIDE,'RHS')),MILESTONYR,SIDE,'CUMSUM')\$(ORD(T) > ORD(MILESTONYR)+DIAG(SIDE,'RHS')) = YES;
+    UC_TMAP(T,T,T,'RHS','SYNC') = YES;
+    UC_TMAP(T,T,TT,'RHS','CUM+')\$UC_TMAP(T,T,TT,'LHS','CUMSUM') = YES;
+
+With T the i-th milestone year and T-1 the one before it (a lag on
+MILESTONYR, not circular): (T,T,T,'LHS','N'); (T,T-1,T-1,'RHS','N') for
+i > 1; (T,T,M,'LHS','CUMSUM') for every milestone M before T;
+(T,T-1,M,'RHS','CUMSUM') for every M before T-1; (T,T,T,'RHS','SYNC'); and
+(T,T,M,'RHS','CUM+') for every M before T. DIAG is GAMS's label comparison
+(docs/discrepancies.md G15). In the RHS direction (equserco.mod L83) the
+first index is the row's period, the second (LL) the period of the
+coefficients and the third (TT) that of the variables. The set is in the
+presolve dump; `test_equserco_dyn.jl` checks this one against it.
+"""
+function uc_tmap(tm::TimesModel)
+    get!(tm.cache, "UC_TMAP") do
+        ts = [k[1] for k in gset(tm, "MILESTONYR").keys]
+        out = NTuple{5,String}[]
+        for (i, t) in enumerate(ts)
+            push!(out, (t, t, t, "LHS", "N"))                                  # L212, SIDE = LHS
+            i > 1 && push!(out, (t, ts[i-1], ts[i-1], "RHS", "N"))             # L212, SIDE = RHS
+            for j in 1:i-1
+                push!(out, (t, t, ts[j], "LHS", "CUMSUM"))                     # L213: ORD(T) > ORD(M)
+                j < i - 1 && push!(out, (t, ts[i-1], ts[j], "RHS", "CUMSUM"))  # L213: ORD(T) > ORD(M)+1
+                push!(out, (t, t, ts[j], "RHS", "CUM+"))                       # L215
+            end
+            push!(out, (t, t, t, "RHS", "SYNC"))                               # L214
+        end
+        _gset_from("UC_TMAP", out, tm.data)
+    end
+end
+
+"UC_TMAP keyed by its first index (the row's period): T -> (LL, TT, SIDE, UC_DYNT), in set order."
+uc_tmap_of_t(tm::TimesModel) =
+    get!(tm.cache, "UC_TMAP/t") do
+        out = Dict{String,Vector{NTuple{4,String}}}()
+        for (t, ll, tt, side, dynt) in uc_tmap(tm)
+            push!(get!(() -> NTuple{4,String}[], out, t), (ll, tt, side, dynt))
+        end
+        out
+    end::Dict{String,Vector{NTuple{4,String}}}
+
+"""
+    uc_rhsdir(tm, n[, r]) -> Bool
+
+The condition that picks a dynamic constraint's direction, equserco.mod L78
+and L106: `SUM(UC_DYNDIR(R,UC_N,'RHS'),1)`, with R the row's region (the
+UCRSU and UCRSUS families) or, when the row has no region index (UCSU and
+UCSUS), any region (the SUM then controls R).
+"""
+function uc_rhsdir(tm::TimesModel, n::String, r=nothing)
+    dyn = get!(tm.cache, "UC_DYNDIR/RHS") do
+        Set((k[1], k[2]) for k in gset(tm, "UC_DYNDIR") if k[3] == "RHS")
+    end::Set{Tuple{String,String}}
+    r === nothing && return any(k -> k[2] == n, dyn)
+    return (r, n) in dyn
+end
+
+"""
+    uc_dyn_rhs!(expr, tm, n, regions, t, ts_of) -> expr
+
+The dynamic body in the RHS direction, equserco.mod L80-106 (%8 = 1):
+
+    ( SUM(UC_TMAP(T,LL,TT,SIDE,UC_DYNT)\$(LIM(UC_DYNT) xor UC_ATTR(R,UC_N,SIDE,grp,UC_DYNT)), UC_SIGN(SIDE)*
+          [uc_flo, uc_ncap, uc_cap, uc_act, uc_com PRD, uc_com NET, uc_ire: the variables at TT,
+           the coefficients at LL, side SIDE, GROWTH exponent -LEAD(T)*UC_SIGN(SIDE)-1])
+      + [nested UCN terms, refused] + [uc_cli.mod, %CLI% refused]
+      - [uc_pasti.mod] )\$SUM(UC_DYNDIR(R,UC_N,'RHS'),1)
+
+grp is the name each include passes to the TSUM macro: FLO, NCAP, CAP, ACT,
+COMPRD, COMNET and IRE (for uc_com it is not the term's UC_GRPTYPE). LIM =
+{LO, FX, UP, N} (initsys.mod L70) and UC_DYNT = {N, CUMSUM, CUM+, SYNC}
+(L142), so an 'N' entry of UC_TMAP is taken unless the group has the
+attribute N, and a CUMSUM, CUM+ or SYNC entry only when it has that
+attribute (ppmain.mod L1160-1168 set them). Each term is summed over
+`regions` (%4%7, which also controls the R of the UC_ATTR test), then the
+UC_TMAP entries, then, for the timeslice terms, `ts_of(r)` (%6).
+
+GAMS: equserco.mod L80-106 with uc_flo.mod, uc_ncap.mod, uc_cap.mod,
+uc_act.mod, uc_com.mod, uc_ire.mod (%6 = 1) and uc_pasti.mod, v4.9.7.
+"""
+function uc_dyn_rhs!(expr::JuMP.AffExpr, tm::TimesModel, n::String, regions, t::String, ts_of)
+    x = uc_context(tm)
+    mlead = -gv(gparam(tm, "LEAD"), (t,))
+    entries = get(uc_tmap_of_t(tm), t, _NO4)
+    take(r, grp) = [(ll, tt, side) for (ll, tt, side, dynt) in entries
+                    if (dynt == "N") ⊻ ((r, n, side, grp, dynt) in x.uc_attr)]
+    kw(ll, side) = (; side, k0=gv(x.uc_sign, (side,)), lagt=mlead, tc=ll)
+    for r in regions, (ll, tt, side) in take(r, "FLO"), s in ts_of(r)
+        uc_flo!(expr, tm, n, r, tt, s; kw(ll, side)...)
+    end
+    for r in regions, (ll, tt, side) in take(r, "NCAP")
+        uc_ncap!(expr, tm, n, r, tt; kw(ll, side)...)
+    end
+    for r in regions, (ll, tt, side) in take(r, "CAP")
+        uc_cap!(expr, tm, n, r, tt; kw(ll, side)...)
+    end
+    for r in regions, (ll, tt, side) in take(r, "ACT"), s in ts_of(r)
+        uc_act!(expr, tm, n, r, tt, s; kw(ll, side)...)
+    end
+    for (kind, grp) in (("PRD", "COMPRD"), ("NET", "COMNET")), r in regions, (ll, tt, side) in take(r, grp), s in ts_of(r)
+        uc_com!(expr, tm, n, r, tt, s, kind; kw(ll, side)...)
+    end
+    for r in regions, (ll, tt, side) in take(r, "IRE"), s in ts_of(r)
+        uc_ire!(expr, tm, n, r, tt, s; kw(ll, side)...)
+    end
+    return uc_pasti!(expr, tm, n, regions, t)
+end
+
+"""
+    uc_pasti!(expr, tm, n, regions, t) -> expr
+
+The past investments' capacity, subtracted in the RHS direction
+(equserco.mod L103-104: `- uc_pasti.mod %4%7 MIYR_1 T 'RHS'`):
+
+    - %4%7 SUM(RTP(R,T,P)\$UC_GMAP_P(R,UC_N,'CAP',P),
+              SUM(RTP_CPTYR(R,PASTYEAR,T,P),COEF_CPT(R,PASTYEAR,T,P)*NCAP_PASTI(R,PASTYEAR,P)) *
+              UC_CAP(UC_N,'RHS',R,T,P) *
+              PROD(SIDE('RHS'),PROD(UC_ATTR(R,UC_N,SIDE,'CAP','GROWTH'),
+                   POWER(ABS(UC_CAP(UC_N,'RHS',R,T,P)),M(T)-B(T))))) )\$SUM(MIYR_1(T),1)
+
+a constant, only in the first period's rows: the capacity the past
+investments leave in the first period stands for the RHS capacity of the
+period before it. GAMS moves it to the right-hand side.
+
+GAMS: uc_pasti.mod L16-32, v4.9.7.
+"""
+function uc_pasti!(expr::JuMP.AffExpr, tm::TimesModel, n::String, regions, t::String)
+    (t,) in gset(tm, "MIYR_1") || return expr
+    x = uc_context(tm)
+    y = get!(tm.cache, "UC_PASTI") do
+        (cptyr = indexby(gset(tm, "RTP_CPTYR"), (1, 3, 4)),                  # (r,t,p) -> RTP_CPTYR(r,v,t,p)
+         pastyear = gset(tm, "PASTYEAR"),
+         coef_cpt = gparam(tm, "COEF_CPT"),
+         ncap_pasti = gparam(tm, "NCAP_PASTI"),
+         m = gparam(tm, "M"),
+         b = gparam(tm, "B"))
+    end
+    for r in regions
+        for (_, _, _, p) in get(x.gmapp_of_rnk, (r, n, "CAP"), _NO4)
+            (r, t, p) in x.rtp || continue
+            pasti = GNum(0.0)
+            for (_, v, _, _) in get(y.cptyr, (r, t, p), _NO4)
+                (v,) in y.pastyear || continue
+                pasti += gv(y.coef_cpt, (r, v, t, p)) * gv(y.ncap_pasti, (r, v, p))
+            end
+            coef = gv(x.uc_cap, (n, "RHS", r, t, p))
+            g = (r, n, "RHS", "CAP", "GROWTH") in x.uc_attr ?
+                gpower(abs(coef), gv(y.m, (t,)) - gv(y.b, (t,))) : GNum(1.0)
+            addconst!(expr, -(pasti * coef * g))
+        end
     end
     return expr
 end
@@ -713,6 +890,11 @@ function eq_uc!(tm::TimesModel)
         return rhs
     end
     t_succ, rtsuc = gset(tm, "UC_T_SUCC"), setup.rtsuc
+    # The dynamic body (equserco.mod L56-106): the LHS direction (L56-78) or the RHS
+    # direction (L80-106), each under its UC_DYNDIR condition; `r` is the row's region
+    # or `nothing` for the region-summed families.
+    dyn!(expr, n, r, regions, t, ts_of) = uc_rhsdir(tm, n, r) ?
+        uc_dyn_rhs!(expr, tm, n, regions, t, ts_of) : uc_dyn!(expr, tm, n, regions, t, ts_of)
 
     n_rows = 0
     # EQE_UC(UC_N), equcwrap L22, %8 = 2: SUM(BD$UC_RHS(UC_N,BD),1) and some
@@ -813,7 +995,7 @@ function eq_uc!(tm::TimesModel)
         (t,) in milestonyr || continue
         regs = get(regs_of_n, n, String[])
         any(r -> (r, n, t) in t_succ && !isempty(tssum(r, n)), regs) || continue
-        lhs = uc_dyn!(JuMP.AffExpr(0.0), tm, n, regs, t, r -> tssum(r, n))
+        lhs = dyn!(JuMP.AffExpr(0.0), n, nothing, regs, t, r -> tssum(r, n))
         rhs = JuMP.AffExpr(0.0)
         addterm!(rhs, GNum(1.0), tm, "VAR_UCT", n, t)
         add_time_dyn!(rhs, n, regs, t)
@@ -822,7 +1004,7 @@ function eq_uc!(tm::TimesModel)
     # EQE_UCRSU(R,T,UC_N), equcwrap L36.
     for (r, t, n, num, s) in setup.rhsmap
         (num == "DYNAMIC" && s == "ANNUAL" && (r, t, n) in rtsuc) || continue
-        lhs = uc_dyn!(JuMP.AffExpr(0.0), tm, n, (r,), t, rr -> tssum(rr, n))
+        lhs = dyn!(JuMP.AffExpr(0.0), n, r, (r,), t, rr -> tssum(rr, n))
         rhs = JuMP.AffExpr(0.0)
         addterm!(rhs, GNum(1.0), tm, "VAR_UCRT", n, r, t)
         add_time_dyn!(rhs, n, (r,), t)
@@ -831,7 +1013,7 @@ function eq_uc!(tm::TimesModel)
     # EQE_UCRSUS(R,T,UC_N,S), equcwrap L38.
     for (r, t, n, num, s) in setup.rhsmap
         (num == "SUCC" && (r, t, n) in rtsuc) || continue
-        lhs = uc_dyn!(JuMP.AffExpr(0.0), tm, n, (r,), t, _ -> (s,))
+        lhs = dyn!(JuMP.AffExpr(0.0), n, r, (r,), t, _ -> (s,))
         rhs = JuMP.AffExpr(0.0)
         addterm!(rhs, GNum(1.0), tm, "VAR_UCRTS", n, r, t, s)
         add_time_dyn!(rhs, n, (r,), t)
@@ -842,7 +1024,7 @@ function eq_uc!(tm::TimesModel)
         (t,) in milestonyr || continue
         regs = get(regs_of_n, n, String[])
         any(r -> (r, n, t) in t_succ && (r, n, s) in ts_each, regs) || continue
-        lhs = uc_dyn!(JuMP.AffExpr(0.0), tm, n, regs, t, _ -> (s,))
+        lhs = dyn!(JuMP.AffExpr(0.0), n, nothing, regs, t, _ -> (s,))
         rhs = JuMP.AffExpr(0.0)
         addterm!(rhs, GNum(1.0), tm, "VAR_UCTS", n, t, s)
         add_time_dyn!(rhs, n, regs, t)
