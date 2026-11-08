@@ -91,7 +91,6 @@ function untranslated_families(tm::TimesModel)
             ("EQ_ACTPL", "eqactups.vda L99", "RP_PL", 3, :s),
             ("EQ_ACTRMPC", "eqactups.vda L113", "RP_UPR", 3, :s),
             ("EQL_STGCCL", "eqactups.vda L121", "STG_MAXCYC", 3, :p),
-            ("EQ_SLSIFT", "eqactups.vda L131", "RPC_LS", 3, :s),
             ("eq_sdlogic/eq_sudupt/eq_sdslant", "eqlducs.vda L67-81", "RP_DPL", 3, :s),
             ("eq_sdminon/eq_sudload/eq_sudtime/eq_sudpll", "eqlducs.vda L94-118", "RP_DP", 2, :s),
             ("eq_sdind_1/eq_sdind_0", "eqlducs.vda L158-169", "DP_UNS", 7, :p),
@@ -189,6 +188,7 @@ function generate!(tm::TimesModel)
     n += eq_uc!(tm)                  # L229
     n += eq_acteff!(tm)              # VDA: equ_ext.vda L85 (pp_actef.vda L56)
     n += eq_caflac!(tm)              # VDA: equ_ext.vda L88-89
+    n += eq_slsift!(tm)              # VDA: equ_ext.vda L90 (eqactups.vda L131)
     n += eq_ashar!(tm)               # VDA: equ_ext.vda L94-96
     n += eq_ucrtp!(tm)               # VDA: equ_ext.vda L105-106
     n += eq_ret!(tm)                 # DSC: mod_equa.mod L212 (prepret.dsc EQOBJ; RP_RTF marks VNRET)

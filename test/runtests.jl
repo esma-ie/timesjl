@@ -136,6 +136,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "Market shares: EQ(l)_FLOMRK, eqflomrk.mod L56-105 (M1.3)" begin
         include("unit/test_eqflomrk.jl")
     end
+    @testset "Load shifting: EQ_SLSIFT, eqactups.vda L127-158 (M1.3)" begin
+        include("unit/test_eqslsift.jl")
+    end
     @testset "demo12 variants: advanced features (docs/demo12-variants.md)" begin
         include("unit/test_variants.jl")
     end
