@@ -537,8 +537,9 @@ end
 # year itself. %BOTIME% is 1850 unless the run sets it (initsys.mod L35).
 #
 # Not translated: the QA log (L213 PUTGRP, L229-230: a warning when a delayed
-# process has past investment), m13-plan.md open items. The scratch FIL, Z,
-# STARTOFF and ENDOFF are not kept: every later use assigns them first.
+# process has past investment), m13-plan.md open items. The scratch Z is not
+# kept: every later use assigns it first. FIL, STARTOFF and ENDOFF are, as
+# pp_off.mod leaves them (`pp_off_keep!`): a checkpoint dump holds them.
 
 """
     ppmain_rtp_symbols(tm) -> Vector{String}
@@ -709,10 +710,13 @@ function ppmain_rtp!(tm)
     trackp = Set{NTuple{2,String}}(k for (k, rs) in ranges if any(((b, _),) -> (b,) in uncd1, rs))
     # L236-238: LOOP(TRACKP(R,P), $BATINCLUDE pp_off.mod PRC_NOFF P "" "RTP_OFF(R,T,P)$(" YES)
     #   over all the process's ranges
-    for (r, p) in trackp
-        fil = pp_off_fil(tm, ranges[(r, p)])
+    #   in GAMS order (the scratch FIL, STARTOFF and ENDOFF are the last call's)
+    offsc = PPOffScratch()
+    for (r, p) in gams_sort!(collect(trackp), d)
+        fil = pp_off_fil(tm, ranges[(r, p)], offsc)
         foreach(t -> push!(rtp_off, (r, t, p)), pp_off_periods(tm, fil, tset))
     end
+    pp_off_keep!(tm, offsc)
     gput!(tm, "RTP_OFF", rtp_off)
     gput!(tm, "PRC_YMAX", prc_ymax)
     gput!(tm, "UNCD1", uncd1)

@@ -68,5 +68,5 @@ function ppmain_rtp_case!(tm, name)
 end
 
 "What ppmain.mod L199-247 writes, compared after it."
-const PPMAIN_RTP_OUTPUTS = ["B", "E", "D", "M", "PASTYEAR", "PASTMILE", "NCAP_PASTI", "COEF_RTP", "VNT", "PHYR", "PASTSUM", "PRC_NOFF",
+const PPMAIN_RTP_OUTPUTS = ["FIL", "STARTOFF", "ENDOFF", "B", "E", "D", "M", "PASTYEAR", "PASTMILE", "NCAP_PASTI", "COEF_RTP", "VNT", "PHYR", "PASTSUM", "PRC_NOFF",
                             "UNCD1", "PRC_YMAX", "TRACKP", "RTP_OFF", "RTP", "RVP"]

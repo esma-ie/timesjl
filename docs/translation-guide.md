@@ -571,3 +571,6 @@ those checks, their figures and their crafted cases are not published
   checked against GAMS's own run of curex.gms, and the crafted case
   TIMES_Demo-demo12_curex: the M1.3 chain and the whole model (layers 1-3)
   PASS on both variants; CI fixtures. New GAMS semantics: G51.
+- 8 Nov 2026: pp_off.mod's scratch (FIL, STARTOFF, ENDOFF) is kept as GAMS
+  leaves it, so a model with OFF ranges passes the all-symbols checks at
+  the checkpoints; the crafted OFF-range states compare it.
