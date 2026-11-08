@@ -1,4 +1,4 @@
-* TIMES.jl crafted case demo12_ucattr (reference/crafted.toml, 9 Nov 2026): user-constraint
+* TIMES.jl crafted case demo12_ucattr (reference/crafted.toml, 8 Nov 2026): user-constraint
 * attributes (uc_*.mod; M1.3 change 22, docs/m13-plan.md) added to TIMES_Demo demo12
 * (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0). No public suite model has them:
 * - ATT_PER (EQE_UCRT, REG1): NEWFLO on the flows of the new nuclear plant, made vintaged

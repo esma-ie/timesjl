@@ -1,6 +1,6 @@
 * TIMES.jl crafted case demo12_ucattr (reference/crafted.toml): TIMES_Demo demo12.run
 * (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0) unchanged but for the include of
-* ucattr.dd after bounds-uc_wsets.dd (9 Nov 2026).
+* ucattr.dd after bounds-uc_wsets.dd (8 Nov 2026).
 $TITLE  TIMES -- VERSION 4.1.0
 OPTION RESLIM=50000, PROFILE=1, SOLVEOPT=REPLACE;
 OPTION ITERLIM=999999, LIMROW=0, LIMCOL=0, SOLPRINT=OFF;

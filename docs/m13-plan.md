@@ -177,7 +177,7 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 - (22) uc_*.mod, the user-constraint attribute factors (`_uc_perdisc`,
   `_uc_perds`, `_uc_fcost` and the term functions in
-  `src/model/equserco.jl`, 9 Nov 2026): PERDISC (several-period terms,
+  `src/model/equserco.jl`, 8 Nov 2026): PERDISC (several-period terms,
   FPD + (COEF_PVT - FPD) for a cumulative constraint), PERIOD and NEWFLO
   (FPD, and for NEWFLO 1/FPD only for the period's vintage or one RVPT
   commissions in it; on NCAP, PERIOD adds the RVPT investments and
