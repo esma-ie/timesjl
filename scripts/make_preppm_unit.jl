@@ -9,8 +9,10 @@
 # The lines are copied unchanged from <TIMES_model dir>/ppmain.mod (L1-247)
 # and preppm.mod (L1-212, which ppmain.mod L248 includes) into one work file
 # and $BATINCLUDEd with `mod` (scripts/gams_replay.jl); their includes
-# (filparam.gms, timslice.mod, pp_off.mod, pp_qaput.mod, prepret.dsc,
-# fillvint.gms, prepparm.gms, fillparm.gms) come from <TIMES_model dir>.
+# (filparam.gms, timslice.mod, pp_off.mod, pp_qaput.mod, curex.gms,
+# prepret.dsc, fillvint.gms, prepparm.gms, fillparm.gms) come from
+# <TIMES_model dir>. %PRF% (curex.gms L71) is FILE=1 (initmty.mod L417);
+# %MX% (curex.gms L81 without a year index) is empty (setglobs.gms L356, L374).
 # %DATAGDX% is NO (prepxtra.mod SAVE only renames a file) and %RETIRE% YES
 # (initmty.mod L454). No SOLVE, so the PyPI demo GAMS will do (on Windows set
 # TJL_PYTHON to the harness venv's python.exe). Writes
@@ -37,10 +39,11 @@ function main(times_dir, gams...)
         write(head, join(vcat(first(readlines(joinpath(times_dir, "ppmain.mod")), 247), pre), "\n") * "\n")
         # %OBMAC% is YES on any GAMS from 23.0 (initmty.mod L21); %RL% as setglobs.gms L317 sets it without G2X6 (L230)
         glob = merge(tm.switches, Dict("DFLBL" => "'0'", "PGPRIM" => "\"'ACT'\"", "DATAGDX" => "NO", "G2X6" => "NO", "OBMAC" => "YES",
-                                       "RL" => "'R.TL:MAX(12,CARD(R.TL))'", "RETIRE" => "'YES'"))
-        gams_replay(tm, [head => "mod"], PREPPM_OUTPUTS; times_dir,
+                                       "RL" => "'R.TL:MAX(12,CARD(R.TL))'", "RETIRE" => "'YES'",
+                                       "PRF" => "FILE=1", "MX" => "''"))
+        gams_replay(tm, [head => "mod"], preppm_outputs(name); times_dir,
                     also_scan=["filparam.gms", "timslice.mod", "pp_off.mod", "pp_qaput.mod", "prepret.dsc", "fillvint.gms", "prepparm.gms",
-                               "fillparm.gms"],
+                               "fillparm.gms", "curex.gms"],
                     skip=union(PPMAIN_HEAD_DECLARED, ["MINYR"], TIMSLICE_DECLARED, declared), setglobals=glob, workdir=work, onmulti=true,
                     bare=Set(PREPPM_BARE), kw...)
         out = joinpath(outroot, name)

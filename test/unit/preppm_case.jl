@@ -41,8 +41,20 @@ The cases run by GAMS:
   TRACKP) and NCAP_OLIFE (NCAP_ELIFE, PRC_CAP cleared).
 - "nointerp": G_NOINTERP = 1: fillparm does nothing, prepparm clears
   INT_DEFAULT for its parameter.
+- "curex": preppm.mod L27-28 with curex.gms (M1.3 change 26). Currencies
+  MUSD, MGBP and MJPY besides MEuro05; REG1 discounts in MEuro05 and MUSD.
+  G_CUREX MUSD->MEuro05 0.9, MGBP->MEuro05 1.15 and ->MUSD 1.3, MJPY->MUSD
+  0.007, and MEuro05->MEuro05 (L18 clears it); REG2's own MUSD->MEuro05 0.8.
+  So in REG1 MUSD goes to MEuro05 and leaves RDCUR, MGBP has two targets and
+  none of its own (dropped), MJPY reaches MEuro05 by the chain of L29-32; in
+  REG2 MUSD and MGBP go to MEuro05, MJPY nowhere. Costs with a temporary
+  attribute (NCAP_COST: an option record carried over, an option -13
+  series removed by L77, EPS, a dropped and a chained currency; FLO_COST,
+  COM_CSTNET into OBJ_COMNT, DAM_COST) and without one (ACT_CSTUP summed
+  with its MEuro05 record and an MGBP record removed by L82, ACT_CSTRMP at
+  REG2's own rate, REG_BNDCST).
 """
-const PREPPM_CASES = ["fill_opts", "prep_opts", "costs_uc_ret", "nointerp"]
+const PREPPM_CASES = ["fill_opts", "prep_opts", "costs_uc_ret", "nointerp", "curex"]
 
 function preppm_start(fixtures, name)
     fx = only(filter(f -> f["prefix"] == "demo12_off", TOML.parsefile(joinpath(fixtures, "public_fixtures.toml"))["fixture"]))
@@ -132,6 +144,25 @@ function preppm_case!(tm, name)
         put!("PRC_REFIT", 3, ("REG1", "COTEELC", "COTNELC1") => 1.0, ("REG1", "COTEOIL", "COTNOIL1") => -2.0)
         put!("NCAP_ILED", 3, ("REG1", "2015", "COTNELC1") => 1.0)
         put!("NCAP_OLIFE", 3, ("REG1", "2010", "CSHEBIO") => 20.0)
+    elseif name == "curex"
+        foreach(c -> register_uel!(tm.data, c), ("MUSD", "MGBP", "MJPY"))
+        add!("CUR", 1, ("MUSD",), ("MGBP",), ("MJPY",))
+        put!("G_DRATE", 3, ("REG1", "2005", "MUSD") => 0.05)
+        put!("G_CUREX", 2, ("MUSD", "MEuro05") => 0.9, ("MGBP", "MEuro05") => 1.15, ("MGBP", "MUSD") => 1.3,
+             ("MJPY", "MUSD") => 0.007, ("MEuro05", "MEuro05") => 2.0)
+        put!("R_CUREX", 3, ("REG2", "MUSD", "MEuro05") => 0.8)
+        nc(p, c, kv...) = [("REG1", y, p, c) => x for (y, x) in kv]
+        put!("NCAP_COST", 4, nc("COTEBIO", "MEuro05", "2010" => 100.0, "2030" => 200.0)..., nc("COTEBIO", "MUSD", "0" => 5.0, "2010" => 50.0)...,
+             nc("COTECOA", "MUSD", "0" => -13.0, "2010" => 1.0, "2030" => 2.0)..., nc("COTEELC", "MGBP", "2015" => 7.0)...,
+             nc("COTEGAS", "MJPY", "2010" => 1000.0)..., nc("COTEOIL", "MUSD", "2010" => E0)...,
+             ("REG2", "2010", "ELCTEGAS00", "MGBP") => 20.0, ("REG2", "2020", "ELCTEGAS00", "MUSD") => 10.0)
+        put!("FLO_COST", 6, ("REG1", "2010", "ELCTNOIL01", "ELC", "ANNUAL", "MUSD") => 2.0)
+        put!("COM_CSTNET", 5, ("REG1", "2010", "DAOT", "ANNUAL", "MUSD") => 10.0, ("REG1", "2010", "DAOT", "ANNUAL", "MEuro05") => 1.0)
+        put!("DAM_COST", 4, ("REG1", "2010", "TOTCO2", "MUSD") => 10.0)
+        put!("ACT_CSTUP", 5, ("REG1", "2010", "ELCTEGAS00", "DAYNITE", "MUSD") => 10.0,
+             ("REG1", "2010", "ELCTEGAS00", "DAYNITE", "MEuro05") => 1.0, ("REG1", "2020", "ELCTEGAS00", "DAYNITE", "MGBP") => 3.0)
+        put!("ACT_CSTRMP", 5, ("REG2", "2010", "ELCTEGAS00", "UP", "MUSD") => 4.0)
+        put!("REG_BNDCST", 5, ("REG2", "2020", "INV", "MGBP", "UP") => 100.0, ("REG2", "2020", "INV", "MEuro05", "UP") => 50.0)
     elseif name == "nointerp"
         put!("G_NOINTERP", 0, () => 1.0)
         put!("NCAP_AFA", 4, afa("COTEGAS", "0" => 2.0, "2012" => 0.1, "2031" => 0.4)...)
@@ -151,3 +182,10 @@ const PREPPM_OUTPUTS = vcat(["MODLYEAR", "DATAYEAR", "DM_YEAR", "FIL2", "MY_FIL"
                              "PRC_SIMV", "PRC_VINT", "G_RFRIR", "UC_TIME", "RCAP_BND", "PRC_RCAP", "RCAP_BLK", "RCAP_OCAP", "NCAP_OLIFE",
                              "RTP_VARP", "PRC_CAP", "INT_DEFAULT", "RTP", "RVP", "TRACKP", "UNCD7", "MY_ARRAY", "MY_FIL2",
                              "CNT", "DFUNC", "MY_F", "F", "Z", "LAST_VAL", "FIRST_VAL", "MY_FYEAR"], TIMES.PREPPM_PARAMS)
+
+"What curex.gms (preppm.mod L27-28) writes besides `PREPPM_OUTPUTS`, compared in the \"curex\" case only."
+const CUREX_OUTPUTS = ["R_CUREX", "RDCUR", "CURMAP", "RXX", "COM_BPRICE", "COM_CSTNET", "COM_TAXNET", "COM_SUBNET", "COM_CSTPRD",
+                       "COM_TAXPRD", "COM_SUBPRD", "REG_CUMCST", "ACT_CSTPL"]
+
+"The outputs compared for a crafted case."
+preppm_outputs(name) = name == "curex" ? vcat(PREPPM_OUTPUTS, CUREX_OUTPUTS) : PREPPM_OUTPUTS

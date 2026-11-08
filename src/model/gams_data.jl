@@ -307,10 +307,12 @@ A set that only exists when an extension is loaded (e.g. VDA's
 `RPS_CAFLAC`, declared in init_ext.vda L23): the dumped set if the run
 declared it, otherwise an empty set. GAMS code that refers to such a set is
 only compiled with the extension, so an undeclared set has no effect, which
-an empty set reproduces.
+an empty set reproduces. A set TIMES.jl has computed (`gput!`) is returned
+even when the dump does not declare it (curex.gms declares CURMAP only when
+it is included; a crafted state can switch it on).
 """
 function gset_opt(d::DumpData, name::AbstractString, N::Int)
-    Reference.has_symbol(d.dump, name) && return gset(d, name)
+    (haskey(d.sets, uppercase(name)) || Reference.has_symbol(d.dump, name)) && return gset(d, name)
     return GamsSet{N}(uppercase(name), NTuple{N,String}[], Set{NTuple{N,String}}())
 end
 
@@ -319,10 +321,11 @@ end
 
 A parameter that only exists when an extension or option declares it (e.g.
 `RTP_FFCS`, tested with `\$IF DEFINED`): the dumped parameter if the run
-declared it, otherwise an empty one, which reads as zero everywhere.
+declared it, otherwise an empty one, which reads as zero everywhere. A
+parameter TIMES.jl has computed (`gput!`) is returned as for `gset_opt`.
 """
 function gparam_opt(d::DumpData, name::AbstractString, N::Int)
-    Reference.has_symbol(d.dump, name) && return gparam(d, name)
+    (haskey(d.params, uppercase(name)) || Reference.has_symbol(d.dump, name)) && return gparam(d, name)
     return GamsParam{N}(uppercase(name), NTuple{N,String}[], Dict{NTuple{N,String},Float64}())
 end
 
