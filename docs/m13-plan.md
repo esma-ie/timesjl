@@ -177,7 +177,7 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 - (21) equserco.mod L80-106 with uc_pasti.mod, dynamic user constraints in
   the RHS direction (`uc_dyn_rhs!`, `uc_pasti!`, `uc_tmap` in
-  `src/model/equserco.jl`, 9 Nov 2026). A dynamic constraint takes the RHS
+  `src/model/equserco.jl`, 8 Nov 2026). A dynamic constraint takes the RHS
   direction when SUM(UC_DYNDIR(R,UC_N,'RHS'),1) holds, with R the row's
   region or, for EQE_UCSU and EQE_UCSUS, any region. Its terms come from
   UC_TMAP(T,LL,TT,SIDE,UC_DYNT) (eqmain.mod L211-215, built here and equal
