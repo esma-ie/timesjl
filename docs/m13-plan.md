@@ -175,6 +175,33 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 ## Findings so far
 
+- (22) uc_*.mod, the user-constraint attribute factors (`_uc_perdisc`,
+  `_uc_perds`, `_uc_fcost` and the term functions in
+  `src/model/equserco.jl`, 9 Nov 2026): PERDISC (several-period terms,
+  FPD + (COEF_PVT - FPD) for a cumulative constraint), PERIOD and NEWFLO
+  (FPD, and for NEWFLO 1/FPD only for the period's vintage or one RVPT
+  commissions in it; on NCAP, PERIOD adds the RVPT investments and
+  COEF_RPTI - PROD(RVPT,2)), EFF (XOR the COMNET/COMPRD group type), CAPACT,
+  BUILDUP (1/LEAD), and the cost attributes COST, DELIV, TAX and SUB on FLO
+  and IRE (OB_FCOS, OB_FDEL, MIN/MAX(0,OB_FTAX) over RDCUR and TS_ANN), ACT
+  (OB_ACT), NCAP (OB_ICOST + OB_ITAX - OB_ISUB) and COMPRD/COMNET (OBJ_COMPD,
+  OBJ_COMNT per attribute). Still refused: ANNUL with INVCOST, INVTAX,
+  INVSUB (uc_ncap.mod L39 reads CST_ANNC of eqbndcst.mod) and ONLINE
+  (uc_cap.mod L36-42, the VDA RS family's VAR_UPS terms). RVPT (eqmain.mod
+  L199-201) is read from the dump: its loop is over OBJ_2A at milestone
+  years, so it is empty on OTUS9r, whose OBJ_2A entries are all past
+  vintages. No suite model has these attributes (TIMES-NZ's SYNC came in
+  with change 21), so the check is the crafted case TIMES_Demo-demo12_ucattr
+  (`reference/dd/demo12_ucattr/`: five constraints with every translated
+  attribute, CUMSUM and CUM+ entries of UC_TMAP, and a vintaged nuclear
+  plant with a 6-year lead time so that RVPT has a cross-period and three
+  same-period entries): the user-constraint rows match CONVERT on both
+  variants (39 rows; 1,083 checks reduce_off), the M1.3 probe 54 of 54 and
+  chain PASS on both variants, the whole model 35 of 35 checks (objective
+  23,981,380.11 by CPLEX and HiGHS); CI fixtures `demo12_ucattr` and
+  `test_equserco_attr.jl`. The rewritten term functions leave the core
+  models' user-constraint rows as GAMS has them (TIMES-NZ, OTCGEN, OTNYC,
+  OTUS9r reduce_off, every UC row against CONVERT).
 - (21) equserco.mod L80-106 with uc_pasti.mod, dynamic user constraints in
   the RHS direction (`uc_dyn_rhs!`, `uc_pasti!`, `uc_tmap` in
   `src/model/equserco.jl`, 9 Nov 2026). A dynamic constraint takes the RHS

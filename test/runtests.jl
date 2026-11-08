@@ -130,6 +130,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "User constraints: the dynamic RHS direction, equserco.mod L80-106 (M1.3)" begin
         include("unit/test_equserco_dyn.jl")
     end
+    @testset "User constraints: the attribute factors of uc_*.mod (M1.3)" begin
+        include("unit/test_equserco_attr.jl")
+    end
     @testset "demo12 variants: advanced features (docs/demo12-variants.md)" begin
         include("unit/test_variants.jl")
     end

@@ -580,3 +580,8 @@ those checks, their figures and their crafted cases are not published
   and passes layers 2-3 on both variants; every TIMES-NZ user-constraint
   row matches CONVERT; crafted case TIMES_Demo-demo12_ucdyn (CI fixtures)
   passes the M1.3 chain and layers 1-3.
+- 9 Nov 2026: M1.3 (22): the user-constraint attribute factors of uc_*.mod
+  (PERDISC, PERIOD, NEWFLO, EFF, CAPACT, BUILDUP, COST, DELIV, TAX, SUB);
+  ANNUL and ONLINE stay refused. Crafted case TIMES_Demo-demo12_ucattr (CI
+  fixtures) passes the M1.3 chain and layers 1-3; the core models' UC rows
+  are unchanged.
