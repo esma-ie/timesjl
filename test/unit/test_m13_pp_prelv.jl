@@ -20,8 +20,8 @@ const PRELV_STEPS = (preppm_shape!, ppmain_topo!, ppmain_tslvl!, ppmain_life!, p
     names = pp_prelv_symbols(tm)
     r = layer1(tm, DumpData(joinpath(FIXTURES, "demo12_off_prelv")), names)
     foreach(d -> ispass(d) || println(d, " ", d.examples), r)
-    @test length(names) == 821 && all(ispass, r)
-    @test !("PUTOUT" in names) && "TOP_IRE" in names
+    @test length(names) == 824 && all(ispass, r)
+    @test "PUTOUT" in names && "TOP_IRE" in names                 # the QA-log scalars too (M1.3 change 25b-1)
     # L111: without IRE_BND every dummy import from IMPEXP goes
     @test !any(k -> k[1] == "IMPEXP" && k[5] == "IMPNRGZ", gset(tm, "TOP_IRE").keys)
 end
