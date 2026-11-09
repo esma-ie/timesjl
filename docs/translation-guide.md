@@ -619,3 +619,6 @@ those checks, their figures and their crafted cases are not published
   rules G53, the compile-warnings line G54) and every pp_qaput call of
   preprocessing. The harness keeps QA_CHECK.LOG (0.3.2); the gate and the
   CI chain compare the log at ppm and the QA scalars at every checkpoint.
+- 9 Nov 2026: M1.3 (25b-2): pp_qack.mod's checks, extended ones included,
+  'ALL QUALITY CHECKS PASSED' and the ERRLEV abort. The whole QA log is
+  compared at presolve (gate, CI chain).

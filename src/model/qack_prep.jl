@@ -9,7 +9,7 @@
 # (L150, L164) and runs the quality checks; their scratch sets are cleared again, but TS_ARRAY,
 # PRC_YMAX, UNCD7 and Z keep what the checks leave. solve.mod L1 includes pp_clean.mod, which zeroes
 # FLO_SUM, FLO_FUNC, NCAP_AF, NCAP_AFA, NCAP_AFS and the cost attributes to free memory unless
-# MEMCLEAN is NO. The QA log itself (PUT QLOG, pp_qaput.mod, PUTOUT/PUTGRP/ERRLEV) is change 25b.
+# MEMCLEAN is NO. The QA log (PUT QLOG, pp_qaput.mod, PUTOUT/PUTGRP/ERRLEV) is written by qack_log.jl (change 25b-2).
 #
 # Not translated (UnportedError): nested user constraints (pp_qack.mod L53, UC_UCN data); %TIMESED%
 # (L97); stochastic or stepped runs.
@@ -135,7 +135,9 @@ end
 """
     pp_qack_data!(tm) -> tm
 
-The data statements of pp_qack.mod (the QA log's PUT statements and its scalars are change 25b):
+The data statements of pp_qack.mod, with its QA checks (`qack_checks!`, qack_log.jl, M1.3 change 25b-2)
+called where the file makes them and the end of the file (`qack_finish!`: the ERRLEV abort, the
+scalars cleared):
 
     RPC_CONLY(RTPC(R,T,P,C))\$RPC_NOFLO(R,P,C) = YES; RTPCS_VARF(RPC_CONLY,S) = NO;                (L45-47)
     RCS_COMBAL(RHS_COMBAL,BDNEQ) = NO;                                                              (L49)
@@ -169,6 +171,7 @@ function pp_qack_data!(tm::TimesModel)
     nz(x::GNum) = x.v != 0 || x.eps
     uppercase(gswitch(tm, "TIMESED", "")) == "YES" && throw(UnportedError("pp_qack.mod L97: %TIMESED%"))
     isempty(P("UC_UCN", 5)) || throw(UnportedError("pp_qack.mod L53: nested user constraints (UC_UCN)"))
+    qack_open!(tm)                                                             # L37-41
     T = S("MILESTONYR", 1)
     # L45-47
     noflo = S("RPC_NOFLO", 3)
@@ -231,6 +234,8 @@ function pp_qack_data!(tm::TimesModel)
         end
     end
     gput!(tm, "TS_ARRAY", ts_array)
+    # L62-159: the QA checks on the state they see (PRC_CG before L147 and L160)
+    foreach(part -> qack_checks!(tm, part), (:yrfr, :topology, :commodity, :demand, :phantom, :pcg))
     # L129-150: TRACKC, TRACKPC and PRC_CG cleared
     gput!(tm, "TRACKC", Set{NTuple{2,String}}())
     # L164: PRC_CG(RP_PG(R,P,CG)) $= SUM(RPC_AFLO(R,P,C)$(NOT RPC_FFUNC(R,P,C)),1)
@@ -241,6 +246,8 @@ function pp_qack_data!(tm::TimesModel)
         any(k -> !(k in ffunc), get(aflo_of, (r, p), NTuple{3,String}[])) && push!(prc_cg, (r, p, cg))
     end
     gput!(tm, "PRC_CG", prc_cg)
+    # L161-182: the QA checks after L160
+    foreach(part -> qack_checks!(tm, part), (:fsemit, :refit, :afx))
     # L172: OPTION PRC_YMAX < PRC_REFIT (counts per (R, the last PRC)); entries of 1 removed
     ymax = Dict{NTuple{2,String},Float64}()
     for (r, prc, p) in P("PRC_REFIT", 3).keys
@@ -253,6 +260,7 @@ function pp_qack_data!(tm::TimesModel)
     xtqa = uppercase(gswitch(tm, "VDA", "")) == "YES" &&
            (uppercase(gswitch(tm, "XTQA", "")) == "YES" || uppercase(gswitch(tm, "DEBUG", "")) == "YES")
     if xtqa
+        qack_checks!(tm, :xtqa)                                                # the checks (qack_log.jl)
         gput!(tm, "RXX", Set{NTuple{3,String}}())
         for (name, n) in (("FSCK", 5), ("CG_GRP", 4), ("RP_CCG", 4), ("RP_GRP", 3), ("RVP", 3))
             gput!(tm, name, Set{NTuple{n,String}}())
@@ -282,6 +290,7 @@ function pp_qack_data!(tm::TimesModel)
             gput_scalar!(tm, "Z", z)
         end
     end
+    qack_finish!(tm)                                                           # L374-387
     return tm
 end
 
