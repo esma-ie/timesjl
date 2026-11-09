@@ -630,3 +630,10 @@ those checks, their figures and their crafted cases are not published
   allocation data stay refused (27a-2).
 - 9 Nov 2026: M1.3 (27b): powerflo.vda DECL and EQ_GR_POWFLO, phase-angle
   grids; demo12_pf passes layers 2-3 in both variants (CI public fixture).
+- 9 Nov 2026: M1.3 (25c): the reduced flows of the coefficient stage
+  (coef_ptr.mod L38-42, coef_ext.vda L62-75), approved by James (#81). The
+  gate chains every core run and the demo12 cases, both variants, from the
+  input dump to presolve on every symbol.
+- 9 Nov 2026: M1.4 starts (James), alongside the end of M1.3, as CLAUDE.md
+  allows; its gate waits for the M1.3 gate. Plan: docs/m14-plan.md (five
+  changes, each checked against the `input/` dumps).
