@@ -81,6 +81,35 @@ gput_scalar!(tm, name, x::Real) = gput!(tm, name, iszero(x) ? Dict{Tuple{},Float
 gput_scalar!(tm, name, x::GNum) = gput!(tm, name, x.eps ? Dict{Tuple{},Float64}(() => 0.0) : iszero(x.v) ? Dict{Tuple{},Float64}() :
                                                       Dict{Tuple{},Float64}(() => x.v))
 
+"The scratch scalars filparam.gms and fillcost.gms write."
+const FIL_SCRATCH = ("F", "Z", "MY_F", "DFUNC", "LAST_VAL", "FIRST_VAL", "MY_FYEAR")
+
+"""
+    FilScratch(tm)
+
+The scratch scalars of filparam.gms (L23-40) and fillcost.gms (L27-35),
+carried from tuple to tuple and from call to call as GAMS does: each call
+resets only some of them per tuple (filparam F, Z, MY_FYEAR; fillcost F,
+LAST_VAL), so what the last call leaves depends on the earlier tuples and
+calls too. Read from `tm` at the start of coef_obj.mod and written back by
+`put_fil_scratch!` after its last fillcost call (L151). CNT is not kept:
+fillcost.gms L33's `FOR(CNT=MY_FYEAR-Z+1 TO -1, ...)` starts at 0 or below
+for data years at least one apart, so it always leaves CNT at 0, which
+coef_nio.mod L59 has already cleared.
+"""
+mutable struct FilScratch
+    F::GNum
+    Z::GNum
+    MY_F::GNum
+    DFUNC::GNum
+    LAST_VAL::GNum
+    FIRST_VAL::GNum
+    MY_FYEAR::GNum
+end
+FilScratch(tm) = FilScratch((gv(gparam_opt(tm.data, n, 0), ()) for n in FIL_SCRATCH)...)
+"Write the scratch scalars back to `tm`, as the last filparam/fillcost call leaves them (EPS kept)."
+put_fil_scratch!(tm, s::FilScratch) = foreach(n -> gput_scalar!(tm, n, getfield(s, Symbol(n))), FIL_SCRATCH)
+
 """
     filparam_gdrate!(tm, ax, fil) -> Dict
 
@@ -90,17 +119,23 @@ extrapolated over FIL, by the option in G_DRATE(R,'0',CUR) (DFUNC: < 0 none;
 1 interpolation only; 2 EPS outside the data; 4 no forward, 5 no backward
 extrapolation; above 10 by its last digit). Returns the new G_DRATE values.
 
+The tuples are taken in GAMS order and the scratch scalars carried in
+`scratch` (`FilScratch`), which is left as the last tuple leaves it.
+
 GAMS: filparam.gms L19-42 (coef_obj.mod L41), v4.9.7.
 """
-function filparam_gdrate!(tm, ax::YearAxis, fil::Set{String})
+function filparam_gdrate!(tm, ax::YearAxis, fil::Set{String}; scratch::FilScratch=FilScratch(tm))
     gd = gvalues(tm, "G_DRATE", 3)
-    # L21: UNCD7(R,CUR,...) for every (R,CUR) with a record in any year
-    tuples = Set((k[1], k[3]) for k in keys(gd))
+    # L21: UNCD7(R,CUR,...) for every (R,CUR) with a record in any year, looped in GAMS order
+    tuples = collect(Set((k[1], k[3]) for k in keys(gd)))
+    gams_sort!(tuples, tm.data)
     byrc = Dict{Tuple{String,String},Dict{String,Float64}}()
     for ((r, y, c), v) in gd
         get!(() -> Dict{String,Float64}(), byrc, (r, c))[y] = v
     end
-    first_val, last_val = GZERO, GZERO                     # scalars keep their values across tuples
+    s = scratch
+    first_val, last_val, my_f = s.FIRST_VAL, s.LAST_VAL, s.MY_F   # scalars keep their values across tuples
+    F, Z, my_fyear, dfunc = s.F.v, s.Z.v, s.MY_FYEAR.v, Float64(s.DFUNC)
     for (r, c) in tuples
         F, Z, my_fyear = 0.0, Inf, 9999.0                  # L23
         recs = byrc[(r, c)]
@@ -143,6 +178,8 @@ function filparam_gdrate!(tm, ax::YearAxis, fil::Set{String})
             iszero(x) || gassign!(gd, (r, ll, c), x)     # $=
         end
     end
+    s.F, s.Z, s.MY_F, s.DFUNC = GNum(F), GNum(Z), my_f, GNum(dfunc)
+    s.LAST_VAL, s.FIRST_VAL, s.MY_FYEAR = last_val, first_val, GNum(my_fyear)
     return gd
 end
 
@@ -156,12 +193,16 @@ between them and extrapolated (first value backward where `bext(t, year)`,
 last value forward where `fext(t, year)`). Returns the cache keyed by the
 other indices then the year: with `%OBMAC%` YES (`data_years = true`, L37)
 it holds the data years too; otherwise only the filled years, which
-fillcost.gms L41 writes back into the source parameter.
+fillcost.gms L41 writes back into the source parameter. With `scratch`
+(a `FilScratch`) and `data` (the model's DumpData, for the GAMS order of the
+tuples), the scratch scalars are carried in and left as the last tuple of
+the UNCD7 loop leaves them.
 
 GAMS: fillcost.gms L19-42, v4.9.7.
 """
 function fillcost(src::Dict{NTuple{N,String},Float64}, take, ax::YearAxis, fil::Vector{String}, dm_year::Vector{String};
-                  bext=(t, y) -> true, fext=(t, y) -> true, data_years::Bool) where {N}
+                  bext=(t, y) -> true, fext=(t, y) -> true, data_years::Bool,
+                  scratch::Union{Nothing,FilScratch}=nothing, data=nothing) where {N}
     filset = Set(fil)
     dm = Set(dm_year)
     # L26: UNCD7(R,'0',rest)$take $= SRC(R,LL,rest), every year
@@ -173,8 +214,14 @@ function fillcost(src::Dict{NTuple{N,String},Float64}, take, ax::YearAxis, fil::
         k[2] in dm && (b[k[2]] = v)
     end
     cache = Dict{NTuple{N,String},Float64}()
-    first_val, my_fyear, Z = GZERO, 0.0, 0.0               # kept across tuples (L27 resets only F, LAST_VAL)
-    for (t, b) in bucket
+    # L27: LOOP(UNCD7(R,YEAR,rest), ...) in GAMS order (YEAR is the one label '0', so the order of (R,rest))
+    tuples = collect(keys(bucket))
+    data === nothing || gams_sort!(tuples, data)
+    s = scratch === nothing ? FilScratch(GZERO, GZERO, GZERO, GZERO, GZERO, GZERO, GZERO) : scratch
+    first_val, my_fyear, Z, my_f = s.FIRST_VAL, s.MY_FYEAR.v, s.Z.v, s.MY_F   # kept across tuples
+    F, last_val = s.F.v, s.LAST_VAL                        # L27 resets these two
+    for t in tuples
+        b = bucket[t]
         F, last_val = 0.0, GZERO
         my_fil2 = Dict{String,GNum}()
         # L30-35: the data years in DM_YEAR order
@@ -184,6 +231,7 @@ function fillcost(src::Dict{NTuple{N,String},Float64}, take, ax::YearAxis, fil::
             my_f = v == 0.0 ? GEPS : GNum(v)
             Zy = ax.yearval[y]
             if !iszero(last_val)                           # IF(LAST_VAL, ...): EPS is true
+                # GAMS sets LAST_VAL to the slope here (L33); L35 sets it to MY_F again, so only the end shows
                 slope = (my_f - last_val) / GNum(Zy - my_fyear)
                 for cnt in Int(my_fyear - Zy + 1):-1
                     yt = lead(ax, y, cnt)
@@ -209,6 +257,9 @@ function fillcost(src::Dict{NTuple{N,String},Float64}, take, ax::YearAxis, fil::
             x = gif(first_val, bext(t, yv) && yv < F) + get(my_fil2, y, GZERO) + gif(last_val, fext(t, yv) && yv > Z)
             iszero(x) || (cache[(t..., y)] = x.eps ? 0.0 : x.v)
         end
+    end
+    if scratch !== nothing
+        s.F, s.Z, s.MY_F, s.LAST_VAL, s.FIRST_VAL, s.MY_FYEAR = GNum(F), GNum(Z), my_f, last_val, first_val, GNum(my_fyear)
     end
     return cache
 end
@@ -282,7 +333,8 @@ function coef_obj!(tm)
     gput_scalar!(tm, "ACL", 0.0)
 
     # L41: interpolate the discount rates
-    gd = filparam_gdrate!(tm, ax, fil)
+    scratch = FilScratch(tm)                    # filparam.gms and fillcost.gms scratch, carried call to call
+    gd = filparam_gdrate!(tm, ax, fil; scratch)
     gdv(r, y, c) = gv(gd, (r, y, c))
 
     # L45-54: OBJ_DISC, cumulative from YR_V1, normalised to the base year
@@ -471,10 +523,11 @@ function coef_obj!(tm)
     bext(t, y) = y >= pymin(t[1], t[2])
     fext(t, y) = y <= pymax(t[1], t[2])
     for (n, cache) in (("NCAP_COST", "OB_ICOST"), ("NCAP_ISUB", "OB_ISUB"), ("NCAP_ITAX", "OB_ITAX"))
-        gput!(tm, cache, fillcost(gvalues(tm, n, 4), take_rd, ax, fil_inv, dm_year; bext, fext, data_years=true))
+        gput!(tm, cache, fillcost(gvalues(tm, n, 4), take_rd, ax, fil_inv, dm_year; bext, fext, data_years=true,
+                                  scratch, data=tm.data))
     end
     # L123-124: NCAP_ISPCT into X_RP, then OB_ISUB(RP,CUR,YEAR)$X_RP $= OB_ICOST*X_RP
-    x_rp = fillcost(ispct, t -> true, ax, fil_inv, dm_year; bext, fext, data_years=true)
+    x_rp = fillcost(ispct, t -> true, ax, fil_inv, dm_year; bext, fext, data_years=true, scratch, data=tm.data)
     if !isempty(x_rp)
         ob_isub = gvalues(tm, "OB_ISUB", 4)
         ob_icost = gparam(tm, "OB_ICOST")
@@ -489,7 +542,8 @@ function coef_obj!(tm)
     gput!(tm, "X_RP", Dict{NTuple{3,String},Float64}())
     for (n, cache) in (("NCAP_FOM", "OB_FOM"), ("NCAP_FSUB", "OB_FSB"), ("NCAP_FTAX", "OB_FTX"),
                        ("NCAP_DCOST", "OB_DCC"), ("NCAP_DLAGC", "OB_DLC"))
-        gput!(tm, cache, fillcost(gvalues(tm, n, 4), take_rd, ax, fil_inv, dm_year; bext, fext, data_years=true))
+        gput!(tm, cache, fillcost(gvalues(tm, n, 4), take_rd, ax, fil_inv, dm_year; bext, fext, data_years=true,
+                                  scratch, data=tm.data))
     end
 
     # L135-136: FIL for the variable costs: the milestones with VARCOST LIN, else Y_EOH from MIYR_V1
@@ -502,16 +556,17 @@ function coef_obj!(tm)
     # L140: activity costs
     rpset = S1("RP")
     gput!(tm, "OB_ACT", fillcost(gvalues(tm, "ACT_COST", 4), t -> (t[1], t[2]) in rpset, ax, fil_var_sorted, dm_year;
-                                 data_years=true))
+                                 data_years=true, scratch, data=tm.data))
     # L143-145: commodity and trade costs, filled years written back (no cache)
     for n in ("OBJ_COMNT", "OBJ_COMPD")
         p = gvalues(tm, n, 6)
-        fillcost_writeback!(p, fillcost(p, t -> (t[1], t[2], t[3]) in com_ts, ax, fil_var_sorted, dm_year; data_years=false))
+        fillcost_writeback!(p, fillcost(p, t -> (t[1], t[2], t[3]) in com_ts, ax, fil_var_sorted, dm_year; data_years=false,
+                                        scratch, data=tm.data))
         gput!(tm, n, p)
     end
     rpcs_var = S1("RPCS_VAR")
     fillcost_writeback!(ipric, fillcost(ipric, t -> (t[1], t[2], t[3], t[4]) in rpcs_var, ax, fil_var_sorted, dm_year;
-                                        data_years=false))
+                                        data_years=false, scratch, data=tm.data))
     gput!(tm, "OBJ_IPRIC", ipric)
     gput!(tm, "OB_COM", Dict{NTuple{6,String},Float64}())
     gput!(tm, "OB_IRE", Dict{NTuple{7,String},Float64}())
@@ -519,8 +574,9 @@ function coef_obj!(tm)
     annual = mem("ANNUAL")
     take_flo(t) = (t[1], t[2], t[3], t[4]) in rpcs_var || t[4] in annual
     for (p, cache) in ((flo_cost, "OB_FCOS"), (flo_deliv, "OB_FDEL"), (fsub, "OB_FTAX"))
-        gput!(tm, cache, fillcost(p, take_flo, ax, fil_var_sorted, dm_year; data_years=true))
+        gput!(tm, cache, fillcost(p, take_flo, ax, fil_var_sorted, dm_year; data_years=true, scratch, data=tm.data))
     end
+    put_fil_scratch!(tm, scratch)               # as the last fillcost call (L151) leaves them
 
     # L153-154: OPTION CLEAR=PRC_YMIN, PRC_YMAX, RPC_CUR, OBJ_FSUB
     gput!(tm, "PRC_YMIN", Dict{NTuple{2,String},Float64}())

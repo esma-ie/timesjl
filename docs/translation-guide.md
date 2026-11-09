@@ -610,3 +610,8 @@ those checks, their figures and their crafted cases are not published
   the pre-solve dump matches on the core models and twelve demo12 cases;
   the CI chain runs end to end on demo12 (input dump to the model, layers
   1-3). Change 25 is complete; 25b (the QA log) is next.
+- 9 Nov 2026: M1.3 (25-5): the coefficient stage leaves filparam.gms's,
+  fillcost.gms's and coef_ext.vda L23's scratch scalars as GAMS does, so
+  the CI chain checks every symbol at coef and presolve, and
+  scripts/m13_gate.jl chains on from ppm to presolve (reduce_off; the
+  as_run variants stop at the coefficient stage's reduced flows).
