@@ -1,13 +1,22 @@
-# M1.4 changes 2-4: GAMS's compile phase for a TIMES run, from the .run file to `$BATINCLUDE maindrv.mod`.
+# M1.4 changes 2-4 and 2b: GAMS's compile phase for a TIMES run, the whole program.
 #
 # GAMS: the .run file, initsys.mod L17-187 (with units.def, maplists.def, globals.def), initmty.mod
-# L19-508, main_ext.mod L1-23 and the extension declarations initmty.dsc, initmty.vda; v4.9.7.
+# L19-508, main_ext.mod L1-23 and the extension declarations initmty.dsc, initmty.vda; v4.9.7. With
+# `full=true` (change 2b) also maindrv.mod and every file it includes, for their declarations and
+# compile-time data: GAMS compiles the whole program before it runs any of it, so the input dump
+# holds every symbol TIMES declares and the data its later files give at compile time. Their
+# executable statements run after the input checkpoint, in TIMES.jl's own translation, so are skipped.
 # The run file and the TIMES files are read with src/dd/ddparse.jl; this file does what the GAMS
 # compiler does with them, in order: the dollar-control lines ($SET, $IF, $BATINCLUDE, $KILL, $ONEPS,
 # ...), the declarations (with $ONMULTI), the data statements (domain checks, $ONEPS, label order),
 # and it queues the executable statements, which run when compilation ends, as GAMS runs them, by the
 # hand-written Julia in `INIT_EXEC` (each cites its line). The result is what the harness's input
-# dump holds (`execute_unload` just before maindrv.mod): every symbol, its records, and the labels.
+# dump holds (`execute_unload` just before maindrv.mod): every symbol, its records, and the labels;
+# `g.trace` is the listing's Include File Summary, checked against GAMS's by scripts/m14_probe.jl.
+#
+# Known gap: an assignment compiled after maindrv.mod makes its symbol DEFINED for a later
+# `$IF DEFINED` (G35); the reader marks only data statements and macros. No open suite model's
+# include trace depends on it (every one matches GAMS's); to be closed with a GAMS experiment.
 #
 # GAMS rules followed (GAMS 54 manual: Dollar Control Options; Data Entry; Compile-Time Variables),
 # and the checks that confirm each against the input/ dumps are in docs/m14-plan.md. Behaviour not
@@ -52,13 +61,22 @@ mutable struct GamsCompile
     warnlog::Vector{String}
     exec::Vector{Tuple{String,Int,String}}    # executable statements queued: file, line, text
     dirs::Vector{String}              # include search path after the including file's folder
-    done::Bool                        # reached $BATINCLUDE maindrv.mod
+    done::Bool                        # reached $BATINCLUDE maindrv.mod (or, with `full`, the end of the run file)
     licencelevel::Int                 # %SYSTEM.LICENSELEVEL% (run option; docs/m14-plan.md, decision 1 of #84)
+    full::Bool                        # compile maindrv.mod and what it includes too (change 2b)
+    later::Bool                       # past `$BATINCLUDE maindrv.mod`: executable statements are not queued
+    pending::String                   # a statement of TIMES code still open at a dollar line
+    pendline::Int
+    eolcom::String                    # $EOLCOM marker ("" when off)
+    trace::Vector{Tuple{Int,String}}  # the files included: level, name (the listing's Include File Summary)
+    macros::Set{String}               # $MACRO names (upper case): DECLARED and DEFINED hold for them (VNRET)
+    refs::Set{String}                 # names compiled code refers to (G57: GDX leaves out unreferenced variables)
 end
 
-function GamsCompile(; dirs=String[], licencelevel::Int=0)
+function GamsCompile(; dirs=String[], licencelevel::Int=0, full::Bool=false)
     GamsCompile(Dict{String,String}(), GLevel[], Dict{String,GSym}(), 0, LabelTable(),
-        false, false, false, false, 0, String[], Tuple{String,Int,String}[], String.(dirs), false, licencelevel)
+        false, false, false, false, 0, String[], Tuple{String,Int,String}[], String.(dirs), false, licencelevel,
+        full, false, "", 0, "", Tuple{Int,String}[], Set{String}(), Set{String}())
 end
 
 compile_error(file, line, msg) = throw(DDSyntaxError(file, line, msg))
@@ -79,8 +97,9 @@ gisset(g::GamsCompile, name) = gvar(g, name) !== nothing
 
 const G_SYSTEM = Dict("SYSTEM.TITLE" => "TIMES", "SYSTEM.INCPARENT" => "")
 
-# Substitute %name% (defined names only; an undefined one stays as written) and %1..%9 (arguments of
-# the current include level; a missing argument is empty, as in GAMS)
+# Substitute %name% (defined names only; an undefined one stays as written) and %1, %2, ..., %12
+# (arguments of the current include level, any number of digits: uc_flo.mod L27 has %11 and %12; a
+# missing argument is empty, as in GAMS)
 function gsubst(g::GamsCompile, s::AbstractString)
     occursin('%', s) || return String(s)
     s = replace(s, r"%([A-Za-z_][A-Za-z0-9_.]*)%" => function (m)
@@ -91,7 +110,7 @@ function gsubst(g::GamsCompile, s::AbstractString)
         v = gvar(g, n)
         v === nothing ? m : v
     end)
-    replace(s, r"%([1-9])" => function (m)
+    replace(s, r"%([1-9][0-9]*)" => function (m)
         i = parse(Int, m[2:end])
         args = isempty(g.stack) ? String[] : g.stack[end].args
         i <= length(args) ? args[i] : ""
@@ -150,10 +169,14 @@ function gdeclare!(g::GamsCompile, kind::Symbol, name::AbstractString, domain, t
 end
 
 function galias!(g::GamsCompile, names, file, line)
-    target = names[1]
+    # the set is the name that exists (or *), in any position: ALIAS(LIFE,AGE), setglobs.gms L283
+    ti = findfirst(n -> n == "*" || (x = get(g.syms, uppercase(n), nothing); x !== nothing && x.kind !== :alias), names)
+    ti === nothing && (ti = findfirst(n -> haskey(g.syms, uppercase(n)), names))
+    ti === nothing && compile_error(file, line, "ALIAS of unknown sets $(join(names, ", "))")
+    target = names[ti]
     t = target == "*" ? nothing : gsym(g, target)
-    target == "*" || t !== nothing || compile_error(file, line, "ALIAS of an unknown set $target")
-    for n in names[2:end]
+    for (j, n) in enumerate(names)
+        j == ti && continue
         k = uppercase(n)
         haskey(g.syms, k) && (g.syms[k].kind === :alias || compile_error(file, line, "ALIAS $n: already a $(g.syms[k].kind)"))
         haskey(g.syms, k) && continue
@@ -212,7 +235,10 @@ function gput!(g::GamsCompile, s::GSym, key::Vector{String}, text, val, doms, fi
         s.members[key] = old === nothing || !isempty(strip(text)) ? String(text) : old
     else
         v, sp = val
-        if sp === :none && v == 0.0
+        if sp === :none && v == 0.0 && isempty(key)
+            # a scalar's 0 stays 0 under $ONEPS (ACL, ERRLEV, ... in the input dumps)
+            s.vals[key] = (0.0, :none)
+        elseif sp === :none && v == 0.0
             # a zero in data: EPS under $ONEPS; otherwise not stored (and an earlier value removed:
             # UNCONFIRMED for a data statement under $ONMULTI)
             g.oneps ? (s.vals[key] = (0.0, :eps)) : delete!(s.vals, key)
@@ -224,8 +250,18 @@ end
 
 # ---- statements ---------------------------------------------------------------------------------
 
-function gstatements!(g::GamsCompile, text::AbstractString, file, firstline; source::Bool)
-    items = parse_dd(text; file, source, firstline)
+function gstatements!(g::GamsCompile, text::AbstractString, file, firstline; source::Bool, final::Bool=false)
+    # TIMES code: a statement still open at the end (it goes on after a dollar line) waits in g.pending
+    if source
+        text = g.pending * text
+        firstline = isempty(g.pending) ? firstline : g.pendline
+        g.pending = ""
+    end
+    rest = source && !final ? Ref(("", 0)) : nothing
+    items = parse_dd(text; file, source, firstline, rest)
+    if source && !isempty(first(rest[]))
+        g.pending, g.pendline = rest[]
+    end
     for it in items
         if it isa DDSymbol && it.kind === :set && guniverse(g, it.name)
             # data for an alias of the universe (SET ITEM / "%FIXBOH%", ... /, initmty.mod L440;
@@ -239,8 +275,11 @@ function gstatements!(g::GamsCompile, text::AbstractString, file, firstline; sou
         elseif it isa DDAlias
             galias!(g, it.names, it.file, it.line)
         elseif it isa DDOther
-            it.keyword == "EXEC" && push!(g.exec, (basename(it.file), it.line, it.text))
-            # OPTION statements do not change data
+            gnoterefs!(g, it.text)
+            # executable statements before maindrv.mod run after compilation (INIT_EXEC); those after it
+            # run after the input checkpoint, in TIMES.jl's own translation (M1.1-M1.3), so are skipped
+            it.keyword == "EXEC" && !g.later && push!(g.exec, (basename(it.file), it.line, it.text))
+            # OPTION, MODEL, FILE statements do not change data
         else
             compile_error(it.file, it.line, "a dollar line inside a statement block")   # not reached
         end
@@ -250,8 +289,10 @@ end
 # ---- files and dollar lines ---------------------------------------------------------------------
 
 function gfind(g::GamsCompile, name::AbstractString, from::AbstractString)
-    for d in [dirname(from); g.dirs]
-        p = joinpath(d, name)
+    # a file named without an extension is looked for as `name.gms` (GAMS's default; setglobs, maindrv.mod L23)
+    names = isempty(splitext(name)[2]) ? [name * ".gms", name] : [name]
+    for d in [dirname(from); g.dirs], n in names
+        p = joinpath(d, n)
         isfile(p) && return p
     end
     nothing
@@ -265,13 +306,17 @@ executable statements. `g.dirs` must hold the TIMES source folder (GAMS's `idir`
 """
 function gams_compile!(g::GamsCompile, runfile::AbstractString)
     ginclude!(g, runfile, String[])
-    g.done || compile_error(runfile, 0, "the run file does not reach \$BATINCLUDE maindrv.mod")
+    g.full ? (g.done = true) : (g.done || compile_error(runfile, 0, "the run file does not reach \$BATINCLUDE maindrv.mod"))
+    # a declaration still open at the end of the program is complete (no ';' needed before the end)
+    isempty(strip(g.pending)) || gstatements!(g, "", runfile, g.pendline; source=true, final=true)
     run_exec!(g)
     g
 end
 
 function ginclude!(g::GamsCompile, path::AbstractString, args::Vector{String})
     push!(g.stack, GLevel(String(path), args, Dict{String,String}(), Dict{String,String}()))
+    push!(g.trace, (length(g.stack) - 1, basename(path)))
+    eolcom = g.eolcom                 # $EOLCOM holds for the file that sets it and what it includes
     lines = split(read(path, String), '\n')
     i = 1
     n = length(lines)
@@ -279,7 +324,8 @@ function ginclude!(g::GamsCompile, path::AbstractString, args::Vector{String})
     bstart = 1
     flush!() = begin
         t = String(take!(block))
-        isempty(strip(t)) || gstatements!(g, gsubst(g, t), path, bstart; source=gsource(path))
+        # after maindrv.mod the run file is TIMES code too (the harness's TJL_SOLVEINFO statements)
+        isempty(strip(t)) || gstatements!(g, gsubst(g, t), path, bstart; source=gsource(path) || g.later)
     end
     while i <= n && !g.done
         l = lines[i]
@@ -306,25 +352,60 @@ function ginclude!(g::GamsCompile, path::AbstractString, args::Vector{String})
                 continue
             end
             jump = gdollar!(g, gsubst(g, rest), path, i)
+            jump === :exit && break       # $EXIT: the rest of this file is not read
+            if jump isa Tuple
+                # code from a $IF line: the start of the next block
+                i += 1
+                bstart = i - 1
+                write(block, isempty(g.eolcom) ? jump[2] : gstripeol(jump[2], g.eolcom), '\n')
+                continue
+            end
+            if jump === :skipnext
+                i += 2
+                bstart = i
+                continue
+            end
             if jump !== nothing
-                # $GOTO: forward to $LABEL name
-                j = findnext(x -> occursin(Regex("^\\\$\\s*label\\s+" * jump * "\\s*\$", "i"), rstrip(x, '\r')), lines, i + 1)
-                j === nothing && compile_error(path, i, "\$GOTO $jump: no \$LABEL")
+                # $GOTO: to $LABEL name, forward first, then from the top (main_ext.mod's loop goes back)
+                # the label name may be followed by more text ($LABEL EQUA %2, eqobjfix.mod L178)
+                isl(x) = occursin(Regex("^\\\$\\s*label\\s+" * jump * "(\\s|\$)", "i"), rstrip(x, '\r'))
+                j = something(findnext(isl, lines, i + 1), findfirst(isl, lines), 0)
+                j == 0 && compile_error(path, i, "\$GOTO $jump: no \$LABEL")
                 i = j
             end
             i += 1
             bstart = i
         else
-            write(block, l, '\n')
+            write(block, isempty(g.eolcom) ? l : gstripeol(l, g.eolcom), '\n')
             i += 1
         end
     end
     g.done || flush!()
     pop!(g.stack)
+    g.eolcom = eolcom
+end
+
+# a code line without its end-of-line comment ($EOLCOM marker outside quotes)
+function gstripeol(l::AbstractString, m::AbstractString)
+    occursin(m, l) || return l
+    q = '\0'
+    i = firstindex(l)
+    while i <= lastindex(l)
+        c = l[i]
+        if q != '\0'
+            c == q && (q = '\0')
+        elseif c == '\'' || c == '"'
+            q = c
+        elseif startswith(SubString(l, i), m)
+            return l[firstindex(l):prevind(l, i)]
+        end
+        i = nextind(l, i)
+    end
+    l
 end
 
 # TIMES's own files are read in source mode; the model's DD files in DD mode
-gsource(path) = lowercase(splitext(path)[2]) in (".mod", ".def", ".dsc", ".vda", ".gms")
+gsource(path) = !(lowercase(splitext(path)[2]) in (".dd", ".run"))
 
 # One dollar line (without the '$', switches substituted). Returns a label name for $GOTO, else nothing.
 function gdollar!(g::GamsCompile, s::AbstractString, file, line)
@@ -342,29 +423,43 @@ function gdollar!(g::GamsCompile, s::AbstractString, file, line)
         # a global of the same name hides no longer behind a scoped one, and vice versa: GAMS keeps one
         # name in one scope (UNCONFIRMED for a name set in two scopes; none of the TIMES files does)
         isempty(more) || return gdollar!(g, more, file, line)
-    elseif cmd in ("IF", "IFI", "IFE")
+    elseif cmd in ("IF", "IFI")
         ok, tail = gcondition(g, rest, cmd == "IFI", file, line)
-        ok || return nothing
-        tail = strip(tail)
-        isempty(tail) && return nothing
-        if startswith(tail, '$')
-            return gdollar!(g, tail[2:end], file, line)
-        end
-        gstatements!(g, tail, file, line; source=true)
+        return gtail!(g, ok, tail, file, line)
+    elseif cmd == "IFE"
+        ok, tail = gife(g, rest, file, line)
+        return gtail!(g, ok, tail, file, line)
     elseif cmd in ("BATINCLUDE", "INCLUDE")
         parts = gargs(rest)
         isempty(parts) && compile_error(file, line, "\$$cmd without a file")
         f = parts[1]
         if lowercase(basename(f)) == "maindrv.mod"
-            g.done = true
-            return nothing
+            if !g.full
+                # stop here; a declaration still open before maindrv.mod is complete
+                isempty(strip(g.pending)) || gstatements!(g, "", file, g.pendline; source=true, final=true)
+                g.done = true
+                return nothing
+            end
+            g.later = true
         end
         lowercase(basename(f)) == "main_ext.mod" && return (main_ext!(g, parts[2:end], file, line); nothing)
+        if lowercase(splitext(basename(f))[1]) == "gdxfilter" && !isempty(parts) && length(parts) >= 2 && uppercase(parts[2]) == "MAIN"
+            # setglobs.gms L13 (%DATAGDX% YES and compile warnings): gdxfilter.gms MAIN reloads all data
+            # from the _dd_.gdx it wrote (L12-14), with $onFiltered, so the reload drops the records
+            # outside their domains, which the compile has dropped already (G56; the TIMES-NZ input dumps
+            # match without it). Its includes are traced as GAMS lists them: itself, then _dd_.dd (L12);
+            # the listing shows no second gdxfilter.gms for the $ONRECURSE line (L11).
+            lv = length(g.stack)
+            append!(g.trace, [(lv, "gdxfilter.gms"), (lv + 1, "_dd_.dd")])
+            return nothing
+        end
         p = gfind(g, f, file)
         p === nothing && compile_error(file, line, "\$$cmd: $f not found")
         lowercase(basename(f)) in G_REFUSED_INCLUDES && throw(UnportedError("$(basename(f)) (\$$cmd at $(basename(file)) L$line)"))
         ginclude!(g, p, cmd == "BATINCLUDE" ? String.(parts[2:end]) : String[])
-    elseif cmd == "KILL"
+    elseif cmd in ("KILL", "CLEAR")
+        # compile-time removal of a symbol's data ($KILL also allows a new data statement; $CLEAR
+        # resets to the defaults, which for sets and parameters is no records)
         for n in split(rest, r"[\s,]+"; keepempty=false)
             x = gsym(g, n)
             x === nothing && continue
@@ -378,16 +473,138 @@ function gdollar!(g::GamsCompile, s::AbstractString, file, line)
         g.oneps = cmd == "ONEPS"
     elseif cmd in ("ONWARNING", "OFFWARNING")
         g.onwarning = cmd == "ONWARNING"
-    elseif cmd in ("OFFLISTING", "ONLISTING", "TITLE", "STITLE", "PHANTOM", "ONSYMLIST", "OFFSYMLIST", "ONUELLIST", "OFFUELLIST", "LABEL")
-        # listing and layout only
+    elseif cmd in G_NOEFFECT
+        # listing, layout, environment and compiler settings with no effect on the data
+    elseif cmd == "EOLCOM"
+        g.eolcom = String(strip(rest))
+    elseif cmd == "MACRO"
+        # a macro is expanded in executable code only, which TIMES.jl does not compile; its name counts
+        # for $IF DECLARED and DEFINED (prepret.dsc L41 VNRET, tested at mod_vars.mod L94, eqobj.mod L39)
+        mm = match(r"^\s*([A-Za-z_][A-Za-z0-9_]*)", rest)
+        mm === nothing || push!(g.macros, uppercase(mm[1]))
+        gnoterefs!(g, rest)
+    elseif cmd == "SHIFT"
+        isempty(g.stack[end].args) || popfirst!(g.stack[end].args)
+        r = strip(rest)
+        isempty(r) || return gdollar!(g, r, file, line)
+    elseif cmd == "EXIT"
+        return :exit
+    elseif cmd == "SETNAMES"
+        # $SETNAMES file pathvar namevar extvar ('.' = not set), as locals
+        a = gargs(rest)
+        length(a) == 4 || compile_error(file, line, "\$SETNAMES needs four arguments")
+        f = a[1]
+        for (v, x) in zip(a[2:4], (dirname(f), splitext(basename(f))[1], splitext(f)[2]))
+            v == "." || (g.stack[end].locals[uppercase(v)] = x)
+        end
+    elseif cmd == "SETARGS"
+        # names for the arguments; a name with no argument is set empty (setglobs.gms L13 is called
+        # with one argument and tests '%X2%'=='' at L342)
+        for (i, v) in enumerate(split(rest))
+            g.stack[end].locals[uppercase(v)] = i <= length(g.stack[end].args) ? g.stack[end].args[i] : ""
+        end
     elseif cmd == "GOTO"
         return String(strip(rest))
-    elseif cmd == "ABORT"
-        compile_error(file, line, "\$ABORT $(strip(rest))")
+    elseif cmd == "ABORT" || cmd == "ERROR"
+        compile_error(file, line, "\$$cmd $(strip(rest))")
+    elseif cmd in ("GDXOUT", "UNLOAD") || (cmd == "GDXIN" && isempty(strip(rest)))
+        # writing a GDX file at compile time (setglobs.gms L9-13) changes no data; $GDXIN alone closes one
+    elseif cmd in ("EVAL", "EVALGLOBAL", "EVALLOCAL")
+        nm = match(r"^(\S+)\s*(.*)$"s, rest)
+        nm === nothing && compile_error(file, line, "\$$cmd without a name")
+        expr, more = gsetvalue(nm[2])
+        v = gevalnum(expr, file, line)
+        target = cmd == "EVALGLOBAL" ? g.globals : cmd == "EVALLOCAL" ? g.stack[end].locals : g.stack[end].scoped
+        target[uppercase(nm[1])] = isinteger(v) ? string(Int(v)) : string(v)
+        isempty(more) || return gdollar!(g, more, file, line)
+    elseif cmd == "HIDDENCALL"
+        # a shell command (prepxtra.mod L91: renaming the saved GDX file): no data effect by itself; data
+        # could only come back through $INCLUDE or $LOAD, which are read or refused on their own
+    elseif cmd in ("GDXIN", "LOAD", "LOADDC", "LOADM", "LOADR", "CALL", "EXECUTE", "SETCOMPS")
+        throw(UnportedError("\$$cmd ($(basename(file)) L$line)"))
+    elseif startswith(cmd, "%")
+        # a dollar line whose command is an undefined switch (maindrv.mod: `$ %MX% SETGLOBAL MX`):
+        # no effect (UNCONFIRMED: GAMS compiles such lines without error in every suite run)
     else
         compile_error(file, line, "the dollar control \$$cmd is outside what TIMES.jl reads")
     end
     nothing
+end
+
+const G_NOEFFECT = Set(["OFFLISTING", "ONLISTING", "TITLE", "STITLE", "PHANTOM", "ONSYMLIST", "OFFSYMLIST",
+    "ONUELLIST", "OFFUELLIST", "LABEL", "ONMIXED", "USE999", "SETENV", "ECHO", "ECHON", "ONRECURSE",
+    "OFFRECURSE", "ONUNI", "OFFUNI", "HIDDEN", "OFFINCLUDE", "ONINCLUDE", "OFFUPPER", "ONUPPER", "LOG", "SHOW",
+    "STARS", "SINGLE", "DOUBLE", "EJECT", "LINES", "ONDOLLAR", "OFFDOLLAR", "ONGLOBAL", "OFFGLOBAL", "DROP",
+    "DROPLOCAL", "DROPGLOBAL", "ONVERBATIM", "OFFVERBATIM", "ONECHO", "OFFECHO"])
+
+# what follows a true $IF condition: nothing, another dollar command, or TIMES code
+function gtail!(g::GamsCompile, ok::Bool, tail, file, line)
+    tail = strip(tail)
+    # nothing after the condition: the condition governs the next line (eqobjfix.mod L205-207,
+    # main_ext.mod L13-14, maindrv.mod L35-36); a false one skips it
+    isempty(tail) && return ok ? nothing : :skipnext
+    ok || return nothing
+    startswith(tail, '$') && return gdollar!(g, tail[2:end], file, line)
+    # TIMES code: it joins the code that follows, as a line in its place (prepret.dsc L45, `$ IF %MIP%
+    # INTEGER`, puts INTEGER in front of the VARIABLE statement of L46)
+    (:code, String(tail))
+end
+
+# $IFE [NOT] expression rest: a compile-time numeric test. The expressions TIMES writes use numbers,
+# CARD(symbol) (its records at this point of compilation), + - * /, comparisons (= > < >= <= <>),
+# NOT, AND, OR, and parentheses (eqmain.mod L197, init_ext.vda L135, gasgrids.vda, powerflo.vda L198)
+function gife(g::GamsCompile, s::AbstractString, file, line)
+    # the expression ends at the first blank outside parentheses that is followed by '$' or by text
+    # not part of an expression; TIMES always writes it without inner blanks except after NOT
+    s = lstrip(s)
+    neg = false
+    if (m = match(r"^not\s+"i, s)) !== nothing
+        neg = true
+        s = s[length(m.match)+1:end]
+    end
+    depth = 0
+    j = lastindex(s) + 1
+    for (k, c) in pairs(s)
+        c == '(' && (depth += 1)
+        c == ')' && (depth -= 1)
+        if depth == 0 && isspace(c)
+            j = k
+            break
+        end
+    end
+    expr, tail = s[firstindex(s):prevind(s, j)], j > lastindex(s) ? "" : s[j:end]
+    v = gevalexpr(g, expr, file, line)
+    (xor(v != 0, neg), tail)
+end
+
+function gevalexpr(g::GamsCompile, e::AbstractString, file, line)
+    x = replace(e, r"CARD\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)"i => m -> begin
+        n = match(r"\(\s*([A-Za-z_][A-Za-z0-9_]*)"i, m)[1]
+        s = gsym(g, n)
+        string(s === nothing ? 0 : s.kind === :set ? length(s.members) : (s.dim == 0 ? 1 : length(s.vals)))
+    end)
+    occursin(r"^[0-9+\-*/().<>=\s]*$", x) || compile_error(file, line, "an \$IFE expression outside what TIMES.jl reads: $e")
+    x = replace(x, "<>" => "!=", ">=" => "≥", "<=" => "≤")
+    x = replace(x, r"(?<![<>!≥≤=])=(?!=)" => "==")
+    x = replace(x, "≥" => ">=", "≤" => "<=")
+    v = eval(Meta.parse(x))
+    v isa Bool ? Int(v) : v
+end
+
+# $EVAL expressions (prepxtra.mod L88-89: a timestamp for a file name): numbers, + - * / **, MOD,
+# TRUNC, LOG10, and GYEAR/GMONTH/GDAY/GHOUR/GMINUTE/GSECOND of JSTART (now)
+function gevalnum(e::AbstractString, file, line)
+    tm = Libc.TmStruct(time())
+    now = Dict("YEAR" => tm.year + 1900, "MONTH" => tm.month + 1, "DAY" => tm.mday, "HOUR" => tm.hour,
+        "MINUTE" => tm.min, "SECOND" => tm.sec)
+    x = replace(e, r"G(YEAR|MONTH|DAY|HOUR|MINUTE|SECOND)\(\s*JSTART\s*\)"i => m -> string(now[uppercase(match(r"^G([A-Za-z]+)"i, m)[1])]))
+    x = replace(x, "**" => "^")
+    x = replace(x, r"\bMOD\("i => "mod(", r"\bTRUNC\("i => "trunc(", r"\bLOG10\("i => "log10(")
+    # only numbers, operators, parentheses and the three functions may remain
+    occursin(r"^([0-9+\-*/^().,\s]|mod|trunc|log10)*$", x) ||
+        compile_error(file, line, "an \$EVAL expression outside what TIMES.jl reads: $e")
+    v = eval(Meta.parse(isempty(strip(x)) ? "0" : x))
+    Float64(v)
 end
 
 # dollar options without arguments (several may share a line)
@@ -423,7 +640,7 @@ function gcondition1(g::GamsCompile, s::AbstractString, ci::Bool, file, line)
         # DECLARED: the symbol exists; DEFINED: it also has a data statement (G35: whether an empty
         # list // counts is UNCONFIRMED; it counts here, as a data statement)
         x = get(g.syms, uppercase(m[2]), nothing)
-        ok = x !== nothing && (lowercase(m[1]) == "declared" || x.kind === :alias || x.hasdata)
+        ok = uppercase(m[2]) in g.macros || (x !== nothing && (lowercase(m[1]) == "declared" || x.kind === :alias || x.hasdata))
         return (ok, m[3])
     elseif (m = match(r"^exist\s+(\S+)\s*(.*)$"is, s)) !== nothing
         return (gfind(g, m[1], file) !== nothing, m[2])
@@ -431,6 +648,19 @@ function gcondition1(g::GamsCompile, s::AbstractString, ci::Bool, file, line)
         return (true, m[2])          # GAMS 54 (CLAUDE.md): later than every version TIMES tests
     elseif (m = match(r"^funtype\s+\S+\s*(.*)$"is, s)) !== nothing
         return (true, m[1])
+    elseif (m = match(r"^dimension\s+(\d+)\s+(\S+)\s*(.*)$"is, s)) !== nothing
+        x = gsym(g, m[2])
+        return (x !== nothing && x.dim == parse(Int, m[1]), m[3])
+    elseif (m = match(r"^(settype|partype|vartype|equtype|pretype)\s+(\S+)\s*(.*)$"is, s)) !== nothing
+        # the symbol's type: a set, a parameter (scalars too), a variable, an equation, undeclared
+        x = gsym(g, m[2])
+        w = lowercase(m[1])
+        k = x === nothing ? :none : x.kind
+        ok = w == "settype" ? k === :set : w == "partype" ? k in (:parameter, :scalar) :
+             w == "vartype" ? k === :variable : w == "equtype" ? k === :equation : k === :none
+        return (ok, m[3])
+    elseif (m = match(r"^warnings\s*(.*)$"is, s)) !== nothing
+        return (g.warnings > 0, m[1])     # compile warnings so far (G54)
     elseif (m = match(r"^errorfree\s*(.*)$"is, s)) !== nothing
         return (true, m[1])
     end
@@ -444,21 +674,24 @@ function gcondition1(g::GamsCompile, s::AbstractString, ci::Bool, file, line)
     (ok, m[9])
 end
 
-# main_ext.mod L1-23: include `<stage>.<ext>` for each extension named after the stage (once each),
-# with the extension and the calling file's name as arguments
+# main_ext.mod L1-23: include `<stage>.<ext>` (when the file exists) for each extension named after the
+# stage, with the extension and the calling file's name as arguments, once each: L13 (`$IF NOT
+# SETLOCAL %1`, nothing after it) governs the next line, the include.
 function main_ext!(g::GamsCompile, args, file, line)
     isempty(args) && return
     stage = args[1]
     parent = splitext(basename(file))[1]
+    push!(g.trace, (length(g.stack), "main_ext.mod"))
+    push!(g.stack, GLevel(String(file), String[], Dict{String,String}(), Dict{String,String}()))
     seen = Set{String}()
     for ext in args[2:end]
         isempty(ext) && continue
-        u = uppercase(ext)
-        u in seen && continue
+        uppercase(ext) in seen && continue
         p = gfind(g, "$(stage).$(lowercase(ext))", file)
         p === nothing || ginclude!(g, p, [String(ext), parent])
-        push!(seen, u)
+        push!(seen, uppercase(ext))
     end
+    pop!(g.stack)
 end
 
 # ---- the executable statements before maindrv.mod -----------------------------------------------
@@ -514,7 +747,21 @@ function run_exec!(g::GamsCompile)
     end
 end
 
+# the names a statement (or a macro body) refers to
+gnoterefs!(g::GamsCompile, text::AbstractString) =
+    foreach(m -> push!(g.refs, uppercase(m.match)), eachmatch(r"[A-Za-z_][A-Za-z0-9_]*", text))
+
 # ---- the result, as the input dump holds it -----------------------------------------------------
+
+"""
+    gdx_symbols(g) -> Vector{GSym}
+
+The symbols `execute_unload` writes, in declaration order: every set, parameter and alias, and the
+variables and equations that compiled code refers to. GAMS leaves out a variable that nothing refers
+to (VAS_EXPOBJ, referred to only after eqobj.mod's `\$EXIT`; checked with GAMS 54.6.1, G57).
+"""
+gdx_symbols(g::GamsCompile) = sort!([s for s in values(g.syms) if !(s.kind in (:variable, :equation)) || uppercase(s.name) in g.refs];
+    by=x -> x.order)
 
 "A compiled symbol's records in GAMS order: keys, and the values (parameters) or element text (sets)."
 function grecords(g::GamsCompile, s::GSym)

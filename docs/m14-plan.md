@@ -125,9 +125,26 @@ runs the chain from DD files on demo12 and the crafted cases.
 | # | What | Status |
 | --- | --- | --- |
 | 2-4 | `src/dd/compile.jl`: the compile phase to maindrv.mod | done for the open core models (draft PR) |
-| 2b | the compile phase of maindrv.mod and its includes: declarations and compile-time data | next |
+| 2b | the compile phase of maindrv.mod and its includes: declarations and compile-time data | done for the open core models (9 Nov, draft PR #86) |
 | 2c | the TIMES source as a Julia Artifact (after James's decision) | |
 | 5 | scale, wiring, `m13_gate.jl --from dd` | as planned |
+
+### Change 2b, 9 Nov 2026 (late evening)
+
+The whole program compiles without GAMS. On every open suite model (demo12, TIMES-NZ steady and
+shift, OTCGEN, OTNYC, OTUS9r reference and tax1_wo_mou), both variants, `scripts/m14_probe.jl`
+finds:
+
+- the files included, in order and by level, equal the Include File Summary of GAMS's listing
+  (643 to 678 inclusions);
+- every symbol of the input dump declared, and no other (GDX leaves out unreferenced variables, G57);
+- every set and parameter identical (824, or 825 for OTUS9r): keys, record order, values, EPS,
+  element text;
+- every label in the dump's order (1,709 for demo12 to 10,441 for OTCGEN).
+
+The compile takes 1 s (demo12) to 8 s (OTUS9r). The GAMS rules this needed are G55 to G58 and the
+addition to G35. Next: the TIMES source as an Artifact (2c, James's decision), then change 5: a
+`DumpData` from the compile, and `m13_gate.jl` from DD files.
 
 ## Open questions (flag, do not guess)
 
@@ -139,10 +156,13 @@ runs the chain from DD files on demo12 and the crafted cases.
    depends on the GAMS licence of the machine. TIMES.jl has no GAMS licence.
    Proposal: a `licencelevel` run option, default as on James's
    workstation, recorded in known-differences.md.
-3. **`$IF DEFINED` on a symbol declared with an empty `//` list (G35):** not
-   confirmed whether that counts as defined.
+3. **`$IF DEFINED` on a symbol declared with an empty `//` list (G35):** answered
+   9 Nov 2026: it counts as defined (GAMS experiment), and so does a `$MACRO` name. Still open: an
+   assignment compiled after maindrv.mod also makes a symbol DEFINED, which the reader does not track
+   (no open suite model's include trace depends on it).
 4. **Duplicate keys inside one data statement:** GAMS's behaviour is not
-   confirmed. The reader stops on them until a model shows one.
+   confirmed. The reader lets the later record win, as `$ONMULTI` merges do; every open suite model
+   matches the input dumps, so none depends on it either way.
 5. **Labels used only by TIMES code** (`ITEM` with an empty `%FIXBOH%`, the
    label `''`): the dump keeps only labels that some record uses (G36), so
    their place in the label order is checked indirectly.

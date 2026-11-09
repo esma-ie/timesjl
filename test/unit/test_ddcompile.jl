@@ -2,7 +2,7 @@
 # source is not in CI; scripts/m14_probe.jl checks the real run files against the input dumps on
 # James's machine.
 using Test
-using TIMES: GamsCompile, gams_compile!, gsym, grecords, gdx_uels, DDSyntaxError
+using TIMES: GamsCompile, gams_compile!, gsym, grecords, gdx_uels, gdx_symbols, DDSyntaxError
 
 function compile_files(files::Dict{String,String}; run="m.run", kw...)
     dir = mktempdir()
@@ -66,4 +66,48 @@ end
 @testset "the run must reach maindrv.mod; unknown dollar controls stop" begin
     @test_throws DDSyntaxError compile_files(Dict("m.run" => "SET A / a /;\n"))
     @test_throws DDSyntaxError compile_files(Dict("m.run" => "\$FOO bar\n" * MAIN))
+end
+
+@testset "change 2b: TIMES code after maindrv.mod" begin
+    files = Dict(
+        "m.run" => "\$ONEPS\nSET I / a, b /;\n\$BATINCLUDE maindrv.mod mod\nPARAMETER AFTER(I) 'after' //;\n",
+        "maindrv.mod" =>
+            # $SETARGS: a name with no argument is empty (setglobs.gms L13, L342)
+            "\$SETARGS X1 X2\n\$IF NOT '%X2%'=='' \$EXIT\n" *
+            # $IF with nothing after the condition governs the next line (eqobjfix.mod L205)
+            "\$IF %NOPE%==YES\nSET SKIPPED / s /;\n\$IF NOT %NOPE%==YES\nSET KEPT / k /;\n" *
+            # a declaration that goes on after a dollar line (eqdeclr.mod)
+            "EQUATIONS\n  E1(I) 'one' //\n\$IF %NOPE%==YES E9 'not this'\n  E2(I) 'two' //\n;\n" *
+            # code from a $IF line joins the next line (prepret.dsc L45-46)
+            "\$IF NOT %NOPE%==YES POSITIVE\nVARIABLE V1(I);\nVARIABLE V2(I);\n" *
+            # executable statements after maindrv.mod are skipped; they may span dollar lines
+            "LOOP(I,\n\$IF %NOPE%==YES DISPLAY I;\n  V1.UP(I) = 1);\n" *
+            # $IFE with CARD at compile time; $EVAL
+            "\$IFE CARD(I)=2 SET CARD2 / c2 /;\n\$EVAL N '1+2*3'\nSET EV / e%N% /;\n" *
+            # macros count as DECLARED and DEFINED (prepret.dsc L41 VNRET; VAR_STS)
+            "\$MACRO MAC(X) V2(X)\n\$IF NOT DEFINED MAC PARAMETER MAC(I) //;\n\$IF DECLARED MAC SET MACSEEN / m /;\n" *
+            # a scalar's 0 stays 0 under $ONEPS; arguments beyond 9
+            "SCALAR Z0 / 0 /;\n\$BATINCLUDE args.mod 1 2 3 4 5 6 7 8 9 10 eleven\n" *
+            # blanks before the dot of a key (eqbndcst.mod L22)
+            "SET PAIR(I,I) / a   .(a,b) /;\nE1(I).. V1(I) =E= 1;\nVARIABLE UNUSED;\n",
+        "args.mod" => "SET ARG11 / %11 /;\n")
+    dir = mktempdir()
+    for (n, t) in files
+        write(joinpath(dir, n), t)
+    end
+    g = GamsCompile(; dirs=[dir], full=true)
+    gams_compile!(g, joinpath(dir, "m.run"))
+    @test first(grecords(g, gsym(g, "EV"))) == [["e7"]]
+    @test gsym(g, "SKIPPED") === nothing && gsym(g, "KEPT") !== nothing
+    @test g.syms["E1"].kind === :equation && haskey(g.syms, "E2") && !haskey(g.syms, "E9")
+    @test g.syms["V1"].kind === :variable
+    @test gsym(g, "CARD2") !== nothing
+    @test !haskey(g.syms, "MAC") && gsym(g, "MACSEEN") !== nothing
+    @test last(grecords(g, gsym(g, "Z0"))) == [(0.0, :none)]
+    @test first(grecords(g, gsym(g, "ARG11"))) == [["eleven"]]
+    @test first(grecords(g, gsym(g, "PAIR"))) == [["a", "a"], ["a", "b"]]
+    @test gsym(g, "AFTER") !== nothing                       # the run file goes on after maindrv.mod
+    names = [s.name for s in gdx_symbols(g)]
+    @test "E1" in names && "V1" in names && !("UNUSED" in names)   # G57
+    @test [x[2] for x in g.trace] == ["m.run", "maindrv.mod", "args.mod"]
 end

@@ -642,3 +642,8 @@ those checks, their figures and their crafted cases are not published
   GAMS's label list; anything else stops with its file and line. Every DD
   and run file of the five open models parses (OTUS9r: 49 MB, 1.15 million
   records, 2.5 s).
+- 9 Nov 2026: M1.4 (2-4, 2b): GAMS's compile phase without GAMS
+  (`src/dd/compile.jl`). The whole TIMES program compiles from the run file
+  and the DD files: on every open suite model, both variants, the files
+  included equal GAMS's listing, and every set, parameter and label of the
+  input dump is identical (`scripts/m14_probe.jl`). New GAMS rules G55-G58.
