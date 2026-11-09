@@ -58,9 +58,8 @@ include("coef_ptr_case.jl")
     end
 end
 
-@testset "coef_ptr refuses reduced flows" begin
+@testset "coef_ptr translates reduced flows (L38-42)" begin
     tm = coef_ptr_start(PPM_DEMO12, "flosum")
     gput!(tm, "RPCG_PTRAN", Set([("REG1", "ELCTNGAS01", "ELCGAS", "ELC", "NRG", "ELC")]))
-    @test occursin("L39-42", only(coef_ptr_unported(tm)))
-    @test_throws UnportedError coef_ptr!(tm)
+    @test isempty(coef_ptr_unported(tm))           # checked on every as_run reference against GAMS's coef dump
 end

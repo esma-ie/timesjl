@@ -99,7 +99,7 @@ end
     @test_throws UnportedError coef_ext!(tm)
     tm = coef_ext_start(PPM_DEMO12, "resid")
     gput!(tm, "RPC_FFUNC", Set([("REG1", "ELCTNGAS01", "ELC")]))
-    @test occursin("L62-69", only(coef_ext_unported(tm)))
+    @test isempty(coef_ext_unported(tm))                 # reduced flows (L62-69) are translated
     tm = coef_ext_start(PPM_DEMO12, "resid")
     gput!(tm, "ACT_MINLD", Dict(("REG1", "2010", "ELCTNGAS01") => 0.4))
     @test occursin("eqlducs.vda", only(coef_ext_unported(tm)))
