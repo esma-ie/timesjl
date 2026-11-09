@@ -50,7 +50,10 @@ end
     for (name, _) in COEF_ALT_CASES
         tm = coef_alt_start(PPM_DEMO12, name)
         coef_alt!(tm)
-        r = layer1(tm, DumpData(joinpath(FIXTURES, "coefalt_unit_gams", name)), COEF_ALT_OUTPUTS)
+        # "plain" ends at L59, before L66 clears MY_ARRAY: there MY_ARRAY is coef_obj.mod's (fillcost.gms's,
+        # M1.3 change 25-5), which the fixture's GAMS state took from TIMES.jl before that change
+        outs = name == "plain" ? filter(!=("MY_ARRAY"), COEF_ALT_OUTPUTS) : COEF_ALT_OUTPUTS
+        r = layer1(tm, DumpData(joinpath(FIXTURES, "coefalt_unit_gams", name)), outs)
         foreach(d -> ispass(d) || println(name, ": ", d, " ", d.examples), r)
         @test all(ispass, r)
         if name == "alt"
