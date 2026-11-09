@@ -1,0 +1,67 @@
+* TIMES.jl crafted case demo12_ls (reference/crafted.toml, 8 Nov 2026): demo12 variant 1,
+* load shifting (docs/demo12-variants.md; eqactups.vda L127-158, EQ_SLSIFT; M1.3 change 24),
+* added to TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0). Set up as
+* TIMES-NZ's demand-flexibility processes are (a timeslice storage process at the DAYNITE
+* level whose commodity is both its input and output, an activity group, STG_EFF and
+* STG_SIFT): LSCOMELC shifts commercial electricity (COMELC) in both regions, up to 20% of
+* it in REG1 (30% by 2050) and 10% in REG2; in REG2 the activity itself may also shift
+* (STG_SIFT on ACT at the WD slice). No ACT_TIME, so the time-window terms are not used
+* (demo12_lst adds them).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET PRC
+/
+LSCOMELC 'Load shifting of commercial electricity'
+/
+
+SET COM_GRP
+/
+LSCOMELC_NRGO
+/
+
+SET COM_GMAP
+/
+REG1.LSCOMELC_NRGO.COMELC
+REG2.LSCOMELC_NRGO.COMELC
+/
+
+SET PRC_MAP
+/
+REG1.STG.LSCOMELC
+REG2.STG.LSCOMELC
+/
+
+SET PRC_TSL
+/
+REG1.LSCOMELC.DAYNITE
+REG2.LSCOMELC.DAYNITE
+/
+
+SET PRC_ACTUNT
+/
+REG1.LSCOMELC.LSCOMELC_NRGO.PJ
+REG2.LSCOMELC.LSCOMELC_NRGO.PJ
+/
+
+SET TOP
+/
+REG1.LSCOMELC.COMELC.IN
+REG1.LSCOMELC.COMELC.OUT
+REG2.LSCOMELC.COMELC.IN
+REG2.LSCOMELC.COMELC.OUT
+/
+
+PARAMETER
+STG_EFF ' '/
+REG1.2005.LSCOMELC 0.95
+REG2.2005.LSCOMELC 0.95
+/
+
+PARAMETER
+STG_SIFT ' '/
+REG1.2005.LSCOMELC.COMELC.ANNUAL 0.2
+REG1.2050.LSCOMELC.COMELC.ANNUAL 0.3
+REG2.2005.LSCOMELC.COMELC.ANNUAL 0.1
+REG2.2005.LSCOMELC.ACT.WD 0.05
+/

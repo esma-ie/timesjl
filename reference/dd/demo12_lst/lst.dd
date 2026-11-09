@@ -1,0 +1,17 @@
+* TIMES.jl crafted case demo12_lst (reference/crafted.toml, 8 Nov 2026): demo12_ls/ls.dd plus
+* time windows for the load shifting (ACT_TIME; eqactups.vda L127-158, EQ_SLSIFT; M1.3
+* change 24), on TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0): in REG1
+* load may be advanced by at most 4 hours (LO) and delayed by at most 6 (UP), and is
+* balanced within 12 hours (N). ACT_TIME also fills RP_UPR (init_ext.vda L73), which brings
+* the hour map of timslice.mod L110-121 (RS_HR, RJ_SL, RS_UP, JS_CCL) used by the MOD
+* window terms; eqactups.vda L33 rebuilds RP_UPR from ACT_CSTRMP before the equations, so
+* no ramping equation (EQ_ACTRMPC) comes with it.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER
+ACT_TIME ' '/
+REG1.2005.LSCOMELC.LO 4
+REG1.2005.LSCOMELC.UP 6
+REG1.2005.LSCOMELC.N 12
+/

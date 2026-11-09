@@ -36,7 +36,7 @@ MACRO, stochastics, ETL, climate and damage after M1.7.
 | --- | --- | --- | --- | --- | --- |
 | 2 | Dispatching and unit commitment | `TIMES_Demo-demo12_uc` | 3.7.0, Aug 2014 (ramping, `eqactups.vda`); 3.9.0, Oct 2015 (linear dispatch); 3.9.7, Jul 2016 (unit commitment by start-up type, `eqlducs.vda`), announced 4.0.0 | `eqactups.vda`, `eqlducs.vda` | made (5 Nov 2026) |
 | 5 | Retrofits and lifetime extensions | `TIMES_Demo-demo12_refit` | 4.1.2, Mar 2017 (`PRC_REFIT`); 4.1.6, 4.6.4, 4.6.7-8, 4.7.1 | User Note `TIMES-Refits-Note.pdf`; `prepret.dsc`, `ppmain.mod` L484-487 | made (5 Nov 2026); translated, layers 2-3 PASS (M1.3 change 20b, 6 Nov 2026) |
-| 1 | Load shifting | | 4.3.0, Jan 2019 (`STG_SIFT`); 4.3.6 (asymmetric) | User Note `TIMES-Load-Shifting.pdf`; `eqactups.vda` | next (with M1.3 change 24) |
+| 1 | Load shifting | `TIMES_Demo-demo12_ls`, `TIMES_Demo-demo12_lst` | 4.3.0, Jan 2019 (`STG_SIFT`); 4.3.6 (asymmetric) | User Note `TIMES-Load-Shifting.pdf`; `eqactups.vda` | made (8 Nov 2026); translated, layers 2-3 PASS (M1.3 change 24) |
 | 4 | Dynamic time slices | | 4.3.2, Mar 2019 (varying cycles); 4.4.1, Feb 2020 (time-slice trees, `dynslite.vda`) | User Note `User_Note-TIMES-Dynamic-timeslices.docx` | |
 | 3 | Flexible time-slice storage (STSFLX) | | 4.5.8, Sep 2021 | User Note `TIMES-Experimental-STS-Variant.pdf` | |
 | 7a | Recent attributes, first batch | | 4.6.3-4.7.5, Jul 2022 - Oct 2023: `G_RFRIR`, `NCAP_AFSX`, emissions on CHP activity, non-vintaged `ACT_FLO`, `NCAP_ICOM` for past investments | Version.log | |

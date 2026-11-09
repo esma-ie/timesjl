@@ -175,6 +175,36 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 ## Findings so far
 
+- (24) eqactups.vda L127-158, EQ_SLSIFT, load shifting
+  (`src/ext/vda/eqslsift.jl`, 8 Nov 2026). Rows (R,T,P,COM,S,LNX,L) for
+  every RPS_PRCTS slice of an RPC_LS process with LNX = FX and L in {N,
+  FX}, and for any LNX with an ACT_TIME window L at the process's own
+  slices; the left-hand side is generated only for LNX = FX (the sifting
+  balance against STG_SIFT for L = N, the net shifting for L = FX, the
+  advance/delay terms for LO/UP with ACT_TIME 'LO') and the right-hand side
+  only for LNX = N (the delay balance over the previous slice for UP, the
+  advance balance for LO, the time windows for N and FX). `var_sift` is
+  VAR_UDP times PRC_CAPACT*RS_STGPRD/8760; the windows compare
+  MOD(..., 1/JS_CCL) (sign of the first argument, G43) over RS_UP and
+  RJ_SL with ACT_TIME/8760, and `RJ_SL(R,JS,TS(SL--RS_STG(R,SL)))` binds TS
+  to the previous slice of SL. ACT_TIME fills RP_UPR only for the
+  preprocessing hour map (init_ext.vda L73, timslice.mod L110-121):
+  eqactups.vda L33 rebuilds RP_UPR from ACT_CSTRMP before the equations,
+  so a load-shifting model with windows brings no EQ_ACTRMPC. The other
+  families of eqactups.vda stay refused. Checked: TIMES-NZ steady, the
+  8,736 EQ_SLSIFT rows against CONVERT on both variants (86,114 checks),
+  and TIMES-NZ's whole model for the first time (changes 21, 23 and 24):
+  steady reduce_off layer 2 PASS (1,408,361 rows, 1,299,224 columns,
+  5,026,918 nonzeros); demo12 variant 1, the crafted cases
+  TIMES_Demo-demo12_ls (`reference/dd/demo12_ls/`: a load-shifting
+  process for commercial electricity in both regions, as TIMES-NZ's
+  demand-flexibility processes are set up, with STG_SIFT on ACT in REG2)
+  and TIMES_Demo-demo12_lst (plus ACT_TIME LO 4, UP 6, N 12 hours in
+  REG1, which reach VAR_UDP and the VAR_UPS window terms over the hour
+  map): EQ_SLSIFT rows against CONVERT on both variants (120 and 228
+  rows), the M1.3 probe 54 of 54 and chain PASS on both variants, the
+  whole models 34 of 34 checks each (objective 23,960,685.74 by CPLEX and
+  HiGHS); CI fixtures `demo12_ls`, `demo12_lst` and `test_eqslsift.jl`.
 - (23) eqflomrk.mod L56-105, EQ(l)_FLOMRK (`src/model/eqflomrk.jl`,
   8 Nov 2026): the market share of a process, or of a group ITEM of
   processes, in the production of a commodity (VAR_COMPRD over the

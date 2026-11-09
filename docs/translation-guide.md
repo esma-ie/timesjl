@@ -589,3 +589,7 @@ those checks, their figures and their crafted cases are not published
   market-share row matches CONVERT; crafted case TIMES_Demo-demo12_flomrk
   (CI fixtures) reaches the exchange and storage branches and all three
   bound types.
+- 8 Nov 2026: M1.3 (24): eqactups.vda L127-158, EQ_SLSIFT (load shifting),
+  with demo12 variant 1 (crafted cases demo12_ls and demo12_lst, CI
+  fixtures, layers 1-3). TIMES-NZ is generated whole for the first time:
+  layer 2 PASS on steady reduce_off.
