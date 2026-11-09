@@ -392,11 +392,11 @@ end
 """
     ppm_ext_symbols(tm) -> Vector{String}
 
-Every set and parameter of the dump `tm` started from but the QA-log scalars
-PUTOUT, PUTGRP and ERRLEV: ppm_ext.vda ends the prelv -> ppm segment.
+Every set and parameter of the dump `tm` started from, the QA-log scalars
+PUTOUT, PUTGRP and ERRLEV too (M1.3 change 25b-1): ppm_ext.vda ends the
+prelv -> ppm segment.
 """
-ppm_ext_symbols(tm) = sort([i.name for i in values(tm.data.dump.symbols)
-                            if i.kind in (:set, :parameter) && !(i.name in ("PUTOUT", "PUTGRP", "ERRLEV"))])
+ppm_ext_symbols(tm) = sort([i.name for i in values(tm.data.dump.symbols) if i.kind in (:set, :parameter)])
 
 "The symbols ppm_ext.vda L59-169 writes, for the replay at L169."
 const PPM_EXT_OUTPUTS = ["FLO_FUNCX", "TRACKP", "RPCC_FFUNC", "RPCG_PTRAN", "RPC_FFUNC", "RPC_NOFLO", "PRC_ACT", "NO_ACT", "TRACKPC",
@@ -497,12 +497,25 @@ function ppm_ext!(tm)
     rpg_1ace = gmembers(tm, "RPG_1ACE", 4)
     trackpc = project(rpg_1ace, (1, 2, 4))
     setdiff!(noflo, trackpc)
-    # L87-90: LOOP(TRACKPC(KEEP_FLOF(R,P,C)), IF(RPC_FFUNC(R,P,C)+TRACKPG(R,P,C),RPG_1ACE(R,P,CG,C) = NO; ELSE (QA log 01)))
+    qa_group!(tm)
+    # L87-90: LOOP(TRACKPC(KEEP_FLOF(R,P,C)), IF(RPC_FFUNC(R,P,C)+TRACKPG(R,P,C),RPG_1ACE(R,P,CG,C) = NO; ELSE
+    #   pp_qaput 01 'ACT_EFF shadow group contains only an auxiliary flow';
+    #   PUT ' WARNING       - ACT_EFF is applied to the auxiliary flow: R.P.C= 'TRACKPC.TE(TRACKPC)))
     keep_flof, trackpg = gmembers(tm, "KEEP_FLOF", 3), gmembers(tm, "TRACKPG", 3)
     drop1 = Set(k for k in trackpc if k in keep_flof && (k in ffunc || k in trackpg))
     filter!(k -> !((k[1], k[2], k[4]) in drop1), rpg_1ace)
-    # L91: TRACKPC(KEEP_FLOF) = NO; L92-94: LOOP(RPC_FFUNC(TRACKPC), (QA log 09))
+    for k in gams_sort!([k for k in trackpc if k in keep_flof && !(k in drop1)], tm.data)
+        pp_qaput!(tm, 1, "ACT_EFF shadow group contains only an auxiliary flow")
+        qput!(qalog(tm), " WARNING       - ACT_EFF is applied to the auxiliary flow: R.P.C= " * join(k, "."))
+    end
+    # L91: TRACKPC(KEEP_FLOF) = NO; PUTGRP=0; L92-94: LOOP(RPC_FFUNC(TRACKPC), pp_qaput 09 'Inconsistent/spurious
+    #   process transformation parameters'; PUT ' SEVERE ERROR  - Same process flow definitions in conflict: R.P.C= ',TRACKPC.TE(TRACKPC))
     setdiff!(trackpc, keep_flof)
+    qa_group!(tm)
+    for k in gams_sort!([k for k in trackpc if k in ffunc], tm.data)
+        pp_qaput!(tm, 9, "Inconsistent/spurious process transformation parameters")
+        qput!(qalog(tm), " SEVERE ERROR  - Same process flow definitions in conflict: R.P.C= " * join(k, "."))
+    end
     # L96: TRACKPG(RPC_ACE) = NO; TRACKPG(TRACKPC) = NO
     setdiff!(trackpg, rpc_ace); setdiff!(trackpg, trackpc)
     # L97: RPC_EMIS(TRACKPG) = YES; RPCC_FFUNC(TRACKPG(RP,C),C) = YES

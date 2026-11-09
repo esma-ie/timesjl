@@ -15,8 +15,8 @@
 # comparison takes EPS as 0 (G12); `$=` writes only a nonzero or EPS value
 # (G24); a right-hand side that names the symbol being assigned reads it as
 # it was before the statement (G11); a guarded expression is not evaluated
-# where its guard is false (G14). The QA log (pp_chp.mod L66-70) is not
-# written.
+# where its guard is false (G14). The QA log (pp_chp.mod L66-70) is written
+# in LOOP order (M1.3 change 25b-1).
 
 """
     ppmain_flo_symbols(tm) -> Vector{String}
@@ -333,7 +333,18 @@ function pp_chp!(tm, tr::TsTree, modl)
         gassign!(pk, (r, v, p, s), gv(pk, (r, v, p, s)) / gmax(GNum(1.0), gv(afl, (r, v, p, c))))
     end
     gput!(tm, "NCAP_PKCNT", pk)
-    # L65-70: RVP(RVP)$(...) = NO and the QA log: RVP is cleared at L71 next, so neither has a data effect
+    # L65: RVP(RVP)$(NCAP_CEH(RVP)+1$NCAP_CHPR(RVP,'FX')+NCAP_CHPR(RVP,'LO')>0) = NO   (RVP is cleared at L71)
+    # L66-70: PUTGRP = 0; LOOP(RVP(R,V,P)$(T(V)+PRC_VINT(R,P)), pp_qaput 01 'CHP process with zero CEH but only upper
+    #   bound on CHPR.'; PUT QLOG ' WARNING       - Unusual CHP operation: R=',%RL%,' P=',%PL%,' V=',V.TL)
+    qa_group!(tm)
+    tmem = Set(k[1] for k in gset(tm, "T").keys)
+    vint = gset_opt(tm.data, "PRC_VINT", 2).members
+    for (r, v, p) in rvpl
+        x = Float64(gv(ceh, (r, v, p))) + (haskey(chpr, (r, v, p, "FX")) ? 1.0 : 0.0) + Float64(gv(chpr, (r, v, p, "LO")))
+        (x > 0 || !(v in tmem || (r, p) in vint)) && continue
+        pp_qaput!(tm, 1, "CHP process with zero CEH but only upper bound on CHPR.")
+        qput!(qalog(tm), " WARNING       - Unusual CHP operation: R=" * qlab12(r) * " P=" * qlab12(p) * " V=" * v)
+    end
     # L71: OPTION CLEAR=PRC_ACT,CLEAR=RVP,CLEAR=TRACKP,CLEAR=TRACKPG,CLEAR=RP_PRC,CLEAR=RP_GRP,CLEAR=COEF_RTP
     gput!(tm, "NCAP_CHPR", chpr)
     gput!(tm, "NCAP_CEH", ceh)

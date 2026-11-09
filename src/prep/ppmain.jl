@@ -6,10 +6,10 @@
 # extensions' init_ext (the init checkpoint).
 #
 # L13-29 declare the QA log file, scalars and sets; their data effects are in
-# the dumps, taken after compilation. L35 (`$IF WARNINGS`) writes a header to
-# QA_CHECK.LOG when compilation raised warnings; the dump does not record
-# that, and TIMES.jl does not write the QA log yet (m13-plan.md, open items),
-# so it is not translated. Nothing else in L1-137 needs refusing.
+# the dumps, taken after compilation. L35 (`$IF WARNINGS`) writes a group
+# line to QA_CHECK.LOG when compilation raised warnings, which the dump does
+# not record: the count is an input of the run (`qa_warnings!`, qalog.jl,
+# M1.3 change 25b-1). Nothing else in L1-137 needs refusing.
 #
 # Index sets: R is REG, P is PRC, C and COM are COM, CG is COM_GRP, LL is
 # ALLYEAR, S is ALL_TS; RPC_IRE, RP_IRE and TOP_IRE run over ALL_REG, so
@@ -62,6 +62,8 @@ function ppmain_head!(tm)
     dflbl = "0"                                                       # %DFLBL% (initmty.mod L367)
     # labels the block writes that a dump holds only when some record uses them (G36)
     foreach(l -> register_uel!(tm.data, l), ("IMP", "EXP", "IN", "OUT", "STG", "STK", "STS", "NST", "ANNUAL", "PASTI", pg))
+    # L33-35: $IF WARNINGS, the QA log's 'GAMS Warnings Detected' group (qalog.jl)
+    qa_compile_warnings!(tm)
 
     # --- Discounted currencies (L38) --------------------------------------------
     # L38: LOOP((R,LL(BOHYEAR),CUR)$G_DRATE(R,LL,CUR), RDCUR(R,CUR) = YES)
@@ -536,8 +538,8 @@ end
 # EOHYEAR adds 'EOH' (initsys.mod L40-44), so `ORD(EOHYEAR)+%BOTIME%-2` is the
 # year itself. %BOTIME% is 1850 unless the run sets it (initsys.mod L35).
 #
-# Not translated: the QA log (L213 PUTGRP, L229-230: a warning when a delayed
-# process has past investment), m13-plan.md open items. The scratch Z is not
+# The QA log (M1.3 change 25b-1): L213 starts a group, L229-230 warn when a
+# delayed process has past investment (in LOOP order). The scratch Z is not
 # kept: every later use assigns it first. FIL, STARTOFF and ENDOFF are, as
 # pp_off.mod leaves them (`pp_off_keep!`): a checkpoint dump holds them.
 
@@ -639,6 +641,9 @@ function ppmain_rtp!(tm)
         gput!(tm, "PASTSUM", Dict{NTuple{3,String},Float64}())
     end
 
+    # L213: PUTGRP = 0
+    qa_group!(tm)
+
     # --- NCAP_START as PRC_NOFF (L215-217) ---------------------------------------------
     # L215-217: LOOP(LASTLL(LL)$CARD(NCAP_START), Z=CARD(LL)+%BOTIME%;
     #   PRC_NOFF(RP,'BOH',EOHYEAR)$NCAP_START(RP) = NO;
@@ -698,8 +703,13 @@ function ppmain_rtp!(tm)
     foreach(k -> gassign!(prc_ymax, k, get(offmax, k, -Inf)), trackp)
     # L227-231: LOOP(TRACKP(R,P)$SUM(PYR$NCAP_PASTI(R,PYR,P),1), IF(PRC_YMAX(R,P) GT 0, <QA warning>; PRC_YMAX(R,P) = 0))
     with_pasti = Set{NTuple{2,String}}((k[1], k[3]) for k in keys(pasti) if (k[2],) in pastyear)   # EPS counts (G12)
-    for k in trackp
-        (k in with_pasti && ymax(k) > 0) && delete!(prc_ymax, k)
+    delayed = [k for k in trackp if k in with_pasti && ymax(k) > 0]
+    gams_sort!(delayed, tm.data)                                     # LOOP order, for the QA log
+    for k in delayed
+        # L229-230: pp_qaput 01 'Delayed Process but PASTInvestment'; ' WARNING       - Delay is ignored:   R=',%RL%,' P=',P.TL
+        pp_qaput!(tm, 1, "Delayed Process but PASTInvestment")
+        qput!(qalog(tm), " WARNING       - Delay is ignored:   R=" * qlab12(k[1]) * " P=" * k[2])
+        delete!(prc_ymax, k)
     end
     # L232: OPTION CLEAR=TRACKP
 

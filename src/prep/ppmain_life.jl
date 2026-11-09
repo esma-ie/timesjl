@@ -15,9 +15,9 @@
 # for the special values (EPS, +-INF, NA, UNDF). `$x` is true for EPS (G12)
 # and `NOT x` false (G25); an EPS compares as 0 (G12).
 #
-# Not translated: the QA log (L465-472 messages, L526-531 and L539-542
-# warnings, L582-585), m13-plan.md open items; the data effects of those
-# lines are translated. L484 (`SET PRC_RCAP //; PARAMETER PRC_REFIT //;`) is
+# The QA log (L465-472, L524-531, L539-542, L573 and L582-585) is written in
+# LOOP order (M1.3 change 25b-1); `RTP.TE(RTP)` of an assigned record is its
+# labels joined by '.'. L484 (`SET PRC_RCAP //; PARAMETER PRC_REFIT //;`) is
 # a pair of empty data statements under $ONMULTI, compiled before execution,
 # which keep the data (G39).
 
@@ -78,10 +78,17 @@ function ppmain_life!(tm)
     age = OrdAxis(tm, "AGE")
     rxx = Set{NTuple{3,String}}()
     if haskey(age.pos, "1")
-        for k in rtp
-            (onT(k) && haskey(tlife, k)) || continue
+        qa_group!(tm)                                             # L465: PUTGRP = 0
+        cand = [k for k in rtp if onT(k) && haskey(tlife, k) && lead(age, "1", glead(tlife[k] - 0.999)) === nothing]
+        for k in gams_sort!(cand, d)
             x = tlife[k]                                          # EPS is 0.0
-            lead(age, "1", glead(x - 0.999)) === nothing && x < 1 && push!(rxx, k)
+            # L467-471: pp_qaput 01 'NCAP_TLIFE out of feasible range'; then 'Too short, set to 1' (and RXX)
+            #   or 'No FOM beyond year ',CARD(AGE):<3:0
+            pp_qaput!(tm, 1, "NCAP_TLIFE out of feasible range")
+            msg = x < 1 ? " WARNING       - Too short, set to 1,   R=" :
+                  " WARNING       - No FOM beyond year " * qnum(length(age.labels), 3, 0; left=true) * ",  R="
+            qput!(qalog(tm), msg * qlab12(k[1]) * " P=" * qlab12(k[3]) * " V=" * k[2])
+            x < 1 && push!(rxx, k)
         end
         foreach(k -> (k[2],) in modl && (tlife[k] = 1.0), rxx)
     end
@@ -244,8 +251,9 @@ function ppmain_life!(tm)
     end
 
     # --- Capacity bounds (L524-542) -------------------------------------------------------------
-    # L524: OPTION CLEAR=RVP
+    # L524: OPTION CLEAR=RVP; PUTGRP=0
     rvp = Set{NTuple{3,String}}()
+    qa_group!(tm)
     cap = gvalues(tm, "CAP_BND", 4)
     bdneq = [k[1] for k in gset(tm, "BDNEQ").keys]
     # L525: CAP_BND(RTP,BDNEQ) $= CAP_BND(RTP,'FX')
@@ -271,7 +279,15 @@ function ppmain_life!(tm)
         ifq.v < 10 && gassign!(cap, up, GEPS)
         iszero(gpow(GZERO, ifq + f + GNum((k[1], k[3]) in rp_flo ? 1.0 : 0.0))) || (f = z)
         F = f                                                     # an EPS bound leaves F EPS
-        f.v < z.v && gassign!(rcap_bnd, (k..., "N"), z)
+        if f.v < z.v
+            gassign!(rcap_bnd, (k..., "N"), z)
+            # L530-531: pp_qaput IFQ 'Inconsistent CAP_BND(UP/FX) defined for process capacity';
+            #   PUT ' WARNING       - Bound converted to NCAP_BND,   R.T.P= ',RTP.TE(RTP); PUT$(IFQ>9)@28 'infeasibility detected,'
+            pp_qaput!(tm, ifq.v, "Inconsistent CAP_BND(UP/FX) defined for process capacity")
+            q = qalog(tm)
+            qput!(q, " WARNING       - Bound converted to NCAP_BND,   R.T.P= " * join(k, "."))
+            ifq.v > 9 && (qat!(q, 28); qput!(q, "infeasibility detected,"))
+        end
     end
     gput!(tm, "RCAP_BND", rcap_bnd)
     # L533: RVP(RTP)$((CAP_BND(RTP,'UP')=0)$CAP_BND(RTP,'UP')) = YES   (an EPS upper bound)
@@ -296,6 +312,15 @@ function ppmain_life!(tm)
     # L538: RTP_VARP(RTP(R,T,P))$(CAP_BND(RTP,'UP')*CAP_BND(RTP,'LO')) = YES   (EPS*x is EPS, G6)
     foreach(k -> (onT(k) && !iszero(gv(cap, (k..., "UP")) * gv(cap, (k..., "LO")))) && push!(varp, k), rtp)
     gput!(tm, "RTP_VARP", varp)
+    # L539-542: PUTGRP=0; LOOP(RTP(RTP_VARP)$((CAP_BND(RTP,'LO')>CAP_BND(RTP,'UP'))$CAP_BND(RTP,'UP')),
+    #   pp_qaput 1 'Inconsistent CAP_BND(UP/LO/FX) defined for process capacity';
+    #   PUT ' WARNING       - Lower bound set equal to upper bound,   R.T.P= ',RTP.TE(RTP))   (a message only)
+    qa_group!(tm)
+    lo_up = [k for k in rtp if k in varp && haskey(cap, (k..., "UP")) && get(cap, (k..., "LO"), 0.0) > cap[(k..., "UP")]]
+    for k in gams_sort!(lo_up, d)
+        pp_qaput!(tm, 1, "Inconsistent CAP_BND(UP/LO/FX) defined for process capacity")
+        qput!(qalog(tm), " WARNING       - Lower bound set equal to upper bound,   R.T.P= " * join(k, "."))
+    end
 
     # --- Periods without new capacity (L546-552) -------------------------------------------------
     # L546: LOOP(BDUPX(BD),RTP_OFF(RTP)$((NCAP_BND(RTP,BD)=0)$NCAP_BND(RTP,BD)) = YES)
@@ -353,6 +378,8 @@ function ppmain_life!(tm)
         onT(k) && foreach(c -> push!(rtpc, (k..., c)), get(coms, (k[1], k[3]), String[]))
     end
     gput!(tm, "RTPC", rtpc)
+    # L573: PUTGRP = 0
+    qa_group!(tm)
     # L575: LOOP(PRC_FOFF(R,P,C,TS,BOHYEAR,EOHYEAR),TRACKPC(R,P,C) = YES)
     foff = Dict{NTuple{3,String},Vector{NTuple{3,String}}}()            # (R,P,C) => (TS, BOHYEAR, EOHYEAR)
     for (r, p, c, ts, b, e) in gams_sort!(collect(gset_opt(d, "PRC_FOFF", 6).keys), d)
@@ -373,6 +400,20 @@ function ppmain_life!(tm)
         end
     end
     gput!(tm, "RTPCS_OUT", outs)
+    # L582-585: LOOP(PRC_FOFF(RPC(R,P,C),TS,BOHYEAR,EOHYEAR)$SUM(RPCS_VAR(R,P,C,S)$RS_BELOW(R,S,TS),1),
+    #   pp_qaput 01 'Flow OFF TS level below VARiable TS level';
+    #   PUT QLOG ' WARNING       - OFF is ignored:  R=',%RL%,' P=',%PL%,' C=',%CL%,' S=',TS.TL)
+    if !isempty(foff)
+        below = gset(tm, "RS_BELOW").members
+        varts = Dict{NTuple{3,String},Vector{String}}()
+        foreach(k -> push!(get!(varts, (k[1], k[2], k[3]), String[]), k[4]), gset(tm, "RPCS_VAR").keys)
+        for (r, p, c, ts, b, e) in gams_sort!(collect(gset_opt(d, "PRC_FOFF", 6).keys), d)
+            (r in reg && haskey(boh.pos, b) && haskey(eoh.pos, e) && (r, p, c) in rpc) || continue
+            any(s -> (r, s, ts) in below, get(varts, (r, p, c), String[])) || continue
+            pp_qaput!(tm, 1, "Flow OFF TS level below VARiable TS level")
+            qput!(qalog(tm), " WARNING       - OFF is ignored:  R=" * qlab12(r) * " P=" * qlab12(p) * " C=" * qlab12(c) * " S=" * ts)
+        end
+    end
     gput!(tm, "MY_FIL", my_fil)
     pp_off_keep!(tm, offsc)
 

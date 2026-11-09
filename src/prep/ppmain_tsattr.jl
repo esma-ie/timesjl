@@ -18,8 +18,9 @@
 # (G24); a right-hand side that names the symbol being assigned reads it as
 # it was before the statement (G11); a scalar `$` on a loop domain is read
 # again before each member (G30, G46). The QA log (pp_qaput.mod: PUTOUT,
-# PUTGRP, ERRLEV) is not written (m13-plan.md open item); within pp_lvlbr.mod
-# PUTGRP only says whether a bound conflict was found, which is kept. The
+# PUTGRP, ERRLEV) is written in LOOP order (M1.3 change 25b-1): the COM_FR
+# normalisation (L723-728) and pp_lvlbr.mod's bound conflicts (L23-24,
+# L47-52); within pp_lvlbr.mod PUTGRP also says whether a conflict was found. The
 # scratch UNCD7, TS_ARRAY, Z, F and the work sets are left as GAMS leaves them.
 
 """
@@ -262,7 +263,7 @@ function lvlfc!(tm, tr::TsTree, name, N, years, qual, comts; extra=Set{String}[]
 end
 
 """
-    lvlbr!(tm, tr, x, tgt, rtpv, Z, F; mid=0, pad=2, p5=false, p6=true) -> (Z, F, TS_ARRAY or nothing)
+    lvlbr!(tm, tr, x, tgt, rtpv, Z, F; name, tsname, mid=0, pad=2, p5=false, p6=true) -> (Z, F, TS_ARRAY or nothing)
 
 pp_lvlbr.mod: the bound attribute `x` (keys R, V, P, `mid` more indexes
 (%2), S, BD) levelled to the target timeslices `tgt(key, s)` (%3): a value
@@ -273,10 +274,13 @@ it gives a warning and the lower one is ignored. With `p6` (%6 = 1), LO and
 UP at a target that has an FX too are removed. `rtpv` is RTP(R,V,P) at the
 model years; `pad` the '0' labels of %4 in UNCD7; `p5` is %5. `x` is
 changed in place; Z and F are the scratch scalars as GAMS leaves them.
+`name` (%1) and `tsname` (%3) are the attribute's and the target set's
+names, for the QA log's group lines.
 
 GAMS: pp_lvlbr.mod L15-55, v4.9.7.
 """
-function lvlbr!(tm, tr::TsTree, x::Dict{NTuple{K,String},Float64}, tgt, rtpv, Z, F; mid=0, pad=2, p5=false, p6=true) where {K}
+function lvlbr!(tm, tr::TsTree, x::Dict{NTuple{K,String},Float64}, tgt, rtpv, Z, F; name::String, tsname::String,
+                mid=0, pad=2, p5=false, p6=true) where {K}
     sp, bp = 4 + mid, 5 + mid
     bdset = Set(k[1] for k in gset(tm, "BD").keys)
     modl = Set(k[1] for k in gset(tm, "MODLYEAR").keys)
@@ -294,7 +298,16 @@ function lvlbr!(tm, tr::TsTree, x::Dict{NTuple{K,String},Float64}, tgt, rtpv, Z,
             iszero(Z) && break
             if haskey(x, kat(k, ts))                                     # L21-25: a value above, at a target: warning
                 F = GNum(1.0)
-                tgt(k, ts) && (Z = GZERO; push!(uncd7, urow(k, ts, ts, b)))
+                if tgt(k, ts)
+                    Z = GZERO
+                    # L22-25: IF(NOT UNCD7(R,TS,P%2,TS,BD%4), pp_qaput 01 '%1 Bounds conflict: Bound at %3 level and
+                    #   below, lower ignored'; PUT QLOG ' WARNING       -     R=',%RL%,' P=',%PL%,' TS=',TS.TL; UNCD7(...) = YES)
+                    if !(urow(k, ts, ts, b) in uncd7)
+                        pp_qaput!(tm, 1, name * " Bounds conflict: Bound at " * tsname * " level and below, lower ignored")
+                        qput!(qalog(tm), " WARNING       -     R=" * qlab12(r) * " P=" * qlab12(k[3]) * " TS=" * ts)
+                        push!(uncd7, urow(k, ts, ts, b))
+                    end
+                end
             elseif tgt(k, ts)                                            # L26: a target above without a value
                 Z = GZERO
                 push!(uncd7, urow(k, v, ts, b))
@@ -342,11 +355,18 @@ function lvlbr!(tm, tr::TsTree, x::Dict{NTuple{K,String},Float64}, tgt, rtpv, Z,
     #   IF(%3(R,P,%7S) AND (%1(..,'UP') + %1(..,'LO')), <warning>; UNCD7(R,V,P%2,S,'0'%4) = YES));
     #   IF(PUTGRP, %1(R,V,P%2,S,BDNEQ)$UNCD7(R,V,P%2,S,'0'%4) = 0; OPTION CLEAR=UNCD7))
     if p6
-        conflict = Set{NTuple{K - 1,String}}()
+        qa_group!(tm)                                                    # L47: PUTGRP = 0
+        conflict = NTuple{K - 1,String}[]
         for k in keys(x)
             (k[bp] == "FX" && k[1] in tr.reg && k[2] in modl && tgt(k, k[sp])) || continue
             g = k[1:sp]
             iszero(gv(x, (g..., "UP")) + gv(x, (g..., "LO"))) || push!(conflict, g)
+        end
+        # L48-52: in LOOP order, pp_qaput 01 '%1 Bounds conflict: FX + LO/UP at same TS-level, latter ignored';
+        #   PUT QLOG ' WARNING       -     R=',%RL%,' Y=',V.TL,' P=',%PL%,' S=',S.TL
+        for g in gams_sort!(conflict, tm.data)
+            pp_qaput!(tm, 1, name * " Bounds conflict: FX + LO/UP at same TS-level, latter ignored")
+            qput!(qalog(tm), " WARNING       -     R=" * qlab12(g[1]) * " Y=" * g[2] * " P=" * qlab12(g[3]) * " S=" * g[sp])
         end
         bdneq = [k[1] for k in gset(tm, "BDNEQ").keys]
         foreach(g -> foreach(b -> delete!(x, (g..., b)), bdneq), conflict)
@@ -463,12 +483,19 @@ function ppmain_tsattr!(tm)
     #   IF(ABS(COM_FR(R,T,C,'ANNUAL')-1) GT 1E-5, Z=0; <warning>)))
     rtc_by = Dict{NTuple{2,String},Vector{String}}()
     foreach(k -> pushat!(rtc_by, (k[1], k[3]), k[2]), rtcT)
+    qa_group!(tm)                                                        # L723: PUTGRP = 0
     for (r, c) in gordered(tm, trackc)
         Z = GNum(1.0)
         for t in get(rtc_by, (r, c), String[])
             iszero(Z) && break
             a = gv(cfr, (r, t, c, "ANNUAL")).v
-            (a != 1 && abs(a - 1) > 1e-5) && (Z = GZERO)
+            if a != 1 && abs(a - 1) > 1e-5
+                Z = GZERO
+                # L726-728: pp_qaput 01 'COM_FR does not sum to unity (T=first year)';
+                #   PUT QLOG ' WARNING       - Normalized to 1,   R=',%RL%,' C=',%CL%,' (T=',T.TL:0,')'
+                pp_qaput!(tm, 1, "COM_FR does not sum to unity (T=first year)")
+                qput!(qalog(tm), " WARNING       - Normalized to 1,   R=" * qlab12(r) * " C=" * qlab12(c) * " (T=" * t * ")")
+            end
         end
     end
     # L729: COM_FR(RTC(R,T,C),S)$((COM_FR(RTC,'ANNUAL') NE 1)$TRACKC(R,C)) = COM_FR(RTC,S) / COM_FR(RTC,'ANNUAL')
@@ -572,7 +599,7 @@ function ppmain_tsattr!(tm)
         ((k[1], k[2], k[3]) in rtpv && k[5] in bd && (k[1], k[3], k[4]) in prc_ts && !haskey(naf, k)) && push!(rtps_bd, k)
     end
     # L767: $BATINCLUDE pp_lvlbr.mod NCAP_AF '' PRC_TS ",'0','0'" 0 1
-    Z, F, arr_br = lvlbr!(tm, tr, naf, (k, s) -> (k[1], k[3], s) in prc_ts, rtpv, Z, F)
+    Z, F, arr_br = lvlbr!(tm, tr, naf, (k, s) -> (k[1], k[3], s) in prc_ts, rtpv, Z, F; name="NCAP_AF", tsname="PRC_TS")
     arr_br === nothing || (ts_array = arr_br)
     uncd7 = Set{NTuple{7,String}}()
     # L768: NCAP_AF(RTPS_BD)$NCAP_AF(RTPS_BD) $= NCAP_AFS(RTPS_BD)

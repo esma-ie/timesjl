@@ -51,12 +51,10 @@ end
     prep_ext_symbols(tm) -> Vector{String}
 
 Every set and parameter of the prep dump, compared after `prep_ext!` (the
-step ends the init -> prep segment), except the QA-log scalars PUTOUT,
-PUTGRP and ERRLEV, which the translation does not write (the QA log,
-m13-plan.md open items).
+step ends the init -> prep segment), the QA-log scalars PUTOUT, PUTGRP and
+ERRLEV too (M1.3 change 25b-1).
 """
-prep_ext_symbols(tm) = sort([i.name for i in values(tm.data.dump.symbols)
-                             if i.kind in (:set, :parameter) && !(i.name in ("PUTOUT", "PUTGRP", "ERRLEV"))])
+prep_ext_symbols(tm) = sort([i.name for i in values(tm.data.dump.symbols) if i.kind in (:set, :parameter)])
 
 """
     prep_ext!(tm) -> tm

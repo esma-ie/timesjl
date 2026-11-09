@@ -63,7 +63,7 @@ from runfile import build_dd_run, patch_run  # noqa: E402
 from runlimits import RunSlot, default_max_parallel, default_slot_dir, default_threads, limit_threads  # noqa: E402
 from gdx2arrow import convert_gdx, gams_system_directory  # noqa: E402
 
-HARNESS_VERSION = "0.3.1"  # 0.3.1 (5 Nov 2026): --only convert; 0.3.0 (31 Oct 2026): M1.3 checkpoints, --only presolve; 0.2.4 (29 Oct 2026): run limits (threads, parallel runs); 0.2.3: model overrides; 0.2.2: raw/tjl_<run>.run; 0.2.1: extra_dd_dirs; 0.2.0: pre-solve run
+HARNESS_VERSION = "0.3.2"  # 0.3.2 (9 Nov 2026): raw/tjl_presolve_qa_check.log; 0.3.1 (5 Nov 2026): --only convert; 0.3.0 (31 Oct 2026): M1.3 checkpoints, --only presolve; 0.2.4 (29 Oct 2026): run limits (threads, parallel runs); 0.2.3: model overrides; 0.2.2: raw/tjl_<run>.run; 0.2.1: extra_dd_dirs; 0.2.0: pre-solve run
 EXPECTED_TIMES_VERSION = "4.9.7"
 EXPECTED_TIMES_COMMIT = "d9a6a25"
 VARIANTS = {"reduce_off": {"REDUCE": "NO"}, "as_run": {}}
@@ -328,6 +328,17 @@ def presolve_run(args, model, overrides, idirs, extra, out, work_root, manifest,
         manifest["dumps"]["coef"] = convert(work / "tjl_coef.gdx", out / "coef", args.sysdir)
     for f in work.glob(f"tjl_{tag}*"):
         shutil.copy(f, out / "raw" / f.name)
+    keep_qa_log(work, out / "raw" / f"tjl_{tag}_qa_check.log")
+
+
+def keep_qa_log(work: Path, dest: Path) -> bool:
+    """The QA log (QA_CHECK.LOG, written by pp_qaput.mod) of a run, as GAMS left it: M1.3 change 25b
+    compares TIMES.jl's log with it. GAMS writes it lower case under filecase=4."""
+    qa = next((f for f in work.iterdir() if f.name.lower() == "qa_check.log"), None)
+    if qa is None:
+        return False
+    shutil.copy(qa, dest)
+    return True
 
 
 def convert_run(args, model, overrides, idirs, extra, out, work_root, manifest, model_name, variant):

@@ -36,7 +36,6 @@ for vx in VARIANTS
             foreach(f -> f(tm), VARIANT_STEPS)
             ref = DumpData(fx("ppm"))
             names = sort([i.name for i in values(ref.dump.symbols) if i.kind in (:set, :parameter) &&
-                          !(i.name in ("PUTOUT", "PUTGRP", "ERRLEV")) &&
                           (i.name in input_names || haskey(tm.data.sets, i.name) || haskey(tm.data.params, i.name))])
             r = layer1(tm, ref, names)
             foreach(d -> ispass(d) || println("$(vx["prefix"]) input -> ppm: ", d, " ", d.examples), r)

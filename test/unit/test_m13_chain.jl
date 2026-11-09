@@ -15,7 +15,7 @@ using TIMES: TimesModel, DumpData, layer1, init_ext!, ppmain_head!, ppmain_years
              ppmain_flo!, ppmain_flofs!, ppmain_ire!, ppmain_bnd!, ppmain_cum!, ppmain_stg!, ppmain_uc!, ppmain_ucmap!,
              ppmain_blend!, ppmain_reduce!, ppm_ext_actef!, ppm_ext!, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!,
              coef_shp!, coef_ext!, prepret_decl!, eqobjinv_prep!, eqobjfix_prep!, eqobsalv_prep!, eqmain_prep!, bnd_data!,
-             pp_qack_data!, pp_clean!, generate!
+             pp_qack_data!, pp_clean!, generate!, qa_carry!, qa_text, qa_compare
 using TIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp
 import TOML, JSON, JuMP, HiGHS
 
@@ -38,10 +38,12 @@ function carry_state(tm, dir)
     merge!(nt.switches, tm.switches)
     merge!(nt.data.sets, tm.data.sets)
     merge!(nt.data.params, tm.data.params)
-    return nt
+    return qa_carry!(nt, tm)                    # the QA log goes on (M1.3 change 25b-1)
 end
 
-chain_symbols(d) = sort([i.name for i in values(d.dump.symbols) if i.kind in (:set, :parameter) && !(i.name in ("PUTOUT", "PUTGRP", "ERRLEV"))])
+"Every set and parameter of the dump `d` (less the QA-log scalars unless `qa`: pp_qack.mod's log is change 25b-2)."
+chain_symbols(d; qa=true) = sort([i.name for i in values(d.dump.symbols) if i.kind in (:set, :parameter) &&
+                                  (qa || !(i.name in ("PUTOUT", "PUTGRP", "ERRLEV")))])
 
 @testset "M1.3 chain: input dump -> ppm -> coefficients -> pre-solve -> model, TIMES_Demo demo12" begin
     fx = only(filter(f -> f["prefix"] == "demo12_off", TOML.parsefile(joinpath(FIXTURES, "public_fixtures.toml"))["fixture"]))
@@ -55,6 +57,11 @@ chain_symbols(d) = sort([i.name for i in values(d.dump.symbols) if i.kind in (:s
         @test length(r) > 800 && all(ispass, r)
         tm = carry_state(tm, joinpath(FIXTURES, "demo12_off_" * b))
     end
+    # the QA log written by preprocessing against GAMS's QA_CHECK.LOG of the pre-solve run (M1.3 change 25b-1)
+    qok, note = qa_compare(qa_text(tm), read(joinpath(FIXTURES, "demo12_off_qa_check.log"), String))
+    qok || println("QA log: ", note)
+    @test qok
+    @test occursin("COM_FR does not sum to unity", qa_text(tm))
     # coefmain.mod order, then coef_ext.vda (test_public_parity.jl, check_layer1_coef); compared on the
     # fixture's coef_symbols and on every set and parameter of the ppm dump (with the scratch scalars
     # filparam.gms, fillcost.gms and coef_ext.vda L23 leave, M1.3 change 25-5)
@@ -67,7 +74,7 @@ chain_symbols(d) = sort([i.name for i in values(d.dump.symbols) if i.kind in (:s
     @test all(n -> n in names, ("FIRST_VAL", "LAST_VAL", "MY_FYEAR", "F", "Z", "MY_F"))
     # the coef -> pre-solve step, every set and parameter at the pre-solve checkpoint
     tm = carry_state(tm, joinpath(FIXTURES, "demo12_off_coef"))
-    names = chain_symbols(tm.data)
+    names = chain_symbols(tm.data; qa=false)
     foreach(f -> f(tm), M13_COEF_PRESOLVE)
     ref = DumpData(joinpath(FIXTURES, "demo12_off_presolve"))
     r = layer1(tm, ref, filter(n -> haskey(ref.dump.symbols, n) && n != "TJL_SOLVEINFO", names))

@@ -102,6 +102,7 @@ function probe13(refdir, model; roots=Dict{String,String}(), variant="reduce_off
             continue
         end
         tm = TimesModel(joinpath(dir, a); switches=sw)
+        TIMES.qa_warnings!(tm, TIMES.gams_warnings(joinpath(dir, "raw", "tjl_presolve.lst")))   # ppmain.mod L35
         ref = DumpData(joinpath(dir, b))
         for (_, name, f, syms, extra) in seg
             try

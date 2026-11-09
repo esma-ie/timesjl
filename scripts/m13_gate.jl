@@ -14,13 +14,18 @@
 # value is never used for it). A symbol that neither TIMES.jl nor the
 # segment's check touched is the same in both dumps (the segment ends compare
 # every symbol of their start dump). Compared at each checkpoint: every set
-# and parameter of the segment's start dump, less the QA-log scalars PUTOUT,
-# PUTGRP and ERRLEV (25b) and the harness's TJL_SOLVEINFO, as at the segment
-# ends of the probe. Both variants. A path TIMES.jl does not translate yet
+# and parameter of the segment's start dump, less the harness's
+# TJL_SOLVEINFO, and at presolve less the QA-log scalars PUTOUT, PUTGRP and
+# ERRLEV too (pp_qack.mod's QA log is M1.3 change 25b-2). At ppm the QA log
+# TIMES.jl wrote is compared with GAMS's (raw/tjl_presolve_qa_check.log,
+# harness 0.3.2 or reference/python/keep_qa_log.py): GAMS's goes on with
+# pp_qack.mod's groups. The run's compilation warnings (ppmain.mod L35) are
+# read from the pre-solve listing. Both variants. A path TIMES.jl does not translate yet
 # (UnportedError) ends the chain there; the checkpoints before it still count.
 
 include(joinpath(@__DIR__, "m13_probe.jl"))      # M13_STEPS, M13_SEGMENTS, run_switches, runfile_of, suite_switches
-using TIMES: coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!
+using TIMES: coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!, qa_warnings!, gams_warnings,
+             qa_carry!, qa_text, qa_compare
 
 "The M1.2 coefficient stage, ppm -> coef: coefmain.mod in order, then coef_ext.vda (maindrv.mod L62-73)."
 const M12_COEF = (coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!)
@@ -35,12 +40,12 @@ function carry(tm, dir)
     merge!(nt.switches, tm.switches)
     merge!(nt.data.sets, tm.data.sets)
     merge!(nt.data.params, tm.data.params)
-    return nt
+    return qa_carry!(nt, tm)
 end
 
-"Every set and parameter of the dump `d`, less the QA-log scalars and the harness's own."
-gate_symbols(d) = sort([i.name for i in values(d.dump.symbols)
-                        if i.kind in (:set, :parameter) && !(i.name in ("PUTOUT", "PUTGRP", "ERRLEV", "TJL_SOLVEINFO"))])
+"Every set and parameter of the dump `d`, less the harness's own (and the QA-log scalars unless `qa`)."
+gate_symbols(d; qa=true) = sort([i.name for i in values(d.dump.symbols) if i.kind in (:set, :parameter) && i.name != "TJL_SOLVEINFO" &&
+                                 (qa || !(i.name in ("PUTOUT", "PUTGRP", "ERRLEV")))])
 
 """
     gate13(refdir, model; roots, variant) -> Bool
@@ -58,10 +63,11 @@ function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off"
     rf = runfile_of(refdir, model, variant)
     sw = rf === nothing ? suite_switches(model, m, roots) : run_switches(rf)
     tm = TimesModel(joinpath(dir, "input"); switches=sw)
+    qa_warnings!(tm, gams_warnings(joinpath(dir, "raw", "tjl_presolve.lst")))   # $IF WARNINGS, ppmain.mod L35
     ok, t_all, reached = true, 0.0, "input"
     for (a, b) in GATE_SEGMENTS
         isdir(joinpath(dir, b)) || (println("== ", model, "/", variant, ": no ", b, " dump; the chain ends at ", a); break)
-        names = gate_symbols(tm.data)                 # the segment's start dump
+        names = gate_symbols(tm.data; qa=b != "presolve")   # the segment's start dump
         t = try
             @elapsed foreach(f -> f(tm), gate_steps(a))
         catch e
@@ -83,6 +89,16 @@ function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off"
         for d in bad
             println("     ", d)
             foreach(e -> println("        ", e), d.examples)
+        end
+        qalog = joinpath(dir, "raw", "tjl_presolve_qa_check.log")
+        if b == "ppm"
+            if isfile(qalog)
+                qok, note = qa_compare(qa_text(tm), read(qalog, String))
+                ok &= qok
+                println("== ", model, "/", variant, " QA log at ppm: ", qok ? "PASS" : "FAIL", " (", note, ")")
+            else
+                println("== ", model, "/", variant, " QA log at ppm: no GAMS log (reference/python/keep_qa_log.py)")
+            end
         end
         reached = b
         tm = carry(tm, joinpath(dir, b))
