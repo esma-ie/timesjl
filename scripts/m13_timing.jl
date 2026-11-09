@@ -52,7 +52,7 @@ end
 function timed_chain(dir, sw)
     tm = TimesModel(joinpath(dir, "input"); switches=sw)
     t = Dict{String,Float64}()
-    for (a, b) in M13_SEGMENTS
+    for (a, b) in filter(s -> s[1] != "coef", M13_SEGMENTS)       # preprocessing only (input -> ppm)
         for (_, name, f, _, _) in filter(s -> s[1] == a, M13_STEPS)
             t[name] = @elapsed f(tm)
         end

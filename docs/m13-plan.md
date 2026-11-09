@@ -111,6 +111,10 @@ GAMS 54.6.1):
 | 23 | eqflomrk.mod: EQ(l)_FLOMRK, market-share flow constraints | | TIMES-NZ |
 | 24 | eqactups.vda: EQ_SLSIFT, load shifting (with the demo12 load-shifting variant) | 131- | layers 2-3 TIMES-NZ (both variants) |
 | 25 | eqmain.mod preparation and pp_qack.mod: the coef -> pre-solve step, so the CI chain runs end to end (in M1.3, not M1.5: James, 5 Nov 2026) | | presolve (demo12 in CI) |
+| 25-1 | mod_vars.mod L94 (prepret.dsc DECL, its data statements L44-81), eqobj.mod L14-39 (with prepret.dsc EQOBJ L119-131) and eqobjinv.mod L18-274 (with coef_alt.lin INV, L89-118): the investment cases, spreads, corrections and divisors (8 Nov 2026; the step in parts) | 14-39; 18-274 | the probe's coef -> presolve segment: core models, demo12 cases; crafted case demo12_objinv (CI) |
+| 25-2 | eqobjfix.mod, eqobjvar.mod, eqobsalv.mod (with coef_alt.lin FIX and prepret.dsc OBJFIX/OBSALV): their data statements | | coef -> presolve |
+| 25-3 | eqmain.mod L41-262 (RVPT, RTP_OFF, the UC maps and the other data statements between the equation includes), equ_ext (eqactups.vda L1-35 and the other VDA preparations), mod_equa.mod, mod_ext | | coef -> presolve |
+| 25-4 | bndmain.mod data statements and pp_qack.mod (less the QA log, 25b); the coef -> pre-solve step joins the M1.3 chain and the CI chain runs end to end | | presolve, every symbol (demo12 in CI) |
 | 25b | pp_qaput.mod: the QA log (QA_CHECK.LOG) and its scalars PUTOUT, PUTGRP and ERRLEV, at every pp_qaput call translated so far, and the ERRLEV abort of pp_qack.mod L376-386 (ERRLEV 33: the run goes on with an alert; above 33: stop). TIMES.jl checks errors as GAMS does until JuMP-side checks are added in Phase 2 (James, 6 Nov 2026). The harness does not keep QA_CHECK.LOG yet (harness change, then a GAMS rerun) | 1-16; 376-386 | log text and scalars at init, prep, prelv, ppm; crafted demo12 states for the WARNING, ERROR and FATAL paths (CI) |
 | 26 | curex.gms (preppm.mod L27-28): currency conversion from G_CUREX and R_CUREX into each region's currency. JRC-EU-TIMES-cli_ll has G_CUREX data (found 7 Nov 2026 by the nightly run; brought into M1.3 by James, 7 Nov 2026) | 1-84 | prep: JRC-EU-TIMES-cli_ll on James's machine (verdicts only, docs/test-models.md); crafted case demo12_curex, G_CUREX and R_CUREX in a second currency (CI) |
 | 27 | powerflo.vda: the power-flow (PTDF) grid extension, %POWERFLO% YES, which init_ext.vda L134-135 sets when PRC_REACT, GR_PTDF or GG_KGF has data. JRC-EU-TIMES-cli_ll has PRC_REACT data (found 7 Nov 2026; brought into M1.3 by James, 7 Nov 2026). In three parts; the switch stays refused until the last: | | JRC-EU-TIMES-cli_ll on James's machine (verdicts only); demo12 variant 6, PTDF power grid (docs/demo12-variants.md; CI) |
@@ -175,6 +179,40 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 ## Findings so far
 
+- (25-1) The start of the coef -> pre-solve step (`src/model/eqobjinv_prep.jl`,
+  `prepret_decl!` and `prepret_eqobj!` in `src/ext/dsc/prepret.jl`,
+  8 Nov 2026). The step from the coef dump to the pre-solve dump changes 53
+  symbols on demo12 (the eqobj*.mod preparation, mod_vars, eqmain, bndmain
+  and pp_qack); it is translated in four parts (25-1 to 25-4) and probed as
+  a fifth segment, coef -> presolve, of `scripts/m13_probe.jl` (the gate
+  and the timing script keep to input -> ppm until 25-4). 25-1 covers what
+  runs before eqobjfix.mod: prepret.dsc DECL's data statements
+  (mod_vars.mod L94: the refit maps, RP_RTF, VNTRT, RVPRL, VN2T and the EPS
+  added to NCAP_ILED, which forces the retiring vintages into case 2a),
+  eqobj.mod L14-39 (K_EOH, KTYAGE, SUM_OBJ, where `OBV('OBJSAL'),OBV` is one
+  controlled index so only (OBJSAL,OBJSAL) is -1) with prepret.dsc EQOBJ's
+  data statements (L119-131), and eqobjinv.mod L18-274: RTP without the
+  zero past investments, OBJ_ICUR, the lifetime corrections, COR_SALVI,
+  OBJ_CRF, OBJ_PASTI, OPYEAR, the cases 1a, 1b (with its FOR loop over
+  repeated investments), 2a and 2b, the interest during construction, the
+  investment and decommissioning spreads (KAGE, INVSTEP, INVSPRED, UNCD7,
+  YKAGE, OBJ_SUMIII), and the divisors, with coef_alt.lin's INV part under
+  a non-empty %CTST% (DOINV falls through into DOFIX up to `%2$GOTO
+  FINISH`). Checked on the symbols the part settles that nothing later in
+  the step changes (26, and 15 more for early retirement): every core
+  model, reduce_off (OTCGEN, OTNYC, TIMES-NZ: 26 of 26; OTUS9r with early
+  retirement: 41 of 41), demo12, demo12_ucattr, demo12_ips, demo12_refit and
+  demo12_refit_afc on both variants, and the crafted case
+  TIMES_Demo-demo12_objinv (`reference/dd/demo12_objinv/`: decommissioning
+  costs, lifetimes and lag, a technology discount rate, a 6-year life that
+  repeats within periods and, in REG2, with a 2-year lead time: case 2b),
+  which no suite model reaches; its whole model passes layers 2-3 (33
+  checks; objective 23,962,067.34 by CPLEX and HiGHS). CI:
+  `test_m13_coef_presolve.jl` on demo12_off, demo12_refit (its coef dump
+  is a new fixture) and demo12_objinv. Not translated: %VALIDATE%, %ETL%,
+  %STAGES% (refused). RVPT (eqmain.mod L199-201) is empty on OTUS9r because
+  its OBJ_2A entries are all past vintages and the loop runs over milestone
+  years; it is read from the dump until 25-3.
 - (24) eqactups.vda L127-158, EQ_SLSIFT, load shifting
   (`src/ext/vda/eqslsift.jl`, 8 Nov 2026). Rows (R,T,P,COM,S,LNX,L) for
   every RPS_PRCTS slice of an RPC_LS process with LNX = FX and L in {N,

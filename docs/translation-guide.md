@@ -593,3 +593,8 @@ those checks, their figures and their crafted cases are not published
   with demo12 variant 1 (crafted cases demo12_ls and demo12_lst, CI
   fixtures, layers 1-3). TIMES-NZ is generated whole for the first time:
   layer 2 PASS on steady reduce_off.
+- 8 Nov 2026: M1.3 (25-1): the start of the coef -> pre-solve step, in four
+  parts: prepret.dsc DECL and EQOBJ data, eqobj.mod L14-39 and
+  eqobjinv.mod L18-274 (with coef_alt.lin INV). The probe gains a coef ->
+  presolve segment; every core model and the demo12 cases pass; new crafted
+  case TIMES_Demo-demo12_objinv (case 2b, decommissioning; CI fixtures).

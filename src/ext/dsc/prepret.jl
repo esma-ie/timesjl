@@ -587,3 +587,181 @@ function eq_ret!(tm::TimesModel)
     end
     return n
 end
+
+"""
+    prepret_decl!(tm) -> tm
+
+The data statements of prepret.dsc DECL (mod_vars.mod L94), the start of the
+coef -> pre-solve step when early retirement is on (VNRET declared): the
+refit maps and types, the forced 2a/2b objective type of retiring vintages
+and the synchronised refits:
+
+    PRC_RCAP(PRC_RCAP(RP)) = PRC_CAP(RP);                                                  (L48)
+    LOOP(PRC_RCAP(R,PRC), F=0; MY_F=0; CNT=EPS;                                            (L49-55)
+     LOOP(P\$PRC_REFIT(R,PRC,P),Z=PRC_REFIT(R,PRC,P); CNT\$CNT=CNT+1;
+      IF(ABS(Z)>2, F=F+1); IF(MOD(Z,2)=0,MY_F\$(ABS(Z)-4)=3);
+      IF(Z<0,RTP_TT(R,T,TT,PRC)\$COEF_CPT(R,T,TT,P)=YES; ELSE RTP_TT(R,T,T,PRC)\$RTP(R,T,P)=YES; CNT=0;));
+     IF(CNT,Z=(-1+2\$(F=CNT))*MAX(1,MY_F); ELSE Z=-2);
+     IF(NOT MAPVAL(CNT),RP_RTF(R,PRC) = Z);
+     IF(F,RCAP_BND(RTP(R,T,PRC),'UP')\$(NOT SUM(P\$PRC_REFIT(R,PRC,P),RTP(R,T,P)\$(ABS(PRC_REFIT(R,PRC,P))>2)))=EPS));
+    VNTRT(VNT(V,T))\$(NOT SAMEAS(V,T)) = YES;                                              (L59)
+    RVPRL(RTP(R,V,P))\$PRC_RCAP(R,P)=MAX(0,SMAX(VNRET(V,T,P),YEARVAL(T))-YEARVAL(V));      (L60)
+    RVP(RTP) \$= RVPRL(RTP);                                                               (L61)
+    NCAP_ILED(RVP) = NCAP_ILED(RVP)+EPS;                                                   (L62)
+    OPTION TRACKP < RCAP_OCAP; RP_RTF(TRACKP)\$(NOT RP_RTF(TRACKP)) = EPS;                 (L64-65)
+    VN2T(VNTRT(LL,T(YEAR))) = ORD(YEAR)-ORD(LL);                                           (L66)
+    RCAP_BND(R,T,P,BDNEQ) \$= RCAP_BND(R,T,P,'FX');                                        (L67)
+    PRC_YMAX(PRC_RCAP(RP)) = MIN(0,SUM(P\$PRC_REFIT(RP,P),MAX(EPS,3-ABS(PRC_REFIT(RP,P))))); (L78)
+    RVPRL(R,'0',P) \$= PRC_YMAX(R,P);                                                       (L79)
+    OPTION CLEAR=TRACKP,CLEAR=PASTSUM,CLEAR=RVP;                                            (L81)
+
+VNRET(V,T,P) is RTP_CPTYR(R,VNTRT(V,T),P) (the macro of L41). CNT starts at
+EPS, which counts as true in `\$CNT` and `IF(CNT, ...)` and as 0 in `F=CNT`;
+MAPVAL(CNT) is nonzero only for EPS, so a process without refits keeps its
+RP_RTF. MOD takes the sign of its first argument (G43). The bounds of the
+label (L68-77, L80) are `ret_bounds!`.
+
+GAMS: prepret.dsc L44-81, v4.9.7.
+"""
+function prepret_decl!(tm::TimesModel)
+    Reference.has_symbol(tm.data.dump, "RP_RTF") || return tm                      # $IF DECLARED VNRET
+    d = tm.data
+    yax = YearAxis(tm)
+    T = gset(tm, "MILESTONYR")
+    rtp = gset(tm, "RTP")
+    prc_cap = gset(tm, "PRC_CAP")
+    prc_rcap = filter(k -> k in prc_cap, gmembers(tm, "PRC_RCAP", 2))              # L48
+    gput!(tm, "PRC_RCAP", prc_rcap)
+    refit = gparam_opt(d, "PRC_REFIT", 3)
+    refit_of = indexby(refit, (1, 2))                                              # (r,prc) -> PRC_REFIT(r,prc,p)
+    coef_cpt = gparam(tm, "COEF_CPT")
+    cpt_of_rp = indexby(coef_cpt, (1, 4))                                          # (r,p) -> COEF_CPT(r,v,t,p)
+    rtp_tt = gmembers(tm, "RTP_TT", 4)
+    rp_rtf = gvalues(tm, "RP_RTF", 2)
+    rcap_bnd = gvalues(tm, "RCAP_BND", 4)
+    rtp_of_rp = indexby(rtp, (1, 3))                                               # (r,p) -> RTP(r,t,p)
+    no3, no4 = NTuple{3,String}[], NTuple{4,String}[]
+    istrue(x::GNum) = x.v != 0 || x.eps
+    prc_rcap_sorted = collect(prc_rcap); gams_sort!(prc_rcap_sorted, d)
+    for (r, prc) in prc_rcap_sorted                                                # L49-55
+        f, my_f, cnt = 0.0, 0.0, GEPS
+        for (_, _, p) in get(refit_of, (r, prc), no3)
+            z = gv(refit, (r, prc, p)).v
+            istrue(cnt) && (cnt = cnt + GNum(1.0))
+            abs(z) > 2 && (f += 1)
+            (rem(z, 2) == 0 && abs(z) - 4 != 0) && (my_f = 3.0)
+            if z < 0
+                for (_, t, tt, _) in get(cpt_of_rp, (r, p), no4)
+                    ((t,) in T && (tt,) in T) && push!(rtp_tt, (r, t, tt, prc))
+                end
+            else
+                for (_, t, _) in get(rtp_of_rp, (r, p), no3)
+                    (t,) in T && push!(rtp_tt, (r, t, t, prc))
+                end
+                cnt = GZERO
+            end
+        end
+        z = istrue(cnt) ? (-1 + (f == cnt.v ? 2 : 0)) * max(1.0, my_f) : -2.0
+        cnt.eps || gassign!(rp_rtf, (r, prc), GNum(z))
+        if f != 0
+            for (_, t, _) in get(rtp_of_rp, (r, prc), no3)
+                (t,) in T || continue
+                any(k -> (r, t, k[3]) in rtp && abs(gv(refit, k).v) > 2, get(refit_of, (r, prc), no3)) && continue
+                gassign!(rcap_bnd, (r, t, prc, "UP"), GEPS)
+            end
+        end
+    end
+    gput!(tm, "RTP_TT", rtp_tt)
+    vntrt = gmembers(tm, "VNTRT", 2)                                               # L59
+    foreach(k -> k[1] != k[2] && push!(vntrt, k), gset(tm, "VNT"))
+    gput!(tm, "VNTRT", vntrt)
+    rvprl = gvalues(tm, "RVPRL", 3)                                                # L60
+    smax = Dict{NTuple{3,String},Float64}()
+    for (r, v, t, p) in gset(tm, "RTP_CPTYR")
+        (v, t) in vntrt || continue
+        smax[(r, v, p)] = max(get(smax, (r, v, p), -Inf), yax.yearval[t])
+    end
+    for (r, v, p) in rtp
+        (r, p) in prc_rcap || continue
+        gassign!(rvprl, (r, v, p), GNum(max(0.0, get(smax, (r, v, p), -Inf) - yax.yearval[v])))
+    end
+    rvp = [k for k in keys(rvprl) if k in rtp]                                     # L61: RVP(RTP) $= RVPRL(RTP)
+    iled = gvalues(tm, "NCAP_ILED", 3)                                             # L62
+    foreach(k -> gassign!(iled, k, gv(iled, k) + GEPS), rvp)
+    gput!(tm, "NCAP_ILED", iled)
+    for k in unique((k[1], k[3]) for k in gparam_opt(d, "RCAP_OCAP", 4).keys)      # L64-65: TRACKP(R,P) < RCAP_OCAP(R,V,P,C)
+        haskey(rp_rtf, k) || gassign!(rp_rtf, k, GEPS)
+    end
+    gput!(tm, "RP_RTF", rp_rtf)
+    vn2t = gvalues(tm, "VN2T", 2)                                                  # L66
+    for (ll, t) in vntrt
+        (t,) in T && gassign!(vn2t, (ll, t), GNum(Float64(yax.pos[t] - yax.pos[ll])))
+    end
+    gput!(tm, "VN2T", vn2t)
+    for k in [k for k in keys(rcap_bnd) if k[4] == "FX"]                           # L67
+        x = gv(rcap_bnd, k)
+        for bd in ("LO", "UP")
+            gassign!(rcap_bnd, (k[1], k[2], k[3], bd), x)
+        end
+    end
+    gput!(tm, "RCAP_BND", rcap_bnd)
+    ymax = gvalues(tm, "PRC_YMAX", 2)                                              # L78
+    for (r, p) in prc_rcap
+        s = GZERO
+        for k in get(refit_of, (r, p), no3)
+            s = s + gmax(GEPS, GNum(3 - abs(gv(refit, k).v)))
+        end
+        gassign!(ymax, (r, p), gmin(GZERO, s))
+    end
+    gput!(tm, "PRC_YMAX", ymax)
+    for (r, p) in collect(keys(ymax))                                              # L79: RVPRL(R,'0',P) $= PRC_YMAX(R,P)
+        gassign!(rvprl, (r, "0", p), gv(ymax, (r, p)))
+    end
+    gput!(tm, "RVPRL", rvprl)
+    gput!(tm, "TRACKP", Set{NTuple{2,String}}())                                   # L81
+    gput!(tm, "PASTSUM", Dict{NTuple{3,String},Float64}())
+    gput!(tm, "RVP", Set{NTuple{3,String}}())
+    delete!(tm.cache, "RCAPSUB")
+    return tm
+end
+
+"The sets and parameters prepret_decl! settles (prepret.dsc L44-81)."
+prepret_decl_symbols(tm) = Reference.has_symbol(tm.data.dump, "RP_RTF") ?
+    ["PRC_RCAP", "RTP_TT", "RP_RTF", "RCAP_BND", "VNTRT", "RVPRL", "NCAP_ILED", "VN2T", "TRACKP", "RVP", "PASTSUM",
+     "RCAP_BLK", "NCAP_OLIFE", "RCAP_OCAP", "COEF_CAP"] : String[]
+
+"""
+    prepret_eqobj!(tm) -> tm
+
+The data statements of prepret.dsc EQOBJ (eqobj.mod L39, before
+eqobjinv.mod), when early retirement is on:
+
+    OPTION CLEAR=RCAP_BLK;                                    (L120, %MIP% not set)
+    RVPRL(R,PYR_S,P)\$PRC_RESID(R,'0',P)=NO; NCAP_OLIFE(R,T,P)\$(NOT PRC_VINT(R,P))=NO;   (L129)
+    RCAP_OCAP(RTP,C)\$(NOT RVPRL(RTP)) = 0;                   (L130)
+    OPTION CLEAR=COEF_CAP;                                    (L131)
+
+The integer-retirement block (L122-128) needs RCAP_BLK, which L120 has just
+cleared (RCAP_BLK data is refused, init_ext.jl).
+
+GAMS: prepret.dsc L119-131, v4.9.7.
+"""
+function prepret_eqobj!(tm::TimesModel)
+    Reference.has_symbol(tm.data.dump, "RP_RTF") || return tm
+    d = tm.data
+    gput!(tm, "RCAP_BLK", Dict{NTuple{3,String},Float64}())
+    pyr_s, resid = gset(tm, "PYR_S"), gparam_opt(d, "PRC_RESID", 3)
+    rvprl = gvalues(tm, "RVPRL", 3)
+    filter!(((k, _),) -> !((k[2],) in pyr_s && haskey(resid, (k[1], "0", k[3]))), rvprl)
+    gput!(tm, "RVPRL", rvprl)
+    vint, T = gset(tm, "PRC_VINT"), gset(tm, "MILESTONYR")
+    olife = gvalues(tm, "NCAP_OLIFE", 3)
+    filter!(((k, _),) -> !((k[2],) in T && !((k[1], k[3]) in vint)), olife)
+    gput!(tm, "NCAP_OLIFE", olife)
+    rtp = gset(tm, "RTP")
+    ocap = gvalues(tm, "RCAP_OCAP", 4)
+    filter!(((k, _),) -> !((k[1], k[2], k[3]) in rtp && !haskey(rvprl, (k[1], k[2], k[3]))), ocap)
+    gput!(tm, "RCAP_OCAP", ocap)
+    gput!(tm, "COEF_CAP", Dict{NTuple{4,String},Float64}())
+    return tm
+end

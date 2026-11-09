@@ -46,7 +46,9 @@ function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off"
     sw = rf === nothing ? suite_switches(model, m, roots) : run_switches(rf)
     tm = TimesModel(joinpath(dir, "input"); switches=sw)
     ok, t_all = true, 0.0
-    for (a, b) in M13_SEGMENTS
+    # The chain runs input -> ppm; coef -> presolve (change 25) joins it once the whole step is
+    # translated and the coefficient stage is carried into the chain.
+    for (a, b) in filter(s -> s[1] != "coef", M13_SEGMENTS)
         names = gate_symbols(tm.data)                 # the segment's start dump
         t = @elapsed foreach(s -> s[3](tm), filter(s -> s[1] == a, M13_STEPS))
         t_all += t

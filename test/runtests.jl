@@ -139,6 +139,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "Load shifting: EQ_SLSIFT, eqactups.vda L127-158 (M1.3)" begin
         include("unit/test_eqslsift.jl")
     end
+    @testset "The coef -> pre-solve step: eqobj and eqobjinv data (M1.3 change 25)" begin
+        include("unit/test_m13_coef_presolve.jl")
+    end
     @testset "demo12 variants: advanced features (docs/demo12-variants.md)" begin
         include("unit/test_variants.jl")
     end

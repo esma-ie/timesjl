@@ -181,3 +181,18 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_lst/demo12_lst.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_ls", "{crafted}/demo12_lst"]
+
+# TIMES_Demo demo12 + objinv.dd (8 Nov 2026): M1.3 change 25-1, the investment cases and
+# decommissioning of eqobjinv.mod (case 2b, repeated investments, decommissioning spreads,
+# a technology discount rate) that no public suite model reaches.
+[[model]]
+name = "TIMES_Demo-demo12_objinv"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_objinv/demo12_objinv.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_objinv"]
