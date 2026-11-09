@@ -55,21 +55,22 @@ chain_symbols(d) = sort([i.name for i in values(d.dump.symbols) if i.kind in (:s
         @test length(r) > 800 && all(ispass, r)
         tm = carry_state(tm, joinpath(FIXTURES, "demo12_off_" * b))
     end
-    # coefmain.mod order, then coef_ext.vda (test_public_parity.jl, check_layer1_coef)
+    # coefmain.mod order, then coef_ext.vda (test_public_parity.jl, check_layer1_coef); compared on the
+    # fixture's coef_symbols and on every set and parameter of the ppm dump (with the scratch scalars
+    # filparam.gms, fillcost.gms and coef_ext.vda L23 leave, M1.3 change 25-5)
+    names = chain_symbols(tm.data)
     coef_cpt!(tm); coef_nio!(tm); coef_ptr!(tm); coef_obj!(tm); coef_alt!(tm); coef_shp!(tm); coef_ext!(tm)
-    r = layer1(tm, DumpData(joinpath(FIXTURES, "demo12_off_coef")), fx["coef_symbols"])
+    ref = DumpData(joinpath(FIXTURES, "demo12_off_coef"))
+    r = layer1(tm, ref, unique(vcat(fx["coef_symbols"], filter(n -> haskey(ref.dump.symbols, n) && n != "TJL_SOLVEINFO", names))))
     foreach(d -> ispass(d) || println("coefficients: ", d, " ", d.examples), r)
-    @test all(ispass, r)
+    @test length(r) > 900 && all(ispass, r)
+    @test all(n -> n in names, ("FIRST_VAL", "LAST_VAL", "MY_FYEAR", "F", "Z", "MY_F"))
     # the coef -> pre-solve step, every set and parameter at the pre-solve checkpoint
     tm = carry_state(tm, joinpath(FIXTURES, "demo12_off_coef"))
     names = chain_symbols(tm.data)
     foreach(f -> f(tm), M13_COEF_PRESOLVE)
     ref = DumpData(joinpath(FIXTURES, "demo12_off_presolve"))
-    # FIRST_VAL, LAST_VAL and MY_FYEAR: filparam.gms scratch that the M1.2 coefficient stage does not yet
-    # leave as GAMS's last fillcost/filparam call does (an open item of the M1.3 gate, docs/m13-plan.md);
-    # every filparam call writes them before it reads them
-    coef_scratch = ("FIRST_VAL", "LAST_VAL", "MY_FYEAR")
-    r = layer1(tm, ref, filter(n -> haskey(ref.dump.symbols, n) && n != "TJL_SOLVEINFO" && !(n in coef_scratch), names))
+    r = layer1(tm, ref, filter(n -> haskey(ref.dump.symbols, n) && n != "TJL_SOLVEINFO", names))
     foreach(d -> ispass(d) || println("coef -> presolve: ", d, " ", d.examples), r)
     @test length(r) > 800 && all(ispass, r)
     # the model from TIMES.jl's own state: matrix and objective against GAMS

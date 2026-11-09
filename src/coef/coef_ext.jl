@@ -107,12 +107,14 @@ function coef_ext!(tm)
     rtforc = gvalues(tm, "RTFORC", 4)
     pasti = gvalues(tm, "NCAP_PASTI", 3)
     rp_resid0 = Set((k[1], k[3]) for k in keys(resid) if k[2] == "0")
+    rcap_loop = [k for k in prc_rcap.keys if k in trackp]
+    gams_sort!(rcap_loop, tm.data)                       # LOOP order: the scratch Z is the last pass's
     for v in pyr_s
         # L23: LOOP(PRC_RCAP(TRACKP(R,P)), Z = SMAX(T,PRC_RESID(R,T,P));
         #        RTFORC(RTP_CPTYR(R,V,T,P)) = Z-PRC_RESID(R,T,P)+EPS; PRC_RESID(R,T,P)$RTFORC(R,V,T,P) = Z)
-        for (r, p) in prc_rcap.keys
-            (r, p) in trackp || continue
+        for (r, p) in rcap_loop
             z = maximum((Float64(gv(resid, (r, t, p))) for t in t_list); init=-Inf)
+            gput_scalar!(tm, "Z", z)                         # scratch, as the last pass leaves it
             for (_, _, t, _) in get(cptyr_by_rvp, (r, v, p), NTuple{4,String}[])
                 gassign!(rtforc, (r, v, t, p), GNum(z) - gv(resid, (r, t, p)) + GEPS)
                 haskey(rtforc, (r, v, t, p)) && gassign!(resid, (r, t, p), GNum(z))
