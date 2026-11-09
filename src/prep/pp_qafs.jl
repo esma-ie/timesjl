@@ -225,6 +225,9 @@ function pp_qafs!(tm)
         (k[6] == "ANNUAL" && k[7] == "UP" && k[2] in modl) && push!(rtp_cgc, (k[1], k[2], k[3], k[4], k[5]))
     end
     rtp_grp = free_groups(rtp_cgc)                                                    # L70-71
+    # L71 also reads what RTPGIG still holds from L60 (L65 clears RTP_GRP only): the groups whose redundant
+    # fixed share was dropped are left out of the FX+UP check (a QA message only: such a group has no UP share)
+    foreach(k -> push!(rtp_grp, k[1:5]), rtpgig)
     empty!(rtpgig)                                                                    # L72
     qa_group!(tm)                                                                     # L72: PUTGRP=0
     for g in gordered(tm, setdiff(rtp_cg, rtp_grp))                                   # L73
