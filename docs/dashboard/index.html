@@ -168,11 +168,11 @@ const PIPELINE = [
   ["Preprocessing","pp_qack, pp_qaput",403,"done","25-4, 25b: QA checks and log"],
   ["Coefficients","coef_cpt",63,"partial","shaped availabilities refused"],
   ["Coefficients","coef_nio",71,"partial","capacity-related flows refused"],
-  ["Coefficients","coef_ptr",54,"review","reduced flows, 25c (draft #81)"],
+  ["Coefficients","coef_ptr",54,"done","reduced flows: 25c"],
   ["Coefficients","coef_obj",205,"partial","ANNCOST LEV, elastic demand refused"],
   ["Coefficients","coef_alt",161,"partial","TIMESTEP refused"],
   ["Coefficients","coef_shp",97,"partial","capacity-related flows refused"],
-  ["Coefficients","coef_ext",83,"partial","UC, ASHAR, CSTBAL refused; 25c in review"],
+  ["Coefficients","coef_ext",83,"partial","UC, ASHAR, CSTBAL refused"],
   ["Equations","core + VDA families",1750,"partial","blending, elastic demand refused"],
   ["Equations","eqmain.mod data",262,"done","25-3"],
   ["Equations","prepret.dsc: early retirement",162,"partial","RCAP_BLK, NCAP_OLIFE refused"],
@@ -188,7 +188,7 @@ const MILESTONES = [
   ["M1.0","foundations","done","gate 18 Oct"],
   ["M1.1","model generation","done","gate 21 Oct"],
   ["M1.2","coefficients","done","gate 31 Oct"],
-  ["M1.3","preprocessing","active","25c to decide; then the gate"],
+  ["M1.3","preprocessing","active","gate next"],
   ["M1.4","DD-file reader","active","started 9 Nov"],
   ["M1.5","run options","todo",""],
   ["M1.6","reporting, .vd","todo",""],
@@ -248,18 +248,18 @@ const M13_CHANGES = [
   ["25b-1",null,"pp_qaput.mod: the QA log and preprocessing's checks","","done","QA log"],
   ["25b-2",null,"pp_qack.mod: the QA checks and the ERRLEV abort","","done","QA checks, abort"],
   ["25b-3",null,"crafted cases demo12_qa and demo12_qa99","","done","QA test cases"],
-  ["25c",null,"coef_ptr.mod L38-42, coef_ext.vda L62-75: reduced flows (proposed)","","review","reduced flows"],
+  ["25c",null,"coef_ptr.mod L38-42, coef_ext.vda L62-75: reduced flows","","done","reduced flows"],
   ["26",null,"curex.gms: currency conversion","prep","done","currency"],
   ["27a",null,"powerflo.vda main block and PREP: phase-angle grids","prelv","done","grid: preparation"],
   ["27a-2",null,"powerflo.vda: PTDF grids, node allocation","prelv","todo","grid: PTDF, nodes"],
   ["27b",null,"powerflo.vda DECL, POWFLO: EQ_GR_POWFLO","","done","grid: equations"],
   ["27c",null,"powerflo.vda RPTB: grid reporting (with M1.6)","","todo","grid: reporting"],
 ];
-const M13_NOTE = "docs/m13-plan.md · merged to main up to #80 (9 Nov); 25c is draft PR #81";
+const M13_NOTE = "docs/m13-plan.md · merged to main up to #81 (9 Nov); 27a-2 waits behind M1.4";
 // scripts/m13_gate.jl on James's workstation: the chain from GAMS's input dump through every checkpoint to the
 // pre-solve dump, every symbol at 1e-9. TIMES.jl seconds for the whole chain.
 const M13_GATE = {
-  meta:"scripts/m13_gate.jl, James's workstation, 9 Nov 2026, branch of draft PR #81 (7195f71); the as-run column needs #81",
+  meta:"scripts/m13_gate.jl, James's workstation, 9 Nov 2026, the code of #81 (7195f71, merged)",
   before:"6 Nov nightly on main: 10 of 10 runs (5 models) to ppm",
   runs:[
     {model:"TIMES_Demo-demo12", licence:"CC BY 4.0", off:105.3, as:1.5},
