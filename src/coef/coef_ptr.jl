@@ -28,13 +28,7 @@ const NO_TSL = NTuple{3,String}[]
 
 "The coef_ptr.mod paths this model would take that are not translated; empty when coef_ptr! can run."
 function coef_ptr_unported(tm)
-    out = String[]
-    rpc_aflo = gset_opt(tm.data, "RPC_AFLO", 3)
-    any(k -> !(k in rpc_aflo), gset_opt(tm.data, "KEEP_FLOF", 3).keys) &&
-        push!(out, "coef_ptr.mod L38-40 (ACT_FLO of reduced flows: KEEP_FLOF has data outside RPC_AFLO)")
-    isempty(gset_opt(tm.data, "RPCG_PTRAN", 6)) ||
-        push!(out, "coef_ptr.mod L39-42 (FLO_FUNC/FLO_SUM substitution of reduced flows: RPCG_PTRAN has data)")
-    return out
+    return String[]                   # the reduced flows (L38-42) are translated (draft, 9 Nov 2026)
 end
 
 """
@@ -141,11 +135,51 @@ function coef_ptr!(tm)
     end
     gput!(tm, "COEF_PTRAN", coef_ptran)
 
-    # L37: KEEP_FLOF(RPC_AFLO(R,P,C)) = NO   (L38-40 refused unless KEEP_FLOF is then empty)
+    # L37: KEEP_FLOF(RPC_AFLO(R,P,C)) = NO
     rpc_aflo = gset_opt(tm.data, "RPC_AFLO", 3)
-    gput!(tm, "KEEP_FLOF", Set(k for k in gmembers(tm, "KEEP_FLOF", 3) if !(inC(k[3]) && k in rpc_aflo)))
-    # L41: CGTEST(CGTES2) = YES   (L42 refused unless RPCG_PTRAN is empty, when it changes nothing)
+    keep_flof = Set(k for k in gmembers(tm, "KEEP_FLOF", 3) if !(inC(k[3]) && k in rpc_aflo))
+    gput!(tm, "KEEP_FLOF", keep_flof)
+    # L38-40: ACT_FLO(RTP(R,V,P),C,S)$(RPCS_VAR(R,P,C,S)$KEEP_FLOF(R,P,C)) =
+    #   SUM((RPCG_PTRAN(RPC_ACT(R,P,COM),C,CG,CG4),PRC_TS(R,P,TS))$TS_MAP(R,TS,S),PRC_ACTFLO(RTP,COM)*COEF_PTRAN(RTP,CG,COM,CG4,TS)) +
+    #   SUM(RPCG_PTRAN(R,P,C,COM,CG,CG4)$COEF_PTRAN(RTP,CG,C,CG4,S),PRC_ACTFLO(RTP,COM)/COEF_PTRAN(RTP,CG,C,CG4,S))
+    ptran = gset_opt(tm.data, "RPCG_PTRAN", 6).keys
+    if !isempty(keep_flof)
+        act_flo = gvalues(tm, "ACT_FLO", 5)
+        actflo = gparam(tm, "PRC_ACTFLO")
+        rpc_act = gset_opt(tm.data, "RPC_ACT", 3).members
+        prc_ts = indexby(gset(tm, "PRC_TS"), (1, 2))
+        tsmap = gset(tm, "TS_MAP").members
+        by_red = indexby(gset_opt(tm.data, "RPCG_PTRAN", 6), (1, 2, 4))      # (R,P,C) at position 4
+        by_c3 = indexby(gset_opt(tm.data, "RPCG_PTRAN", 6), (1, 2, 3))       # (R,P,C) at position 3
+        keep_of = Dict{NTuple{2,String},Vector{String}}()
+        foreach(k -> push!(get!(() -> String[], keep_of, (k[1], k[2])), k[3]), keep_flof)
+        for (r, v, p) in rtp.keys, c in get(keep_of, (r, p), String[])
+            for (_, _, _, s) in get(rpcs_var, (r, p, c), NO_RPCS)
+                x = GZERO
+                for (_, _, com, _, cg, cg4) in get(by_red, (r, p, c), NTuple{6,String}[])
+                    (r, p, com) in rpc_act || continue
+                    for (_, _, ts) in get(prc_ts, (r, p), NTuple{3,String}[])
+                        (r, ts, s) in tsmap || continue
+                        x += gv(actflo, (r, v, p, com)) * gv(coef_ptran, (r, v, p, cg, com, cg4, ts))
+                    end
+                end
+                for (_, _, _, com, cg, cg4) in get(by_c3, (r, p, c), NTuple{6,String}[])
+                    y = gv(coef_ptran, (r, v, p, cg, c, cg4, s))
+                    iszero(y) || (x += gv(actflo, (r, v, p, com)) / y)
+                end
+                gassign!(act_flo, (r, v, p, c, s), x)
+            end
+        end
+        gput!(tm, "ACT_FLO", act_flo)
+    end
+    # L41: CGTEST(CGTES2) = YES
     union!(cgtest, cgtes2)
+    # L42: COEF_PTRAN(CGTEST(R,V,P,CG,C,COM),S)$RPCG_PTRAN(R,P,C,COM,CG,COM) = 0
+    if !isempty(ptran)
+        pt = Set(ptran)
+        filter!(kv -> !(kv[1][1:6] in cgtest && (kv[1][1], kv[1][3], kv[1][5], kv[1][6], kv[1][4], kv[1][6]) in pt), coef_ptran)
+        gput!(tm, "COEF_PTRAN", coef_ptran)
+    end
 
     # L45: OPTION CG_GRP <= CGTEST; L46: CG_GRP(RPCC_FFUNC) = NO; L47: OPTION RPCC_FFUNC <= CG_GRP
     rpcc_ffunc = gset(tm, "RPCC_FFUNC")
