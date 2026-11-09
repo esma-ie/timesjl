@@ -1,0 +1,222 @@
+{
+ "format": "timesjl-dump",
+ "format_version": 1,
+ "source": "..\\timesjl-reference\\_work\\TIMES_Demo-demo12_flomrk\\as_run\\convert\\tjl_matrix.gdx",
+ "uels": "uels.arrow",
+ "symbols": [
+  {
+   "name": "i",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "*"
+   ],
+   "description": "Equation names",
+   "records": 3345,
+   "file": "i.arrow"
+  },
+  {
+   "name": "j",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "*"
+   ],
+   "description": "Variable names",
+   "records": 4611,
+   "file": "j.arrow"
+  },
+  {
+   "name": "jb",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "j"
+   ],
+   "description": "binary variables",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "ji",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "j"
+   ],
+   "description": "integer variables",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "jsc",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "j"
+   ],
+   "description": "semi-continuous variables",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "jsi",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "j"
+   ],
+   "description": "semi-integer variables",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "s",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "*"
+   ],
+   "description": "sos sets",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "js1",
+   "kind": "set",
+   "type": "",
+   "dimension": 2,
+   "domain": [
+    "s",
+    "j"
+   ],
+   "description": "sos1 variables",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "js2",
+   "kind": "set",
+   "type": "",
+   "dimension": 2,
+   "domain": [
+    "s",
+    "j"
+   ],
+   "description": "sos2 variables",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "jobj",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "j"
+   ],
+   "description": "objective variable",
+   "records": 1,
+   "file": "jobj.arrow"
+  },
+  {
+   "name": "iobj",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "i"
+   ],
+   "description": "objective row (if reformulation possible, empty otherwise)",
+   "records": 1,
+   "file": "iobj.arrow"
+  },
+  {
+   "name": "objcoef",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 0,
+   "domain": [],
+   "description": "objective coefficient",
+   "records": 1,
+   "file": "objcoef.arrow"
+  },
+  {
+   "name": "objconst",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 0,
+   "domain": [],
+   "description": "objective constant",
+   "records": 1,
+   "file": "objconst.arrow"
+  },
+  {
+   "name": "objjacval",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 0,
+   "domain": [],
+   "description": "objective jacobian value",
+   "records": 1,
+   "file": "objjacval.arrow"
+  },
+  {
+   "name": "e",
+   "kind": "equation",
+   "type": "eq",
+   "dimension": 1,
+   "domain": [
+    "i"
+   ],
+   "description": "equations",
+   "records": 3345,
+   "file": "e.arrow"
+  },
+  {
+   "name": "x",
+   "kind": "variable",
+   "type": "free",
+   "dimension": 1,
+   "domain": [
+    "j"
+   ],
+   "description": "variables",
+   "records": 4611,
+   "file": "x.arrow"
+  },
+  {
+   "name": "A",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 2,
+   "domain": [
+    "i",
+    "j"
+   ],
+   "description": "jacobian",
+   "records": 18802,
+   "file": "A.arrow"
+  },
+  {
+   "name": "ANl",
+   "kind": "set",
+   "type": "",
+   "dimension": 2,
+   "domain": [
+    "i",
+    "j"
+   ],
+   "description": "nonlinear jacobian indicator",
+   "records": 0,
+   "file": null
+  }
+ ]
+}

@@ -133,6 +133,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "User constraints: the attribute factors of uc_*.mod (M1.3)" begin
         include("unit/test_equserco_attr.jl")
     end
+    @testset "Market shares: EQ(l)_FLOMRK, eqflomrk.mod L56-105 (M1.3)" begin
+        include("unit/test_eqflomrk.jl")
+    end
     @testset "demo12 variants: advanced features (docs/demo12-variants.md)" begin
         include("unit/test_variants.jl")
     end

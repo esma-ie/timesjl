@@ -1,0 +1,32 @@
+* TIMES.jl crafted case demo12_flomrk (reference/crafted.toml, 8 Nov 2026): market-share
+* constraints (eqflomrk.mod L56-105; M1.3 change 23, docs/m13-plan.md) added to TIMES_Demo
+* demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0) with the inter-period oil store of
+* demo12_ips (ips.dd). TIMES-NZ reaches only LO rows of single processes; this case reaches:
+* - FLO_MARK (preppm.mod L237): REG1's gas plant at most 60% of electricity (UP);
+* - a negative share of a standard process (REG2's coal plant, UP): RX_MARK is then set at
+*   the last period instead of '0' (eqflomrk.mod L26-27), so the flows are divided by
+*   PRC_MARK and the right-hand side factor is 0 (L68, L103);
+* - a group ITEM, RNWGRP, of two processes (hydro and wind in REG1, LO);
+* - an exchange process (coal imports MINCOA1, FX), the IRE branch (L83-88);
+* - a storage process (STKOIL1 in REG1, UP), the storage branch (L91-95).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET ITEM
+/
+RNWGRP
+/
+
+PARAMETER
+FLO_MARK ' '/
+REG1.2005.ELCTEGAS00.ELC.UP 0.6
+/
+
+PARAMETER
+PRC_MARK ' '/
+REG2.2005.ELCTECOA00.ELCTECOA00.ELC.UP -0.5
+REG1.2005.ELCREHYD00.RNWGRP.ELC.LO 0.01
+REG1.2005.ELCREWIN00.RNWGRP.ELC.LO 0.01
+REG1.2005.MINCOA1.MINCOA1.COA.FX 0.4
+REG1.2005.STKOIL1.STKOIL1.OIL.UP 0.5
+/
