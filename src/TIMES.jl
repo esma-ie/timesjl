@@ -20,6 +20,7 @@ import JuMP
 
 include("reference/Reference.jl")
 include("dd/ddparse.jl")
+include("dd/compile.jl")
 include("model/gams_data.jl")
 include("model/mod_vars.jl")
 include("model/equations.jl")

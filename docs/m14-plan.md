@@ -95,9 +95,43 @@ checkpoint, so it is out of scope.
 The M1.4 gate: change 5 passes on every core-tier run, both variants, and CI
 runs the chain from DD files on demo12 and the crafted cases.
 
+## Findings of 9 Nov 2026 (evening), and the plan they change
+
+- **Changes 2, 3 and 4 are one piece of code.** The `$IF`/`$SET` logic decides which declarations
+  and data GAMS compiles, and the data rules decide the records, so none of the three can be
+  checked alone. `src/dd/compile.jl` does GAMS's compile phase for all three: dollar controls,
+  declarations with `$ONMULTI`, data statements (domain checks, `$ONEPS`, label order), and the
+  executable statements before maindrv.mod (initsys.mod L43, initmty.mod L368-369), run after
+  compilation as GAMS runs them. They are reviewed as one PR, in place of three.
+- **Result before maindrv.mod:** on every open core model, both variants, every symbol the reader
+  compiles (389) equals the input dump (keys, record order, values, EPS, set text), and every label
+  is in the dump's order (G55). demo12 compiles in 0.5 s, OTUS9r in 7 s. TIMES-NZ's 84 domain
+  violations are dropped with 84 warnings, as in GAMS (G56; open question 1 below, answered).
+- **Scope: GAMS compiles the whole program before running any of it.** So the input dump holds
+  every symbol of TIMES (1,023 for demo12, 602 of them declared after maindrv.mod), and the
+  compile-time data of the later files: 30 symbols with records, 4 more members of UC_NUMBER,
+  3 labels. The M1.3 chain reads them. A GAMS-free run needs them too, so the reader must also
+  compile maindrv.mod and the files it includes, for their declarations and compile-time data
+  only (their executable statements run after the input checkpoint and are already translated).
+  TIMES's code uses about 45 kinds of dollar control; the later files add `$MACRO` (127),
+  `$EOLCOM`, `$SHIFT`, `$EXIT`, `$IFE`, `$CLEAR` and others to what initsys and initmty use. New
+  change 2b. This is the main risk to the M1.4 timetable.
+- **Where the TIMES source comes from.** Compiling the whole program needs the TIMES v4.9.7 files
+  at run time, in CI and for users. Change 2 was to generate Julia from initsys and initmty; that
+  does not scale to the whole program (about 250 files). Proposal (decision for James): a pinned
+  Julia Artifact of `etsap-TIMES/TIMES_model` @ d9a6a25, downloaded on first use and checked by
+  hash; CI uses the same artifact. Until then the scripts take `--sources`.
+
+| # | What | Status |
+| --- | --- | --- |
+| 2-4 | `src/dd/compile.jl`: the compile phase to maindrv.mod | done for the open core models (draft PR) |
+| 2b | the compile phase of maindrv.mod and its includes: declarations and compile-time data | next |
+| 2c | the TIMES source as a Julia Artifact (after James's decision) | |
+| 5 | scale, wiring, `m13_gate.jl --from dd` | as planned |
+
 ## Open questions (flag, do not guess)
 
-1. **Domain violations.** suite.toml says DATAGDX "filters" 84 records in
+1. **Domain violations.** (Answered 9 Nov 2026: dropped at compile time, G56.) suite.toml says DATAGDX "filters" 84 records in
    each TIMES-NZ case. G32 says GAMS drops them at compile time. Change 4 checks
    the TIMES-NZ `input/` dump. TIMES-NZ's 88 compile warnings against 84
    dropped records leave 4 unexplained.
