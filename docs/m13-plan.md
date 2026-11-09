@@ -112,7 +112,7 @@ GAMS 54.6.1):
 | 24 | eqactups.vda: EQ_SLSIFT, load shifting (with the demo12 load-shifting variant) | 131- | layers 2-3 TIMES-NZ (both variants) |
 | 25 | eqmain.mod preparation and pp_qack.mod: the coef -> pre-solve step, so the CI chain runs end to end (in M1.3, not M1.5: James, 5 Nov 2026) | | presolve (demo12 in CI) |
 | 25-1 | mod_vars.mod L94 (prepret.dsc DECL, its data statements L44-81), eqobj.mod L14-39 (with prepret.dsc EQOBJ L119-131) and eqobjinv.mod L18-274 (with coef_alt.lin INV, L89-118): the investment cases, spreads, corrections and divisors (8 Nov 2026; the step in parts) | 14-39; 18-274 | the probe's coef -> presolve segment: core models, demo12 cases; crafted case demo12_objinv (CI) |
-| 25-2 | eqobjfix.mod, eqobjvar.mod, eqobsalv.mod (with coef_alt.lin FIX and prepret.dsc OBJFIX/OBSALV): their data statements | | coef -> presolve |
+| 25-2 | eqobjfix.mod, eqobjvar.mod, eqobsalv.mod (with coef_alt.lin FIX and prepret.dsc OBJFIX/OBSALV): their data statements (9 Nov 2026) | 19-175; 11-82 | coef -> presolve: core models, demo12 cases (CI) |
 | 25-3 | eqmain.mod L41-262 (RVPT, RTP_OFF, the UC maps and the other data statements between the equation includes), equ_ext (eqactups.vda L1-35 and the other VDA preparations), mod_equa.mod, mod_ext | | coef -> presolve |
 | 25-4 | bndmain.mod data statements and pp_qack.mod (less the QA log, 25b); the coef -> pre-solve step joins the M1.3 chain and the CI chain runs end to end | | presolve, every symbol (demo12 in CI) |
 | 25b | pp_qaput.mod: the QA log (QA_CHECK.LOG) and its scalars PUTOUT, PUTGRP and ERRLEV, at every pp_qaput call translated so far, and the ERRLEV abort of pp_qack.mod L376-386 (ERRLEV 33: the run goes on with an alert; above 33: stop). TIMES.jl checks errors as GAMS does until JuMP-side checks are added in Phase 2 (James, 6 Nov 2026). The harness does not keep QA_CHECK.LOG yet (harness change, then a GAMS rerun) | 1-16; 376-386 | log text and scalars at init, prep, prelv, ppm; crafted demo12 states for the WARNING, ERROR and FATAL paths (CI) |
@@ -179,6 +179,28 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 ## Findings so far
 
+- (25-2) eqobjfix.mod L19-175 with coef_alt.lin FIX (L105-131) and
+  eqobsalv.mod L11-82 (`src/model/eqobjfix_prep.jl`, 9 Nov 2026; eqobjvar.mod
+  and prepret.dsc OBJFIX/OBSALV have no data statements): the fixed-cost
+  spreads (OBJ_FCUR, OBJ_YES, OBJ_SUMIV for cases 1a, 1b, 2a, 2b, OBJ_SUMIVS
+  for decommissioning surveillance, without past-investment charges where
+  NCAP_PASTI is absent), the shape controls RTP_SHAPE/RTP_ISHPR, the
+  present-value factors OBJ_LIFE, the spreads KAGE, INVSTEP and INVSPRED, the
+  divisors OBJ_DIVIV, and under a non-empty %CTST% OBJ_JD, OBJ_WD and the
+  residual-capacity divisors; then the salvage controls and values
+  (OBJ_SUMS, OBJ_SUMS3, SALV_INV, OBJ_DCEOH, OBJSCC, OBJ_IAD, COR_SALVD,
+  OBJ_CRFD, SALV_DEC). Three GAMS points: `OPTION a <= b` matches repeated
+  domains from the left and `OPTION a < b` from the right (G52, checked on
+  GAMS 54.6.1; KAGE takes JOT from OBJ_LIFE); in coef_alt.lin L125
+  `MAX(1,MIN(IPD(T),ROUND(NCAP_TLIFE))$(OBJ_1B+OBJ_1A))` gives 1 to cases
+  2a/2b (the `$` conditions the MIN only); under FIX, `%2` = `*` comments out
+  coef_alt.lin L117-118, so INVSTEP is kept and the OBJ_WD lines run, and
+  eqobjfix.mod L169 skips the clear of OBJ_YES. The copy of L161 runs in
+  GAMS order and sees its own earlier copies. Checked, coef -> presolve on
+  the symbols settled (with 25-1: 51; 66 with early retirement): OTCGEN,
+  OTNYC, TIMES-NZ and OTUS9r (reduce_off); demo12, demo12_ucattr,
+  demo12_ips, demo12_refit, demo12_objinv on both variants; CI:
+  test_m13_coef_presolve.jl.
 - (25-1) The start of the coef -> pre-solve step (`src/model/eqobjinv_prep.jl`,
   `prepret_decl!` and `prepret_eqobj!` in `src/ext/dsc/prepret.jl`,
   8 Nov 2026). The step from the coef dump to the pre-solve dump changes 53
