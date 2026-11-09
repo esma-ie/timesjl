@@ -1,0 +1,28 @@
+# Environment of the cuOpt lane (scripts/cuopt/README.md): TIMES.jl from this
+# checkout plus cuOpt.jl. Kept apart from the package and from test/, so CI
+# without a GPU never loads cuOpt.
+#
+#   julia --project=scripts/cuopt -e 'using Pkg; Pkg.instantiate()'
+#
+# cuOpt.jl 0.5.0 loads only the cuOpt 26.10 library (libcuopt_mathopt.so,
+# from the pip wheel libcuopt-mathopt-cu12 or -cu13 == 26.10.*). Change the
+# two together. HiGHS is here because the script reuses scripts/parity_report.jl,
+# which imports it.
+
+[deps]
+HiGHS = "87dc4568-4c63-4d18-b0c0-bb2238e4078b"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+TIMES = "2625f1fd-8477-4c68-a6fe-e00cc6f61c53"
+TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
+cuOpt = "29a73d17-8276-40b7-9ffb-d89e58023643"
+
+[sources]
+TIMES = {path = "../.."}
+
+[compat]
+HiGHS = "1"
+JSON = "0.21, 1"
+JuMP = "1"
+cuOpt = "=0.5.0"
+julia = "1.11"

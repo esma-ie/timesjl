@@ -1,11 +1,41 @@
 # Parity dashboard
 
-`index.html` is the TIMES.jl parity board: four 16:9 panels (translation
-progress, milestones and headline figures; the M1.3 preprocessing probe by
-step and model; the parity matrix of every check by model and
-stage; objective agreement and generation timings against GAMS), in the ESMA
-palette, exportable panel by panel to a slide deck. Open it from a checkout
-or as the private artifact James keeps.
+`index.html` is the TIMES.jl parity board: ten 16:9 slides in the ESMA brand
+(DM Sans, Dark Green and Dark Yellow, the ESMA logo). Each slide follows the
+usual ESMA slide layout: a title and one-line message, a Dark Yellow accent
+line, then the chart, with the source in the footer.
+
+1. at a glance: headline figures and the milestones;
+2. translation coverage by stage of the GAMS code;
+3. the M1.3 changes, by status;
+4. the M1.3 chain from GAMS's input dump to the pre-solve point;
+5. the M1.3 probe, step by step;
+6. parity by run, CI test cases (layers 1-3);
+7. parity by run, public reference models;
+8. equation families against GAMS's matrix;
+9. objective agreement;
+10. coefficient-stage time against GAMS.
+
+## Slides for a deck
+
+Every slide is drawn on a fixed 1280 x 720 canvas and scaled as a whole, so
+it fits a Google Slides page (10 x 5.625 in) exactly. Labels are at least
+14 px on that canvas.
+
+- One slide alone: open `index.html#slide=N` (add `&theme=dark` for
+  dark-green slides).
+- All slides as PNGs at 2560 x 1440 (headless Chrome or Edge):
+
+      powershell -NoProfile -ExecutionPolicy Bypass -File scripts\dashboard_png.ps1
+
+  They go to `timesjl-slides`, beside the repository (`-Out` to change). In
+  Google Slides: Insert > Image > Upload from computer, and size it to the
+  page.
+- Print to PDF gives one slide per page.
+
+The ESMA logo is the official RGB artwork ("On White Background" on light
+slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
+(c) ESMA and is not covered by the repository's GPL licence.
 
 ## Data
 
@@ -69,10 +99,11 @@ or as the private artifact James keeps.
 
       julia --project=test scripts/parity_report.jl tim.json --ref ../timesjl-reference TIM-bau TIM-mitigation_cb2024-300mt TIM-mitigation_cb2024-300mt-myopic
 
-- The pipeline strip (GAMS files and their status), the milestones, the M1.3
-  changes and their probe results, the coefficient-stage timings (M1.2,
+- The pipeline (GAMS files and their status), the milestones, the M1.3
+  changes and their probe results, the M1.3 chain (`M13_GATE`, from
+  `scripts/m13_gate.jl`), the coefficient-stage timings (M1.2,
   workstation) and the suite's models not yet reported are written into the
-  page by hand (`PIPELINE`, `MILESTONES`, `M13_CHANGES`, `M13_PROBE`,
+  page by hand (`PIPELINE`, `MILESTONES`, `M13_CHANGES`, `M13_NOTE`, `M13_GATE`, `M13_PROBE`,
   `TIMINGS`, `PLANNED_RUNS` in its script); update them when a file is
   translated, a change merges, a gate passes, `scripts/m13_probe.jl` is run
   on the core tier, `docs/timings.md` changes or the suite changes.
@@ -82,10 +113,11 @@ or as the private artifact James keeps.
 
 ## Encoding
 
-Matrix cells: fill = status; inner square = records compared, log scale;
-yellow hairline = records left to a later coefficient file
-(`later_overwrites`); dashed outline = not run. Objective chart: relative
-difference per GAMS solver on a log axis against the 1e-6 gate, with
-cross-feasibility ticks (ours in GAMS's matrix, theirs in ours). Timing
-chart: GAMS execution to hand-off against TIMES.jl generation, with the
-Phase 1 5x target per model.
+Status: green pass, red fail, charcoal refused (an untranslated path: TIMES.jl
+stops with a message), striped Dark Yellow in review, dashed outline not run
+or not started. Numbers in cells are the records compared at 1e-9 (layers
+1-2, and GAMS records per probe step) or the relative objective difference
+(layer 3). A Dark Yellow underline marks records left to a later coefficient
+file (`later_overwrites`). Objective slide: CPLEX and HiGHS references on a
+log axis against the 1e-6 gate. Timing slide: the GAMS profile of the
+coefficient stage against TIMES.jl, warm, with the Phase 1 5x target.
