@@ -271,3 +271,17 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 3233
 cols = 4495
 nonzeros = 18366
+
+# Crafted case TIMES_Demo-demo12_pf (reference/crafted.toml: demo12 + pf.dd), 9 Nov 2026 (GAMS
+# 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): a phase-angle DC
+# power-flow grid on the REG1-REG2 electricity link (M1.3 changes 27a-27b), the whole model. The
+# presolve dump is shared with test/fixtures/variant_fixtures.toml. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_pf"
+model    = "TIMES_Demo-demo12_pf"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3257
+cols = 4485
+nonzeros = 18423

@@ -605,3 +605,28 @@ those checks, their figures and their crafted cases are not published
   statements (AFS, SUPERYR, RVPT, RTP_OFF, the user-constraint maps,
   RP_UPR). Only bndmain.mod, pp_qack.mod, pp_clean.mod and scratch remain
   for 25-4.
+- 9 Nov 2026: M1.3 (25-4): bndmain.mod, pp_qack.mod (data) and pp_clean.mod,
+  with the step's scratch. From GAMS's coef dump every set and parameter of
+  the pre-solve dump matches on the core models and twelve demo12 cases;
+  the CI chain runs end to end on demo12 (input dump to the model, layers
+  1-3). Change 25 is complete; 25b (the QA log) is next.
+- 9 Nov 2026: M1.3 (25-5): the coefficient stage leaves filparam.gms's,
+  fillcost.gms's and coef_ext.vda L23's scratch scalars as GAMS does, so
+  the CI chain checks every symbol at coef and presolve, and
+  scripts/m13_gate.jl chains on from ppm to presolve (reduce_off; the
+  as_run variants stop at the coefficient stage's reduced flows).
+- 9 Nov 2026: M1.3 (25b-1): the QA log (`src/prep/qalog.jl`, GAMS's PUT
+  rules G53, the compile-warnings line G54) and every pp_qaput call of
+  preprocessing. The harness keeps QA_CHECK.LOG (0.3.2); the gate and the
+  CI chain compare the log at ppm and the QA scalars at every checkpoint.
+- 9 Nov 2026: M1.3 (25b-2): pp_qack.mod's checks, extended ones included,
+  'ALL QUALITY CHECKS PASSED' and the ERRLEV abort. The whole QA log is
+  compared at presolve (gate, CI chain).
+- 9 Nov 2026: M1.3 (25b-3): crafted cases demo12_qa (QA warnings) and
+  demo12_qa99 (a FATAL error and the abort), from their input dumps in CI.
+  Change 25b is complete.
+- 9 Nov 2026: M1.3 (27a): powerflo.vda PREP and main block, phase-angle
+  grids; crafted case demo12_pf (CI variant fixture). PTDF and node
+  allocation data stay refused (27a-2).
+- 9 Nov 2026: M1.3 (27b): powerflo.vda DECL and EQ_GR_POWFLO, phase-angle
+  grids; demo12_pf passes layers 2-3 in both variants (CI public fixture).

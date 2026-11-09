@@ -20,8 +20,8 @@ const PRELV_STEPS = (preppm_shape!, ppmain_topo!, ppmain_tslvl!, ppmain_life!, p
     names = pp_prelv_symbols(tm)
     r = layer1(tm, DumpData(joinpath(FIXTURES, "demo12_off_prelv")), names)
     foreach(d -> ispass(d) || println(d, " ", d.examples), r)
-    @test length(names) == 821 && all(ispass, r)
-    @test !("PUTOUT" in names) && "TOP_IRE" in names
+    @test length(names) == 824 && all(ispass, r)
+    @test "PUTOUT" in names && "TOP_IRE" in names                 # the QA-log scalars too (M1.3 change 25b-1)
     # L111: without IRE_BND every dummy import from IMPEXP goes
     @test !any(k -> k[1] == "IMPEXP" && k[5] == "IMPNRGZ", gset(tm, "TOP_IRE").keys)
 end
@@ -70,7 +70,9 @@ end
 @testset "pp_prelv.vda: refused paths" begin
     fx = only(filter(f -> f["prefix"] == "demo12_off", TOML.parsefile(joinpath(FIXTURES, "public_fixtures.toml"))["fixture"]))
     tm = TimesModel(joinpath(FIXTURES, "demo12_off_prep"); switches=merge(fx["switches"], Dict("POWERFLO" => "YES")))
-    @test any(s -> occursin("L114", s), pp_prelv_unported(tm))
+    @test isempty(pp_prelv_unported(tm))                              # phase-angle grids: M1.3 change 27a
+    TIMES.gput!(tm, "GR_PTDF", Dict{NTuple{6,String},Float64}(("REG1", "2005", "ELCTECOA00", "ELC", "REG2", "ELC") => 0.5))
+    @test any(s -> occursin("GR_PTDF", s), pp_prelv_unported(tm))   # the PTDF formulation stays refused (27a-2)
 end
 
 # init_ext.vda L134-135: %POWERFLO% YES comes from the data, not the run file, and a
@@ -86,7 +88,7 @@ end
     TIMES.gput!(tm, "PRC_REACT", Dict{NTuple{3,String},Float64}(("REG1", "2005", "ELCTECOA00") => 0.1))
     TIMES.data_switches!(tm)
     @test TIMES.gswitch(tm, "POWERFLO", "") == "YES"
-    @test any(s -> occursin("L114", s), pp_prelv_unported(tm))
+    @test isempty(pp_prelv_unported(tm))                              # phase-angle grids are translated (27a)
     @test !("MY_F" in TIMES.preppm_shape_symbols(tm))               # powerflo.vda L80 assigns it again
     @test !("RXX" in TIMES.ppmain_life_symbols(tm))                 # powerflo.vda L121-122
 end

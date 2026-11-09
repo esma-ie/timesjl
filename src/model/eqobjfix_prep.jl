@@ -113,6 +113,8 @@ function eqobjfix_prep!(tm::TimesModel)
     fil2 = Dict(v => ((v,) in T ? gv(ipd, (v,)).v - 1 : 0.0) for (v,) in modlyear)
     my_array = Dict(v => gv(B, (v,)).v - yv(v) + ((v,) in T ? gv(P("M", 1), (v,)).v - gv(B, (v,)).v - fil2[v] : 0.0)
                     for (v,) in modlyear)
+    gput!(tm, "FIL2", Dict((v,) => x for (v, x) in fil2 if x != 0))            # L66-67: the scratch as GAMS leaves it
+    gput!(tm, "MY_ARRAY", Dict((v,) => x for (v, x) in my_array if x != 0))
     obj_sumiv = Set{NTuple{6,String}}()
     for k in obj_yes
         (k in obj_1a && haskey(my_array, k[2])) || continue
@@ -129,7 +131,9 @@ function eqobjfix_prep!(tm::TimesModel)
         y = ylead(y0, n)
         (y === nothing || a === nothing || l === nothing) || push!(obj_sumiv, (y, r, t, p, a, l))
     end
-    for k in sort!(collect(obj_yes))
+    scal = Dict{String,Float64}()          # scratch scalars as the statements leave them (F, Z, MY_F, CNT, OBJ_C, OBJ_D)
+    yes_sorted = collect(obj_yes); gams_sort!(yes_sorted, d)                  # LOOP order
+    for k in yes_sorted
         (k in obj_1b && (k[2],) in T) || continue
         (r, t, p) = k
         zz = tl(k)
@@ -138,16 +142,20 @@ function eqobjfix_prep!(tm::TimesModel)
             f = gv(B, (t,)).v - zhalf(zz) - yv(t)
             zz = rnd(gv(rpti, k).v * zz) - 1
             sumiv!(t, f, r, t, p, agelead(a1, zz), agelead(a1, my_f))
+            scal["MY_F"] = my_f; scal["F"] = f; scal["Z"] = zz
         else
             cnt = istep(t, zz)
             obj_d = cnt - 1
             my_f = gv(B, (t,)).v - yv(t) - floor(cnt / 2)
             c, n = 1.0, gv(rpti, k).v
+            scal["Z"] = zz; scal["OBJ_D"] = obj_d; scal["CNT"] = cnt; scal["MY_F"] = my_f
             while c <= n
                 f = my_f; my_f = f + zz; cnt = rnd(my_f) - rnd(f) - 1
                 sumiv!(t, f, r, t, p, agelead(a1, obj_d), agelead(a1, cnt))
+                scal["F"] = f; scal["MY_F"] = my_f; scal["CNT"] = cnt
                 c += 1
             end
+            scal["OBJ_C"] = c                                                  # FOR leaves the first value past n
         end
     end
     # L111-114: case 2a
@@ -166,27 +174,33 @@ function eqobjfix_prep!(tm::TimesModel)
             (yv(y) >= f && yv(y) < z) && push!(obj_sumivs, (r, v, p, kk, y))
         end
     end
-    for k in obj_2a, cur in curs
+    obj_2a_sorted = collect(obj_2a.keys)
+    for k in obj_2a_sorted, cur in curs
         nz(gv(ob_dlc, (k[1], k[3], cur, k[2]))) || continue
         (r, v, p) = k
         my_f = gv(B, (v,)).v + gv(iled, k).v
         f = rnd(my_f + tl(k)); z = f + gv(dlag, k).v; my_f -= yv(v)
         sumivs!(r, v, p, v, my_f, f, z)
+        scal["MY_F"] = my_f; scal["F"] = f; scal["Z"] = z
     end
     # L129-138: case 2b
-    for k in sort!(collect(obj_yes))
+    for k in yes_sorted
         (k in obj_2b && (k[2],) in T) || continue
         (r, t, p) = k
         zz = tl(k); my_f = rnd(gv(B, (t,)).v + gv(iled, k).v) - yv(t)
+        scal["Z"] = zz; scal["MY_F"] = my_f
         c, n = 1.0, gv(rpti, k).v
         while c <= n
             f = my_f; my_f = f + zz; cnt = rnd(my_f) - rnd(f) - 1
             sumiv!(t, f, r, t, p, a1, agelead(a1, cnt))
+            scal["F"] = f; scal["MY_F"] = my_f; scal["CNT"] = cnt
             c += 1
         end
+        scal["OBJ_C"] = c
     end
     # L143-149: surveillance, case 2b
-    for k in obj_2b, cur in curs
+    obj_2b_sorted = collect(obj_2b.keys)
+    for k in obj_2b_sorted, cur in curs
         ((k[2],) in T && nz(gv(ob_dlc, (k[1], k[3], cur, k[2])))) || continue
         (r, t, p) = k
         c, n = 1.0, gv(rpti, k).v
@@ -194,8 +208,10 @@ function eqobjfix_prep!(tm::TimesModel)
             my_f = gv(B, (t,)).v + gv(iled, k).v + (c - 1) * tl(k)
             f = rnd(my_f + tl(k)); z = f + gv(dlag, k).v; my_f -= yv(t)
             sumivs!(r, t, p, t, my_f, f, z)
+            scal["MY_F"] = my_f; scal["F"] = f; scal["Z"] = z
             c += 1
         end
+        scal["OBJ_C"] = c
     end
     # L154-155: forget past investment charges without NCAP_PASTI
     k_eoh, pastmile = S("K_EOH", 1), S("PASTMILE", 1)
@@ -356,6 +372,7 @@ function eqobjfix_prep!(tm::TimesModel)
         gput!(tm, "OBJ_YES", Set{NTuple{3,String}}()); gput!(tm, "YKAGE", Set{NTuple{3,String}}())   # L175
     end
     gput!(tm, "INVSTEP", invstep)                                             # coef_alt.lin L117 is commented out under FIX
+    foreach(((n, x),) -> gput_scalar!(tm, n, x), scal)
     return tm
 end
 
@@ -457,6 +474,7 @@ function eqobsalv_prep!(tm::TimesModel)
     obj_disc = P("OBJ_DISC", 3)
     obj_dceoh = Dict{NTuple{2,String},Float64}()
     for (ll,) in S("MIYR_1", 1)                                                 # L52
+        gput_scalar!(tm, "F", miyr_vl + 1 - yv(ll))
         y = lead(yax, ll, glead(miyr_vl + 1 - yv(ll)))
         for (r, cur) in rdcur_sorted
             gassign!(obj_dceoh, (r, cur), y === nothing ? GZERO : gv(obj_disc, (r, y, cur)))
@@ -465,12 +483,14 @@ function eqobsalv_prep!(tm::TimesModel)
     gput!(tm, "OBJ_DCEOH", obj_dceoh)
     tlist = [k[1] for k in T.keys]                                              # L54-55
     B = P("B", 1)
-    z = maximum((i - 1 for (i, t) in enumerate(tlist) if gv(B, (t,)).v <= miyr_vl + 1); init=-1)
+    z = maximum((i - 1 for (i, t) in enumerate(tlist) if gv(B, (t,)).v <= miyr_vl + 1); init=-Inf)
+    gput_scalar!(tm, "Z", z)
     miyr_1 = S("MIYR_1", 1)
     cpx, rtp_cpx = P("NCAP_CPX", 3), P("RTP_CPX", 4)
     rtp = S("RTP", 3)
     for (i, t) in enumerate(tlist)
-        j = i - z
+        isfinite(z) || continue
+        j = i - Int(z)
         (1 <= j <= length(tlist) && (tlist[j],) in miyr_1) || continue
         for (r, v, p, kk) in obj_sumsi
             ((r, v, p) in rtp && nz(gv(cpx, (r, v, p)))) || continue

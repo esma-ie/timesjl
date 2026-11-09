@@ -256,7 +256,7 @@
    "n_mismatch": 0,
    "rel_diff": 6.529954703831444e-15,
    "run": "demo12_off",
-   "solve_seconds": 1.01,
+   "solve_seconds": 1.04,
    "status": "pass",
    "unit": "CPLEX"
   },
@@ -267,7 +267,7 @@
    "n_excluded": 0,
    "n_mismatch": 0,
    "run": "demo12_off",
-   "seconds": 1.829,
+   "seconds": 1.812,
    "status": "pass",
    "symbols": [
     {
@@ -358,7 +358,7 @@
    "n_excluded": 0,
    "n_mismatch": 0,
    "run": "demo12_off",
-   "seconds": 0.406,
+   "seconds": 0.415,
    "status": "pass",
    "symbols": [
     {
@@ -413,7 +413,7 @@
    "n_excluded": 2283,
    "n_mismatch": 0,
    "run": "demo12_off",
-   "seconds": 0.863,
+   "seconds": 0.877,
    "status": "pass",
    "symbols": [
     {
@@ -468,7 +468,7 @@
    "n_excluded": 0,
    "n_mismatch": 0,
    "run": "demo12_off",
-   "seconds": 3.978,
+   "seconds": 4.402,
    "status": "pass",
    "symbols": [
     {
@@ -733,7 +733,7 @@
    "n_excluded": 212,
    "n_mismatch": 0,
    "run": "demo12_off",
-   "seconds": 1.501,
+   "seconds": 1.491,
    "status": "pass",
    "symbols": [
     {
@@ -848,7 +848,7 @@
    "n_excluded": 212,
    "n_mismatch": 0,
    "run": "demo12_off",
-   "seconds": 1.232,
+   "seconds": 1.275,
    "status": "pass",
    "symbols": [
     {
@@ -957,7 +957,7 @@
    "n_excluded": 0,
    "n_mismatch": 0,
    "run": "demo12_off",
-   "seconds": 1.556,
+   "seconds": 1.65,
    "status": "pass",
    "symbols": [
     {
@@ -1676,7 +1676,7 @@
    "n_mismatch": 0,
    "rel_diff": 5.752579134979864e-15,
    "run": "demo12_red17b",
-   "solve_seconds": 0.16,
+   "solve_seconds": 0.17,
    "status": "pass",
    "unit": "CPLEX"
   },
@@ -1695,7 +1695,7 @@
    "n_mismatch": 0,
    "rel_diff": 7.773755587810577e-16,
    "run": "demo12_red17b",
-   "solve_seconds": 0.16,
+   "solve_seconds": 0.17,
    "status": "pass",
    "unit": "HIGHS"
   },
@@ -1955,7 +1955,7 @@
    "n_mismatch": 0,
    "rel_diff": 4.197828017417738e-15,
    "run": "demo12_red17b_off",
-   "solve_seconds": 0.19,
+   "solve_seconds": 0.2,
    "status": "pass",
    "unit": "CPLEX"
   },
@@ -1974,7 +1974,7 @@
    "n_mismatch": 0,
    "rel_diff": 2.4876017880993837e-15,
    "run": "demo12_red17b_off",
-   "solve_seconds": 0.19,
+   "solve_seconds": 0.2,
    "status": "pass",
    "unit": "HIGHS"
   },
@@ -3151,7 +3151,7 @@
    "n_mismatch": 0,
    "rel_diff": 1.0882631404455126e-15,
    "run": "demo12_ucrt_off",
-   "solve_seconds": 0.21,
+   "solve_seconds": 0.2,
    "status": "pass",
    "unit": "CPLEX"
   },
@@ -3170,7 +3170,7 @@
    "n_mismatch": 0,
    "rel_diff": 3.886654073019669e-15,
    "run": "demo12_ucrt_off",
-   "solve_seconds": 0.21,
+   "solve_seconds": 0.2,
    "status": "pass",
    "unit": "HIGHS"
   },
@@ -3450,7 +3450,7 @@
    "n_mismatch": 0,
    "rel_diff": 7.00651188723448e-15,
    "run": "demo12_refit",
-   "solve_seconds": 0.18,
+   "solve_seconds": 0.17,
    "status": "pass",
    "unit": "CPLEX"
   },
@@ -3469,9 +3469,708 @@
    "n_mismatch": 0,
    "rel_diff": 9.342015849645918e-16,
    "run": "demo12_refit",
-   "solve_seconds": 0.18,
+   "solve_seconds": 0.17,
    "status": "pass",
    "unit": "HIGHS"
+  },
+  {
+   "detail": [],
+   "layer": 1,
+   "n_compared": 4734,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_refit",
+   "seconds": 0.028,
+   "status": "pass",
+   "symbols": [
+    {
+     "mismatch": 0,
+     "n": 1,
+     "name": "SOW",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 6,
+     "name": "SW_T",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 14,
+     "name": "B",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 14,
+     "name": "E",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 14,
+     "name": "M",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 14,
+     "name": "D",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 6,
+     "name": "MY_TS",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 2435,
+     "name": "NCAP_AF",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "NCAP_AFS",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 2230,
+     "name": "COEF_AF",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "RTPS_BD",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "NCAP_AFBX",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "RTP_ISHPR",
+     "status": "pass"
+    }
+   ],
+   "unit": "coef_cpt"
+  },
+  {
+   "detail": [],
+   "layer": 1,
+   "n_compared": 0,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_refit",
+   "seconds": 0.0,
+   "status": "pass",
+   "symbols": [
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "COEF_ICOM",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "COEF_OCOM",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "COEF_RCOM",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "NCAP_OCOM",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "NCAP_CLAG",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "NCAP_CLED",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "RPC_CAPFLO",
+     "status": "pass"
+    }
+   ],
+   "unit": "coef_nio"
+  },
+  {
+   "detail": [],
+   "layer": 1,
+   "n_compared": 1943,
+   "n_excluded": 2086,
+   "n_mismatch": 0,
+   "run": "demo12_refit",
+   "seconds": 0.008,
+   "status": "pass",
+   "symbols": [
+    {
+     "mismatch": 0,
+     "n": 736,
+     "name": "COEF_PTRAN",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "RPCC_FFUNC",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 1207,
+     "name": "PRC_CG",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "KEEP_FLOF",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "ACT_FLO",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "CGTEST",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "CGTES2",
+     "status": "pass"
+    }
+   ],
+   "unit": "coef_ptr"
+  },
+  {
+   "detail": [],
+   "layer": 1,
+   "n_compared": 21904,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_refit",
+   "seconds": 0.034,
+   "status": "pass",
+   "symbols": [
+    {
+     "mismatch": 0,
+     "n": 13,
+     "name": "TS_ANN",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 111,
+     "name": "EACHYEAR",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 109,
+     "name": "Y",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 6213,
+     "name": "YK",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 49,
+     "name": "Y_EOH",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 1,
+     "name": "YR_V1",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 1,
+     "name": "YR_VL",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "ACL",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 306,
+     "name": "G_DRATE",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 308,
+     "name": "OBJ_DISC",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 1,
+     "name": "G_DYEAR",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 2,
+     "name": "G_RCUR",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 12,
+     "name": "OBJ_PVT",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 12,
+     "name": "COEF_PVT",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 18,
+     "name": "OBJ_RFR",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "OBJ_COMNT",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "OBJ_COMPD",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 3748,
+     "name": "OBJ_IPRIC",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "FLO_COST",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "FLO_DELIV",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "OBJ_VFLO",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "NCAP_ISPCT",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 5031,
+     "name": "OB_ICOST",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "OB_ISUB",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "OB_ITAX",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 4241,
+     "name": "OB_FOM",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "OB_FSB",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "OB_FTX",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "OB_DCC",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "OB_DLC",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 1680,
+     "name": "OB_ACT",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "OB_FCOS",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "OB_FDEL",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "OB_FTAX",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "OBJ_FSUB",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "RPC_CUR",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "X_RP",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "OB_COM",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "OB_IRE",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "SHEDJ",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "SHAPED",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 48,
+     "name": "FIL",
+     "status": "pass"
+    }
+   ],
+   "unit": "coef_obj"
+  },
+  {
+   "detail": [],
+   "layer": 1,
+   "n_compared": 1380,
+   "n_excluded": 212,
+   "n_mismatch": 0,
+   "run": "demo12_refit",
+   "seconds": 0.006,
+   "status": "pass",
+   "symbols": [
+    {
+     "mismatch": 0,
+     "n": 46,
+     "name": "PERDINV",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 88,
+     "name": "TPULSEYR",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 88,
+     "name": "TPULSE",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 32,
+     "name": "OBJ_LINT",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "OBJ_ALTV",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "YK1",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 6,
+     "name": "FPD",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 12,
+     "name": "OBJ_PVT",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 12,
+     "name": "COEF_PVT",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "RTP_CAPVL",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 12,
+     "name": "RB",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 18,
+     "name": "R_DF",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 1054,
+     "name": "COEF_CPT",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "PASTSUM",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 6,
+     "name": "FIL2",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 6,
+     "name": "MY_ARRAY",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "NCAP_ILED",
+     "status": "pass"
+    }
+   ],
+   "unit": "coef_alt"
+  },
+  {
+   "detail": [],
+   "layer": 1,
+   "n_compared": 1265,
+   "n_excluded": 213,
+   "n_mismatch": 0,
+   "run": "demo12_refit",
+   "seconds": 0.005,
+   "status": "pass",
+   "symbols": [
+    {
+     "mismatch": 0,
+     "n": 210,
+     "name": "OPYEAR",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 1,
+     "name": "AGEJ",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "Z",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "FLO_FUNCX",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "NCAP_CPX",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "RTP_CAPYR",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "RTP_FFCX",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "RTP_CPX",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 1054,
+     "name": "COEF_CPT",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "PRC_YMIN",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "PRC_YMAX",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "TRACKP",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "RVPRL",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "RP_GRP",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "RTP_CGC",
+     "status": "pass"
+    },
+    {
+     "mismatch": 0,
+     "n": 0,
+     "name": "COEF_CAP",
+     "status": "pass"
+    }
+   ],
+   "unit": "coef_shp"
+  },
+  {
+   "detail": [
+    "not yet translated: coef_ext.vda L62-69 (reduced flows: RPC_FFUNC has members)"
+   ],
+   "layer": 1,
+   "run": "demo12_refit",
+   "status": "refused",
+   "unit": "coef_ext"
   },
   {
    "detail": [],
@@ -3781,20 +4480,2312 @@
    "solve_seconds": 0.18,
    "status": "pass",
    "unit": "HIGHS"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 132,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQE_ACTEFF"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 120,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQE_COMBAL"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 48,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQE_COMPRD"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 18,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQE_CPT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 238,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQE_INSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 12,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQE_OUTSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 8,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQE_UCRT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 6,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQE_UCRTS"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 876,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQG_COMBAL"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 322,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQG_INSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 70,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQG_OUTSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQL_ACTBND"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1232,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQL_CAPACT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQ_ACTFLO"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 16,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQ_CUMFLO"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 54,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQ_IRE"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQ_OBJ"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQ_OBJFIX"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQ_OBJINV"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQ_OBJSALV"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQ_OBJVAR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "EQ_PEAK"
+  },
+  {
+   "counts": {},
+   "detail": [],
+   "layer": 2,
+   "n_compared": 26093,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_curex",
+   "status": "pass",
+   "unit": "matrix"
+  },
+  {
+   "detail": [],
+   "gams_in_mine_ok": true,
+   "gams_in_mine_violation": 9.126412692239683e-8,
+   "gams_objective": 2.397418374320761e7,
+   "gams_point_objective_in_mine": 2.397418374320761e7,
+   "julia_objective": 2.397418374320778e7,
+   "julia_solver": "HiGHS",
+   "layer": 3,
+   "mine_in_gams_violation": 1.6189005691558123e-9,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "rel_diff": 6.992440920049322e-15,
+   "run": "demo12_curex",
+   "solve_seconds": 0.14,
+   "status": "pass",
+   "unit": "CPLEX"
+  },
+  {
+   "detail": [],
+   "gams_in_mine_ok": true,
+   "gams_in_mine_violation": 1.2330201570875943e-7,
+   "gams_objective": 2.3974183743207768e7,
+   "gams_point_objective_in_mine": 2.3974183743207768e7,
+   "julia_objective": 2.397418374320778e7,
+   "julia_solver": "HiGHS",
+   "layer": 3,
+   "mine_in_gams_violation": 1.6189005691558123e-9,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "rel_diff": 4.661627280032851e-16,
+   "run": "demo12_curex",
+   "solve_seconds": 0.14,
+   "status": "pass",
+   "unit": "HIGHS"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 132,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQE_ACTEFF"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 126,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQE_COMBAL"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 48,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQE_COMPRD"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 28,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQE_CPT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 238,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQE_INSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 12,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQE_OUTSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 18,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQE_UCRSU"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 6,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQE_UCRSUS"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 8,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQE_UCRT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 6,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQE_UCRTS"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 6,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQE_UCSU"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 6,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQE_UCSUS"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 870,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQG_COMBAL"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 322,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQG_INSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 70,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQG_OUTSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQL_ACTBND"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1232,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQL_CAPACT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQ_ACTFLO"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 16,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQ_CUMFLO"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 54,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQ_IRE"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQ_OBJ"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQ_OBJFIX"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQ_OBJINV"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQ_OBJSALV"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQ_OBJVAR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "EQ_PEAK"
+  },
+  {
+   "counts": {},
+   "detail": [],
+   "layer": 2,
+   "n_compared": 26340,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucdyn",
+   "status": "pass",
+   "unit": "matrix"
+  },
+  {
+   "detail": [],
+   "gams_in_mine_ok": true,
+   "gams_in_mine_violation": 8.965375286607014e-8,
+   "gams_objective": 5.4125294455032e7,
+   "gams_point_objective_in_mine": 5.4125294455032e7,
+   "julia_objective": 5.412529445503214e7,
+   "julia_solver": "HiGHS",
+   "layer": 3,
+   "mine_in_gams_violation": 1.342414179816842e-8,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "rel_diff": 2.615432077864509e-15,
+   "run": "demo12_ucdyn",
+   "solve_seconds": 0.17,
+   "status": "pass",
+   "unit": "CPLEX"
+  },
+  {
+   "detail": [],
+   "gams_in_mine_ok": true,
+   "gams_in_mine_violation": 1.1324300430715084e-7,
+   "gams_objective": 5.412529445503215e7,
+   "gams_point_objective_in_mine": 5.412529445503215e7,
+   "julia_objective": 5.412529445503214e7,
+   "julia_solver": "HiGHS",
+   "layer": 3,
+   "mine_in_gams_violation": 1.342414179816842e-8,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "rel_diff": 1.3765431988760536e-16,
+   "run": "demo12_ucdyn",
+   "solve_seconds": 0.17,
+   "status": "pass",
+   "unit": "HIGHS"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 132,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQE_ACTEFF"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 120,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQE_COMBAL"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 48,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQE_COMPRD"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 23,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQE_CPT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 238,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQE_INSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 12,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQE_OUTSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQE_UCR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 12,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQE_UCRSU"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 20,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQE_UCRT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 6,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQE_UCRTS"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 876,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQG_COMBAL"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 322,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQG_INSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 70,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQG_OUTSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQL_ACTBND"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1237,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQL_CAPACT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQ_ACTFLO"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 16,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQ_CUMFLO"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 54,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQ_IRE"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQ_OBJ"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQ_OBJFIX"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQ_OBJINV"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQ_OBJSALV"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQ_OBJVAR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "EQ_PEAK"
+  },
+  {
+   "counts": {},
+   "detail": [],
+   "layer": 2,
+   "n_compared": 26546,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ucattr",
+   "status": "pass",
+   "unit": "matrix"
+  },
+  {
+   "detail": [],
+   "gams_in_mine_ok": true,
+   "gams_in_mine_violation": 8.864847700351675e-8,
+   "gams_objective": 2.398138010624352e7,
+   "gams_point_objective_in_mine": 2.398138010624352e7,
+   "julia_objective": 2.3981380106243566e7,
+   "julia_solver": "HiGHS",
+   "layer": 3,
+   "mine_in_gams_violation": 1.8608261598274112e-9,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "rel_diff": 1.8640913651964706e-15,
+   "run": "demo12_ucattr",
+   "solve_seconds": 0.14,
+   "status": "pass",
+   "unit": "CPLEX"
+  },
+  {
+   "detail": [],
+   "gams_in_mine_ok": true,
+   "gams_in_mine_violation": 1.1386146070435643e-7,
+   "gams_objective": 2.398138010624367e7,
+   "gams_point_objective_in_mine": 2.398138010624367e7,
+   "julia_objective": 2.3981380106243566e7,
+   "julia_solver": "HiGHS",
+   "layer": 3,
+   "mine_in_gams_violation": 1.8608261598274112e-9,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "rel_diff": 4.349546518791738e-15,
+   "run": "demo12_ucattr",
+   "solve_seconds": 0.14,
+   "status": "pass",
+   "unit": "HIGHS"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 132,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQE_ACTEFF"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 120,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQE_COMBAL"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 60,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQE_COMPRD"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 18,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQE_CPT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQE_FLOMRK"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 238,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQE_INSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 12,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQE_OUTSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 8,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQE_UCRT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 6,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQE_UCRTS"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 876,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQG_COMBAL"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQG_FLOMRK"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 322,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQG_INSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 70,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQG_OUTSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQL_ACTBND"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1257,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQL_CAPACT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 21,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQL_FLOMRK"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQ_ACTFLO"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 16,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQ_CUMFLO"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 54,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQ_IRE"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQ_OBJ"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQ_OBJFIX"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQ_OBJINV"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQ_OBJSALV"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQ_OBJVAR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQ_PEAK"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 25,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQ_STGAUX"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 27,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "EQ_STGIPS"
+  },
+  {
+   "counts": {},
+   "detail": [],
+   "layer": 2,
+   "n_compared": 26758,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_flomrk",
+   "status": "pass",
+   "unit": "matrix"
+  },
+  {
+   "detail": [],
+   "gams_in_mine_ok": true,
+   "gams_in_mine_violation": 9.126412692239683e-8,
+   "gams_objective": 2.396071569765798e7,
+   "gams_point_objective_in_mine": 2.396071569765798e7,
+   "julia_objective": 2.3960715697658077e7,
+   "julia_solver": "HiGHS",
+   "layer": 3,
+   "mine_in_gams_violation": 2.3264874471351504e-9,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "rel_diff": 4.0423478573086625e-15,
+   "run": "demo12_flomrk",
+   "solve_seconds": 0.18,
+   "status": "pass",
+   "unit": "CPLEX"
+  },
+  {
+   "detail": [],
+   "gams_in_mine_ok": true,
+   "gams_in_mine_violation": 1.0780786396935582e-7,
+   "gams_objective": 2.396071569765813e7,
+   "gams_point_objective_in_mine": 2.396071569765813e7,
+   "julia_objective": 2.3960715697658077e7,
+   "julia_solver": "HiGHS",
+   "layer": 3,
+   "mine_in_gams_violation": 2.3264874471351504e-9,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "rel_diff": 2.1766488462431124e-15,
+   "run": "demo12_flomrk",
+   "solve_seconds": 0.18,
+   "status": "pass",
+   "unit": "HIGHS"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 132,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQE_ACTEFF"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 120,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQE_COMBAL"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 96,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQE_COMPRD"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 18,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQE_CPT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 238,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQE_INSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 12,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQE_OUTSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 8,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQE_UCRT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 6,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQE_UCRTS"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 876,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQG_COMBAL"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 322,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQG_INSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 70,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQG_OUTSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQL_ACTBND"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1232,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQL_CAPACT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQ_ACTFLO"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 16,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQ_CUMFLO"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 54,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQ_IRE"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQ_OBJ"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQ_OBJFIX"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQ_OBJINV"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQ_OBJSALV"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQ_OBJVAR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQ_PEAK"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 120,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "EQ_SLSIFT"
+  },
+  {
+   "counts": {},
+   "detail": [],
+   "layer": 2,
+   "n_compared": 27077,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_ls",
+   "status": "pass",
+   "unit": "matrix"
+  },
+  {
+   "detail": [],
+   "gams_in_mine_ok": true,
+   "gams_in_mine_violation": 9.14969575660507e-8,
+   "gams_objective": 2.3960685737007745e7,
+   "gams_point_objective_in_mine": 2.3960685737007745e7,
+   "julia_objective": 2.396068573700779e7,
+   "julia_solver": "HiGHS",
+   "layer": 3,
+   "mine_in_gams_violation": 1.862645149230957e-9,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "rel_diff": 1.8657013439518374e-15,
+   "run": "demo12_ls",
+   "solve_seconds": 0.15,
+   "status": "pass",
+   "unit": "CPLEX"
+  },
+  {
+   "detail": [],
+   "gams_in_mine_ok": true,
+   "gams_in_mine_violation": 3.03839442494791e-9,
+   "gams_objective": 2.3960685737007782e7,
+   "gams_point_objective_in_mine": 2.3960685737007782e7,
+   "julia_objective": 2.396068573700779e7,
+   "julia_solver": "HiGHS",
+   "layer": 3,
+   "mine_in_gams_violation": 1.862645149230957e-9,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "rel_diff": 3.109502239919724e-16,
+   "run": "demo12_ls",
+   "solve_seconds": 0.15,
+   "status": "pass",
+   "unit": "HIGHS"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 132,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQE_ACTEFF"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 120,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQE_COMBAL"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 96,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQE_COMPRD"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 18,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQE_CPT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 238,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQE_INSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 12,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQE_OUTSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 8,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQE_UCRT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 6,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQE_UCRTS"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 876,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQG_COMBAL"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 322,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQG_INSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 70,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQG_OUTSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQL_ACTBND"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1232,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQL_CAPACT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQ_ACTFLO"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 16,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQ_CUMFLO"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 54,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQ_IRE"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQ_OBJ"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQ_OBJFIX"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQ_OBJINV"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQ_OBJSALV"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQ_OBJVAR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQ_PEAK"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 228,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "EQ_SLSIFT"
+  },
+  {
+   "counts": {},
+   "detail": [],
+   "layer": 2,
+   "n_compared": 27713,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_lst",
+   "status": "pass",
+   "unit": "matrix"
+  },
+  {
+   "detail": [],
+   "gams_in_mine_ok": true,
+   "gams_in_mine_violation": 9.14969575660507e-8,
+   "gams_objective": 2.3960685737007745e7,
+   "gams_point_objective_in_mine": 2.3960685737007745e7,
+   "julia_objective": 2.396068573700779e7,
+   "julia_solver": "HiGHS",
+   "layer": 3,
+   "mine_in_gams_violation": 1.395164872519672e-9,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "rel_diff": 1.8657013439518374e-15,
+   "run": "demo12_lst",
+   "solve_seconds": 0.15,
+   "status": "pass",
+   "unit": "CPLEX"
+  },
+  {
+   "detail": [],
+   "gams_in_mine_ok": true,
+   "gams_in_mine_violation": 6.822665454819798e-8,
+   "gams_objective": 2.3960685737007853e7,
+   "gams_point_objective_in_mine": 2.3960685737007853e7,
+   "julia_objective": 2.396068573700779e7,
+   "julia_solver": "HiGHS",
+   "layer": 3,
+   "mine_in_gams_violation": 1.395164872519672e-9,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "rel_diff": 2.643076903931758e-15,
+   "run": "demo12_lst",
+   "solve_seconds": 0.15,
+   "status": "pass",
+   "unit": "HIGHS"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 132,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQE_ACTEFF"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 120,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQE_COMBAL"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 48,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQE_COMPRD"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 18,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQE_CPT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 238,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQE_INSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 12,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQE_OUTSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 8,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQE_UCRT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 6,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQE_UCRTS"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 876,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQG_COMBAL"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 322,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQG_INSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 70,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQG_OUTSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQL_ACTBND"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1232,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQL_CAPACT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQ_ACTFLO"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 16,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQ_CUMFLO"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 54,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQ_IRE"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQ_OBJ"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQ_OBJFIX"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQ_OBJINV"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQ_OBJSALV"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQ_OBJVAR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "EQ_PEAK"
+  },
+  {
+   "counts": {},
+   "detail": [],
+   "layer": 2,
+   "n_compared": 26094,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_objinv",
+   "status": "pass",
+   "unit": "matrix"
+  },
+  {
+   "detail": [],
+   "gams_in_mine_ok": true,
+   "gams_in_mine_violation": 1.0734584066085517e-7,
+   "gams_objective": 2.3962067335880943e7,
+   "gams_point_objective_in_mine": 2.3962067335880943e7,
+   "julia_objective": 2.3962067335880924e7,
+   "julia_solver": "HiGHS",
+   "layer": 3,
+   "mine_in_gams_violation": 9.313225746154785e-10,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "rel_diff": 7.773307382547169e-16,
+   "run": "demo12_objinv",
+   "solve_seconds": 0.13,
+   "status": "pass",
+   "unit": "CPLEX"
+  },
+  {
+   "detail": [],
+   "gams_in_mine_ok": true,
+   "gams_in_mine_violation": 1.231819624081254e-7,
+   "gams_objective": 2.3962067335880965e7,
+   "gams_point_objective_in_mine": 2.3962067335880965e7,
+   "julia_objective": 2.3962067335880924e7,
+   "julia_solver": "HiGHS",
+   "layer": 3,
+   "mine_in_gams_violation": 9.313225746154785e-10,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "rel_diff": 1.7101276241603756e-15,
+   "run": "demo12_objinv",
+   "solve_seconds": 0.13,
+   "status": "pass",
+   "unit": "HIGHS"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 132,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQE_ACTEFF"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 120,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQE_COMBAL"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 48,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQE_COMPRD"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 18,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQE_CPT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 238,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQE_INSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 12,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQE_OUTSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 8,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQE_UCRT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 6,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQE_UCRTS"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 876,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQG_COMBAL"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 322,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQG_INSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 70,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQG_OUTSHR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQL_ACTBND"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1232,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQL_CAPACT"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQ_ACTFLO"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 16,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQ_CUMFLO"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQ_GR_POWFLO"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 54,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQ_IRE"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQ_OBJ"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQ_OBJFIX"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQ_OBJINV"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQ_OBJSALV"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 2,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQ_OBJVAR"
+  },
+  {
+   "detail": [],
+   "layer": 2,
+   "n_compared": 24,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "EQ_PEAK"
+  },
+  {
+   "counts": {},
+   "detail": [],
+   "layer": 2,
+   "n_compared": 26165,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "run": "demo12_pf",
+   "status": "pass",
+   "unit": "matrix"
+  },
+  {
+   "detail": [],
+   "gams_in_mine_ok": true,
+   "gams_in_mine_violation": 9.14969575660507e-8,
+   "gams_objective": 2.396068573700775e7,
+   "gams_point_objective_in_mine": 2.396068573700775e7,
+   "julia_objective": 2.3960685737007916e7,
+   "julia_solver": "HiGHS",
+   "layer": 3,
+   "mine_in_gams_violation": 1.6189005691558123e-9,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "rel_diff": 6.996380039819389e-15,
+   "run": "demo12_pf",
+   "solve_seconds": 0.15,
+   "status": "pass",
+   "unit": "CPLEX"
+  },
+  {
+   "detail": [],
+   "gams_in_mine_ok": true,
+   "gams_in_mine_violation": 1.219050318468362e-7,
+   "gams_objective": 2.3960685737007905e7,
+   "gams_point_objective_in_mine": 2.3960685737007905e7,
+   "julia_objective": 2.3960685737007916e7,
+   "julia_solver": "HiGHS",
+   "layer": 3,
+   "mine_in_gams_violation": 1.6189005691558123e-9,
+   "n_compared": 1,
+   "n_excluded": 0,
+   "n_mismatch": 0,
+   "rel_diff": 4.664253359879562e-16,
+   "run": "demo12_pf",
+   "solve_seconds": 0.15,
+   "status": "pass",
+   "unit": "HIGHS"
   }
  ],
  "meta": {
-  "commit": "9df68b2ea",
-  "date": "2026-11-07T11:09:28.029",
-  "host": "039-JG4434-WD1",
+  "commit": "6b1857143",
+  "date": "2026-11-09T06:23:00.794",
+  "host": "workstation",
   "julia": "1.13.2",
-  "threads": 12,
+  "threads": 8,
   "times_version": "4.9.7 @ d9a6a25"
  },
  "runs": [
   {
    "cols": 9669,
-   "generate_seconds": 7.538,
+   "generate_seconds": 7.812,
    "id": "demo12_off",
    "licence": "CC-BY-4.0",
    "model": "TIMES_Demo-demo12",
@@ -3806,7 +6797,7 @@
   },
   {
    "cols": 4485,
-   "generate_seconds": 0.723,
+   "generate_seconds": 0.62,
    "id": "demo12_red",
    "licence": "CC-BY-4.0",
    "model": "TIMES_Demo-demo12",
@@ -3818,7 +6809,7 @@
   },
   {
    "cols": 4485,
-   "generate_seconds": 0.314,
+   "generate_seconds": 0.315,
    "id": "demo12_red17b",
    "licence": "CC-BY-4.0",
    "model": "TIMES_Demo-demo12_red17b",
@@ -3830,7 +6821,7 @@
   },
   {
    "cols": 9669,
-   "generate_seconds": 0.391,
+   "generate_seconds": 0.403,
    "id": "demo12_red17b_off",
    "licence": "CC-BY-4.0",
    "model": "TIMES_Demo-demo12_red17b",
@@ -3842,7 +6833,7 @@
   },
   {
    "cols": 4599,
-   "generate_seconds": 0.662,
+   "generate_seconds": 0.68,
    "id": "demo12_ips",
    "licence": "CC-BY-4.0",
    "model": "TIMES_Demo-demo12_ips",
@@ -3854,7 +6845,7 @@
   },
   {
    "cols": 9783,
-   "generate_seconds": 0.399,
+   "generate_seconds": 0.391,
    "id": "demo12_ips_off",
    "licence": "CC-BY-4.0",
    "model": "TIMES_Demo-demo12_ips",
@@ -3866,7 +6857,7 @@
   },
   {
    "cols": 4513,
-   "generate_seconds": 0.343,
+   "generate_seconds": 0.361,
    "id": "demo12_ucrt",
    "licence": "CC-BY-4.0",
    "model": "TIMES_Demo-demo12_ucrt",
@@ -3878,7 +6869,7 @@
   },
   {
    "cols": 9697,
-   "generate_seconds": 0.388,
+   "generate_seconds": 0.379,
    "id": "demo12_ucrt_off",
    "licence": "CC-BY-4.0",
    "model": "TIMES_Demo-demo12_ucrt",
@@ -3890,7 +6881,7 @@
   },
   {
    "cols": 4627,
-   "generate_seconds": 0.642,
+   "generate_seconds": 0.659,
    "id": "demo12_refit",
    "licence": "CC-BY-4.0",
    "model": "TIMES_Demo-demo12_refit",
@@ -3909,6 +6900,102 @@
    "nonzeros": 19333,
    "redistribute": "public",
    "rows": 3365,
+   "source": "test/fixtures (CI)",
+   "variant": "as_run"
+  },
+  {
+   "cols": 4485,
+   "generate_seconds": 0.321,
+   "id": "demo12_curex",
+   "licence": "CC-BY-4.0",
+   "model": "TIMES_Demo-demo12_curex",
+   "nonzeros": 18375,
+   "redistribute": "public",
+   "rows": 3233,
+   "source": "test/fixtures (CI)",
+   "variant": "as_run"
+  },
+  {
+   "cols": 4537,
+   "generate_seconds": 1.976,
+   "id": "demo12_ucdyn",
+   "licence": "CC-BY-4.0",
+   "model": "TIMES_Demo-demo12_ucdyn",
+   "nonzeros": 18524,
+   "redistribute": "public",
+   "rows": 3279,
+   "source": "test/fixtures (CI)",
+   "variant": "as_run"
+  },
+  {
+   "cols": 4520,
+   "generate_seconds": 0.7,
+   "id": "demo12_ucattr",
+   "licence": "CC-BY-4.0",
+   "model": "TIMES_Demo-demo12_ucattr",
+   "nonzeros": 18758,
+   "redistribute": "public",
+   "rows": 3268,
+   "source": "test/fixtures (CI)",
+   "variant": "as_run"
+  },
+  {
+   "cols": 4611,
+   "generate_seconds": 0.372,
+   "id": "demo12_flomrk",
+   "licence": "CC-BY-4.0",
+   "model": "TIMES_Demo-demo12_flomrk",
+   "nonzeros": 18802,
+   "redistribute": "public",
+   "rows": 3345,
+   "source": "test/fixtures (CI)",
+   "variant": "as_run"
+  },
+  {
+   "cols": 4725,
+   "generate_seconds": 0.379,
+   "id": "demo12_ls",
+   "licence": "CC-BY-4.0",
+   "model": "TIMES_Demo-demo12_ls",
+   "nonzeros": 18951,
+   "redistribute": "public",
+   "rows": 3401,
+   "source": "test/fixtures (CI)",
+   "variant": "as_run"
+  },
+  {
+   "cols": 4893,
+   "generate_seconds": 0.322,
+   "id": "demo12_lst",
+   "licence": "CC-BY-4.0",
+   "model": "TIMES_Demo-demo12_lst",
+   "nonzeros": 19311,
+   "redistribute": "public",
+   "rows": 3509,
+   "source": "test/fixtures (CI)",
+   "variant": "as_run"
+  },
+  {
+   "cols": 4495,
+   "generate_seconds": 0.337,
+   "id": "demo12_objinv",
+   "licence": "CC-BY-4.0",
+   "model": "TIMES_Demo-demo12_objinv",
+   "nonzeros": 18366,
+   "redistribute": "public",
+   "rows": 3233,
+   "source": "test/fixtures (CI)",
+   "variant": "as_run"
+  },
+  {
+   "cols": 4485,
+   "generate_seconds": 0.696,
+   "id": "demo12_pf",
+   "licence": "CC-BY-4.0",
+   "model": "TIMES_Demo-demo12_pf",
+   "nonzeros": 18423,
+   "redistribute": "public",
+   "rows": 3257,
    "source": "test/fixtures (CI)",
    "variant": "as_run"
   }

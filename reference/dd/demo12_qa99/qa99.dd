@@ -1,0 +1,7 @@
+* TIMES.jl crafted case demo12_qa99 (reference/crafted.toml, 9 Nov 2026): a second parent
+* for timeslice WD in REG2, so timslice.mod L101-104 writes 'Duplicate parent timeslices -
+* Fatal' (ERRLEV 99) and pp_qack.mod L380 aborts the run (M1.3 change 25b-3). The run stops
+* before the pre-solve dump; its QA_CHECK.LOG is the reference (test/fixtures).
+SET TS_MAP /
+REG2.S.WD
+/;

@@ -39,8 +39,14 @@ function untranslated_families(tm::TimesModel)
     inT(t) = (t,) in t_set
 
     # --- run switches selecting other formulations ---------------------------
-    for sw in ("STAGES", "SPINES", "OBJANN", "VALIDATE", "ETL", "CLI", "ABS", "ECB", "MCA", "POWERFLO")
+    for sw in ("STAGES", "SPINES", "OBJANN", "VALIDATE", "ETL", "CLI", "ABS", "ECB", "MCA")
         yes(sw) && note!("(variant $sw)", "mod_equa.mod / main_ext.mod", "switch $sw = YES")
+    end
+    # %POWERFLO% YES: phase-angle grids are translated (EQ_GR_POWFLO, M1.3 change 27b); PTDF, node allocation,
+    # gas grids and the N-1 constraint EQ_GR_XBND are not
+    if yes("POWERFLO")
+        foreach(w -> note!("(variant POWERFLO)", "powerflo.vda", w), powerflo_main_unported(tm))
+        isempty(P("GR_XBND", 2)) || note!("EQ_GR_XBND", "powerflo.vda L336-358", "GR_XBND has data")
     end
     uppercase(gswitch(tm, "MACRO", "NO")) in ("YES", "CSA", "MSA", "MLF") &&
         note!("(MACRO)", "eqmacro.tm, mod_ext.msa/mlf", "switch MACRO = $(gswitch(tm, "MACRO", ""))")
@@ -191,6 +197,7 @@ function generate!(tm::TimesModel)
     n += eq_slsift!(tm)              # VDA: equ_ext.vda L90 (eqactups.vda L131)
     n += eq_ashar!(tm)               # VDA: equ_ext.vda L94-96
     n += eq_ucrtp!(tm)               # VDA: equ_ext.vda L105-106
+    n += eq_gr_powflo!(tm)           # VDA: equ_ext.vda L101 (powerflo.vda POWFLO, M1.3 change 27b)
     n += eq_ret!(tm)                 # DSC: mod_equa.mod L212 (prepret.dsc EQOBJ; RP_RTF marks VNRET)
     apply_bounds!(tm)                # maindrv.mod L92
     JuMP.@objective(tm.model, Min, getvar!(tm, "OBJZ"))   # solve.mod L37

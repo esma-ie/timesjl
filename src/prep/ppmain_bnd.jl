@@ -15,7 +15,8 @@
 # nonzero or EPS value (G24); a right-hand side that names the symbol being
 # assigned reads it as it was before the statement (G11); `OPTION a < b`
 # fills each position of `a` from the rightmost unmatched position of `b` of
-# the same domain (G26, G34). The QA log (pp_lvlbd.mod L31-33) is not written.
+# the same domain (G26, G34). The QA log (L989, pp_lvlbd.mod L31-33) is
+# written in LOOP order (M1.3 change 25b-1).
 
 """
     ppmain_bnd_unported(tm) -> Vector{String}
@@ -133,6 +134,7 @@ function ppmain_bnd!(tm)
     gput!(tm, "RC_RC", rc_rc)
 
     # --- L989-995: bounds below their level aggregated (pp_lvlbd.mod) ---------------------------------
+    qa_group!(tm)                                                      # L989: PUTGRP = 0
     by(itr, f, g) = (d = Dict{Any,Vector{Any}}(); foreach(k -> pushat!(d, f(k), g(k)), itr); d)
     rtp, rtc = gset(tm, "RTP").members, gset(tm, "RTC").members
     pts_of = by(gset(tm, "PRC_TS").keys, k -> (k[1], k[2]), k -> k[3])
@@ -142,18 +144,22 @@ function ppmain_bnd!(tm)
     ie_set, allreg, prc = member("IE"), member("ALL_REG"), member("PRC")
     #   ACT_BND    P '' '' ''          PRC_TS RPS_PRCTS RTPS_BD EPS
     Z, F = pp_lvlbd!(tm, tr, "ACT_BND", 5, 4, Z, F; domok=k -> k[2] in tmem && k[3] in prc, rt=k -> (k[1], k[2], k[3]) in rtp,
-                     targets=k -> get(pts_of, (k[1], k[3]), String[]), valid=(k, s) -> (k[1], k[3], s) in rps_prcts, neg=GEPS)
+                     targets=k -> get(pts_of, (k[1], k[3]), String[]), valid=(k, s) -> (k[1], k[3], s) in rps_prcts, neg=GEPS,
+                     tsname="PRC_TS", idx="P")
     #   FLO_FR     P C, '' ",''"       RPCS_VAR RPCS_VAR UNCD7 0
     Z, F = pp_lvlbd!(tm, tr, "FLO_FR", 6, 5, Z, F; domok=k -> k[2] in tmem && k[3] in prc && k[4] in com, rt=k -> (k[1], k[2], k[3]) in rtp,
-                     targets=k -> get(rpcs_of, (k[1], k[3], k[4]), String[]), valid=(k, s) -> (k[1], k[3], k[4], s) in rpcsv, neg=GZERO)
+                     targets=k -> get(rpcs_of, (k[1], k[3], k[4]), String[]), valid=(k, s) -> (k[1], k[3], k[4], s) in rpcsv, neg=GZERO,
+                     tsname="RPCS_VAR", idx="P")
     #   COM_BNDNET C '' '' ",'',''"    COM_TS RCS_COMTS UNCD7;  COM_BNDPRD the same
     for n in ("COM_BNDNET", "COM_BNDPRD")
         Z, F = pp_lvlbd!(tm, tr, n, 5, 4, Z, F; domok=k -> k[2] in tmem && k[3] in com, rt=k -> (k[1], k[2], k[3]) in rtc,
-                         targets=k -> get(cts_of, (k[1], k[3]), String[]), valid=(k, s) -> (k[1], k[3], s) in rcs_comts, neg=nothing)
+                         targets=k -> get(cts_of, (k[1], k[3]), String[]), valid=(k, s) -> (k[1], k[3], s) in rcs_comts, neg=nothing,
+                         tsname="COM_TS", idx="C")
     end
     #   IRE_BND    C '' 'ALL_R,IE,' '' COM_TS RCS_COMTS UNCD7 EPS
     Z, F = pp_lvlbd!(tm, tr, "IRE_BND", 7, 4, Z, F; domok=k -> k[2] in tmem && k[3] in com && k[5] in allreg && k[6] in ie_set, rt=k -> (k[1], k[2], k[3]) in rtc,
-                     targets=k -> get(cts_of, (k[1], k[3]), String[]), valid=(k, s) -> (k[1], k[3], s) in rcs_comts, neg=GEPS)
+                     targets=k -> get(cts_of, (k[1], k[3]), String[]), valid=(k, s) -> (k[1], k[3], s) in rcs_comts, neg=GEPS,
+                     tsname="COM_TS", idx="C")
 
     # --- L998-1001: bounds from the rate levels ----------------------------------------------------------
     bdl = gvalues(tm, "FLO_BDLVL", 6)
@@ -186,7 +192,7 @@ function ppmain_bnd!(tm)
 end
 
 """
-    pp_lvlbd!(tm, tr, name, N, sp, Z, F; domok, rt, targets, valid, neg) -> (Z, F)
+    pp_lvlbd!(tm, tr, name, N, sp, Z, F; domok, rt, targets, valid, neg, tsname, idx) -> (Z, F)
 
 pp_lvlbd.mod: the bound attribute `name` (N indexes, S at `sp` and BD last)
 given at timeslices outside the valid levels (%7, `valid(key, s)`) is
@@ -198,11 +204,12 @@ leaves the lower ones. `neg` (%9) replaces negative LO/UP below (EPS, 0, or
 `nothing` for none). LO and UP are then dropped where FX is given. `domok`
 holds the domains of the controlling indexes (T a milestone, %2-%4), `rt`
 the RTP or RTC membership the flags of L24 need. The
-scratch TS_BD and BDVAL are stored as GAMS leaves them.
+scratch TS_BD and BDVAL are stored as GAMS leaves them. A conflict is
+written to the QA log (L31-33): `tsname` is %6, `idx` %2 ('P' or 'C').
 
 GAMS: pp_lvlbd.mod L22-46, v4.9.7.
 """
-function pp_lvlbd!(tm, tr::TsTree, name, N, sp, Z, F; domok, rt, targets, valid, neg)
+function pp_lvlbd!(tm, tr::TsTree, name, N, sp, Z, F; domok, rt, targets, valid, neg, tsname::String, idx::String)
     x = gvalues(tm, name, N)
     bds = [k[1] for k in gset(tm, "BD").keys]
     bdneq = Set(k[1] for k in gset(tm, "BDNEQ").keys)
@@ -244,8 +251,14 @@ function pp_lvlbd!(tm, tr::TsTree, name, N, sp, Z, F; domok, rt, targets, valid,
                 end
                 Z = iszero(F) ? GZERO : GNum(Float64(n))
             end
-            # L31: IF(Z, F=(F>Z); <warning>)
-            iszero(Z) || (F = GNum(F.v > Z.v ? 1.0 : 0.0))
+            # L31-33: IF(Z, F=(F>Z); pp_qaput 01 '%1 Bounds conflict: Value at %6 level and below, latter ignored';
+            #   PUT QLOG ' WARNING       -     %1:  R=',%RL%,' Y=',T.TL,' %2=',%2.TL,' S=',TS.TL)
+            if !iszero(Z)
+                F = GNum(F.v > Z.v ? 1.0 : 0.0)
+                pp_qaput!(tm, 1, name * " Bounds conflict: Value at " * tsname * " level and below, latter ignored")
+                qput!(qalog(tm), " WARNING       -     " * name * ":  R=" * qlab12(r) * " Y=" * row[2] * " " * idx * "=" * row[3] *
+                                 " S=" * ts)
+            end
             iszero(F) && continue
             # L34: BDVAL(BD)=(NOT TS_BD(TS,BD))$BDNEQ(BD)
             bdval = Set{Tuple{String}}((b,) for b in bds if b in bdneq && !haskey(ts_bd, (ts, b)))

@@ -1,0 +1,55 @@
+              ******          TIMES -- VERSION 4.9.7           ******
+              **************   QUALITY ASSURANCE LOG   **************
+
+ *** User-provided G_YRFR values are not valid year fractions
+ *01 WARNING       - TS fractions normalized,  (R.TSL.S)=REG2.ANNUAL.ANNUAL
+ *01 WARNING       - TS fractions normalized,  (R.TSL.S)=REG2.SEASON.S
+ *01 WARNING       - TS fractions normalized,  (R.TSL.S)=REG2.SEASON.W
+
+ *** Duplicate parent timeslices - Fatal
+ *99 FATAL ERROR   -    REG=REG2 TS=WD
+
+ *** COM_FR does not sum to unity (T=first year)
+ *01 WARNING       - Normalized to 1,   R=REG1         C=DRAP         (T=2005)
+ *01 WARNING       - Normalized to 1,   R=REG2         C=DCAP         (T=2005)
+ *01 WARNING       - Normalized to 1,   R=REG2         C=DCOT         (T=2005)
+ *01 WARNING       - Normalized to 1,   R=REG2         C=DCSH         (T=2005)
+ *01 WARNING       - Normalized to 1,   R=REG2         C=DIDM1        (T=2005)
+ *01 WARNING       - Normalized to 1,   R=REG2         C=DRAP         (T=2005)
+ *01 WARNING       - Normalized to 1,   R=REG2         C=DROT         (T=2005)
+ *01 WARNING       - Normalized to 1,   R=REG2         C=DRSH         (T=2005)
+ *01 WARNING       - Normalized to 1,   R=REG2         C=DTCAR        (T=2005)
+ *01 WARNING       - Normalized to 1,   R=REG2         C=DTPUB        (T=2005)
+
+
+ *** Commodity fractions do not sum up to 1
+ *01 WARNING       -     R=REG2         C=ELC          T=2005
+ *01 WARNING       -     R=REG2         C=AGRELC       T=2005
+ *01 WARNING       -     R=REG2         C=COMELC       T=2005
+ *01 WARNING       -     R=REG2         C=RSDELC       T=2005
+ *01 WARNING       -     R=REG2         C=TRAELC       T=2005
+ *01 WARNING       -     R=REG2         C=ELC          T=2010
+ *01 WARNING       -     R=REG2         C=AGRELC       T=2010
+ *01 WARNING       -     R=REG2         C=COMELC       T=2010
+ *01 WARNING       -     R=REG2         C=RSDELC       T=2010
+ *01 WARNING       -     R=REG2         C=TRAELC       T=2010
+ *01 WARNING       -     R=REG2         C=ELC          T=2015
+ *01 WARNING       -     R=REG2         C=AGRELC       T=2015
+ *01 WARNING       -     R=REG2         C=COMELC       T=2015
+ *01 WARNING       -     R=REG2         C=RSDELC       T=2015
+ *01 WARNING       -     R=REG2         C=TRAELC       T=2015
+ *01 WARNING       -     R=REG2         C=ELC          T=2020
+ *01 WARNING       -     R=REG2         C=AGRELC       T=2020
+ *01 WARNING       -     R=REG2         C=COMELC       T=2020
+ *01 WARNING       -     R=REG2         C=RSDELC       T=2020
+ *01 WARNING       -     R=REG2         C=TRAELC       T=2020
+ *01 WARNING       -     R=REG2         C=ELC          T=2030
+ *01 WARNING       -     R=REG2         C=AGRELC       T=2030
+ *01 WARNING       -     R=REG2         C=COMELC       T=2030
+ *01 WARNING       -     R=REG2         C=RSDELC       T=2030
+ *01 WARNING       -     R=REG2         C=TRAELC       T=2030
+ *01 WARNING       -     R=REG2         C=ELC          T=2050
+ *01 WARNING       -     R=REG2         C=AGRELC       T=2050
+ *01 WARNING       -     R=REG2         C=COMELC       T=2050
+ *01 WARNING       -     R=REG2         C=RSDELC       T=2050
+ *01 WARNING       -     R=REG2         C=TRAELC       T=2050

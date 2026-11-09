@@ -51,8 +51,6 @@ function coef_ext_unported(tm)
         yes(n) && push!(out, "coef_ext.$(lowercase(n)) ($n YES)")
     end
     gswitch(tm, "MACRO", "") == "" || push!(out, "coef_ext.msa/mlf (MACRO set)")
-    isempty(gset_opt(tm.data, "RPC_FFUNC", 3)) || push!(out, "coef_ext.vda L62-69 (reduced flows: RPC_FFUNC has members)")
-    isempty(gset_opt(tm.data, "RPCG_PTRAN", 6)) || push!(out, "coef_ext.vda L66 (RPCG_PTRAN has members)")
     for (s, n, kind) in (("ACT_CSTSD", 6, :param), ("ACT_SDTIME", 5, :param), ("ACT_MAXNON", 4, :param),
                          ("ACT_LOSSD", 5, :param), ("ACT_LOSPL", 4, :param), ("ACT_MINLD", 3, :param),
                          ("RP_PL", 3, :set), ("RP_DP", 2, :set), ("RP_UPT", 4, :set))
@@ -107,12 +105,14 @@ function coef_ext!(tm)
     rtforc = gvalues(tm, "RTFORC", 4)
     pasti = gvalues(tm, "NCAP_PASTI", 3)
     rp_resid0 = Set((k[1], k[3]) for k in keys(resid) if k[2] == "0")
+    rcap_loop = [k for k in prc_rcap.keys if k in trackp]
+    gams_sort!(rcap_loop, tm.data)                       # LOOP order: the scratch Z is the last pass's
     for v in pyr_s
         # L23: LOOP(PRC_RCAP(TRACKP(R,P)), Z = SMAX(T,PRC_RESID(R,T,P));
         #        RTFORC(RTP_CPTYR(R,V,T,P)) = Z-PRC_RESID(R,T,P)+EPS; PRC_RESID(R,T,P)$RTFORC(R,V,T,P) = Z)
-        for (r, p) in prc_rcap.keys
-            (r, p) in trackp || continue
+        for (r, p) in rcap_loop
             z = maximum((Float64(gv(resid, (r, t, p))) for t in t_list); init=-Inf)
+            gput_scalar!(tm, "Z", z)                         # scratch, as the last pass leaves it
             for (_, _, t, _) in get(cptyr_by_rvp, (r, v, p), NTuple{4,String}[])
                 gassign!(rtforc, (r, v, t, p), GNum(z) - gv(resid, (r, t, p)) + GEPS)
                 haskey(rtforc, (r, v, t, p)) && gassign!(resid, (r, t, p), GNum(z))
@@ -285,10 +285,72 @@ function coef_ext!(tm)
     rp_cgc = union(gmembers(tm, "RP_CGC", 4), rpg_1ace.keys)
     trackpc = Set((k[1], k[2], k[4]) for k in rpg_1ace.keys)
     rp_grp = Set((k[1], k[2], k[3]) for k in rp_cgc)
-    # L62: TRACKPC(TRACKPC) = RPC_FFUNC(TRACKPC) (RPC_FFUNC is empty here, refused otherwise); L63: nothing to do
-    empty!(trackpc)
-    # L65-69: CG_GRP <= RTP_FFCX; RP_DCGG from RPCG_PTRAN (empty) and TRACKPC (empty): no RTP_FFCX changes
-    # L71: RP_CGC(R,P,CG,C)$TRACKPC(R,P,C) = NO (TRACKPC empty)
+    # L62: TRACKPC(TRACKPC) = RPC_FFUNC(TRACKPC)
+    rpc_ffunc = S1("RPC_FFUNC").members
+    filter!(k -> k in rpc_ffunc, trackpc)
+    act_eff0 = gvalues(tm, "ACT_EFF", 5)
+    if !isempty(trackpc)
+        # L63: ACT_FLO(RTP(R,V,P),C,S)$(RPCS_VAR(R,P,C,S)$TRACKPC(R,P,C)) =
+        #   1/SUM(RP_CGC(R,P,CG,C),MAX(MICRO,ACT_EFF(RTP,CG,S)*(1+(ACT_EFF(RTP,C,S)-1)$ACT_EFF(RTP,C,S))))
+        micro = GNum(gscalar(tm, "MICRO"))
+        act_flo = gvalues(tm, "ACT_FLO", 5)
+        rpcs_of = indexby(S1("RPCS_VAR"), (1, 2, 3))
+        cg_of = Dict{NTuple{3,String},Vector{String}}()
+        foreach(k -> push!(get!(() -> String[], cg_of, (k[1], k[2], k[4])), k[3]), rp_cgc)
+        tr_of = Dict{NTuple{2,String},Vector{String}}()
+        foreach(k -> push!(get!(() -> String[], tr_of, (k[1], k[2])), k[3]), trackpc)
+        for (r, v, p) in rtp.keys, c in get(tr_of, (r, p), String[]), (_, _, _, s) in get(rpcs_of, (r, p, c), NTuple{4,String}[])
+            ec = gv(act_eff0, (r, v, p, c, s))
+            den = GZERO
+            for cg in get(cg_of, (r, p, c), String[])
+                den += gmax(micro, gv(act_eff0, (r, v, p, cg, s)) * (GNum(1.0) + gif(ec - GNum(1.0), !iszero(ec))))
+            end
+            gassign!(act_flo, (r, v, p, c, s), GNum(1.0) / den)
+        end
+        gput!(tm, "ACT_FLO", act_flo)
+    end
+    # L65: OPTION CG_GRP <= RTP_FFCX   (RTP_FFCX(R,V,T,P,CG,CG2): positions 1, 4, 5, 6)
+    ffcx = gvalues(tm, "RTP_FFCX", 6)
+    cg_grp = Set{NTuple{4,String}}((k[1], k[4], k[5], k[6]) for k in keys(ffcx))
+    # L66: LOOP(RPCG_PTRAN(RP,C,COM,CG,CG2)$CG_GRP(RP,CG,CG2),
+    #   IF(RPC_FFUNC(RP,C), RP_DCGG(RP,C,CG,CG2,'UP')=YES; ELSE RP_DCGG(RP,COM,CG,CG2,'LO')=YES))
+    dcgg = Set{NTuple{6,String}}()
+    for (r, p, c, com, cg, cg2) in S1("RPCG_PTRAN").keys
+        (r, p, cg, cg2) in cg_grp || continue
+        (r, p, c) in rpc_ffunc ? push!(dcgg, (r, p, c, cg, cg2, "UP")) : push!(dcgg, (r, p, com, cg, cg2, "LO"))
+    end
+    # L67: RP_DCGG(TRACKPC(RP,COM),CG,C,'UP')$(RP_CGC(RP,CG,COM)$RPC_ACT(RP,C)) $= CG_GRP(RP,CG,C)
+    rpc_act = S1("RPC_ACT").members
+    for (r, p, cg, com) in rp_cgc
+        (r, p, com) in trackpc || continue
+        for k in cg_grp
+            (k[1] == r && k[2] == p && k[3] == cg && (r, p, k[4]) in rpc_act) && push!(dcgg, (r, p, com, cg, k[4], "UP"))
+        end
+    end
+    if !isempty(dcgg)
+        # L68: RTP_FFCX(RTP_CAPYR(R,V,T,P),ACTCG,C)$RPC_FFUNC(R,P,C) $=
+        #   SUM(RP_DCGG(R,P,C,CG,CG2,L),(POWER(RTP_FFCX(R,V,T,P,CG,CG2)+1,BDSIG(L))-1)$(RTP_FFCX(R,V,T,P,CG,CG2)-MIN(0,BDSIG(L))))
+        bdsig = Dict("LO" => 1.0, "UP" => -1.0)
+        actcg = [k[1] for k in S1("ACTCG").keys]
+        sums = Dict{NTuple{6,String},GNum}()                                 # the right side reads the old values (G11)
+        for (r, v, t, p) in S1("RTP_CAPYR").keys, (rr, pp, c, cg, cg2, l) in dcgg
+            (rr == r && pp == p && (r, p, c) in rpc_ffunc) || continue
+            x = gv(ffcx, (r, v, t, p, cg, cg2))
+            b = bdsig[l]
+            iszero(x - GNum(min(0.0, b))) && continue
+            y = gpower(x + GNum(1.0), GNum(b)) - GNum(1.0)
+            for a in actcg
+                sums[(r, v, t, p, a, c)] = get(sums, (r, v, t, p, a, c), GZERO) + y
+            end
+        end
+        foreach(((k, y),) -> iszero(y) || gassign!(ffcx, k, y), sums)      # $=
+        # L69: LOOP(RP_DCGG(R,P,C,CG,CG2,L),RTP_FFCX(R,V,T,P,CG,CG2)=0)
+        gone = Set((k[1], k[2], k[4], k[5]) for k in dcgg)
+        filter!(kv -> !((kv[1][1], kv[1][4], kv[1][5], kv[1][6]) in gone), ffcx)
+        gput!(tm, "RTP_FFCX", ffcx)
+    end
+    # L71: RP_CGC(R,P,CG,C)$TRACKPC(R,P,C) = NO
+    filter!(k -> !((k[1], k[2], k[4]) in trackpc), rp_cgc)
     # L72: COEF_PTRAN(RTP(R,V,P),CG,C,COM,S)$(RPCS_VAR(R,P,C,S)$RPC_PG(R,P,COM)$RP_CGC(R,P,CG,C))
     #        = ACT_EFF(RTP,CG,S)*PRC_ACTFLO(RTP,COM)*(1+(ACT_EFF(RTP,C,S)-1)$ACT_EFF(RTP,C,S))
     coef_ptran = gvalues(tm, "COEF_PTRAN", 7)
@@ -315,13 +377,15 @@ function coef_ext!(tm)
     # L73: ACT_EFF(R,LL,P,CG,S)$RP_GRP(R,P,CG) = 0
     filter!(kv -> !((kv[1][1], kv[1][3], kv[1][4]) in rp_grp), act_eff)
     gput!(tm, "ACT_EFF", act_eff)
-    # L74: OPTION RP_GRP < RP_CGC; RPCC_FFUNC(RP_GRP(R,P,CG),COM)$RPC_PG(R,P,COM) = YES
+    # L74: OPTION RP_GRP < RP_CGC (after L71); RPCC_FFUNC(RP_GRP(R,P,CG),COM)$RPC_PG(R,P,COM) = YES
+    rp_grp = Set((k[1], k[2], k[3]) for k in rp_cgc)
     rpcc_ffunc = gmembers(tm, "RPCC_FFUNC", 4)
     for (r, p, cg) in rp_grp, (_, _, com) in get(pg_by_rp, (r, p), NTuple{3,String}[])
         push!(rpcc_ffunc, (r, p, cg, com))
     end
     gput!(tm, "RPCC_FFUNC", rpcc_ffunc)
-    # L75: $IFI NOT %SENSIS%==YES OPTION CLEAR=RPCG_PTRAN (empty here); L76: work sets cleared
+    # L75: $IFI NOT %SENSIS%==YES OPTION CLEAR=RPCG_PTRAN; L76: work sets cleared
+    uppercase(strip(gswitch(tm, "SENSIS", ""))) == "YES" || gput!(tm, "RPCG_PTRAN", Set{NTuple{6,String}}())
     for (n, N) in (("TRACKPC", 3), ("RP_GRP", 3), ("CG_GRP", 4), ("RP_DCGG", 6), ("RTP_CAPYR", 4), ("RP_CGC", 4))
         gput!(tm, n, Set{NTuple{N,String}}())
     end

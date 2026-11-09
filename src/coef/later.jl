@@ -29,6 +29,8 @@ check leaves those records out; the later file's own check compares them.
   (coef_ext.vda L63).
 - RPCC_FFUNC(R,P,CG,COM) for RP_GRP(R,P,CG) (`OPTION RP_GRP < RP_CGC`, the
   group position, G26) and RPC_PG(R,P,COM) (coef_ext.vda L74).
+- the scratch Z, which coef_ext.vda L23 sets in its PRC_RCAP loop when a
+  refitted process has a positive PRC_RESID at a milestone (M1.3 change 25-5).
 - COEF_PVT(R,T) where coef_obj.mod left it zero: FPD(T) (coef_ext.vda L81);
   and OBJ_PVT, COEF_PVT everywhere when `%CTST%` is `**EPS` (coef_alt.lin
   L47, LINFLO).
@@ -49,6 +51,10 @@ function later_overwrites(tm; after::AbstractString="coef_shp")
     end
     pyr = Set(k[1] for k in gset(tm, "PYR_S").keys)
     resid = Set((r, p) for ((r, t, p), v) in gparam(tm, "PRC_RESID").values if v > 0)
+    # coef_ext.vda L21-23: TRACKP from PRC_RESID > 0 at the milestones; LOOP(PYR_S, LOOP(PRC_RCAP(TRACKP(R,P)), Z = ...))
+    tmem = Set(k[1] for k in gset(tm, "MILESTONYR").keys)
+    trackp_resid = Set((r, p) for ((r, t, p), v) in gparam(tm, "PRC_RESID").values if v > 0 && t in tmem)
+    z_later = !isempty(pyr) && any(k -> k in trackp_resid, gset_opt(tm.data, "PRC_RCAP", 2).keys)
 
     # coef_ext.vda L60: RP_CGC(RPG_1ACE) = YES; OPTION TRACKPC < RPG_1ACE (positions 1, 2, 4)
     rpg_1ace = gset_opt(tm.data, "RPG_1ACE", 4)
@@ -73,6 +79,7 @@ function later_overwrites(tm; after::AbstractString="coef_shp")
     return Dict{String,Function}(
         "COEF_CPT" => k -> (k[2] in pyr && (k[1], k[4]) in resid) || (k[1], k[2], k[4]) in cpx,
         "RTP_CAPYR" => k -> true,
+        "Z" => k -> z_later,
         "RTP_FFCX" => k -> (k[5] in actcg && (k[1], k[4], k[6]) in rpc_ffunc) ||
                            ((k[1], k[4], k[5]) in dcgg_cg && (k[1], k[4], k[6]) in rpc_act),
         "COEF_PVT" => k -> linflo || !haskey(coef_pvt, k),

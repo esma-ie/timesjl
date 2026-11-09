@@ -148,4 +148,7 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "M1.3 gate: the chain from the input dump through the coefficients" begin
         include("unit/test_m13_chain.jl")
     end
+    @testset "M1.3 (25b): the QA log" begin
+        include("unit/test_qalog.jl")
+    end
 end

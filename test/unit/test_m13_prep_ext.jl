@@ -19,8 +19,8 @@ const PREP_STEPS = (ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!
     names = prep_ext_symbols(tm)
     r = layer1(tm, DumpData(joinpath(FIXTURES, "demo12_off_prep")), names)
     foreach(d -> ispass(d) || println(d, " ", d.examples), r)
-    @test length(names) == 821 && all(ispass, r)
-    @test !("PUTOUT" in names) && "MY_SUM" in names
+    @test length(names) == 824 && all(ispass, r)
+    @test "PUTOUT" in names && "MY_SUM" in names                  # the QA-log scalars too (M1.3 change 25b-1)
     # L49-68: every demo12 process has a '0' record and one data year: the one-point run-down over its lifetime
     @test ("REG1", "2004", "2005", "CAPEELC") in gset(tm, "RTP_CPTYR").members && isempty(gset(tm, "TRACKP").keys)
 end
@@ -89,10 +89,15 @@ end
     fx = only(filter(f -> f["prefix"] == "demo12_off", TOML.parsefile(joinpath(FIXTURES, "public_fixtures.toml"))["fixture"]))
     tm = TimesModel(joinpath(FIXTURES, "demo12_off_init"); switches=fx["switches"])
     @test isempty(prep_ext_unported(tm))
-    for (sw, line) in (("STAGES", "L214"), ("POWERFLO", "L37"), ("WAVER", "L63"), ("ETL", "ETL"))
+    for (sw, line) in (("STAGES", "L214"), ("WAVER", "L63"), ("ETL", "ETL"))
         t = TimesModel(joinpath(FIXTURES, "demo12_off_init"); switches=merge(fx["switches"], Dict(sw => "YES")))
         @test any(s -> occursin(line, s), prep_ext_unported(t))
     end
+    # %POWERFLO% YES: powerflo.vda PREP is translated (M1.3 change 27a); gas grids (GG_KGF data) are refused
+    t = TimesModel(joinpath(FIXTURES, "demo12_off_init"); switches=merge(fx["switches"], Dict("POWERFLO" => "YES")))
+    @test isempty(prep_ext_unported(t))
+    TIMES.gput!(t, "GG_KGF", Dict{NTuple{4,String},Float64}(("REG1", "2005", "ELCTECOA00", "ELC") => 1.0))
+    @test any(s -> occursin("GG_KGF", s), prep_ext_unported(t))
     t = TimesModel(joinpath(FIXTURES, "demo12_off_init"); switches=merge(fx["switches"], Dict("VINTOPT" => "1")))
     @test any(s -> occursin("L42-43", s), prep_ext_unported(t))
 end

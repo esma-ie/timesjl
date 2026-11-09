@@ -37,14 +37,14 @@ using TIMES: DumpData, layer1, init_ext!, ppmain_head!, ppmain_head_symbols, ppm
              ppmain_reduce!, ppmain_reduce_symbols, ppm_ext_actef!, ppm_ext_actef_symbols, ppm_ext!, ppm_ext_symbols,
              prepret_decl!, prepret_decl_symbols, eqobjinv_prep!, eqobjinv_prep_symbols,
              eqobjfix_prep!, eqobjfix_prep_symbols, eqobsalv_prep!, eqobsalv_prep_symbols,
-             eqmain_prep!, eqmain_prep_symbols
+             eqmain_prep!, eqmain_prep_symbols, bnd_data!, pp_qack_data!, pp_clean!, qack_prep_symbols
 using TIMES.Reference: ispass
 
 "The segments: (first checkpoint, next checkpoint)."
 const M13_SEGMENTS = [("input", "init"), ("init", "prep"), ("prep", "prelv"), ("prelv", "ppm"), ("coef", "presolve")]
 
 "Every set and parameter of the dump `tm` started from."
-all_symbols(tm) = sort([i.name for i in values(tm.data.dump.symbols) if i.kind in (:set, :parameter)])
+all_symbols(tm) = sort([i.name for i in values(tm.data.dump.symbols) if i.kind in (:set, :parameter) && i.name != "TJL_SOLVEINFO"])
 
 "Translated steps in execution order: (segment start, name, function, symbols, symbols by model)."
 const M13_STEPS = Tuple{String,String,Function,Vector{String},Function}[
@@ -80,6 +80,9 @@ const M13_STEPS = Tuple{String,String,Function,Vector{String},Function}[
     ("coef", "eqobjfix_prep", eqobjfix_prep!, String[], eqobjfix_prep_symbols),   # eqobj.mod L54: eqobjfix.mod L19-175 (coef_alt.lin FIX)
     ("coef", "eqobsalv_prep", eqobsalv_prep!, String[], eqobsalv_prep_symbols),   # eqobj.mod L65: eqobsalv.mod L11-82
     ("coef", "eqmain_prep", eqmain_prep!, String[], eqmain_prep_symbols),   # eqmain.mod L65-226, equ_ext.vda L76-90
+    ("coef", "bnd_data", bnd_data!, String[], tm -> String[]),          # maindrv.mod L92: bndmain.mod data statements
+    ("coef", "pp_qack_data", pp_qack_data!, String[], tm -> String[]),  # L98: pp_qack.mod data statements
+    ("coef", "pp_clean", pp_clean!, String[], all_symbols),            # L111: solve.mod L1, pp_clean.mod: the whole coef -> presolve segment
 ]
 
 function probe13(refdir, model; roots=Dict{String,String}(), variant="reduce_off", steps=M13_STEPS)
@@ -99,11 +102,13 @@ function probe13(refdir, model; roots=Dict{String,String}(), variant="reduce_off
             continue
         end
         tm = TimesModel(joinpath(dir, a); switches=sw)
+        TIMES.qa_warnings!(tm, TIMES.gams_warnings(joinpath(dir, "raw", "tjl_presolve.lst")))   # ppmain.mod L35
         ref = DumpData(joinpath(dir, b))
         for (_, name, f, syms, extra) in seg
             try
                 t = @elapsed f(tm)
-                r = layer1(tm, ref, vcat(syms, extra(tm)))
+                # a symbol of the start dump the next dump lacks (declared in another run, e.g. ADESC under %POWERFLO%) is skipped
+                r = layer1(tm, ref, filter(n -> haskey(ref.dump.symbols, uppercase(n)), vcat(syms, extra(tm))))
                 bad = filter(!ispass, r)
                 println("== ", model, " ", name, ": ", isempty(bad) ? "PASS" : "FAIL", " (", length(r), " symbols, ",
                         sum(d -> d.n_ref, r; init=0), " GAMS records at ", b, ", ", round(t; digits=2), " s)")

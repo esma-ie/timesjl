@@ -621,9 +621,18 @@ MAPVAL(CNT) is nonzero only for EPS, so a process without refits keeps its
 RP_RTF. MOD takes the sign of its first argument (G43). The bounds of the
 label (L68-77, L80) are `ret_bounds!`.
 
-GAMS: prepret.dsc L44-81, v4.9.7.
+With %POWERFLO% YES, mod_vars.mod L95 follows: powerflo.vda DECL
+(`powerflo_decl!`, M1.3 change 27b).
+
+GAMS: prepret.dsc L44-81 (mod_vars.mod L94), powerflo.vda L194-226 (L95), v4.9.7.
 """
 function prepret_decl!(tm::TimesModel)
+    _prepret_decl!(tm)                                                              # mod_vars.mod L94
+    uppercase(strip(gswitch(tm, "POWERFLO", ""), ['\'', '"'])) == "YES" && powerflo_decl!(tm)   # L95
+    return tm
+end
+
+function _prepret_decl!(tm::TimesModel)
     Reference.has_symbol(tm.data.dump, "RP_RTF") || return tm                      # $IF DECLARED VNRET
     d = tm.data
     yax = YearAxis(tm)

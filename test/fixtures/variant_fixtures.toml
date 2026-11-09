@@ -116,3 +116,15 @@ variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
+
+# Variant 6 begun (M1.3 changes 27a-27b, 9 Nov 2026): a phase-angle DC power-flow grid (PRC_REACT
+# on demo12's electricity link; powerflo.vda PREP, main block, DECL and EQ_GR_POWFLO). Preprocessing
+# from the input dump to ppm on every symbol; nothing left untranslated (layers 2-3 in
+# public_fixtures.toml).
+[[variant]]
+prefix   = "demo12_pf"
+model    = "TIMES_Demo-demo12_pf"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []
