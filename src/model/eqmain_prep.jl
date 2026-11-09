@@ -115,6 +115,7 @@ function eqmain_prep!(tm::TimesModel)
         (haskey(tpos, t) && !((r, t, p) in rtp_off)) || continue
         f = gv(B, (t,)).v + gv(iled, (r, t, p)).v
         z = count(((_, tt),) -> haskey(tpos, tt) && f > gv(E, (tt,)).v + 0.5, get(vnt_of, (t,), NTuple{2,String}[]))
+        gput_scalar!(tm, "F", f); gput_scalar!(tm, "Z", z)                     # scratch, as the last pass leaves it
         j = tpos[t] + z
         j <= length(tlist) && push!(rvpt, (r, t, p, tlist[j]))
     end

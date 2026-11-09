@@ -114,7 +114,7 @@ GAMS 54.6.1):
 | 25-1 | mod_vars.mod L94 (prepret.dsc DECL, its data statements L44-81), eqobj.mod L14-39 (with prepret.dsc EQOBJ L119-131) and eqobjinv.mod L18-274 (with coef_alt.lin INV, L89-118): the investment cases, spreads, corrections and divisors (8 Nov 2026; the step in parts) | 14-39; 18-274 | the probe's coef -> presolve segment: core models, demo12 cases; crafted case demo12_objinv (CI) |
 | 25-2 | eqobjfix.mod, eqobjvar.mod, eqobsalv.mod (with coef_alt.lin FIX and prepret.dsc OBJFIX/OBSALV): their data statements (9 Nov 2026) | 19-175; 11-82 | coef -> presolve: core models, demo12 cases (CI) |
 | 25-3 | eqmain.mod L41-262 (RVPT, RTP_OFF, the UC maps and the other data statements between the equation includes), equ_ext (eqactups.vda L1-35 and the other VDA preparations), mod_equa.mod, mod_ext (9 Nov 2026) | | coef -> presolve: residual inventory on the core models and demo12 cases |
-| 25-4 | bndmain.mod data statements, pp_qack.mod (less the QA log, 25b) and pp_clean.mod (solve.mod L1, the memory clean-up), and the step's scratch; the coef -> pre-solve step joins the M1.3 chain and the CI chain runs end to end | | presolve, every symbol (demo12 in CI) |
+| 25-4 | bndmain.mod data statements, pp_qack.mod (less the QA log, 25b) and pp_clean.mod (solve.mod L1, the memory clean-up), and the step's scratch; the coef -> pre-solve step joins the M1.3 chain and the CI chain runs end to end (9 Nov 2026) | | presolve, every symbol: core models, demo12 cases (CI: test_m13_coef_presolve.jl, test_m13_chain.jl end to end) |
 | 25b | pp_qaput.mod: the QA log (QA_CHECK.LOG) and its scalars PUTOUT, PUTGRP and ERRLEV, at every pp_qaput call translated so far, and the ERRLEV abort of pp_qack.mod L376-386 (ERRLEV 33: the run goes on with an alert; above 33: stop). TIMES.jl checks errors as GAMS does until JuMP-side checks are added in Phase 2 (James, 6 Nov 2026). The harness does not keep QA_CHECK.LOG yet (harness change, then a GAMS rerun) | 1-16; 376-386 | log text and scalars at init, prep, prelv, ppm; crafted demo12 states for the WARNING, ERROR and FATAL paths (CI) |
 | 26 | curex.gms (preppm.mod L27-28): currency conversion from G_CUREX and R_CUREX into each region's currency. JRC-EU-TIMES-cli_ll has G_CUREX data (found 7 Nov 2026 by the nightly run; brought into M1.3 by James, 7 Nov 2026) | 1-84 | prep: JRC-EU-TIMES-cli_ll on James's machine (verdicts only, docs/test-models.md); crafted case demo12_curex, G_CUREX and R_CUREX in a second currency (CI) |
 | 27 | powerflo.vda: the power-flow (PTDF) grid extension, %POWERFLO% YES, which init_ext.vda L134-135 sets when PRC_REACT, GR_PTDF or GG_KGF has data. JRC-EU-TIMES-cli_ll has PRC_REACT data (found 7 Nov 2026; brought into M1.3 by James, 7 Nov 2026). In three parts; the switch stays refused until the last: | | JRC-EU-TIMES-cli_ll on James's machine (verdicts only); demo12 variant 6, PTDF power grid (docs/demo12-variants.md; CI) |
@@ -179,6 +179,35 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 ## Findings so far
 
+- (25-4) The end of the coef -> pre-solve step (`src/model/qack_prep.jl`,
+  9 Nov 2026): bndmain.mod's data statements and its includes' (NCAP_BND,
+  CAP_BND, UC_TS_SUM, FLO_BND and TRACKPC in bnd_flo.mod, the storage bounds,
+  the UC right-hand sides that bnd_ucv.mod L35 opens with an INF upper bound
+  for 'N'), pp_qack.mod's data statements without the QA log (the
+  generation control sets of L45-60: RPC_CONLY, RTPCS_VARF, RCS_COMBAL,
+  RPG_RED, RTP, RTP_VNTBYR, COEF_VNT, RVP_KMAP; PRC_CG; what the checks
+  leave: TS_ARRAY, PRC_YMAX, UNCD7, Z), and pp_clean.mod (solve.mod L1: the
+  memory clean-up that zeroes FLO_SUM, FLO_FUNC, NCAP_AF, NCAP_AFA,
+  NCAP_AFS and the cost attributes). The steps also leave the scratch
+  scalars and arrays as GAMS does (F, Z, MY_F, CNT, OBJ_C, OBJ_D, FIL2,
+  MY_ARRAY): the loops run in GAMS order, a FOR loop leaves its variable
+  at the first value past the bound (1 when it runs no iteration; checked
+  on GAMS 54.6.1), and an EPS NCAP_ILED leaves MY_F at EPS (OTUS9r).
+  `OPTION p < q` of two parameters copies q's values when p has q's
+  dimension and counts q's records when it has fewer (G31, refined;
+  COEF_VNT). Checked from GAMS's coef dump on every set and parameter of
+  the pre-solve dump (less PUTOUT, PUTGRP, ERRLEV): all pass on the five
+  core models (OTUS9r 821 of 821) and twelve demo12 cases, both variants.
+  The probe's coef -> presolve segment ends with an all-symbols step, and
+  the CI chain (`test_m13_chain.jl`) now runs end to end on demo12: input
+  dump -> preprocessing -> coefficients -> pre-solve (every symbol) ->
+  the model from TIMES.jl's own state, whose matrix (layer 2) and
+  objective (layer 3) match GAMS. Open for the gate: the coefficient stage
+  (M1.2) does not yet leave filparam.gms's scratch FIRST_VAL, LAST_VAL and
+  MY_FYEAR as GAMS's last call does (each call writes them before reading
+  them); the CI chain excludes those three at the pre-solve checkpoint.
+  scripts/m13_gate.jl still chains input -> ppm only; carrying the
+  coefficient stage into it waits for that fix.
 - (25-3) The rest of eqmain.mod and equ_ext.vda (`src/model/eqmain_prep.jl`,
   9 Nov 2026): AFS (eqcapact.mod L20, the `L` include), eqbndcst.mod's block
   (SUPERYR, YK1; RT_IAN, RTP_IAN and CST_ANNC stay empty without cost-bound

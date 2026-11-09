@@ -74,6 +74,7 @@ function eqobjinv_prep!(tm::TimesModel)
     B, E, D, M = P("B", 1), P("E", 1), P("D", 1), P("M", 1)
     ipd = P("IPD", 1)
     ct = ctst(tm)
+    scal = Dict{String,Union{Float64,GNum}}()   # scratch scalars as the statements leave them (F, Z, MY_F, CNT, OBJ_C)
 
     # ---- eqobj.mod L14-28 -------------------------------------------------------
     # L17: K_EOH(EACHYEAR)$((YEARVAL(EACHYEAR) >= PYR_V1) * (YEARVAL(EACHYEAR) <= MIYR_VL)) = YES
@@ -211,6 +212,7 @@ function eqobjinv_prep!(tm::TimesModel)
         zmax = max(zmax, gv(E, (t,)).v)
     end
     z = zmax - sc("MIYR_V1") + 2
+    scal["Z"] = z
     maxlife = max(maximum((2 * gv(D, (t,)).v for (t,) in T); init=-Inf), z, ceil(sc("MAXLIFE")))
     gput_scalar!(tm, "MAXLIFE", maxlife)
     opyear = gmembers(tm, "OPYEAR", 2)
@@ -244,15 +246,17 @@ function eqobjinv_prep!(tm::TimesModel)
     zhalf(zz) = ct == "" ? ceil(zz / 2 - 0.5) : floor(rnd(zz) / 2)                            # L94-95
     istep(t, zz) = ct == "" ? gv(ipd, (t,)).v : min(gv(ipd, (t,)).v, rnd(zz))
     ipdc(t) = ct == "" ? gv(ipd, (t,)).v : 1.0                                                 # IPD(T)%CTST% (**0, **EPS: 1, G13)
-    obj_c = sc("OBJ_C")
-    for k in sort!(collect(obj_1b); by=k -> k), (_, _, _, l) in get(spred_of, k, NTuple{4,String}[])   # L145-158
-        (r, t, p) = k
+    spred_1b = [s4 for k in obj_1b for s4 in get(spred_of, k, NTuple{4,String}[])]
+    gams_sort!(spred_1b, d)                                                                   # LOOP order
+    for (r, t, p, l) in spred_1b                                                              # L145-158
+        k = (r, t, p)
         zz = tl(k)
         if rnd(zz) - ipdc(t) <= 0
             f = gv(B, (t,)).v - zhalf(zz) - yv(t)
             zz = rnd(gv(rpti, k).v * zz) - 1
             kk, a = ylead(t, f), agelead(a1, zz)
             (kk !== nothing && (kk,) in K && a !== nothing) && push!(obj_sumii, (r, t, p, l, kk, a))
+            scal["F"] = f; scal["Z"] = zz
         else
             cnt = istep(t, zz)
             f = gv(B, (t,)).v - yv(t) - floor(cnt / 2)
@@ -265,22 +269,29 @@ function eqobjinv_prep!(tm::TimesModel)
                 f += zz
                 obj_c += 1
             end
+            scal["Z"] = zz; scal["F"] = f; scal["CNT"] = cnt; scal["OBJ_C"] = obj_c     # FOR leaves the first value past n
         end
     end
 
     # ---- L174-214: cases 2a, 2b (OBJ_IDC) ------------------------------------------------
     obj_2a = Set(k for k in obj_i2 if gv(rpti, k).v <= 1)                                     # L174
     obj_idc = Set{NTuple{6,String}}()
-    for k in obj_2a, (_, _, _, l) in get(spred_of, k, NTuple{4,String}[])                       # L188-193
-        (r, v, p) = k
+    spred_2a = [s4 for k in obj_2a for s4 in get(spred_of, k, NTuple{4,String}[])]
+    gams_sort!(spred_2a, d)
+    for (r, v, p, l) in spred_2a                                                              # L188-193
+        k = (r, v, p)
         zz = gv(iled, k).v
         my_f = gv(B, (v,)).v - yv(v) + zz
+        # an EPS NCAP_ILED (prepret.dsc L62) leaves Z and MY_F at EPS when B(V) = YEARVAL(V)
+        scal["Z"] = gv(iled, k); scal["MY_F"] = GNum(gv(B, (v,)).v - yv(v)) + gv(iled, k)
         kk, a = ylead(v, my_f), agelead(a1, max(0.0, zz - 1))
         (kk !== nothing && a !== nothing) && push!(obj_idc, (r, v, p, l, kk, a))
     end
     obj_2b = Set(k for k in obj_i2 if (k[2],) in T && !(k in obj_2a))                         # L198
-    for k in obj_2b, (_, _, _, l) in get(spred_of, k, NTuple{4,String}[])                       # L207-214
-        (r, t, p) = k
+    spred_2b = [s4 for k in obj_2b for s4 in get(spred_of, k, NTuple{4,String}[])]
+    gams_sort!(spred_2b, d)
+    for (r, t, p, l) in spred_2b                                                              # L207-214
+        k = (r, t, p)
         n = gv(rpti, k).v
         c = 1.0
         while c <= n
@@ -288,8 +299,10 @@ function eqobjinv_prep!(tm::TimesModel)
             my_f = rnd(gv(B, (t,)).v + (c - 1) * tl(k)) - yv(t) + zz
             kk, a = ylead(t, my_f), agelead(a1, max(0.0, zz - 1))
             (kk !== nothing && a !== nothing) && push!(obj_idc, (r, t, p, l, kk, a))
+            scal["Z"] = zz; scal["MY_F"] = my_f
             c += 1
         end
+        scal["OBJ_C"] = c
     end
     # L219-229: OBJ_DIVI of OBJ_I2 from the interest during construction
     obj_divi = Dict{NTuple{3,String},Float64}()
@@ -301,8 +314,10 @@ function eqobjinv_prep!(tm::TimesModel)
     for (r, v, p, cur) in icur_sorted
         (r, v, p) in obj_i2 || continue
         zz = gv(coef_iled, (r, v, p)).v
+        scal["Z"] = zz
         if zz != 0
             oc = 1 + gv(g_drate, (r, v, cur)).v
+            scal["OBJ_C"] = oc
             my_fs, f, cnt = 0.0, 0.0, 0.0
             for (_, _, _, _, ll, jot) in get(idc_of, (r, v, p), NTuple{6,String}[])
                 cnt = ageax.pos[jot]
@@ -316,9 +331,11 @@ function eqobjinv_prep!(tm::TimesModel)
             f = (oc^cnt - 1) / (1 - 1 / oc) / cnt - 1
             cnt = max(1.0e-5, zz)
             zz = (oc^cnt - 1) / (1 - 1 / oc) / cnt - 1
+            scal["MY_F"] = my_fs; scal["CNT"] = cnt; scal["Z"] = zz
         else
             f = 1.0
         end
+        scal["F"] = f
         gassign!(obj_divi, (r, v, p), 1 / (1 + (zz == 0 ? 0.0 : zz * my_fs / f)))
     end
     # L231: OBJ_SUMII(R,V,P,LIFE,LL,JOT+(1-ORD(JOT)))$OBJ_IDC(R,V,P,LIFE,LL,JOT) = YES; L232: OPTION CLEAR=OBJ_IDC
@@ -449,9 +466,11 @@ function eqobjinv_prep!(tm::TimesModel)
     isp4 = indexby(_gset_from("INVSPRED", collect(invspred), d), (1, 2))                      # (year,jot) -> INVSPRED
     isp_k = indexby(_gset_from("INVSPRED", collect(invspred), d), (1, 2, 4))                  # (year,life,k_eoh)
     obj_sumiii = Set{NTuple{6,String}}()
-    for (r, v, p, l, y, ke, jot) in uncd7                                                         # L253-257
+    uncd7_sorted = collect(uncd7); gams_sort!(uncd7_sorted, d)
+    for (r, v, p, l, y, ke, jot) in uncd7_sorted                                                  # L253-257
         (ke,) in k_eoh || continue
         f = ceil(tl((r, v, p)) + gv(dlag, (r, v, p)).v)
+        scal["F"] = f
         if (y,) in lastll
             (ke,) in K || continue
             for (_, _, ll, _) in get(isp_k, (y, l, ke), NTuple{4,String}[])
@@ -500,6 +519,9 @@ function eqobjinv_prep!(tm::TimesModel)
     gput!(tm, "UNCD7", uncd7)
     gput!(tm, "COR_SALVI", cor_salvi); gput!(tm, "OBJ_CRF", obj_crf); gput!(tm, "OBJ_PASTI", obj_pasti)
     gput!(tm, "OBJ_DIVI", obj_divi); gput!(tm, "OBJ_DIVIII", obj_diviii)
+    gput!(tm, "FIL2", Dict((v,) => x for (v, x) in fil2 if x != 0))            # L118-119, scratch
+    gput!(tm, "MY_ARRAY", Dict((v,) => x for (v, x) in my_array if x != 0))
+    foreach(((n, x),) -> gput_scalar!(tm, n, x isa GNum ? x : GNum(x)), scal)
     obj_divi_alt && gput!(tm, "OBJ_JD", obj_jd)
     return tm
 end
