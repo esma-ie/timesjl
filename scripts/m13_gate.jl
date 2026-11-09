@@ -15,12 +15,12 @@
 # segment's check touched is the same in both dumps (the segment ends compare
 # every symbol of their start dump). Compared at each checkpoint: every set
 # and parameter of the segment's start dump, less the harness's
-# TJL_SOLVEINFO, and at presolve less the QA-log scalars PUTOUT, PUTGRP and
-# ERRLEV too (pp_qack.mod's QA log is M1.3 change 25b-2). At ppm the QA log
-# TIMES.jl wrote is compared with GAMS's (raw/tjl_presolve_qa_check.log,
-# harness 0.3.2 or reference/python/keep_qa_log.py): GAMS's goes on with
-# pp_qack.mod's groups. The run's compilation warnings (ppmain.mod L35) are
-# read from the pre-solve listing. Both variants. A path TIMES.jl does not translate yet
+# TJL_SOLVEINFO. The QA log TIMES.jl wrote is compared with GAMS's
+# (raw/tjl_presolve_qa_check.log, harness 0.3.2 or
+# reference/python/keep_qa_log.py): at ppm as the start of GAMS's, which goes
+# on with pp_qack.mod's groups, and at presolve whole (M1.3 change 25b). The
+# run's compilation warnings (ppmain.mod L35) are read from the pre-solve
+# listing. Both variants. A path TIMES.jl does not translate yet
 # (UnportedError) ends the chain there; the checkpoints before it still count.
 
 include(joinpath(@__DIR__, "m13_probe.jl"))      # M13_STEPS, M13_SEGMENTS, run_switches, runfile_of, suite_switches
@@ -67,7 +67,7 @@ function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off"
     ok, t_all, reached = true, 0.0, "input"
     for (a, b) in GATE_SEGMENTS
         isdir(joinpath(dir, b)) || (println("== ", model, "/", variant, ": no ", b, " dump; the chain ends at ", a); break)
-        names = gate_symbols(tm.data; qa=b != "presolve")   # the segment's start dump
+        names = gate_symbols(tm.data)                 # the segment's start dump
         t = try
             @elapsed foreach(f -> f(tm), gate_steps(a))
         catch e
@@ -91,13 +91,13 @@ function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off"
             foreach(e -> println("        ", e), d.examples)
         end
         qalog = joinpath(dir, "raw", "tjl_presolve_qa_check.log")
-        if b == "ppm"
+        if b in ("ppm", "presolve")
             if isfile(qalog)
-                qok, note = qa_compare(qa_text(tm), read(qalog, String))
+                qok, note = qa_compare(qa_text(tm), read(qalog, String); complete=b == "presolve")
                 ok &= qok
-                println("== ", model, "/", variant, " QA log at ppm: ", qok ? "PASS" : "FAIL", " (", note, ")")
+                println("== ", model, "/", variant, " QA log at ", b, ": ", qok ? "PASS" : "FAIL", " (", note, ")")
             else
-                println("== ", model, "/", variant, " QA log at ppm: no GAMS log (reference/python/keep_qa_log.py)")
+                println("== ", model, "/", variant, " QA log at ", b, ": no GAMS log (reference/python/keep_qa_log.py)")
             end
         end
         reached = b

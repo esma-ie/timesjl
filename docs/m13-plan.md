@@ -118,7 +118,7 @@ GAMS 54.6.1):
 | 25-5 | The coefficient stage's scratch (follow-up to 25-4, its open gate item): filparam.gms (coef_obj.mod L41) and fillcost.gms (L120-151) leave F, Z, MY_F, DFUNC, LAST_VAL, FIRST_VAL and MY_FYEAR as their last tuple does, taken in GAMS order and carried from call to call; coef_ext.vda L23 leaves Z. scripts/m13_gate.jl chains the coefficient stage and the coef -> pre-solve step (9 Nov 2026) | coef_obj.mod 41, 120-151; coef_ext.vda 23 | coef: every set and parameter (CI: test_m13_chain.jl); the gate from the input dump to presolve |
 | 25b | pp_qaput.mod: the QA log (QA_CHECK.LOG) and its scalars PUTOUT, PUTGRP and ERRLEV, at every pp_qaput call translated so far, and the ERRLEV abort of pp_qack.mod L376-386 (ERRLEV 33: the run goes on with an alert; above 33: stop). TIMES.jl checks errors as GAMS does until JuMP-side checks are added in Phase 2 (James, 6 Nov 2026). The harness does not keep QA_CHECK.LOG yet (harness change, then a GAMS rerun) | 1-16; 376-386 | log text and scalars at init, prep, prelv, ppm; crafted demo12 states for the WARNING, ERROR and FATAL paths (CI) |
 | 25b-1 | The QA log's machinery (`src/prep/qalog.jl`: QLOG, pp_qaput.mod, GAMS's PUT rules, G53) and every pp_qaput call and PUTGRP reset of preprocessing: ppmain.mod (L35 compile warnings, G54; L213-230, L273-276, L338-340, L465-471, L524-542, L573-585, L723-728, L765, L848, L878-885, L989, the PUTCLOSE of L1356), timslice.mod L67-104, pp_qafs.mod, pp_lvlbr.mod, pp_lvlbd.mod, pp_lvlif.mod, pp_chp.mod, pp_prelv.vda L81-85, ppm_ext.vda L86-94. The harness keeps QA_CHECK.LOG (0.3.2; `keep_qa_log.py` for earlier references, no GAMS rerun) (9 Nov 2026) | | PUTOUT, PUTGRP, ERRLEV at init, prep, prelv, ppm; the log at ppm, where GAMS's goes on with pp_qack.mod's groups (gate; CI on demo12) |
-| 25b-2 | pp_qack.mod's checks (L37-372: the QA groups, 'ALL QUALITY CHECKS PASSED') and the ERRLEV abort (L376-386); dynslite.vda L25 if %RTS% is not S; the log compared whole at presolve | 37-386 | log text and scalars at presolve; crafted demo12 states for the WARNING, ERROR and FATAL paths (CI) |
+| 25b-2 | pp_qack.mod's checks (L37-372: the QA groups, 'ALL QUALITY CHECKS PASSED') and the ERRLEV abort (L376-386); the log compared whole at presolve (9 Nov 2026; dynslite.vda L25 stays with TS_OFF data, refused) | 37-386 | log text and scalars at presolve; crafted demo12 states for the WARNING, ERROR and FATAL paths (CI) |
 | 26 | curex.gms (preppm.mod L27-28): currency conversion from G_CUREX and R_CUREX into each region's currency. JRC-EU-TIMES-cli_ll has G_CUREX data (found 7 Nov 2026 by the nightly run; brought into M1.3 by James, 7 Nov 2026) | 1-84 | prep: JRC-EU-TIMES-cli_ll on James's machine (verdicts only, docs/test-models.md); crafted case demo12_curex, G_CUREX and R_CUREX in a second currency (CI) |
 | 27 | powerflo.vda: the power-flow (PTDF) grid extension, %POWERFLO% YES, which init_ext.vda L134-135 sets when PRC_REACT, GR_PTDF or GG_KGF has data. JRC-EU-TIMES-cli_ll has PRC_REACT data (found 7 Nov 2026; brought into M1.3 by James, 7 Nov 2026). In three parts; the switch stays refused until the last: | | JRC-EU-TIMES-cli_ll on James's machine (verdicts only); demo12 variant 6, PTDF power grid (docs/demo12-variants.md; CI) |
 | 27a | powerflo.vda main block (pp_prelv.vda L114: the grid topology, GR_* sets and parameters, PRC_REACT, COM_LIM) and PREP (prep_ext.vda L37) | 1-204 | prelv and prep checkpoints |
@@ -182,6 +182,22 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 ## Findings so far
 
+- (25b-2) pp_qack.mod's checks (`src/model/qack_log.jl`, 9 Nov 2026): the
+  checks every run makes (L62-182: year fractions, the topology, commodity
+  types, demands, phantom topology entries, the primary groups, FS_EMIT,
+  REFIT hosts, NCAP_AFX) and the extended ones of %VDA% with %XTQA% (L203-
+  372), which every core reference runs. Each reads the state where the file
+  has it, so `pp_qack_data!` calls them between its data statements. Two
+  pairs of loops share a group, as the file sets PUTGRP to 0 only before the
+  first ('Commodity in CG ...' with 'No commodities in CG ...'; the IRE
+  checks of L216-238). The scratch Z of L82-84 is kept. At the end (L374-
+  387): ERRLEV 33 writes the alert and the run goes on, above 33 the run
+  stops (an error here, as GAMS's ABORT); with nothing written the log gets
+  'ALL QUALITY CHECKS PASSED'; PUTOUT, PUTGRP and ERRLEV are cleared. The
+  EXECERROR block (L183-201) is left out: TIMES.jl stops at the first
+  execution error. From GAMS's coef dump the lines pp_qack.mod writes match
+  GAMS's log on the five core models and the demo12 cases, both variants;
+  the gate and the CI chain compare the whole log at presolve.
 - (25b-1) The QA log (`src/prep/qalog.jl`, 9 Nov 2026). QA_CHECK.LOG is a
   GAMS PUT file, and its text depends on PUT rules a test on GAMS 54.6.1
   pinned down (G53): `/` ends the current line even when empty, trailing

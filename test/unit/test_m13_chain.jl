@@ -74,12 +74,16 @@ chain_symbols(d; qa=true) = sort([i.name for i in values(d.dump.symbols) if i.ki
     @test all(n -> n in names, ("FIRST_VAL", "LAST_VAL", "MY_FYEAR", "F", "Z", "MY_F"))
     # the coef -> pre-solve step, every set and parameter at the pre-solve checkpoint
     tm = carry_state(tm, joinpath(FIXTURES, "demo12_off_coef"))
-    names = chain_symbols(tm.data; qa=false)
+    names = chain_symbols(tm.data)
     foreach(f -> f(tm), M13_COEF_PRESOLVE)
     ref = DumpData(joinpath(FIXTURES, "demo12_off_presolve"))
     r = layer1(tm, ref, filter(n -> haskey(ref.dump.symbols, n) && n != "TJL_SOLVEINFO", names))
     foreach(d -> ispass(d) || println("coef -> presolve: ", d, " ", d.examples), r)
     @test length(r) > 800 && all(ispass, r)
+    # the whole QA log, pp_qack.mod's checks included (M1.3 change 25b-2)
+    qok, note = qa_compare(qa_text(tm), read(joinpath(FIXTURES, "demo12_off_qa_check.log"), String); complete=true)
+    qok || println("QA log: ", note)
+    @test qok
     # the model from TIMES.jl's own state: matrix and objective against GAMS
     tm = carry_state(tm, joinpath(FIXTURES, "demo12_off_presolve"))
     generate!(tm)

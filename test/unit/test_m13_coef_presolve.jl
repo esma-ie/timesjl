@@ -27,10 +27,9 @@ let refit = only(v for v in TOML.parsefile(joinpath(FIXTURES, "variant_fixtures.
             eqobsalv_prep!(tm)
             eqmain_prep!(tm)                        # change 25-3
             bnd_data!(tm); pp_qack_data!(tm); pp_clean!(tm)   # change 25-4
-            # every set and parameter of the pre-solve dump (less the QA-log scalars, 25b, and the harness's own)
+            # every set and parameter of the pre-solve dump but the harness's own (the QA-log scalars too: 25b-2)
             ref = DumpData(joinpath(FIXTURES, prefix * "_presolve"))
-            names = sort([i.name for i in values(ref.dump.symbols) if i.kind in (:set, :parameter) &&
-                          !(i.name in ("PUTOUT", "PUTGRP", "ERRLEV", "TJL_SOLVEINFO"))])
+            names = sort([i.name for i in values(ref.dump.symbols) if i.kind in (:set, :parameter) && i.name != "TJL_SOLVEINFO"])
             r = layer1(tm, ref, names)
             foreach(d -> ispass(d) || println("$prefix: ", d, " ", d.examples), r)
             @test length(r) >= nsym && all(ispass, r)
