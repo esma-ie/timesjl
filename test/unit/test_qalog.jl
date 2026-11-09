@@ -49,3 +49,38 @@ end
     write(f, "x\n**** 0 ERROR(S)   88 WARNING(S)\n")
     @test gams_warnings(f) == 88 && gams_warnings(f * "_none") == 0
 end
+
+# The crafted cases (reference/crafted.toml, M1.3 change 25b-3): demo12 with data the QA checks
+# complain about, every step from the input dump on one TimesModel, the QA log against GAMS's.
+# demo12_qa: warnings, the run goes on; demo12_qa99: a FATAL error, pp_qack.mod L380 aborts.
+using TIMES: init_ext!, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, prep_ext!, preppm_shape!,
+             ppmain_topo!, ppmain_tslvl!, ppmain_life!, pp_prelv!, pp_qafs!, ppmain_dflt!, ppmain_tsattr!, ppmain_flo!,
+             ppmain_flofs!, ppmain_ire!, ppmain_bnd!, ppmain_cum!, ppmain_stg!, ppmain_uc!, ppmain_ucmap!, ppmain_blend!,
+             ppmain_reduce!, ppm_ext_actef!, ppm_ext!, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!,
+             coef_ext!, prepret_decl!, eqobjinv_prep!, eqobjfix_prep!, eqobsalv_prep!, eqmain_prep!, bnd_data!,
+             pp_qack_data!, pp_clean!, gscalar
+const QA_CHAIN = (init_ext!, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, prep_ext!, preppm_shape!,
+                  ppmain_topo!, ppmain_tslvl!, ppmain_life!, pp_prelv!, pp_qafs!, ppmain_dflt!, ppmain_tsattr!,
+                  ppmain_flo!, ppmain_flofs!, ppmain_ire!, ppmain_bnd!, ppmain_cum!, ppmain_stg!, ppmain_uc!,
+                  ppmain_ucmap!, ppmain_blend!, ppmain_reduce!, ppm_ext_actef!, ppm_ext!, coef_cpt!, coef_nio!,
+                  coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!, prepret_decl!, eqobjinv_prep!, eqobjfix_prep!,
+                  eqobsalv_prep!, eqmain_prep!, bnd_data!, pp_qack_data!, pp_clean!)
+
+@testset "QA log: crafted cases against GAMS" begin
+    fx = only(filter(f -> f["prefix"] == "demo12_off", TOML.parsefile(joinpath(FIXTURES, "public_fixtures.toml"))["fixture"]))
+    for (prefix, aborts) in (("demo12_qa", false), ("demo12_qa99", true))
+        tm = TimesModel(joinpath(FIXTURES, prefix * "_input"); switches=fx["switches"])   # demo12.run's switches
+        err = nothing
+        try
+            foreach(f -> f(tm), QA_CHAIN)
+        catch e
+            err = e
+        end
+        @test (err !== nothing) == aborts
+        aborts && @test occursin("FATAL QA ERROR", sprint(showerror, err))
+        qok, note = qa_compare(qa_text(tm), read(joinpath(FIXTURES, prefix * "_qa_check.log"), String); complete=true)
+        qok || println(prefix, " QA log: ", note)
+        @test qok
+        aborts || @test all(n -> gscalar(tm, n) == 0, ("PUTOUT", "PUTGRP", "ERRLEV"))   # pp_qack.mod L385
+    end
+end
