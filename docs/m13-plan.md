@@ -175,6 +175,39 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 ## Findings so far
 
+- (21) equserco.mod L80-106 with uc_pasti.mod, dynamic user constraints in
+  the RHS direction (`uc_dyn_rhs!`, `uc_pasti!`, `uc_tmap` in
+  `src/model/equserco.jl`, 8 Nov 2026). A dynamic constraint takes the RHS
+  direction when SUM(UC_DYNDIR(R,UC_N,'RHS'),1) holds, with R the row's
+  region or, for EQE_UCSU and EQE_UCSUS, any region. Its terms come from
+  UC_TMAP(T,LL,TT,SIDE,UC_DYNT) (eqmain.mod L211-215, built here and equal
+  to GAMS's, in order, on TIMES-NZ, OTCGEN and OTUS9r): an entry is taken
+  when LIM(UC_DYNT) xor UC_ATTR(R,UC_N,SIDE,grp,UC_DYNT), so the N entry
+  unless the group has the attribute N (ppmain.mod L1168 sets it for an
+  RHS SYNC) and the CUMSUM, CUM+ and SYNC entries only with their
+  attribute; grp is the name the TSUM macro gets (COMPRD, COMNET for the
+  two uc_com includes). The variables are at TT, the coefficients at LL,
+  the GROWTH exponent is -LEAD(T)*UC_SIGN(SIDE)-1, and in the first
+  period's rows uc_pasti.mod subtracts the past investments' capacity
+  times the RHS UC_CAP (and its GROWTH power M(T)-B(T)), a constant that
+  GAMS moves to the right-hand side. The UC_DYNT attributes are now
+  translated (they only pick UC_TMAP entries); CUMSUM always brings PERIOD
+  or ANNUL with it (ppmain.mod L1160-1161), both still refused, so the
+  CUMSUM and CUM+ entries wait for change 22. Checked: OTCGEN, the whole
+  model for the first time, layers 2-3 PASS on both variants (reduce_off
+  1,257,132 rows, 1,507,223 columns, 6,732,783 nonzeros, objective
+  734,425,529.71; as_run 512,182, 765,953, 5,200,869, 756,404,387.82; both
+  as GAMS with CPLEX); TIMES-NZ steady, every user-constraint row against
+  CONVERT on both variants (1,561 rows: 588 EQE_UCRSU and 868 EQE_UCRSUS
+  in the RHS direction with GROWTH and SYNC, 17,061 coefficients; 47,861
+  checks), the rest of the model waiting for changes 23-24; the crafted
+  case TIMES_Demo-demo12_ucdyn (`reference/dd/demo12_ucdyn/`: five dynamic
+  constraints, one or two per family, with CAP, NCAP, ACT, FLO, COMPRD,
+  COMNET and IRE terms, GROWTH, SYNC, UC_TIME and hydro past investments),
+  M1.3 probe 54 of 54 and chain PASS on both variants, the whole model
+  37 of 37 checks (objective 54,125,294.455 by CPLEX and HiGHS), CI
+  fixtures `demo12_ucdyn`. TIMES-NZ's change-22 item (the LHS SYNC
+  attribute) is covered by this change.
 - (8 Nov 2026, pp_off.mod scratch) The gate compares every set and
   parameter at each checkpoint, scratch included, but the translation of
   pp_off.mod (changes 4, 5, 7b, 8a) did not keep its scratch: FIL, which

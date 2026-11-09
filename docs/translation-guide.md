@@ -574,3 +574,9 @@ those checks, their figures and their crafted cases are not published
 - 8 Nov 2026: pp_off.mod's scratch (FIL, STARTOFF, ENDOFF) is kept as GAMS
   leaves it, so a model with OFF ranges passes the all-symbols checks at
   the checkpoints; the crafted OFF-range states compare it.
+- 8 Nov 2026: M1.3 (21): equserco.mod L80-106 and uc_pasti.mod, dynamic
+  user constraints in the RHS direction, with the UC_DYNT attributes (N,
+  CUMSUM, CUM+, SYNC). OTCGEN's whole model is generated for the first time
+  and passes layers 2-3 on both variants; every TIMES-NZ user-constraint
+  row matches CONVERT; crafted case TIMES_Demo-demo12_ucdyn (CI fixtures)
+  passes the M1.3 chain and layers 1-3.
