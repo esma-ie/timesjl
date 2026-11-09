@@ -89,10 +89,15 @@ end
     fx = only(filter(f -> f["prefix"] == "demo12_off", TOML.parsefile(joinpath(FIXTURES, "public_fixtures.toml"))["fixture"]))
     tm = TimesModel(joinpath(FIXTURES, "demo12_off_init"); switches=fx["switches"])
     @test isempty(prep_ext_unported(tm))
-    for (sw, line) in (("STAGES", "L214"), ("POWERFLO", "L37"), ("WAVER", "L63"), ("ETL", "ETL"))
+    for (sw, line) in (("STAGES", "L214"), ("WAVER", "L63"), ("ETL", "ETL"))
         t = TimesModel(joinpath(FIXTURES, "demo12_off_init"); switches=merge(fx["switches"], Dict(sw => "YES")))
         @test any(s -> occursin(line, s), prep_ext_unported(t))
     end
+    # %POWERFLO% YES: powerflo.vda PREP is translated (M1.3 change 27a); gas grids (GG_KGF data) are refused
+    t = TimesModel(joinpath(FIXTURES, "demo12_off_init"); switches=merge(fx["switches"], Dict("POWERFLO" => "YES")))
+    @test isempty(prep_ext_unported(t))
+    TIMES.gput!(t, "GG_KGF", Dict{NTuple{4,String},Float64}(("REG1", "2005", "ELCTECOA00", "ELC") => 1.0))
+    @test any(s -> occursin("GG_KGF", s), prep_ext_unported(t))
     t = TimesModel(joinpath(FIXTURES, "demo12_off_init"); switches=merge(fx["switches"], Dict("VINTOPT" => "1")))
     @test any(s -> occursin("L42-43", s), prep_ext_unported(t))
 end

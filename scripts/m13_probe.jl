@@ -44,7 +44,7 @@ using TIMES.Reference: ispass
 const M13_SEGMENTS = [("input", "init"), ("init", "prep"), ("prep", "prelv"), ("prelv", "ppm"), ("coef", "presolve")]
 
 "Every set and parameter of the dump `tm` started from."
-all_symbols(tm) = sort([i.name for i in values(tm.data.dump.symbols) if i.kind in (:set, :parameter)])
+all_symbols(tm) = sort([i.name for i in values(tm.data.dump.symbols) if i.kind in (:set, :parameter) && i.name != "TJL_SOLVEINFO"])
 
 "Translated steps in execution order: (segment start, name, function, symbols, symbols by model)."
 const M13_STEPS = Tuple{String,String,Function,Vector{String},Function}[
@@ -107,7 +107,8 @@ function probe13(refdir, model; roots=Dict{String,String}(), variant="reduce_off
         for (_, name, f, syms, extra) in seg
             try
                 t = @elapsed f(tm)
-                r = layer1(tm, ref, vcat(syms, extra(tm)))
+                # a symbol of the start dump the next dump lacks (declared in another run, e.g. ADESC under %POWERFLO%) is skipped
+                r = layer1(tm, ref, filter(n -> haskey(ref.dump.symbols, uppercase(n)), vcat(syms, extra(tm))))
                 bad = filter(!ispass, r)
                 println("== ", model, " ", name, ": ", isempty(bad) ? "PASS" : "FAIL", " (", length(r), " symbols, ",
                         sum(d -> d.n_ref, r; init=0), " GAMS records at ", b, ", ", round(t; digits=2), " s)")

@@ -625,3 +625,6 @@ those checks, their figures and their crafted cases are not published
 - 9 Nov 2026: M1.3 (25b-3): crafted cases demo12_qa (QA warnings) and
   demo12_qa99 (a FATAL error and the abort), from their input dumps in CI.
   Change 25b is complete.
+- 9 Nov 2026: M1.3 (27a): powerflo.vda PREP and main block, phase-angle
+  grids; crafted case demo12_pf (CI variant fixture). PTDF and node
+  allocation data stay refused (27a-2).

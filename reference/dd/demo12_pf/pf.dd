@@ -1,0 +1,8 @@
+* TIMES.jl crafted case demo12_pf (reference/crafted.toml, 9 Nov 2026): a line reactance on
+* demo12's electricity link between REG1 and REG2, which sets %POWERFLO% YES (init_ext.vda
+* L134) and makes the link a two-node DC power-flow grid (powerflo.vda, phase-angle
+* formulation; M1.3 changes 27a-27b).
+PARAMETER PRC_REACT /
+REG1.2005.TB_ELC_REG1_REG2_01 0.05
+REG2.2005.TB_ELC_REG1_REG2_01 0.05
+/;

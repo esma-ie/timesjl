@@ -19,7 +19,8 @@
 # zero removes a record; `$=` writes only nonzero or EPS (G24); a statement
 # reads the values from before it (G11).
 #
-# Refused: %POWERFLO% YES (L114, powerflo.vda) and TS_OFF data (L125:
+# Refused: GR_PTDF, node-allocation and gas-grid data under %POWERFLO% YES (L114,
+# powerflo.vda: `powerflo_main!`, M1.3 change 27a) and TS_OFF data (L125:
 # dynslite.vda PRELEV runs when %RTS% is not S, that is with TS_OFF data,
 # timslice.mod L33; no core model has any). Not translated: the DISPLAY of
 # L18. The QA log of L81-85 is written (M1.3 change 25b-1). %SHELL% ANSWER
@@ -28,7 +29,7 @@
 "The pp_prelv.vda paths this model would take that are not translated."
 function pp_prelv_unported(tm)
     out = String[]
-    uppercase(strip(gswitch(tm, "POWERFLO", ""), ['\'', '"'])) == "YES" && push!(out, "pp_prelv.vda L114 (POWERFLO YES: powerflo.vda)")
+    uppercase(strip(gswitch(tm, "POWERFLO", ""), ['\'', '"'])) == "YES" && append!(out, powerflo_main_unported(tm))
     isempty(gset_opt(tm.data, "TS_OFF", 4).keys) || push!(out, "pp_prelv.vda L125 (TS_OFF data: dynslite.vda PRELEV)")
     return out
 end
@@ -461,6 +462,8 @@ function pp_prelv!(tm)
     gput!(tm, "NE", Set{NTuple{2,String}}())
     gput!(tm, "RVPCSL", Set{NTuple{6,String}}())
     gput!(tm, "RPC_CONLY", Set{NTuple{4,String}}())
+    # L114: $IFI %POWERFLO%==YES $include powerflo.vda (M1.3 change 27a)
+    uppercase(strip(gswitch(tm, "POWERFLO", ""), ['\'', '"'])) == "YES" && powerflo_main!(tm)
 
     # --- L117-122: COM_VAR default bounds -------------------------------------------------------------------
     rtcs = gset(tm, "RTCS_VARC").keys
