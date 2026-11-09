@@ -182,6 +182,27 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 ## Findings so far
 
+- (25b-1) The QA log (`src/prep/qalog.jl`, 9 Nov 2026). QA_CHECK.LOG is a
+  GAMS PUT file, and its text depends on PUT rules a test on GAMS 54.6.1
+  pinned down (G53): `/` ends the current line even when empty, trailing
+  blanks are dropped, `@n` moves back and overwrites (the level is written
+  as ` *00` then overwritten from column 4 or 3), PUTCLOSE writes only a
+  line that is not empty, so the first group after ppmain.mod's PUTCLOSE
+  (L1356) follows two blank lines; numbers as C's `%.*f`, labels padded to
+  MAX(12, length) by %RL%, %PL% and %CL%. ppmain.mod L35 writes a group
+  when compilation raised warnings (TIMES-NZ: 88); no dump records that, so
+  the count is an input of the run, read from the reference's listing
+  (G54). Every pp_qaput call and PUTGRP reset of preprocessing is
+  translated in LOOP order, with the PUTGRP side effects (pp_qafs.mod L19
+  and pp_lvlbr.mod L54 test it). The QA log found one condition that has no
+  data effect: pp_qafs.mod L71 reads the RTPGIG of L60 (L65 clears RTP_GRP
+  only), so the groups whose redundant fixed share was dropped skip the
+  FX+UP check. The harness keeps the pre-solve run's QA_CHECK.LOG (0.3.2);
+  `reference/python/keep_qa_log.py` copied it into the existing references
+  from the work folder, each checked to be the same run by its listing, so
+  no GAMS rerun was needed. The gate (`scripts/m13_gate.jl`) and the CI
+  chain compare PUTOUT, PUTGRP and ERRLEV at every checkpoint and the log at
+  ppm, where GAMS's goes on with pp_qack.mod's groups.
 - (25-5) The coefficient stage's scratch (9 Nov 2026), the open gate item
   of 25-4. filparam.gms and fillcost.gms reset only some of their scratch
   scalars per tuple (filparam F, Z, MY_FYEAR; fillcost F and LAST_VAL), so
