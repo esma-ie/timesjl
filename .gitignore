@@ -1,5 +1,6 @@
 /Manifest*.toml
 /test/Manifest*.toml
+/scripts/cuopt/Manifest*.toml
 __pycache__/
 *.pyc
 /reference-output/
