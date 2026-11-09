@@ -605,3 +605,8 @@ those checks, their figures and their crafted cases are not published
   statements (AFS, SUPERYR, RVPT, RTP_OFF, the user-constraint maps,
   RP_UPR). Only bndmain.mod, pp_qack.mod, pp_clean.mod and scratch remain
   for 25-4.
+- 9 Nov 2026: M1.3 (25-4): bndmain.mod, pp_qack.mod (data) and pp_clean.mod,
+  with the step's scratch. From GAMS's coef dump every set and parameter of
+  the pre-solve dump matches on the core models and twelve demo12 cases;
+  the CI chain runs end to end on demo12 (input dump to the model, layers
+  1-3). Change 25 is complete; 25b (the QA log) is next.

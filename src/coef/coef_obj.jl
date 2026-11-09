@@ -77,6 +77,9 @@ end
 
 gscalar(tm, name) = Float64(gv(gparam_opt(tm.data, name, 0), ()))
 gput_scalar!(tm, name, x::Real) = gput!(tm, name, iszero(x) ? Dict{Tuple{},Float64}() : Dict{Tuple{},Float64}(() => Float64(x)))
+"A scalar assignment of a GNum: EPS is kept as an EPS record (0.0), an exact zero removes it."
+gput_scalar!(tm, name, x::GNum) = gput!(tm, name, x.eps ? Dict{Tuple{},Float64}(() => 0.0) : iszero(x.v) ? Dict{Tuple{},Float64}() :
+                                                      Dict{Tuple{},Float64}(() => x.v))
 
 """
     filparam_gdrate!(tm, ax, fil) -> Dict
