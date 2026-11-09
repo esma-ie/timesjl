@@ -119,6 +119,7 @@ GAMS 54.6.1):
 | 25b | pp_qaput.mod: the QA log (QA_CHECK.LOG) and its scalars PUTOUT, PUTGRP and ERRLEV, at every pp_qaput call translated so far, and the ERRLEV abort of pp_qack.mod L376-386 (ERRLEV 33: the run goes on with an alert; above 33: stop). TIMES.jl checks errors as GAMS does until JuMP-side checks are added in Phase 2 (James, 6 Nov 2026). The harness does not keep QA_CHECK.LOG yet (harness change, then a GAMS rerun) | 1-16; 376-386 | log text and scalars at init, prep, prelv, ppm; crafted demo12 states for the WARNING, ERROR and FATAL paths (CI) |
 | 25b-1 | The QA log's machinery (`src/prep/qalog.jl`: QLOG, pp_qaput.mod, GAMS's PUT rules, G53) and every pp_qaput call and PUTGRP reset of preprocessing: ppmain.mod (L35 compile warnings, G54; L213-230, L273-276, L338-340, L465-471, L524-542, L573-585, L723-728, L765, L848, L878-885, L989, the PUTCLOSE of L1356), timslice.mod L67-104, pp_qafs.mod, pp_lvlbr.mod, pp_lvlbd.mod, pp_lvlif.mod, pp_chp.mod, pp_prelv.vda L81-85, ppm_ext.vda L86-94. The harness keeps QA_CHECK.LOG (0.3.2; `keep_qa_log.py` for earlier references, no GAMS rerun) (9 Nov 2026) | | PUTOUT, PUTGRP, ERRLEV at init, prep, prelv, ppm; the log at ppm, where GAMS's goes on with pp_qack.mod's groups (gate; CI on demo12) |
 | 25b-2 | pp_qack.mod's checks (L37-372: the QA groups, 'ALL QUALITY CHECKS PASSED') and the ERRLEV abort (L376-386); the log compared whole at presolve (9 Nov 2026; dynslite.vda L25 stays with TS_OFF data, refused) | 37-386 | log text and scalars at presolve; crafted demo12 states for the WARNING, ERROR and FATAL paths (CI) |
+| 25b-3 | Crafted cases demo12_qa (warnings, the run goes on) and demo12_qa99 (a FATAL error, the abort of pp_qack.mod L380) (9 Nov 2026) | | the whole QA log from the input dump (CI: test_qalog.jl); the chain on demo12_qa (gate) |
 | 26 | curex.gms (preppm.mod L27-28): currency conversion from G_CUREX and R_CUREX into each region's currency. JRC-EU-TIMES-cli_ll has G_CUREX data (found 7 Nov 2026 by the nightly run; brought into M1.3 by James, 7 Nov 2026) | 1-84 | prep: JRC-EU-TIMES-cli_ll on James's machine (verdicts only, docs/test-models.md); crafted case demo12_curex, G_CUREX and R_CUREX in a second currency (CI) |
 | 27 | powerflo.vda: the power-flow (PTDF) grid extension, %POWERFLO% YES, which init_ext.vda L134-135 sets when PRC_REACT, GR_PTDF or GG_KGF has data. JRC-EU-TIMES-cli_ll has PRC_REACT data (found 7 Nov 2026; brought into M1.3 by James, 7 Nov 2026). In three parts; the switch stays refused until the last: | | JRC-EU-TIMES-cli_ll on James's machine (verdicts only); demo12 variant 6, PTDF power grid (docs/demo12-variants.md; CI) |
 | 27a | powerflo.vda main block (pp_prelv.vda L114: the grid topology, GR_* sets and parameters, PRC_REACT, COM_LIM) and PREP (prep_ext.vda L37) | 1-204 | prelv and prep checkpoints |
@@ -182,6 +183,21 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 ## Findings so far
 
+- (25b-3) Two crafted cases for the QA log (9 Nov 2026). demo12_qa adds data
+  the checks warn about (NCAP_TLIFE beyond AGE, an FX share with an UP one,
+  COM_PROJ of a non-DEM commodity, NCAP_CEH on a non-CHP process, NCAP_AF
+  with NCAP_AFA); the run goes on and solves (objective 23,960,762.61), and
+  the chain from the input dump passes every checkpoint with the QA log
+  identical at presolve. demo12_qa99 gives REG2's WD a second parent: a
+  FATAL error at timslice.mod L101-104 (ERRLEV 99), on which pp_qack.mod
+  L380 aborts; GAMS's run stops there (made with `--only presolve`, its QA
+  log from the harness's work folder), and TIMES.jl's chain passes every
+  checkpoint to coef, stops at the same point and leaves the same log. The
+  case found that pp_qack.mod L339-341 writes UNCD7 rows with the label
+  '', which no dump holds when no record uses it (G36): registered now. CI
+  runs both from their input dumps (test_qalog.jl). No suite model and no
+  DD file reaches ERRLEV 33: phantom topology needs a domain violation and
+  an IFQ of 10 or more makes the model infeasible.
 - (25b-2) pp_qack.mod's checks (`src/model/qack_log.jl`, 9 Nov 2026): the
   checks every run makes (L62-182: year fractions, the topology, commodity
   types, demands, phantom topology entries, the primary groups, FS_EMIT,

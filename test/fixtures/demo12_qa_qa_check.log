@@ -1,0 +1,34 @@
+              ******          TIMES -- VERSION 4.9.7           ******
+              **************   QUALITY ASSURANCE LOG   **************
+
+ *** NCAP_TLIFE out of feasible range
+ *01 WARNING       - No FOM beyond year 200,  R=REG1         P=FTE-INDBIO   V=2005
+ *01 WARNING       - No FOM beyond year 200,  R=REG1         P=FTE-INDBIO   V=2010
+ *01 WARNING       - No FOM beyond year 200,  R=REG1         P=FTE-INDBIO   V=2015
+ *01 WARNING       - No FOM beyond year 200,  R=REG1         P=FTE-INDBIO   V=2020
+ *01 WARNING       - No FOM beyond year 200,  R=REG1         P=FTE-INDBIO   V=2030
+ *01 WARNING       - No FOM beyond year 200,  R=REG1         P=FTE-INDBIO   V=2050
+
+ *** FLO_SHAR conflict: Both FX + LO/UP specified, latter ignored
+ *01 WARNING       -     R=REG1         Y=2005 P=FTE-INDOIL   CG=FTE-INDOIL_NRGI C=DSL
+
+ *** COM_FR does not sum to unity (T=first year)
+ *01 WARNING       - Normalized to 1,   R=REG1         C=DRAP         (T=2005)
+ *01 WARNING       - Normalized to 1,   R=REG2         C=DRAP         (T=2005)
+
+
+ *** Both NCAP_AF and NCAP_AFA specified for same process
+ *01 WARNING       -     R=REG1         P=AOTETOT      V=2005
+ *01 WARNING       -     R=REG1         P=AOTETOT      V=2010
+ *01 WARNING       -     R=REG1         P=AOTETOT      V=2015
+ *01 WARNING       -     R=REG1         P=AOTETOT      V=2020
+ *01 WARNING       -     R=REG1         P=AOTETOT      V=2030
+ *01 WARNING       -     R=REG1         P=AOTETOT      V=2050
+
+ *** CHP parameter specified for Non-CHP process
+ *01 WARNING       -     NCAP_CEH : R=REG1         P=FTE-INDBIO   V=2005
+ *01 WARNING       -     NCAP_CEH : R=REG1         P=FTE-INDBIO   V=2010
+ *01 WARNING       -     NCAP_CEH : R=REG1         P=FTE-INDBIO   V=2015
+ *01 WARNING       -     NCAP_CEH : R=REG1         P=FTE-INDBIO   V=2020
+ *01 WARNING       -     NCAP_CEH : R=REG1         P=FTE-INDBIO   V=2030
+ *01 WARNING       -     NCAP_CEH : R=REG1         P=FTE-INDBIO   V=2050

@@ -622,3 +622,6 @@ those checks, their figures and their crafted cases are not published
 - 9 Nov 2026: M1.3 (25b-2): pp_qack.mod's checks, extended ones included,
   'ALL QUALITY CHECKS PASSED' and the ERRLEV abort. The whole QA log is
   compared at presolve (gate, CI chain).
+- 9 Nov 2026: M1.3 (25b-3): crafted cases demo12_qa (QA warnings) and
+  demo12_qa99 (a FATAL error and the abort), from their input dumps in CI.
+  Change 25b is complete.

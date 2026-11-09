@@ -276,6 +276,7 @@ function pp_qack_data!(tm::TimesModel)
         for (r, v, p) in P("NCAP_CEH", 3).keys
             (r, p) in chp || push!(uncd7, ("3", r, v, p, "", "", ""))
         end
+        isempty(uncd7) || register_uel!(d, "")                                 # '' of L339-341, in no dump record (G36)
         gput!(tm, "UNCD7", uncd7)
         # L358-363: Z = SUM(TRACKP(R,P)$(NOT RP_PGACT(R,P)),1) for the last region
         chpr, pgact, rtp_ = P("NCAP_CHPR", 4), S("RP_PGACT", 2), S("RTP", 3)

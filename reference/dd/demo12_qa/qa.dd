@@ -1,0 +1,23 @@
+* TIMES.jl crafted case demo12_qa (reference/crafted.toml, 9 Nov 2026): data the QA
+* checks warn about, with the run going on (M1.3 change 25b-3). Each entry is
+* changed demo12 data or new data on demo12's processes and commodities:
+*   NCAP_TLIFE 400 > CARD(AGE)        ppmain.mod L471  'NCAP_TLIFE out of feasible range'
+*   FLO_SHAR FX with the UP of L3206  pp_qafs.mod L33  'FLO_SHAR conflict: Both FX + LO/UP ...'
+*   COM_PROJ of a non-DEM commodity   pp_qack.mod L134 'Demand: COM_PROJ specified for non-DEM commodity'
+*   NCAP_CEH of a non-CHP process     pp_qack.mod L344 'CHP parameter specified for Non-CHP process'
+*   NCAP_AF with NCAP_AFA (ANNUAL)    pp_qack.mod L320 'Both NCAP_AF and NCAP_AFA specified ...'
+PARAMETER NCAP_TLIFE /
+REG1.2005.FTE-INDBIO 400
+/;
+PARAMETER FLO_SHAR /
+REG1.2005.FTE-INDOIL.DSL.FTE-INDOIL_NRGI.ANNUAL.FX 0.296467316185648
+/;
+PARAMETER COM_PROJ /
+REG1.2010.INDBIO 1
+/;
+PARAMETER NCAP_CEH /
+REG1.2005.FTE-INDBIO 0.5
+/;
+PARAMETER NCAP_AF /
+REG1.2005.AOTETOT.ANNUAL.UP 0.9
+/;
