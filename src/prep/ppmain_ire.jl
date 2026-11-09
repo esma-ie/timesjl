@@ -15,8 +15,9 @@
 # the milestones and the model years (G8, G27). `$x` is true for EPS (G3)
 # and `NOT x` false (G25); a numeric comparison takes EPS as 0 (G12); `$=`
 # writes only a nonzero or EPS value (G24); a scalar `$` on a loop domain is
-# read again before each member (G30, G46). The QA log (pp_lvlif.mod L21-23,
-# ppmain.mod L884-885) is not written.
+# read again before each member (G30, G46). The QA log (ppmain.mod L848,
+# L878, L884-885; pp_lvlif.mod L14, L21-23) is written in LOOP order (M1.3
+# change 25b-1).
 
 """
     ppmain_ire_symbols(tm) -> Vector{String}
@@ -57,6 +58,7 @@ function ppmain_ire!(tm)
     Z, F = gscal(tm, "Z"), gscal(tm, "F")
     ts_array = nothing
     lv(args...; kw...) = ((u7, a) = pp_lvlfc!(tm, tr, args...; kw...); a === nothing || (ts_array = a); u7)
+    qa_group!(tm)                                                      # L848: PUTGRP = 0
     # L849: $BATINCLUDE pp_lvlfc.mod IRE_PRICE 'P,C' RPCS_VAR ',ALL_REG,IE,CUR' '' ALL_TS DATAYEAR 'RPC_IRE(R,P,C,IE)'
     lv("IRE_PRICE", 8; sp=5, years=dyear, keyok=k -> k[4] in com && k[6] in allreg && k[7] in ie_set && k[8] in cur,
        targets=k -> get(rpcs_of, (k[1], k[3], k[4]), none), qual=k -> (k[1], k[3], k[4], k[7]) in rpc_ire)
@@ -69,11 +71,19 @@ function ppmain_ire!(tm)
     rpcsv = gset(tm, "RPCS_VAR").members
     # pp_lvlif.mod L14-20: LOOP((REG,V,P,COM,R,C,S)$IRE_FLO(REG,V,P,COM,R,C,S), IF((NOT RPCS_VAR(R,P,C,S))$STOA(S),
     #   IF(NOT UNCD7(REG,V,P,COM,R,C,'N'), IF(NOT RPC_IRE(R,P,C,'IMP'), TRACKPC(R,P,C)=YES; ELSE UNCD7(...,'N') = YES))))
+    qa_group!(tm)                                                      # pp_lvlif.mod L14: PUTGRP = 0
     rows = Set{NTuple{6,String}}()
+    trackpc = NTuple{3,String}[]
     for k in keys(flo)
         (k[1] in reg && k[2] in modl && k[4] in com && k[5] in reg && k[6] in com) || continue
         (!((k[5], k[3], k[6], k[7]) in rpcsv) && !iszero(gv(stoa, (k[7],)))) || continue
-        (k[5], k[3], k[6], "IMP") in rpc_ire && push!(rows, k[1:6])            # else TRACKPC: the QA log only (L21-23)
+        (k[5], k[3], k[6], "IMP") in rpc_ire ? push!(rows, k[1:6]) : push!(trackpc, (k[5], k[3], k[6]))
+    end
+    # pp_lvlif.mod L21-23: LOOP(TRACKPC(R,P,C), pp_qaput 02 'IRE_FLO import commodity not in TOP_IRE';
+    #   PUT QLOG ' WARNING        -    R=',%RL%,' P=',%PL%,' C=',C.TL); TRACKPC is cleared at L36
+    for (r, p, c) in gams_sort!(unique(trackpc), tm.data)
+        pp_qaput!(tm, 2, "IRE_FLO import commodity not in TOP_IRE")
+        qput!(qalog(tm), " WARNING        -    R=" * qlab12(r) * " P=" * qlab12(p) * " C=" * c)
     end
     # L27-33: LOOP(UNCD7(REG,V,P,COM,R,C,L), TS_ARRAY(S) = IRE_FLO(REG,V,P,COM,R,C,S);
     #   IRE_FLO(REG,V,P,COM,R,C,TS)$((NOT TS_ARRAY(TS))$PRC_TS(R,P,TS)) $= SUM(RS_TREE(FINEST(R,S),TS), ...)/G_YRFR(R,TS))
@@ -156,11 +166,17 @@ function ppmain_ire!(tm)
     #   IF(Z EQ 1, LOOP(RPC_IRE(R,P,COM,'IMP'), Z=0; CG_GRP(R,P,C,COM) = YES)); IF(Z,CG_GRP(R,P,C,C) = YES))
     imp_of = by([k for k in rpc_ire if k[4] == "IMP" && k[3] in com], k -> (k[1], k[2]), k -> k[3])
     cg_grp = Set{NTuple{4,String}}()
+    qa_group!(tm)                                                      # L878: PUTGRP=0
     for (r, p, c, ie) in gams_sort!([k for k in market if k[1] in reg && k[3] in com && k[4] in ie_set], tm.data)
         any(o -> o[1] == r, get(out_of, (r, c, p), none)) && continue
         Z = GNum(Float64(length(get(imp_of, (r, p), none)))) + GEPS
         if (r, p) in dist
-            # Z GT 1: the QA log only
+            # L883-885: IF(Z GT 1, pp_qaput 01 'Unsupported diverging trade topology';
+            #   PUT QLOG ' WARNING       - Too complex topology:  R=',%RL%,' P=',P.TL)
+            if Z.v > 1
+                pp_qaput!(tm, 1, "Unsupported diverging trade topology")
+                qput!(qalog(tm), " WARNING       - Too complex topology:  R=" * qlab12(r) * " P=" * p)
+            end
         elseif Z.v == 1
             Z = GNum(Float64(count(k -> k[1] == r && k[2] == p && k[4] == "EXP" && k[3] in com, market)))
         end

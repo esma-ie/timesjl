@@ -615,3 +615,7 @@ those checks, their figures and their crafted cases are not published
   the CI chain checks every symbol at coef and presolve, and
   scripts/m13_gate.jl chains on from ppm to presolve (reduce_off; the
   as_run variants stop at the coefficient stage's reduced flows).
+- 9 Nov 2026: M1.3 (25b-1): the QA log (`src/prep/qalog.jl`, GAMS's PUT
+  rules G53, the compile-warnings line G54) and every pp_qaput call of
+  preprocessing. The harness keeps QA_CHECK.LOG (0.3.2); the gate and the
+  CI chain compare the log at ppm and the QA scalars at every checkpoint.

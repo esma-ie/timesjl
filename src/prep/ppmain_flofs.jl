@@ -114,7 +114,8 @@ function ppmain_flofs!(tm)
     # --- L840: $BATINCLUDE pp_lvlbr.mod FLO_SHAR ',C,CG' RPCS_VAR "" 1 0 C, -------------------------
     shar = gvalues(tm, "FLO_SHAR", 7)
     rpcsv = gset(tm, "RPCS_VAR").members
-    Z, F, a = lvlbr!(tm, tr, shar, (k, s) -> (k[1], k[3], k[4], s) in rpcsv, Set(rtpV), Z, F; mid=2, pad=0, p5=true, p6=false)
+    Z, F, a = lvlbr!(tm, tr, shar, (k, s) -> (k[1], k[3], k[4], s) in rpcsv, Set(rtpV), Z, F; name="FLO_SHAR",
+                     tsname="RPCS_VAR", mid=2, pad=0, p5=true, p6=false)
     a === nothing || (ts_array = a)
     gput!(tm, "FLO_SHAR", shar)
 

@@ -15,9 +15,9 @@
 #
 # Not translated: L249 (%INTEXT_ONLY% YES, refused at preppm.mod L10); L253
 # (`SET SUBT(T) / SET.T /`, a data statement, compiled before execution: SUBT
-# holds T's members in every dump); the QA log of L273-277 (PUTGRP and the
-# message of a commodity group that is also a commodity in the topology),
-# m13-plan.md open items. The data effects of L273-277 are translated.
+# holds T's members in every dump). The QA log of L273-276 (a commodity
+# group that is also a commodity in the topology) is written (M1.3 change
+# 25b-1).
 
 """
     ppmain_topo_symbols(tm) -> Vector{String}
@@ -98,6 +98,15 @@ function ppmain_topo!(tm)
     # L273-277: IF(CARD(MI_DMAS), OPTION DEM<TOP; <QA log>; OPTION DEM<=MI_DMAS; RC(DEM)=NO;
     #   RPC(R,P,C)$DEM(R,C)=NO; OPTION CLEAR=MI_DMAS,CLEAR=DEM)
     if !isempty(mi_dmas)
+        # L273-276: OPTION DEM<TOP; PUTGRP=0; LOOP(MI_DMAS(DEM(R,C),COM), pp_qaput 09
+        #   'Commodity group found in topology violating its integrity';
+        #   PUT QLOG ' SEVERE ERROR  - Group removed from topology:   R=',%RL%,' CG=',C.TL)
+        qa_group!(tm)
+        top_rc = Set((k[1], k[3]) for k in gset(tm, "TOP").keys)
+        for (r, c, _) in gams_sort!([k for k in mi_dmas if (k[1], k[2]) in top_rc], tm.data)
+            pp_qaput!(tm, 9, "Commodity group found in topology violating its integrity")
+            qput!(qalog(tm), " SEVERE ERROR  - Group removed from topology:   R=" * qlab12(r) * " CG=" * c)
+        end
         dem = project(mi_dmas, (1, 2))
         setdiff!(rc, dem)
         filter!(k -> !((k[1], k[3]) in dem), rpc)
@@ -252,9 +261,8 @@ end
 # PRC_YMAX(R,P)` (L428, L432) S runs over ALL_TS, so a level 0 matches every
 # timeslice outside the region (and EPS is 0, G12).
 #
-# Not translated: the QA log of L338-340 (a warning when levels are moved,
-# m13-plan.md open items). L360 is pp_off.mod (`pp_off_fil`,
-# `pp_off_periods`).
+# The QA log of L338-340 (a warning when levels are moved) is written (M1.3
+# change 25b-1). L360 is pp_off.mod (`pp_off_fil`, `pp_off_periods`).
 
 """
     ppmain_tslvl_symbols(tm) -> Vector{String}
@@ -327,6 +335,15 @@ function ppmain_tslvl!(tm)
     end
     F = coarser!(com_tsl)
     Z = coarser!(prc_tsl)
+    # L338-340: IF(F+Z, PUTGRP=0; pp_qaput 01 'Commodities/processes defined at non-existing TSLVL';
+    #   PUT QLOG ' WARNING       - Number of COM/PRC resetted to coarser level: ',F:0:0 '/' Z:0:0/)
+    if F + Z != 0
+        qa_group!(tm)
+        pp_qaput!(tm, 1, "Commodities/processes defined at non-existing TSLVL")
+        q = qalog(tm)
+        qput!(q, " WARNING       - Number of COM/PRC resetted to coarser level: " * qnum(F, 0, 0) * "/" * qnum(Z, 0, 0))
+        qnl!(q)
+    end
 
     # --- Commodity timeslices and levels (L342-352) -------------------------------------
     com_ts = gmembers(tm, "COM_TS", 3)

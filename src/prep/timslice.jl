@@ -11,11 +11,11 @@
 # before it (G11); `x $= y` keeps x where y is 0 (G24); EPS compares as 0 (G12).
 # %OBMAC% is YES on any GAMS from 23.0 (initmty.mod L21).
 #
-# Not translated: the QA log (L81-82, a warning when year fractions are
-# normalised; L101-104, a FATAL line, ERRLEV 99, for timeslices with several
-# parents, acted on by pp_qack.mod), m13-plan.md open items. The scratch
-# scalars Z, F, MY_F, PUTGRP and pp_off's FIL are not kept: every later use
-# assigns them first. MY_SUM is kept: nothing later in the init -> prep
+# The QA log (M1.3 change 25b-1): L81-82 warn when year fractions are
+# normalised (`TS_GROUP.TE`: assigned records have no text, so the labels
+# joined by '.'); L101-104 write a FATAL line, ERRLEV 99, for timeslices with
+# several parents, acted on by pp_qack.mod. The scratch scalars Z, F, MY_F
+# and pp_off's FIL are not kept: every later use assigns them first. MY_SUM is kept: nothing later in the init -> prep
 # segment assigns it, so the prep checkpoint holds what L72/L77 leave.
 
 """
@@ -193,8 +193,9 @@ function timslice!(tm)
     end
 
     # --- Normalising the year fractions (L67-83) -------------------------------------
-    # L67: Z = 8760*3600 (one second)
+    # L67: Z = 8760*3600 (one second); PUTGRP=0
     Z = 8760 * 3600.0
+    qa_group!(tm)
     MY_SUM = nothing                                                 # the scratch scalar, as the loop leaves it
     kids = below_of(RS_BELOW1, d)
     for (r, l, s) in sorted(TS_GROUP)                                # L69: LOOP(TS_GROUP(R,TSL,S)$(NOT FINEST(R,S)), ...)
@@ -233,7 +234,12 @@ function timslice!(tm)
                 foreach(ts -> gassign!(G_YRFR, (r, ts), q * gv(G_YRFR, (r, ts))), ch)
             end
         end
-        # L80-83: IF(F*Z > 1, ...) writes a warning to the QA log only (not translated)
+        # L80-82: IF(F*Z > 1, pp_qaput 01 'User-provided G_YRFR values are not valid year fractions';
+        #   PUT QLOG ' WARNING       - TS fractions normalized,  (R.TSL.S)=',TS_GROUP.TE(TS_GROUP))
+        if F * Z > 1
+            pp_qaput!(tm, 1, "User-provided G_YRFR values are not valid year fractions")
+            qput!(qalog(tm), " WARNING       - TS fractions normalized,  (R.TSL.S)=" * join((r, l, s), "."))
+        end
     end
     # MY_SUM as the last L72 or L77 leaves it: nothing later in the init -> prep segment assigns it
     MY_SUM === nothing || gput!(tm, "MY_SUM", iszero(MY_SUM) ? Dict{Tuple{},Float64}() : Dict{Tuple{},Float64}(() => MY_SUM))
@@ -299,7 +305,15 @@ function timslice!(tm)
     foreach(((r, _, s),) -> STOAL[(r, s)] = get(STOAL, (r, s), 0.0) + 1, RS_BELOW1)
     empty!(RS_HR)
     filter!(((k, v),) -> !(k[1] in regset && v == 1), STOAL)
-    # L101-104: IF(CARD(STOAL), ...) writes FATAL lines to the QA log only (not translated)
+    # L101-104: IF(CARD(STOAL),PUTGRP=0; LOOP((R,S)$STOAL(R,S), pp_qaput 99 'Duplicate parent timeslices - Fatal';
+    #   PUT QLOG ' FATAL ERROR   -    REG=',R.TL,' TS='S.TL))
+    if !isempty(STOAL)
+        qa_group!(tm)
+        for (r, s) in sorted(k for (k, v) in STOAL if k[1] in regset && v != 0)
+            pp_qaput!(tm, 99, "Duplicate parent timeslices - Fatal")
+            qput!(qalog(tm), " FATAL ERROR   -    REG=" * r * " TS=" * s)
+        end
+    end
     # L106: LOOP(ANNUAL(TS), STOA(S) = ORD(TS)-ORD(S))
     STOA = Dict{Tuple{String},Float64}()
     foreach(s -> gassign!(STOA, (s,), tsax.pos[ann] - tsax.pos[s]), tsax.labels)

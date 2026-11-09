@@ -1,0 +1,2 @@
+# GAMS QA logs (QA_CHECK.LOG) are compared byte for byte, CRLF line ends included
+test/fixtures/*.log -text

@@ -19,8 +19,8 @@ const PREP_STEPS = (ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!
     names = prep_ext_symbols(tm)
     r = layer1(tm, DumpData(joinpath(FIXTURES, "demo12_off_prep")), names)
     foreach(d -> ispass(d) || println(d, " ", d.examples), r)
-    @test length(names) == 821 && all(ispass, r)
-    @test !("PUTOUT" in names) && "MY_SUM" in names
+    @test length(names) == 824 && all(ispass, r)
+    @test "PUTOUT" in names && "MY_SUM" in names                  # the QA-log scalars too (M1.3 change 25b-1)
     # L49-68: every demo12 process has a '0' record and one data year: the one-point run-down over its lifetime
     @test ("REG1", "2004", "2005", "CAPEELC") in gset(tm, "RTP_CPTYR").members && isempty(gset(tm, "TRACKP").keys)
 end

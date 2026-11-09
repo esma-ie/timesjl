@@ -1,0 +1,6 @@
+              ******          TIMES -- VERSION 4.9.7           ******
+              **************   QUALITY ASSURANCE LOG   **************
+
+ *** COM_FR does not sum to unity (T=first year)
+ *01 WARNING       - Normalized to 1,   R=REG1         C=DRAP         (T=2005)
+ *01 WARNING       - Normalized to 1,   R=REG2         C=DRAP         (T=2005)

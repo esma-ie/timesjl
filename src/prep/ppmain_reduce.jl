@@ -365,5 +365,7 @@ function ppmain_reduce!(tm)
     gput!(tm, "R_UC", Set{NTuple{2,String}}())
     gput!(tm, "RVP", Set{NTuple{3,String}}())
     gput!(tm, "RTPCS_OUT", Set{NTuple{5,String}}())
+    # L1356-1357: PUTCLOSE QLOG; IF(PUTOUT, QLOG.AP = 1)   (the QA log, qalog.jl)
+    qa_close!(tm)
     return tm
 end

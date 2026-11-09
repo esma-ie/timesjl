@@ -22,8 +22,8 @@
 # Refused: %POWERFLO% YES (L114, powerflo.vda) and TS_OFF data (L125:
 # dynslite.vda PRELEV runs when %RTS% is not S, that is with TS_OFF data,
 # timslice.mod L33; no core model has any). Not translated: the DISPLAY of
-# L18 and the QA log of L81-85 (m13-plan.md open items). %SHELL% ANSWER (L17)
-# is translated.
+# L18. The QA log of L81-85 is written (M1.3 change 25b-1). %SHELL% ANSWER
+# (L17) is translated.
 
 "The pp_prelv.vda paths this model would take that are not translated."
 function pp_prelv_unported(tm)
@@ -36,12 +36,11 @@ end
 """
     pp_prelv_symbols(tm) -> Vector{String}
 
-Every set and parameter of the dump `tm` started from but the QA-log scalars
-PUTOUT, PUTGRP and ERRLEV (m13-plan.md open items): pp_prelv.vda ends the
+Every set and parameter of the dump `tm` started from, the QA-log scalars
+PUTOUT, PUTGRP and ERRLEV too (M1.3 change 25b-1): pp_prelv.vda ends the
 prep -> prelv segment.
 """
-pp_prelv_symbols(tm) = sort([i.name for i in values(tm.data.dump.symbols)
-                             if i.kind in (:set, :parameter) && !(i.name in ("PUTOUT", "PUTGRP", "ERRLEV"))])
+pp_prelv_symbols(tm) = sort([i.name for i in values(tm.data.dump.symbols) if i.kind in (:set, :parameter)])
 
 """
     pp_prelv!(tm) -> tm
@@ -325,8 +324,15 @@ function pp_prelv!(tm)
             end
         end
     end
-    # L81: RP_CGC(R,P,%PGPRIM%,C) = NO
+    # L81: RP_CGC(R,P,%PGPRIM%,C) = NO; PUTGRP=0
     filter!(k -> !(k[3] == pg && iscom(k[4]) && k[1] in reg), rp_cgc)
+    qa_group!(tm)
+    # L82-85: LOOP(RP_CGC(R,P,CG,COM)$RPC_EMIS(R,P,COM), pp_qaput 01 'FLO_EMIS with no members of source group in
+    #   process - ignored'; PUT QLOG ' WARNING       -     R=',%RL%,' P=',%PL%,' CG=',CG.TL,' COM=',COM.TL)
+    for (r, p, cg, cm) in gams_sort!([k for k in rp_cgc if k[1] in reg && iscom(k[4]) && (k[1], k[2], k[4]) in rpc_emis], tm.data)
+        pp_qaput!(tm, 1, "FLO_EMIS with no members of source group in process - ignored")
+        qput!(qalog(tm), " WARNING       -     R=" * qlab12(r) * " P=" * qlab12(p) * " CG=" * cg * " COM=" * cm)
+    end
     # L86: FLO_SUM(RTP(R,V,P),COM,C,COM,ANNUAL)$RPC_PG(R,P,C) $= SUM(RP_CGC(R,P,CG,COM)$RPC_EMIS(R,P,COM),EPS)
     for (r, p, cg, cm) in rp_cgc
         (iscom(cm) && (r, p, cm) in rpc_emis) || continue
