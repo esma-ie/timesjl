@@ -601,3 +601,7 @@ those checks, their figures and their crafted cases are not published
 - 9 Nov 2026: M1.3 (25-2): eqobjfix.mod (with coef_alt.lin FIX) and
   eqobsalv.mod data statements. New GAMS semantics: G52 (`OPTION <` and
   `<=` match repeated domains from opposite ends).
+- 9 Nov 2026: M1.3 (25-3): eqmain.mod's and equ_ext.vda's own data
+  statements (AFS, SUPERYR, RVPT, RTP_OFF, the user-constraint maps,
+  RP_UPR). Only bndmain.mod, pp_qack.mod, pp_clean.mod and scratch remain
+  for 25-4.

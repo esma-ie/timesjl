@@ -113,8 +113,8 @@ GAMS 54.6.1):
 | 25 | eqmain.mod preparation and pp_qack.mod: the coef -> pre-solve step, so the CI chain runs end to end (in M1.3, not M1.5: James, 5 Nov 2026) | | presolve (demo12 in CI) |
 | 25-1 | mod_vars.mod L94 (prepret.dsc DECL, its data statements L44-81), eqobj.mod L14-39 (with prepret.dsc EQOBJ L119-131) and eqobjinv.mod L18-274 (with coef_alt.lin INV, L89-118): the investment cases, spreads, corrections and divisors (8 Nov 2026; the step in parts) | 14-39; 18-274 | the probe's coef -> presolve segment: core models, demo12 cases; crafted case demo12_objinv (CI) |
 | 25-2 | eqobjfix.mod, eqobjvar.mod, eqobsalv.mod (with coef_alt.lin FIX and prepret.dsc OBJFIX/OBSALV): their data statements (9 Nov 2026) | 19-175; 11-82 | coef -> presolve: core models, demo12 cases (CI) |
-| 25-3 | eqmain.mod L41-262 (RVPT, RTP_OFF, the UC maps and the other data statements between the equation includes), equ_ext (eqactups.vda L1-35 and the other VDA preparations), mod_equa.mod, mod_ext | | coef -> presolve |
-| 25-4 | bndmain.mod data statements and pp_qack.mod (less the QA log, 25b); the coef -> pre-solve step joins the M1.3 chain and the CI chain runs end to end | | presolve, every symbol (demo12 in CI) |
+| 25-3 | eqmain.mod L41-262 (RVPT, RTP_OFF, the UC maps and the other data statements between the equation includes), equ_ext (eqactups.vda L1-35 and the other VDA preparations), mod_equa.mod, mod_ext (9 Nov 2026) | | coef -> presolve: residual inventory on the core models and demo12 cases |
+| 25-4 | bndmain.mod data statements, pp_qack.mod (less the QA log, 25b) and pp_clean.mod (solve.mod L1, the memory clean-up), and the step's scratch; the coef -> pre-solve step joins the M1.3 chain and the CI chain runs end to end | | presolve, every symbol (demo12 in CI) |
 | 25b | pp_qaput.mod: the QA log (QA_CHECK.LOG) and its scalars PUTOUT, PUTGRP and ERRLEV, at every pp_qaput call translated so far, and the ERRLEV abort of pp_qack.mod L376-386 (ERRLEV 33: the run goes on with an alert; above 33: stop). TIMES.jl checks errors as GAMS does until JuMP-side checks are added in Phase 2 (James, 6 Nov 2026). The harness does not keep QA_CHECK.LOG yet (harness change, then a GAMS rerun) | 1-16; 376-386 | log text and scalars at init, prep, prelv, ppm; crafted demo12 states for the WARNING, ERROR and FATAL paths (CI) |
 | 26 | curex.gms (preppm.mod L27-28): currency conversion from G_CUREX and R_CUREX into each region's currency. JRC-EU-TIMES-cli_ll has G_CUREX data (found 7 Nov 2026 by the nightly run; brought into M1.3 by James, 7 Nov 2026) | 1-84 | prep: JRC-EU-TIMES-cli_ll on James's machine (verdicts only, docs/test-models.md); crafted case demo12_curex, G_CUREX and R_CUREX in a second currency (CI) |
 | 27 | powerflo.vda: the power-flow (PTDF) grid extension, %POWERFLO% YES, which init_ext.vda L134-135 sets when PRC_REACT, GR_PTDF or GG_KGF has data. JRC-EU-TIMES-cli_ll has PRC_REACT data (found 7 Nov 2026; brought into M1.3 by James, 7 Nov 2026). In three parts; the switch stays refused until the last: | | JRC-EU-TIMES-cli_ll on James's machine (verdicts only); demo12 variant 6, PTDF power grid (docs/demo12-variants.md; CI) |
@@ -179,6 +179,23 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 ## Findings so far
 
+- (25-3) The rest of eqmain.mod and equ_ext.vda (`src/model/eqmain_prep.jl`,
+  9 Nov 2026): AFS (eqcapact.mod L20, the `L` include), eqbndcst.mod's block
+  (SUPERYR, YK1; RT_IAN, RTP_IAN and CST_ANNC stay empty without cost-bound
+  data, which is refused), RVPT and RTP_OFF (L199-202), the user-constraint
+  maps (L211-226, from `uc_setup` and `uc_tmap`, now stored), RP_PL and AFS
+  (equ_ext.vda L77-79), and RP_UPR (eqactups.vda L33, which is outside the
+  dispatching IF and so empties RP_UPR in a model with ACT_TIME but no
+  ACT_CSTRMP). Refused: the dispatching preparation (eqactups.vda L9-32,
+  with RP_UPL, RP_PL or ACT_CSTRMP) and REG_BNDCST/REG_CUMCST. A residual
+  inventory (every set and parameter of the pre-solve dump after the
+  translated steps) on the core models and nine demo12 cases now shows only
+  what 25-4 covers: bndmain.mod's data statements (NCAP_BND), pp_qack.mod
+  (RTP_VNTBYR, COEF_VNT, PRC_CG, RPG_RED, RXX, RVP_KMAP, RP_XRED, PRC_YMAX,
+  UNCD7, TS_ARRAY), pp_clean.mod (solve.mod L1: FLO_SUM, FLO_FUNC, NCAP_AF,
+  NCAP_AFA, NCAP_AFS and the cost attributes zeroed to free memory) and the
+  scratch scalars and arrays the step leaves (F, Z, MY_F, OBJ_C, OBJ_D,
+  FIL2, MY_ARRAY). CI: test_m13_coef_presolve.jl.
 - (25-2) eqobjfix.mod L19-175 with coef_alt.lin FIX (L105-131) and
   eqobsalv.mod L11-82 (`src/model/eqobjfix_prep.jl`, 9 Nov 2026; eqobjvar.mod
   and prepret.dsc OBJFIX/OBSALV have no data statements): the fixed-cost

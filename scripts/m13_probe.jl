@@ -36,7 +36,8 @@ using TIMES: DumpData, layer1, init_ext!, ppmain_head!, ppmain_head_symbols, ppm
              ppmain_ucmap!, ppmain_ucmap_symbols, ppmain_blend!, ppmain_blend_symbols,
              ppmain_reduce!, ppmain_reduce_symbols, ppm_ext_actef!, ppm_ext_actef_symbols, ppm_ext!, ppm_ext_symbols,
              prepret_decl!, prepret_decl_symbols, eqobjinv_prep!, eqobjinv_prep_symbols,
-             eqobjfix_prep!, eqobjfix_prep_symbols, eqobsalv_prep!, eqobsalv_prep_symbols
+             eqobjfix_prep!, eqobjfix_prep_symbols, eqobsalv_prep!, eqobsalv_prep_symbols,
+             eqmain_prep!, eqmain_prep_symbols
 using TIMES.Reference: ispass
 
 "The segments: (first checkpoint, next checkpoint)."
@@ -78,6 +79,7 @@ const M13_STEPS = Tuple{String,String,Function,Vector{String},Function}[
     ("coef", "eqobjinv_prep", eqobjinv_prep!, String[], eqobjinv_prep_symbols),   # eqmain.mod L34: eqobj.mod L14-39, eqobjinv.mod L18-274
     ("coef", "eqobjfix_prep", eqobjfix_prep!, String[], eqobjfix_prep_symbols),   # eqobj.mod L54: eqobjfix.mod L19-175 (coef_alt.lin FIX)
     ("coef", "eqobsalv_prep", eqobsalv_prep!, String[], eqobsalv_prep_symbols),   # eqobj.mod L65: eqobsalv.mod L11-82
+    ("coef", "eqmain_prep", eqmain_prep!, String[], eqmain_prep_symbols),   # eqmain.mod L65-226, equ_ext.vda L76-90
 ]
 
 function probe13(refdir, model; roots=Dict{String,String}(), variant="reduce_off", steps=M13_STEPS)
