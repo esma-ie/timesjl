@@ -123,7 +123,7 @@ GAMS 54.6.1):
 | 26 | curex.gms (preppm.mod L27-28): currency conversion from G_CUREX and R_CUREX into each region's currency. JRC-EU-TIMES-cli_ll has G_CUREX data (found 7 Nov 2026 by the nightly run; brought into M1.3 by James, 7 Nov 2026) | 1-84 | prep: JRC-EU-TIMES-cli_ll on James's machine (verdicts only, docs/test-models.md); crafted case demo12_curex, G_CUREX and R_CUREX in a second currency (CI) |
 | 27 | powerflo.vda: the power-flow (PTDF) grid extension, %POWERFLO% YES, which init_ext.vda L134-135 sets when PRC_REACT, GR_PTDF or GG_KGF has data. JRC-EU-TIMES-cli_ll has PRC_REACT data (found 7 Nov 2026; brought into M1.3 by James, 7 Nov 2026). In three parts; the switch stays refused until the last: | | JRC-EU-TIMES-cli_ll on James's machine (verdicts only); demo12 variant 6, PTDF power grid (docs/demo12-variants.md; CI) |
 | 27a | powerflo.vda main block (pp_prelv.vda L114: the grid topology, GR_* sets and parameters, PRC_REACT, COM_LIM) and PREP (prep_ext.vda L37) in the phase-angle formulation (9 Nov 2026); the PTDF formulation and the allocation of generation and demand to nodes (GR_PTDF, GR_DEMFR, GR_ENDFR, GR_GENFR, GR_GENMAP, GR_GENLEV data) stay refused for 27a-2, with demo12 variant 6 proper | 1-204 | prelv and prep checkpoints: crafted case demo12_pf (CI: variant fixture) |
-| 27b | powerflo.vda DECL (mod_vars.mod L95), POWFLO (equ_ext.vda L101, mod_ext.vda L45) and IREAUX (%IREAUXBAL%, L221): the power-flow variables, bounds and equations; CSTBAL and OBJBAL (L372-435) stay refused with COM_CSTBAL data, which neither case has | 206-370 | layers 2-3 |
+| 27b | powerflo.vda DECL (mod_vars.mod L95), POWFLO (equ_ext.vda L101, mod_ext.vda L45) and IREAUX (%IREAUXBAL%, L221): the power-flow variables, bounds and equations; CSTBAL and OBJBAL (L372-435) stay refused with COM_CSTBAL data, which neither case has. Done for phase-angle grids (9 Nov 2026): VAR_COMAUX, the reference-node bounds, GR_GRID 'ACT', EQ_GR_POWFLO; EQ_GR_PTDFLO, VIRTCAP, VIRTBND, GENALL, DEMALL (and the IREAUX terms, which need node allocation) come with 27a-2, EQ_GR_XBND with GR_XBND data | 206-370 | layers 2-3: demo12_pf, both variants (CI: public fixture) |
 | 27c | powerflo.vda RPTB (cost_ann.rpt L175): the reporting block, translated with M1.6 and listed here so the file is tracked | 437-462 | M1.6 |
 
 ## Parity (per change)
@@ -183,6 +183,19 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 ## Findings so far
 
+- (27b) powerflo.vda DECL and POWFLO for phase-angle grids (9 Nov 2026).
+  DECL (mod_vars.mod L95) runs in the coef -> pre-solve step after
+  prepret.dsc DECL: VAR_GRIDIO, VAR_XCAP and the free phase angle
+  VAR_COMAUX are declared only under %POWERFLO% (`powerflo_vars!`), the
+  reference node of each disjoint grid (the first with the most lines) has
+  its phase angle fixed at 0 (`bnd_powerflo!`), and GR_GRID gets an 'ACT'
+  record per grid region. EQ_GR_POWFLO (equ_ext.vda L101) equates the flow
+  over the lines between two nodes (imports less exports at the importing
+  end) with the admittance times the phase-angle difference. On demo12_pf
+  the whole model matches GAMS in both variants: the matrix (8,719 rows
+  reduce_off, 3,257 as_run) and the objective 23,960,685.74 with CPLEX and
+  HiGHS. Generation now refuses only the grid data not translated (PTDF,
+  node allocation, gas grids) and EQ_GR_XBND with GR_XBND data.
 - (27a) powerflo.vda, phase-angle grids (`src/ext/vda/powerflo.jl`, 9 Nov
   2026). PREP interpolates PRC_REACT and the grid parameters
   (fillparm.gms, filparam.gms); the main block builds the grid from

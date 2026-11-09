@@ -29,8 +29,6 @@ function eqmain_prep_unported(tm::TimesModel)
              !isempty(gparam_opt(d, "UC_RHST", 3)) || !isempty(gparam_opt(d, "UC_RHSRT", 4)) ||
              !isempty(gparam_opt(d, "UC_RHSTS", 4)) || !isempty(gparam_opt(d, "UC_RHSRTS", 5))
     (has_uc && !var_uc(tm)) && push!(out, "eqmain.mod L205-226: user constraints with VAR_UC not YES")
-    uppercase(strip(gswitch(tm, "POWERFLO", ""), ['\'', '"'])) == "YES" &&
-        push!(out, "equ_ext.vda L101, mod_vars.mod L95 (POWERFLO YES: powerflo.vda DECL and POWFLO, M1.3 change 27b)")
     return out
 end
 

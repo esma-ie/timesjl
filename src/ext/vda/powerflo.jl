@@ -309,3 +309,147 @@ function powerflo_main!(tm)
     done === nothing || gput_scalar!(tm, "DONE", done)
     return tm
 end
+
+# --- M1.3 (27b): DECL (mod_vars.mod L95) and POWFLO (equ_ext.vda L101) ---------------------------
+
+"""
+The variables powerflo.vda DECL declares (L196-199), only under %POWERFLO% (as
+`\$IF DEFINED PRC_REACT` at mod_vars.mod L95): VAR_GRIDIO and VAR_XCAP
+positive, the phase angle VAR_COMAUX free.
+"""
+const POWERFLO_VARS = VariableSpec[
+    VariableSpec("VAR_GRIDIO", ["R", "YEAR", "C", "C", "S", "IO"], true, "Flows between grid nodes and their commodity (powerflo.vda L197)", 95),
+    VariableSpec("VAR_XCAP", ["R", "YEAR", "ITEM"], true, "Virtual capacity of a candidate line (powerflo.vda L198)", 95),
+    VariableSpec("VAR_COMAUX", ["R", "T", "C", "S"], false, "Phase angle of a grid node (powerflo.vda L199)", 95),
+]
+
+"Declare powerflo.vda's variables in the model's variable store (once)."
+function powerflo_vars!(tm)
+    for spec in POWERFLO_VARS
+        n = uppercase(spec.name)
+        haskey(tm.vars.families, n) && continue
+        tm.vars.families[n] = VarFamily(spec)
+        push!(tm.vars.order, n)
+    end
+    return tm
+end
+
+"""
+    powerflo_reference_nodes(tm) -> Set{NTuple{2,String}}
+
+powerflo.vda L222-223: in each disjoint grid J (GR_GRID with GR_GID), the
+first node (GAMS order) with the most lines (GR_FLOW records) is the
+reference node, whose phase angle VAR_COMAUX is fixed at 0 (EPS).
+"""
+function powerflo_reference_nodes(tm)
+    d = tm.data
+    gid = gparam_opt(d, "GR_GID", 2)
+    flow = gparam_opt(d, "GR_FLOW", 3)
+    nlines = Dict{NTuple{2,String},Int}()
+    foreach(k -> (nlines[(k[1], k[3])] = get(nlines, (k[1], k[3]), 0) + 1), keys(flow.values))
+    grid = gams_sort!(collect(gset_opt(d, "GR_GRID", 3).keys), d)
+    out = Set{NTuple{2,String}}()
+    for j in unique(k[1] for k in grid)
+        nodes = [(k[2], k[3]) for k in grid if k[1] == j]
+        any(n -> haskey(gid, n), nodes) || continue              # LOOP(J$SUM(GR_GRID(J,R,C)$GR_GID(R,C),1), ...)
+        z = maximum((get(nlines, n, 0) for n in nodes); init=0)
+        z == 0 && continue                                       # LOOP(GR_GRID(J,R,C)$Z, ...)
+        i = findfirst(n -> get(nlines, n, 0) == z, nodes)
+        push!(out, nodes[i])
+    end
+    return out
+end
+
+"""
+    powerflo_decl!(tm) -> tm
+
+powerflo.vda DECL (mod_vars.mod L95) on the state after the coefficient
+stage: the variables (`powerflo_vars!`), the scratch Z of the reference-node
+loop (L222-223; the fixed phase angles are bounds, `bnd_powerflo!`) and
+GR_GRID(J,R,'ACT') for every grid with an electricity node (L224). The
+candidate lines (L229-249) come only with the PTDF formulation, refused.
+
+GAMS: powerflo.vda L194-226, v4.9.7.
+"""
+function powerflo_decl!(tm)
+    u = powerflo_main_unported(tm)
+    isempty(u) || throw(UnportedError(join(u, "; ")))
+    powerflo_vars!(tm)
+    d = tm.data
+    # L222-223: Z = SMAX(...) per grid, set to 0 at its reference node
+    grid = gset_opt(d, "GR_GRID", 3).keys
+    gid = gparam_opt(d, "GR_GID", 2)
+    any(k -> haskey(gid, (k[2], k[3])), grid) && gput_scalar!(tm, "Z", 0.0)
+    # L224: GR_GRID(J,R,'ACT') $= SUM(GR_GRID(J,NRGELC(R,C)),1)
+    nrgelc = gset_opt(d, "NRGELC", 2).members
+    g = gmembers(tm, "GR_GRID", 3)
+    foreach(k -> (k[2], k[3]) in nrgelc && push!(g, (k[1], k[2], "ACT")), collect(g))
+    gput!(tm, "GR_GRID", g)
+    return tm
+end
+
+"""
+    bnd_powerflo!(bt, tm) -> bt
+
+powerflo.vda L223: `VAR_COMAUX.FX(R,T,C,S) = EPS` at each grid's reference
+node (`powerflo_reference_nodes`), for the columns the equations created.
+
+GAMS: powerflo.vda L222-223, v4.9.7.
+"""
+function bnd_powerflo!(bt, tm)
+    haskey(tm.vars.families, "VAR_COMAUX") || return bt
+    ref = powerflo_reference_nodes(tm)
+    recs = get!(() -> Dict{Tuple,Tuple{Float64,Float64}}(), bt.recs, "VAR_COMAUX")
+    for k in tm.vars.families["VAR_COMAUX"].keys
+        (k[1], k[3]) in ref && (recs[k] = (0.0, 0.0))
+    end
+    return bt
+end
+
+"""
+    eq_gr_powflo!(tm) -> Int
+
+EQ_GR_POWFLO, the DC power flow in the phase-angle formulation (equ_ext.vda
+L101): for each grid node C of region R (RC_GRID) at its commodity
+timeslices S and each node COM of region REG it is linked to (GR_ADMIT),
+the flow over the lines GR_TOP(R,C,REG,COM,P) with a reactance, as REG's
+imports less its exports of COM, equals the admittance times the
+difference of the phase angles VAR_COMAUX of the two nodes. Returns the
+number of rows.
+
+GAMS: powerflo.vda L250-258, v4.9.7.
+"""
+function eq_gr_powflo!(tm)
+    uppercase(strip(gswitch(tm, "POWERFLO", ""), ['\'', '"'])) == "YES" || return 0
+    powerflo_vars!(tm)
+    admit = gparam(tm, "GR_ADMIT")
+    isempty(admit) && return 0
+    d = tm.data
+    rc_grid = gset(tm, "RC_GRID").members
+    varc_of = indexby(gset(tm, "RTCS_VARC"), (1, 2, 3))              # (r,t,c) -> RTCS_VARC(r,t,c,s)
+    top_of = indexby(gset(tm, "GR_TOP"), (1, 2, 3, 4))                # (r,c,reg,com) -> GR_TOP(...,p)
+    vint_of = indexby(gset(tm, "RTP_VINTYR"), (1, 3, 4))              # (r,t,p) -> RTP_VINTYR(r,v,t,p)
+    varf = gset(tm, "RTPCS_VARF").members
+    ire_of = indexby(gset(tm, "RPC_IRE"), (1, 2, 3))                  # (r,p,c) -> RPC_IRE(r,p,c,ie)
+    react = gparam(tm, "PRC_REACT")
+    no4, no5 = NTuple{4,String}[], NTuple{5,String}[]
+    n = 0
+    for ((r, t, c, reg, com), a) in sort(collect(admit.values); by=first)
+        (r, t, c) in rc_grid || continue
+        for (_, _, _, s) in get(varc_of, (r, t, c), no4)
+            lhs = JuMP.AffExpr(0.0)
+            for (_, _, _, _, p) in get(top_of, (r, c, reg, com), no5)
+                iszero(gv(react, (r, t, p))) && continue                 # $PRC_REACT(R,T,P)
+                (reg, t, p, com, s) in varf || continue                  # $RTPCS_VARF(REG,T,P,COM,S)
+                for (_, v, _, _) in get(vint_of, (reg, t, p), no4), (_, _, _, ie) in get(ire_of, (reg, p, com), no4)
+                    addterm!(lhs, GNum(ie == "EXP" ? -1.0 : 1.0), tm, "VAR_IRE", reg, v, t, p, com, s, ie)   # (1-2*XPT(IE))
+                end
+            end
+            rhs = JuMP.AffExpr(0.0)
+            addterm!(rhs, GNum(a), tm, "VAR_COMAUX", r, t, c, s)
+            addterm!(rhs, GNum(-a), tm, "VAR_COMAUX", reg, t, com, s)
+            gconstraint!(tm, "EQ_GR_POWFLO", (r, t, c, s, reg, com), "E", lhs, rhs) === nothing || (n += 1)
+        end
+    end
+    return n
+end

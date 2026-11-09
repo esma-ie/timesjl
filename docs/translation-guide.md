@@ -628,3 +628,5 @@ those checks, their figures and their crafted cases are not published
 - 9 Nov 2026: M1.3 (27a): powerflo.vda PREP and main block, phase-angle
   grids; crafted case demo12_pf (CI variant fixture). PTDF and node
   allocation data stay refused (27a-2).
+- 9 Nov 2026: M1.3 (27b): powerflo.vda DECL and EQ_GR_POWFLO, phase-angle
+  grids; demo12_pf passes layers 2-3 in both variants (CI public fixture).

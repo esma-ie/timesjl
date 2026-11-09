@@ -95,7 +95,6 @@ function bounds_unported(tm::TimesModel)
     (yes("TIMESED") || yes("MICRO")) && throw(UnportedError("bnd_elas.mod (elastic demand steps)"))
     yes("MACRO") && throw(UnportedError("bnd_macro.tm (MACRO)"))
     yes("STAGES") && throw(UnportedError("stochastic bounds (STAGES)"))
-    yes("POWERFLO") && throw(UnportedError("powerflo.vda bounds (POWERFLO)"))
     for sw in ("SPOINT", "LPOINT", "FIXBOH", "STEPPED")
         haskey(tm.switches, sw) && throw(UnportedError("bounds under $sw (spoint.mod L63-87 / maindrv.mod L40)"))
     end
@@ -632,6 +631,7 @@ function bndmain(tm::TimesModel)
         bounds_unported(tm)
         bt = BoundTable()
         ret_bounds!(bt, tm)       # mod_vars.mod L94: prepret.dsc DECL (early retirement), before bndmain
+        bnd_powerflo!(bt, tm)     # mod_vars.mod L95: powerflo.vda DECL L223 (reference phase angles)
         bnd_act!(bt, tm)          # L26
         bnd_flo!(bt, tm)          # L31
         bnd_stg!(bt, tm, "VAR_SIN", "IN", GNum(0.0))       # L36
