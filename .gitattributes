@@ -1,0 +1,3 @@
+# Shell scripts keep LF line endings in every checkout: Git on Windows would
+# otherwise write CRLF, which bash cannot run (scripts/cuopt/wsl2/setup_cuopt.sh).
+*.sh text eol=lf
