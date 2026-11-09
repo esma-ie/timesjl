@@ -123,3 +123,18 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_ucdyn/demo12_ucdyn.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_ucdyn"]
+
+# TIMES_Demo demo12 + ucattr.dd (8 Nov 2026): M1.3 change 22, user-constraint attributes
+# (uc_*.mod): PERIOD, NEWFLO (with RVPT), PERDISC, EFF, CAPACT, BUILDUP, COST, DELIV, TAX,
+# SUB, and the CUMSUM and CUM+ entries of UC_TMAP.
+[[model]]
+name = "TIMES_Demo-demo12_ucattr"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_ucattr/demo12_ucattr.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_ucattr"]

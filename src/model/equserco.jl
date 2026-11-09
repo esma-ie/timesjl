@@ -53,10 +53,10 @@
 # - nested constraints (equserco.mod L76, L99: UC_GMAP_U/UC_UCN) and the
 #   climate terms of the RHS direction (L101, uc_cli.mod; %CLI% is refused
 #   by the generation driver);
-# - every UC_ATTR attribute except GROWTH and the UC_DYNT types N, CUMSUM,
-#   CUM+ and SYNC (PERDISC, PERIOD, EFF, CAPACT, BUILDUP, COST/DELIV/TAX/SUB,
-#   ANNUL, ONLINE, NEWFLO, ...): without them the PROD factors of the term
-#   files are 1 and the uc_com EFF switch is false;
+# - the UC_ATTR attributes ANNUL (with INVCOST, INVTAX, INVSUB: CST_ANNC of
+#   eqbndcst.mod, uc_ncap.mod L39) and ONLINE (uc_cap.mod L36-42); the
+#   others are translated (`UC_ATTR_REFUSED`; PERIOD, NEWFLO, PERDISC, EFF,
+#   CAPACT, BUILDUP and COST/DELIV/TAX/SUB in M1.3 change 22);
 # - capacity-related flows in uc_flo.mod L35-49 (UC_CAPFLO, cal_caps.mod).
 # Read from the pre-solve dump (computed elsewhere): UC_RHS*, UC_ON,
 # UC_R_*/UC_T_*/UC_TS_* maps, UC_GMAP_*/UC_MAP_*, UC_ATTR, UC_DYNDIR, LAGT,
@@ -141,12 +141,20 @@ function uc_setup(tm::TimesModel)
 end
 
 """
-UC_ATTR attributes translated: GROWTH (the uc_*.mod factors of dynamic terms,
-uc_pasti.mod) and the UC_DYNT types N, CUMSUM, CUM+ and SYNC (initsys.mod
-L142), which only pick UC_TMAP entries in the RHS direction (equserco.mod
-L83) and set UC_DYNDIR (ppmain.mod L1167).
+UC_ATTR attributes refused (UC_NAME, initsys.mod L120-129): ANNUL and the
+names UC_MAPCOST maps to it (INVCOST, INVTAX, INVSUB), which read CST_ANNC
+of eqbndcst.mod (uc_ncap.mod L39; eqbndcst.mod is not translated), and
+ONLINE (uc_cap.mod L36-42, the VDA RS family's VAR_UPS terms). Every other
+name is translated: GROWTH and PERDISC; the UC_DYNT types N, CUMSUM, CUM+
+and SYNC, which pick UC_TMAP entries in the RHS direction (equserco.mod L83;
+M1.3 change 21); PERIOD, NEWFLO, EFF, CAPACT, BUILDUP and the cost
+attributes COST, DELIV, TAX and SUB (the uc_*.mod factors; change 22); NET
+and the old cost names FLO_COST ... NCAP_ISUB, which act only in
+preprocessing (preppm.mod L41-43, ppmain.mod L1157); CAPFLO, whose only
+effect is UC_CAPFLO (refused on its own); YES, set only under %CLI%
+(refused by the generation driver).
 """
-const UC_ATTR_TRANSLATED = ("GROWTH", "N", "CUMSUM", "CUM+", "SYNC")
+const UC_ATTR_REFUSED = ("ANNUL", "INVCOST", "INVTAX", "INVSUB", "ONLINE")
 
 function uc_unported(tm::TimesModel, setup)
     var_uc(tm) || throw(UnportedError("user constraints with VAR_UC not YES (eqmain.mod L230-232, equcwrap.mod L13)"))
@@ -154,8 +162,10 @@ function uc_unported(tm::TimesModel, setup)
     # Dynamic families (equcwrap L34-40): nested UCs.
     isempty(gset_opt(d, "UC_GMAP_U", 3)) ||
         throw(UnportedError("equserco.mod L76/L99: nested user constraints (UC_GMAP_U, UC_UCN)"))
-    any(k -> !(k[5] in UC_ATTR_TRANSLATED), gset(tm, "UC_ATTR")) &&
-        throw(UnportedError("uc_*.mod: user-constraint attributes other than GROWTH, N, CUMSUM, CUM+ and SYNC (UC_ATTR: PERIOD, EFF, CAPACT, COST, ...)"))
+    let k = findfirst(k -> k[5] in UC_ATTR_REFUSED, gset(tm, "UC_ATTR").keys)
+        k === nothing || throw(UnportedError("uc_ncap.mod L39, uc_cap.mod L36-42: user-constraint attribute " *
+                                             "$(gset(tm, "UC_ATTR").keys[k]) (ANNUL needs eqbndcst.mod's CST_ANNC, ONLINE the VDA VAR_UPS terms)"))
+    end
     isempty(gset(tm, "UC_CAPFLO")) ||
         throw(UnportedError("uc_flo.mod L35-49: capacity-related flows in user constraints (UC_CAPFLO, cal_caps.mod)"))
     return nothing
@@ -169,7 +179,9 @@ Sets, parameters and incidence maps the uc_*.mod terms read, built once.
 function uc_context(tm::TimesModel)
     get!(tm.cache, "UC_CONTEXT") do
         rtp_vintyr = gset(tm, "RTP_VINTYR")
+        attr = gset(tm, "UC_ATTR")
         (modlyear = gset(tm, "MODLYEAR"),                                      # V: setglobs.gms L147
+         milestonyr = gset(tm, "MILESTONYR"),
          rs_fr = gparam(tm, "RS_FR"),
          rtcs_fr = gparam(tm, "RTCS_FR"),
          rs_below = gset(tm, "RS_BELOW"),
@@ -180,6 +192,7 @@ function uc_context(tm::TimesModel)
          rtp_vara = gset(tm, "RTP_VARA"),
          rpc_aire = gset(tm, "RPC_AIRE"),
          prc_actflo = gparam(tm, "PRC_ACTFLO"),
+         prc_capact = gparam(tm, "PRC_CAPACT"),
          com_ie = gparam(tm, "COM_IE"),
          ts_of_rp = indexby(gset(tm, "PRC_TS"), (1, 2)),                      # (r,p) -> PRC_TS(r,p,ts)
          mapflo_of_nr = indexby(gset(tm, "UC_MAP_FLO"), (1, 2, 3)),           # (n,side,r) -> (n,side,r,p,c)
@@ -188,7 +201,29 @@ function uc_context(tm::TimesModel)
          mapire_of_nr = indexby(gset(tm, "UC_MAP_IRE"), (1, 2)),              # (n,r) -> (n,r,p,c,ie)
          rhs_combal_of_rtc = indexby(gset(tm, "RHS_COMBAL"), (1, 2, 3)),      # (r,t,c) -> (r,t,c,ts)
          rhs_comprd_of_rtc = indexby(gset(tm, "RHS_COMPRD"), (1, 2, 3)),
-         uc_attr = gset(tm, "UC_ATTR"),
+         uc_attr = attr,
+         # (r,n,side,grp) -> the UC_COST attributes of the group, in set order
+         cost_of_rnsg = indexby(_gset_from("UC_ATTR/cost", [k for k in attr.keys if k[5] in UC_COST], tm.data),
+                                (1, 2, 3, 4)),
+         uc_dt = gset(tm, "UC_DT"),
+         fpd = gparam(tm, "FPD"),
+         lead = gparam(tm, "LEAD"),
+         coef_pvt = gparam(tm, "COEF_PVT"),
+         coef_rpti = gparam(tm, "COEF_RPTI"),
+         rvpt = gset(tm, "RVPT"),                                              # eqmain.mod L199-201
+         rvpt_to = indexby(gset(tm, "RVPT"), (1, 3, 4)),                      # (r,p,t) -> RVPT(r,v,p,t)
+         rvpt_from = indexby(gset(tm, "RVPT"), (1, 2, 3)),                    # (r,v,p) -> RVPT(r,v,p,t)
+         rdcur_of_r = indexby(gset(tm, "RDCUR"), (1,)),                       # r -> RDCUR(r,cur)
+         tsann_of_ts = indexby(gset(tm, "TS_ANN"), (1,)),                     # ts -> TS_ANN(ts,sl)
+         ob_fcos = gparam(tm, "OB_FCOS"),                                      # OBJ_FCOST(r,y,p,c,s,m) = OB_FCOS(r,p,c,s,m,y)
+         ob_fdel = gparam(tm, "OB_FDEL"),
+         ob_ftax = gparam(tm, "OB_FTAX"),
+         ob_act = gparam(tm, "OB_ACT"),                                        # OBJ_ACOST(r,y,p,m) = OB_ACT(r,p,m,y)
+         ob_icost = gparam(tm, "OB_ICOST"),                                    # OBJ_ICOST(r,y,p,m) = OB_ICOST(r,p,m,y)
+         ob_itax = gparam(tm, "OB_ITAX"),
+         ob_isub = gparam(tm, "OB_ISUB"),
+         obj_compd = gparam(tm, "OBJ_COMPD"),                                  # (r,t,c,ts,costype,cur)
+         obj_comnt = gparam(tm, "OBJ_COMNT"),
          uc_sign = gparam(tm, "UC_SIGN"),                                      # initsys.mod L116
          uc_flo = gparam(tm, "UC_FLO"),
          uc_act = gparam(tm, "UC_ACT"),
@@ -199,9 +234,16 @@ function uc_context(tm::TimesModel)
     end
 end
 
+const _NO2 = NTuple{2,String}[]
 const _NO3 = NTuple{3,String}[]
 const _NO4 = NTuple{4,String}[]
 const _NO5 = NTuple{5,String}[]
+
+"UC_COST (initsys.mod L131-132)."
+const UC_COST = ("COST", "DELIV", "TAX", "SUB", "ANNUL")
+
+"Whether UC_ATTR(R,UC_N,SIDE,grp,attr) is set."
+_uc_has(x, r, n, side, grp, attr) = (r, n, side, grp, attr) in x.uc_attr
 
 "Timeslice weight of the flow-type UC terms: `PROD(RS_BELOW(R,TS,S),RS_FR(R,S,TS)*(1+RTCS_FR(R,T,C,S,TS)))`."
 _uc_tsw(x, r, t, c, s, ts) =
@@ -224,34 +266,107 @@ function _uc_growth(x, r, n, side, grp, coef::GNum, lagt)
     return gpower(abs(coef), lagt * gv(x.uc_sign, (side,)) - 1)
 end
 
+"""
+    _uc_perdisc(x, r, n, grp, t) -> GNum
+
+The period factor of a several-period term (the `\$IF %6==2` lines of
+uc_flo.mod L22, uc_act.mod L22, uc_com.mod L25, uc_ire.mod L21):
+
+    (1+(FPD(T)+(COEF_PVT(R,T)-FPD(T))\$UC_ATTR(R,UC_N,'LHS',grp,'PERDISC')-1)\$UC_DT(R,UC_N))
+
+FPD(T) for a cumulative constraint (UC_DT), its present value with
+PERDISC, and 1 otherwise; evaluated as written.
+"""
+function _uc_perdisc(x, r, n, grp, t)
+    (r, n) in x.uc_dt || return GNum(1.0)
+    fpd = gv(x.fpd, (t,))
+    y = fpd + gif(gv(x.coef_pvt, (r, t)) - fpd, _uc_has(x, r, n, "LHS", grp, "PERDISC"))
+    return 1 + (y - 1)
+end
+
+"""
+    _uc_perds(x, r, n, side, grp, v, t, p) -> GNum
+
+The PERIOD and NEWFLO factor of the flow, activity and trade terms
+(uc_flo.mod L38-39, uc_act.mod L37-38, uc_ire.mod L38-39):
+
+    PROD(UC_ATTR(R,UC_N,SIDE,grp,UC_PERDS), FPD(T) *
+         PROD(UC_NEWFLO(UC_PERDS), 1\$(SAMEAS(V,T)+RVPT(R,V,P,T))/FPD(T)))
+
+UC_PERDS = {PERIOD, NEWFLO}, UC_NEWFLO = {NEWFLO} (initsys.mod L147-148):
+PERIOD gives FPD(T); NEWFLO gives FPD(T)*(1/FPD(T)) for the vintage of the
+period (or one commissioned in it, RVPT) and 0 for the others.
+"""
+function _uc_perds(x, r, n, side, grp, v, t, p)
+    f = GNum(1.0)
+    _uc_has(x, r, n, side, grp, "PERIOD") && (f = f * gv(x.fpd, (t,)))
+    if _uc_has(x, r, n, side, grp, "NEWFLO")
+        fpd = gv(x.fpd, (t,))
+        f = f * (fpd * (gif(GNum(1.0), v == t || (r, v, p, t) in x.rvpt) / fpd))
+    end
+    return f
+end
+
+"""
+    _uc_fcost(x, r, n, side, grp, t, p, c, ts) -> GNum
+
+The cost factor of the flow and trade terms (uc_flo.mod L41-46, uc_ire.mod
+L41-46), 1 unless the group has a UC_COST attribute:
+
+    PROD(REG(R)\$SUM(UC_ATTR(R,UC_N,SIDE,grp,UC_COST),1),
+      SUM((RDCUR(R,CUR),TS_ANN(TS,SL)),
+        OBJ_FCOST(R,T,P,C,SL,CUR)\$UC_ATTR(...'COST') + OBJ_FDELV(R,T,P,C,SL,CUR)\$UC_ATTR(...'DELIV')
+        + MIN(0,OBJ_FTAX(R,T,P,C,SL,CUR))\$UC_ATTR(...'SUB') + MAX(0,OBJ_FTAX(R,T,P,C,SL,CUR))\$UC_ATTR(...'TAX')))
+
+OBJ_FCOST/FDELV/FTAX(r,y,p,c,s,m) are OB_FCOS/FDEL/FTAX(r,p,c,s,m,y)
+(coef_obj.mod L166-168).
+"""
+function _uc_fcost(x, r, n, side, grp, t, p, c, ts)
+    isempty(get(x.cost_of_rnsg, (r, n, side, grp), _NO5)) && return GNum(1.0)
+    cost, deliv = _uc_has(x, r, n, side, grp, "COST"), _uc_has(x, r, n, side, grp, "DELIV")
+    sub, tax = _uc_has(x, r, n, side, grp, "SUB"), _uc_has(x, r, n, side, grp, "TAX")
+    f = GZERO
+    for (_, cur) in get(x.rdcur_of_r, (r,), _NO2), (_, sl) in get(x.tsann_of_ts, (ts,), _NO2)
+        ftax = gv(x.ob_ftax, (r, p, c, sl, cur, t))
+        f = f + (gif(gv(x.ob_fcos, (r, p, c, sl, cur, t)), cost) + gif(gv(x.ob_fdel, (r, p, c, sl, cur, t)), deliv) +
+                 gif(gmin(GZERO, ftax), sub) + gif(gmax(GZERO, ftax), tax))
+    end
+    return f
+end
+
 # Every term function below takes the term's period `t` (%4: T, or TT in the
 # dynamic blocks; the period of the variables) and, as keywords, the side
 # (%5: 'LHS', or SIDE), a factor `k0` that multiplies the whole term (the
-# dynamic blocks' UC_SIGN(SIDE)), `lagt`, the GROWTH exponent's period length
-# of a dynamic term (%6 = 1: LAGT(T) in the LHS direction, -LEAD(T) in the
-# RHS direction) or `nothing`, and `tc`, the period of the UC_* coefficient
-# (%7: T, TT, or LL in the RHS direction; `t` by default).
+# dynamic blocks' UC_SIGN(SIDE), the RS family's 1/G_YRFR), `lagt`, the
+# GROWTH exponent's period length of a dynamic term (%6 = 1: LAGT(T) in the
+# LHS direction, -LEAD(T) in the RHS direction) or `nothing`, `tc`, the
+# period of the UC_* coefficient (%7: T, TT, or LL in the RHS direction; `t`
+# by default), and `several`, true for the several-period families (%6 = 2:
+# the period factor `_uc_perdisc`).
 
 """
-    uc_flo!(expr, tm, n, r, t, s; side="LHS", k0=1, lagt=nothing) -> expr
+    uc_flo!(expr, tm, n, r, t, s; side="LHS", k0=1, lagt=nothing, tc=t, several=false) -> expr
 
+    [(1+(FPD(T)+(COEF_PVT(R,T)-FPD(T))\$UC_ATTR(R,UC_N,'LHS','FLO','PERDISC')-1)\$UC_DT(R,UC_N)) *, %6 = 2]
     SUM((RTP_VINTYR(R,V,T,P),RTPCS_VARF(R,T,P,C,TS))\$(UC_MAP_FLO(UC_N,SIDE,R,P,C)\$RS_FR(R,S,TS)),
-        [cal_red C COM TS P T] * UC_FLO(UC_N,SIDE,R,T,P,C,TS) *
+        [cal_red C COM TS P T] * UC_FLO(UC_N,SIDE,R,TC,P,C,TS) *
         PROD(ANNUAL,1)*PROD(RS_BELOW(R,TS,S),RS_FR(R,S,TS)*(1+RTCS_FR(R,T,C,S,TS))) *
-        [GROWTH factor, dynamic only] * [other attribute factors = 1])
+        [GROWTH factor, dynamic only] * [PERIOD/NEWFLO factor] * [cost factor])
 
-GAMS: uc_flo.mod L4-59, v4.9.7 (%6 = 0 or 1; L35-49 UC_CAPFLO refused).
+GAMS: uc_flo.mod L4-59, v4.9.7 (L35-49 UC_CAPFLO refused).
 """
 function uc_flo!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String, s::String;
-                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t)
+                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false)
     x = uc_context(tm)
+    several && (k0 = k0 * _uc_perdisc(x, r, n, "FLO", t))
     for (_, _, _, p, c) in get(x.mapflo_of_nr, (n, side, r), _NO5)
         for (_, v, _, _) in get(x.vint_of_rtp, (r, t, p), _NO4)
             (v,) in x.modlyear || continue
             for (_, _, _, _, ts) in get(x.varf_of_rtpc, (r, t, p, c), _NO5)
                 haskey(x.rs_fr, (r, s, ts)) || continue
                 coef = gv(x.uc_flo, (n, side, r, tc, p, c, ts))
-                k = k0 * coef * _uc_tsw(x, r, t, c, s, ts) * _uc_growth(x, r, n, side, "FLO", coef, lagt)
+                k = k0 * coef * _uc_tsw(x, r, t, c, s, ts) * _uc_growth(x, r, n, side, "FLO", coef, lagt) *
+                    _uc_perds(x, r, n, side, "FLO", v, t, p) * _uc_fcost(x, r, n, side, "FLO", t, p, c, ts)
                 cal_nored!(expr, tm, k, r, v, t, p, c, ts)
             end
         end
@@ -260,68 +375,116 @@ function uc_flo!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::St
 end
 
 """
-    uc_ncap!(expr, tm, n, r, t; side="LHS", k0=1, lagt=nothing) -> expr
+    uc_ncap!(expr, tm, n, r, t; side="LHS", k0=1, lagt=nothing, tc=t) -> expr
 
-    SUM(UC_GMAP_P(R,UC_N,'NCAP',P)\$RTP(R,T,P),
-        UC_NCAP(UC_N,SIDE,R,T,P) * VAR_NCAP(R,T,P)\$(NOT RTP_OFF(R,T,P)) *
-        [GROWTH factor, dynamic only] * [other attribute factors = 1])
+    SUM(UC_GMAP_P(R,UC_N,'NCAP',P)\$RTP(R,T,P), UC_NCAP(UC_N,SIDE,R,TC,P) *
+        (VAR_NCAP(R,T,P)\$(NOT RTP_OFF(R,T,P)) +
+         (SUM(RVPT(R,V,P,T),VAR_NCAP(R,V,P)) + VAR_NCAP(R,T,P) *
+          (COEF_RPTI(R,T,P)-PROD(RVPT(R,T,P,MILESTONYR),2)))\$UC_ATTR(R,UC_N,SIDE,'NCAP','PERIOD')) *
+        [GROWTH factor, dynamic only] *
+        PROD(UC_ATTR(R,UC_N,SIDE,'NCAP','BUILDUP'),1/LEAD(T)) *
+        PROD(L('N'),PROD(REG(R)\$SUM(UC_ATTR(R,UC_N,SIDE,'NCAP',UC_COST),1),
+          SUM(RDCUR(R,CUR), [ANNUL: CST_ANNC, refused] + OBJ_ICOST(R,T,P,CUR)\$UC_ATTR(...'COST')
+              + OBJ_ITAX(R,T,P,CUR)\$UC_ATTR(...'TAX') - OBJ_ISUB(R,T,P,CUR)\$UC_ATTR(...'SUB')))))
 
-GAMS: uc_ncap.mod L3-36, v4.9.7 (%3 = %6, so L25 is not compiled).
+`PROD(RVPT(R,T,P,MILESTONYR),2)` is 2 when the period's investment is
+commissioned in a period (RVPT, eqmain.mod L199-201) and 1 otherwise.
+OBJ_ICOST/ITAX/ISUB(r,y,p,m) are OB_ICOST/ITAX/ISUB(r,p,m,y) (coef_obj.mod
+L157-159).
+
+GAMS: uc_ncap.mod L3-50, v4.9.7.
 """
 function uc_ncap!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String;
-                  side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t)
+                  side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false)
     x = uc_context(tm)
+    period = _uc_has(x, r, n, side, "NCAP", "PERIOD")
+    buildup = _uc_has(x, r, n, side, "NCAP", "BUILDUP")
+    hascost = !isempty(get(x.cost_of_rnsg, (r, n, side, "NCAP"), _NO5))
+    cost, tax, sub = (_uc_has(x, r, n, side, "NCAP", a) for a in ("COST", "TAX", "SUB"))
     for (_, _, _, p) in get(x.gmapp_of_rnk, (r, n, "NCAP"), _NO4)
-        ((r, t, p) in x.rtp && !((r, t, p) in x.rtp_off)) || continue
+        (r, t, p) in x.rtp || continue
         coef = gv(x.uc_ncap, (n, side, r, tc, p))
-        addterm!(expr, k0 * coef * _uc_growth(x, r, n, side, "NCAP", coef, lagt), tm, "VAR_NCAP", r, t, p)
+        k = k0 * coef * _uc_growth(x, r, n, side, "NCAP", coef, lagt)
+        buildup && (k = k * (1 / gv(x.lead, (t,))))
+        if hascost
+            f = GZERO
+            for (_, cur) in get(x.rdcur_of_r, (r,), _NO2)
+                f = f + (gif(gv(x.ob_icost, (r, p, cur, t)), cost) + gif(gv(x.ob_itax, (r, p, cur, t)), tax) -
+                         gif(gv(x.ob_isub, (r, p, cur, t)), sub))
+            end
+            k = k * f
+        end
+        (r, t, p) in x.rtp_off || addterm!(expr, k, tm, "VAR_NCAP", r, t, p)
+        if period
+            for (_, v, _, _) in get(x.rvpt_to, (r, p, t), _NO4)
+                addterm!(expr, k, tm, "VAR_NCAP", r, v, p)
+            end
+            nrvpt = count(kk -> (kk[4],) in x.milestonyr, get(x.rvpt_from, (r, t, p), _NO4))
+            addterm!(expr, k * (gv(x.coef_rpti, (r, t, p)) - GNum(2.0^nrvpt)), tm, "VAR_NCAP", r, t, p)
+        end
     end
     return expr
 end
 
 """
-    uc_cap!(expr, tm, n, r, t; side="LHS", k0=1, lagt=nothing) -> expr
+    uc_cap!(expr, tm, n, r, t; side="LHS", k0=1, lagt=nothing, tc=t) -> expr
 
     SUM(RTP(R,T,P)\$UC_GMAP_P(R,UC_N,'CAP',P),
-        VAR_CAP(R,T,P) * UC_CAP(UC_N,SIDE,R,T,P) *
-        PROD(UC_ATTR(R,UC_N,SIDE,'CAP','GROWTH'), POWER(ABS(UC_CAP(UC_N,SIDE,R,T,P)),LAGT*UC_SIGN(SIDE)-1)) *
-        [other attribute factors = 1])
+        VAR_CAP(R,T,P) * UC_CAP(UC_N,SIDE,R,TC,P) *
+        [GROWTH factor, dynamic only] *
+        PROD(UC_ATTR(R,UC_N,SIDE,'CAP','CAPACT'),PRC_CAPACT(R,P)) * PROD(L('N'),1))
 
-The GROWTH line is compiled for %5 = 1 only. GAMS: uc_cap.mod L3-34, v4.9.7
-(L36-50, VDA ONLINE and ABS reserves, only for the RS family).
+GAMS: uc_cap.mod L3-34, v4.9.7 (L36-50, VDA ONLINE and ABS reserves, only
+for the RS family: ONLINE and ABS are refused).
 """
 function uc_cap!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String;
-                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t)
+                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false)
     x = uc_context(tm)
+    capact = _uc_has(x, r, n, side, "CAP", "CAPACT")
     for (_, _, _, p) in get(x.gmapp_of_rnk, (r, n, "CAP"), _NO4)
         (r, t, p) in x.rtp || continue
         coef = gv(x.uc_cap, (n, side, r, tc, p))
-        addterm!(expr, k0 * coef * _uc_growth(x, r, n, side, "CAP", coef, lagt), tm, "VAR_CAP", r, t, p)
+        k = k0 * coef * _uc_growth(x, r, n, side, "CAP", coef, lagt)
+        capact && (k = k * gv(x.prc_capact, (r, p)))
+        addterm!(expr, k, tm, "VAR_CAP", r, t, p)
     end
     return expr
 end
 
 """
-    uc_act!(expr, tm, n, r, t, s; side="LHS", k0=1, lagt=nothing) -> expr
+    uc_act!(expr, tm, n, r, t, s; side="LHS", k0=1, lagt=nothing, tc=t, several=false) -> expr
 
+    [(1+(FPD(T)+(COEF_PVT(R,T)-FPD(T))\$UC_ATTR(R,UC_N,'LHS','ACT','PERDISC')-1)\$UC_DT(R,UC_N)) *, %6 = 2]
     SUM(RTP_VINTYR(R,V,T,P)\$UC_GMAP_P(R,UC_N,'ACT',P),
         SUM(PRC_TS(R,P,TS)\$(RS_FR(R,S,TS)*RTP_VARA(R,T,P)),
-            VAR_ACT(R,V,T,P,TS)*UC_ACT(UC_N,SIDE,R,T,P,TS)*PROD(ANNUAL,RS_FR(R,S,TS)) *
-            [GROWTH factor, dynamic only] * [other attribute factors = 1]))
+            VAR_ACT(R,V,T,P,TS)*UC_ACT(UC_N,SIDE,R,TC,P,TS)*PROD(ANNUAL,RS_FR(R,S,TS)) *
+            [GROWTH factor, dynamic only] * [PERIOD/NEWFLO factor]) *
+        PROD(UC_ATTR(R,UC_N,SIDE,'ACT','COST'),SUM(RDCUR(R,CUR),OBJ_ACOST(R,T,P,CUR))))
 
-GAMS: uc_act.mod L4-37, v4.9.7.
+OBJ_ACOST(r,y,p,m) is OB_ACT(r,p,m,y) (coef_obj.mod L165).
+GAMS: uc_act.mod L4-52, v4.9.7.
 """
 function uc_act!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String, s::String;
-                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t)
+                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false)
     x = uc_context(tm)
+    several && (k0 = k0 * _uc_perdisc(x, r, n, "ACT", t))
+    cost = _uc_has(x, r, n, side, "ACT", "COST")
     for (_, _, _, p) in get(x.gmapp_of_rnk, (r, n, "ACT"), _NO4)
         (r, t, p) in x.rtp_vara || continue
+        fc = GNum(1.0)
+        if cost
+            fc = GZERO
+            for (_, cur) in get(x.rdcur_of_r, (r,), _NO2)
+                fc = fc + gv(x.ob_act, (r, p, cur, t))
+            end
+        end
         for (_, v, _, _) in get(x.vint_of_rtp, (r, t, p), _NO4)
             (v,) in x.modlyear || continue
             for (_, _, ts) in get(x.ts_of_rp, (r, p), _NO3)
                 haskey(x.rs_fr, (r, s, ts)) || continue
                 coef = gv(x.uc_act, (n, side, r, tc, p, ts))
-                k = k0 * coef * gv(x.rs_fr, (r, s, ts)) * _uc_growth(x, r, n, side, "ACT", coef, lagt)
+                k = k0 * coef * gv(x.rs_fr, (r, s, ts)) * _uc_growth(x, r, n, side, "ACT", coef, lagt) *
+                    _uc_perds(x, r, n, side, "ACT", v, t, p) * fc
                 addterm!(expr, k, tm, "VAR_ACT", r, v, t, p, ts)
             end
         end
@@ -330,37 +493,54 @@ function uc_act!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::St
 end
 
 """
-    uc_com!(expr, tm, n, r, t, s, kind; side="LHS", k0=1, lagt=nothing) -> expr
+    uc_com!(expr, tm, n, r, t, s, kind; side="LHS", k0=1, lagt=nothing, tc=t, several=false) -> expr
 
 `kind` = "NET" (equserco.mod L44/L72: `uc_com ... BAL NET NT`) or "PRD"
 (L42/L70: `PRD PRD PD`):
 
     SUM(UC_GMAP_C(R,UC_N,'%9',C,UC_GRPTYPE),
+      [(1+(FPD(T)+(COEF_PVT(R,T)-FPD(T))\$UC_ATTR(R,UC_N,'LHS',UC_GRPTYPE,'PERDISC')-1)\$UC_DT(R,UC_N)) *, %6 = 2]
         SUM(RHS_COM%8(R,T,C,TS)\$RS_FR(R,S,TS),
-            UC_COM(UC_N,'%9',SIDE,R,T,C,TS,UC_GRPTYPE) * VAR_COM%9(R,T,C,TS) *
+            UC_COM(UC_N,'%9',SIDE,R,TC,C,TS,UC_GRPTYPE) * VAR_COM%9(R,T,C,TS) *
             (1+(1/COM_IE(R,T,C,TS)-1)\$(UC_ATTR(R,UC_N,SIDE,UC_GRPTYPE,'EFF') XOR DIAG(UC_GRPTYPE,'COM%9'))) *
             PROD(ANNUAL,1)*PROD(RS_BELOW(R,TS,S),RS_FR(R,S,TS)*(1+RTCS_FR(R,T,C,S,TS))) *
-            [GROWTH factor on UC_GRPTYPE, dynamic only] * [other attribute factors = 1]))
+            [GROWTH factor on UC_GRPTYPE, dynamic only] *
+            PROD(UC_ATTR(R,UC_N,SIDE,UC_GRPTYPE,'PERIOD'),FPD(T)) *
+            PROD(REG(R)\$SUM(UC_ATTR(R,UC_N,SIDE,UC_GRPTYPE,UC_COST),1),
+              SUM((UC_ATTR(R,UC_N,SIDE,UC_GRPTYPE,UC_COST),RDCUR(R,CUR)), OBJ_COM%10(R,T,C,TS,UC_COST,CUR)))))
 
 DIAG is GAMS's built-in label comparison (docs/discrepancies.md G15), so a
-term whose group type is COMNET (COMPRD) is divided by COM_IE unless EFF
-is set; EFF is never set here (refused with the other attributes).
+term whose group type is COMNET (COMPRD) is divided by COM_IE unless EFF is
+set, and one of another group type only when EFF is set. %10 is PD for PRD
+and NT for NET (OBJ_COMPD, OBJ_COMNT).
 
-GAMS: uc_com.mod L4-32, v4.9.7.
+GAMS: uc_com.mod L4-47, v4.9.7.
 """
 function uc_com!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String, s::String, kind::String;
-                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t)
+                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false)
     x = uc_context(tm)
     kind in ("NET", "PRD") || throw(ArgumentError("uc_com kind must be NET or PRD, got $kind"))
     rhs_of = kind == "NET" ? x.rhs_combal_of_rtc : x.rhs_comprd_of_rtc
+    obj_com = kind == "NET" ? x.obj_comnt : x.obj_compd
     var = "VAR_COM" * kind
     for (_, _, _, c, grptype) in get(x.gmapc_of_rnk, (r, n, kind), _NO5)
-        ie_div = grptype == "COM" * kind               # UC_ATTR(...'EFF') XOR DIAG(UC_GRPTYPE,'COM%9'), EFF never set
+        kg = several ? k0 * _uc_perdisc(x, r, n, grptype, t) : k0
+        ie_div = _uc_has(x, r, n, side, grptype, "EFF") ⊻ (grptype == "COM" * kind)
+        period = _uc_has(x, r, n, side, grptype, "PERIOD")
+        costs = get(x.cost_of_rnsg, (r, n, side, grptype), _NO5)
         for (_, _, _, ts) in get(rhs_of, (r, t, c), _NO4)
             haskey(x.rs_fr, (r, s, ts)) || continue
             f = ie_div ? 1 + (GNum(1.0) / gv(x.com_ie, (r, t, c, ts)) - 1) : GNum(1.0)
             coef = gv(x.uc_com, (n, kind, side, r, tc, c, ts, grptype))
-            k = k0 * coef * f * _uc_tsw(x, r, t, c, s, ts) * _uc_growth(x, r, n, side, grptype, coef, lagt)
+            k = kg * coef * f * _uc_tsw(x, r, t, c, s, ts) * _uc_growth(x, r, n, side, grptype, coef, lagt)
+            period && (k = k * gv(x.fpd, (t,)))
+            if !isempty(costs)
+                fc = GZERO
+                for (_, _, _, _, ucc) in costs, (_, cur) in get(x.rdcur_of_r, (r,), _NO2)
+                    fc = fc + gv(obj_com, (r, t, c, ts, ucc, cur))
+                end
+                k = k * fc
+            end
             addterm!(expr, k, tm, var, r, t, c, ts)
         end
     end
@@ -368,27 +548,30 @@ function uc_com!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::St
 end
 
 """
-    uc_ire!(expr, tm, n, r, t, s; side="LHS", k0=1, lagt=nothing) -> expr
+    uc_ire!(expr, tm, n, r, t, s; side="LHS", k0=1, lagt=nothing, tc=t, several=false) -> expr
 
+    [(1+(FPD(T)+(COEF_PVT(R,T)-FPD(T))\$UC_ATTR(R,UC_N,'LHS','IRE','PERDISC')-1)\$UC_DT(R,UC_N)) *, %6 = 2]
     SUM((RTP_VINTYR(R,V,T,P),UC_MAP_IRE(UC_N,R,P,C,IE),RTPCS_VARF(R,T,P,C,TS))\$RS_FR(R,S,TS),
         (VAR_IRE(R,V,T,P,C,TS,IE)\$(NOT RPC_AIRE(R,P,C))+(VAR_ACT(R,V,T,P,TS)*PRC_ACTFLO(R,V,P,C))\$RPC_AIRE(R,P,C))
-        * UC_IRE(UC_N,SIDE,R,T,P,C,TS,IE) *
+        * UC_IRE(UC_N,SIDE,R,TC,P,C,TS,IE) *
         PROD(ANNUAL,1)*PROD(RS_BELOW(R,TS,S),RS_FR(R,S,TS)*(1+RTCS_FR(R,T,C,S,TS))) *
-        [GROWTH factor, dynamic only] * [other attribute factors = 1])
+        [GROWTH factor, dynamic only] * [PERIOD/NEWFLO factor] * [cost factor, as uc_flo])
 
 UC_MAP_IRE has no side index: the same exchanges enter both sides.
-GAMS: uc_ire.mod L4-43, v4.9.7.
+GAMS: uc_ire.mod L4-57, v4.9.7.
 """
 function uc_ire!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String, s::String;
-                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t)
+                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false)
     x = uc_context(tm)
+    several && (k0 = k0 * _uc_perdisc(x, r, n, "IRE", t))
     for (_, _, p, c, ie) in get(x.mapire_of_nr, (n, r), _NO5)
         for (_, v, _, _) in get(x.vint_of_rtp, (r, t, p), _NO4)
             (v,) in x.modlyear || continue
             for (_, _, _, _, ts) in get(x.varf_of_rtpc, (r, t, p, c), _NO5)
                 haskey(x.rs_fr, (r, s, ts)) || continue
                 coef = gv(x.uc_ire, (n, side, r, tc, p, c, ts, ie))
-                k = k0 * coef * _uc_tsw(x, r, t, c, s, ts) * _uc_growth(x, r, n, side, "IRE", coef, lagt)
+                k = k0 * coef * _uc_tsw(x, r, t, c, s, ts) * _uc_growth(x, r, n, side, "IRE", coef, lagt) *
+                    _uc_perds(x, r, n, side, "IRE", v, t, p) * _uc_fcost(x, r, n, side, "IRE", t, p, c, ts)
                 if !((r, p, c) in x.rpc_aire)
                     addterm!(expr, k, tm, "VAR_IRE", r, v, t, p, c, ts, ie)
                 else
@@ -668,9 +851,9 @@ are multiplied by the period factor of the `\$IF %6==2` lines
 
     (1+(FPD(T)+(COEF_PVT(R,T)-FPD(T))\$UC_ATTR(R,UC_N,'LHS',grp,'PERDISC')-1)\$UC_DT(R,UC_N))
 
-which is FPD(T) for a cumulative constraint (UC_DT, ppmain.mod L1150) and 1
-otherwise (PERDISC is refused with the other attributes); the capacity terms
-are not. Then the cumulative terms:
+(`_uc_perdisc`: FPD(T) for a cumulative constraint, UC_DT, ppmain.mod
+L1150, its present value COEF_PVT with PERDISC, 1 otherwise); the capacity
+terms are not. Then the cumulative terms:
 
     + SUM((%7RPC_CUMFLO(R,P,C,ALLYEAR,LL))\$UC_CUMFLO(UC_N,R,P,C,ALLYEAR,LL),
           UC_CUMFLO(UC_N,R,P,C,ALLYEAR,LL)*VAR_CUMFLO(R,P,C,ALLYEAR,LL)*%CUFSCAL%)
@@ -687,11 +870,9 @@ function uc_several_lhs!(expr::JuMP.AffExpr, tm::TimesModel, n::String, regions,
     x = uc_context(tm)
     milestonyr = gset(tm, "MILESTONYR")
     tsum_of_rn = get!(() -> indexby(gset(tm, "UC_T_SUM"), (1, 2)), tm.cache, "UC_T_SUM/rn")
-    uc_dt, fpd = gset(tm, "UC_DT"), gparam(tm, "FPD")
     periods(r) = [k[3] for k in get(tsum_of_rn, (r, n), _NO3) if (k[3],) in milestonyr]
-    pf(r, t) = (r, n) in uc_dt ? 1 + (gv(fpd, (t,)) - 1) : GNum(1.0)     # (1+(FPD(T)-1)$UC_DT)
     for r in regions, t in periods(r), s in ts_of(r)
-        uc_flo!(expr, tm, n, r, t, s; k0=pf(r, t))
+        uc_flo!(expr, tm, n, r, t, s; several=true)
     end
     for r in regions, t in periods(r)
         uc_ncap!(expr, tm, n, r, t)
@@ -700,13 +881,13 @@ function uc_several_lhs!(expr::JuMP.AffExpr, tm::TimesModel, n::String, regions,
         uc_cap!(expr, tm, n, r, t)
     end
     for r in regions, t in periods(r), s in ts_of(r)
-        uc_act!(expr, tm, n, r, t, s; k0=pf(r, t))
+        uc_act!(expr, tm, n, r, t, s; several=true)
     end
     for kind in ("PRD", "NET"), r in regions, t in periods(r), s in ts_of(r)
-        uc_com!(expr, tm, n, r, t, s, kind; k0=pf(r, t))
+        uc_com!(expr, tm, n, r, t, s, kind; several=true)
     end
     for r in regions, t in periods(r), s in ts_of(r)
-        uc_ire!(expr, tm, n, r, t, s; k0=pf(r, t))
+        uc_ire!(expr, tm, n, r, t, s; several=true)
     end
     # Cumulative flows (uc_flo.mod L77) and commodities (equserco.mod L49).
     cufscal = parse(Float64, gswitch(tm, "CUFSCAL", "10"))
