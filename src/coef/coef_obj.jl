@@ -92,7 +92,10 @@ carried from tuple to tuple and from call to call as GAMS does: each call
 resets only some of them per tuple (filparam F, Z, MY_FYEAR; fillcost F,
 LAST_VAL), so what the last call leaves depends on the earlier tuples and
 calls too. Read from `tm` at the start of coef_obj.mod and written back by
-`put_fil_scratch!` after its last fillcost call (L151). CNT is not kept:
+`put_fil_scratch!` after its last fillcost call (L151). fillcost.gms also
+leaves the arrays MY_ARRAY (L29: the tuple's values at DM_YEAR, over what
+coef_obj.mod L113 cleared) and MY_FIL2 (cleared per tuple at L28, then the
+tuple's interpolated years). CNT is not kept:
 fillcost.gms L33's `FOR(CNT=MY_FYEAR-Z+1 TO -1, ...)` starts at 0 or below
 for data years at least one apart, so it always leaves CNT at 0, which
 coef_nio.mod L59 has already cleared.
@@ -105,10 +108,19 @@ mutable struct FilScratch
     LAST_VAL::GNum
     FIRST_VAL::GNum
     MY_FYEAR::GNum
+    MY_ARRAY::Dict{Tuple{String},Float64}
+    MY_FIL2::Dict{Tuple{String},Float64}
 end
-FilScratch(tm) = FilScratch((gv(gparam_opt(tm.data, n, 0), ()) for n in FIL_SCRATCH)...)
-"Write the scratch scalars back to `tm`, as the last filparam/fillcost call leaves them (EPS kept)."
-put_fil_scratch!(tm, s::FilScratch) = foreach(n -> gput_scalar!(tm, n, getfield(s, Symbol(n))), FIL_SCRATCH)
+FilScratch(tm) = FilScratch((gv(gparam_opt(tm.data, n, 0), ()) for n in FIL_SCRATCH)..., gvalues(tm, "MY_ARRAY", 1),
+                            gvalues(tm, "MY_FIL2", 1))
+FilScratch() = FilScratch(GZERO, GZERO, GZERO, GZERO, GZERO, GZERO, GZERO, Dict{Tuple{String},Float64}(), Dict{Tuple{String},Float64}())
+"Write the scratch back to `tm`, as the last filparam/fillcost call leaves it (EPS kept)."
+function put_fil_scratch!(tm, s::FilScratch)
+    foreach(n -> gput_scalar!(tm, n, getfield(s, Symbol(n))), FIL_SCRATCH)
+    gput!(tm, "MY_ARRAY", s.MY_ARRAY)
+    gput!(tm, "MY_FIL2", s.MY_FIL2)
+    return tm
+end
 
 """
     filparam_gdrate!(tm, ax, fil) -> Dict
@@ -217,13 +229,19 @@ function fillcost(src::Dict{NTuple{N,String},Float64}, take, ax::YearAxis, fil::
     # L27: LOOP(UNCD7(R,YEAR,rest), ...) in GAMS order (YEAR is the one label '0', so the order of (R,rest))
     tuples = collect(keys(bucket))
     data === nothing || gams_sort!(tuples, data)
-    s = scratch === nothing ? FilScratch(GZERO, GZERO, GZERO, GZERO, GZERO, GZERO, GZERO) : scratch
+    s = scratch === nothing ? FilScratch() : scratch
     first_val, my_fyear, Z, my_f = s.FIRST_VAL, s.MY_FYEAR.v, s.Z.v, s.MY_F   # kept across tuples
     F, last_val = s.F.v, s.LAST_VAL                        # L27 resets these two
     for t in tuples
         b = bucket[t]
         F, last_val = 0.0, GZERO
         my_fil2 = Dict{String,GNum}()
+        if scratch !== nothing                                     # L28-29: MY_ARRAY(DM_YEAR) = SRC(t,DM_YEAR)
+            for y in dm_year
+                v = get(b, y, nothing)
+                v === nothing ? delete!(s.MY_ARRAY, (y,)) : (s.MY_ARRAY[(y,)] = v)
+            end
+        end
         # L30-35: the data years in DM_YEAR order
         for y in dm_year
             v = get(b, y, nothing)
@@ -256,6 +274,9 @@ function fillcost(src::Dict{NTuple{N,String},Float64}, take, ax::YearAxis, fil::
             yv = ax.yearval[y]
             x = gif(first_val, bext(t, yv) && yv < F) + get(my_fil2, y, GZERO) + gif(last_val, fext(t, yv) && yv > Z)
             iszero(x) || (cache[(t..., y)] = x.eps ? 0.0 : x.v)
+        end
+        if scratch !== nothing                                     # MY_FIL2 as the tuple leaves it (cleared at L28)
+            s.MY_FIL2 = Dict{Tuple{String},Float64}((y,) => (x.eps ? 0.0 : x.v) for (y, x) in my_fil2)
         end
     end
     if scratch !== nothing
@@ -515,6 +536,7 @@ function coef_obj!(tm)
     zmax = maximum((pymax(r, p) for (r, p) in rps); init=-Inf)
     fil_inv = [k for k in ks if yv(k) <= zmax]
     dm_year = [k[1] for k in S1("DM_YEAR").keys]
+    empty!(scratch.MY_ARRAY)                                           # L113: OPTION CLEAR=MY_ARRAY (after L102's use)
 
     # L120-133: investment, fixed and decommissioning costs into the OB_* caches
     # L96-99: %TAKE% is RDCUR(R,CUR), or 1 with $IF DEFINED R_CUREX (R_CUREX has data here, see the header)

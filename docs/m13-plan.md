@@ -187,12 +187,15 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
   calls: `FilScratch` (src/coef/coef_obj.jl) carries F, Z, MY_F, DFUNC,
   LAST_VAL, FIRST_VAL and MY_FYEAR from the G_DRATE call (L41) through
   every fillcost call (L120-151), each looped in GAMS order, and writes
-  them back after the last. CNT is left alone: fillcost.gms L33's
+  them back after the last, with the arrays fillcost.gms leaves: MY_ARRAY
+  (the last tuple's values at DM_YEAR, over what L113 cleared) and MY_FIL2
+  (cleared per tuple, then its interpolated years). CNT is left alone: fillcost.gms L33's
   `FOR(CNT=MY_FYEAR-Z+1 TO -1, ...)` always ends at 0, which coef_nio.mod
   L59 has already cleared. coef_ext.vda L23 (`Z=SMAX(T,PRC_RESID)` in the
   PRC_RCAP loop) leaves Z, found on demo12_refit. From GAMS's ppm dump the
-  coefficient stage now matches the coef dump on all eight scratch scalars
-  on every reduce_off run: the five core models and the demo12 cases. The
+  coefficient stage now matches the coef dump on the eight scratch scalars
+  and the two arrays on every reduce_off run: the five core models and the
+  demo12 cases (comparing every symbol at coef found the arrays). The
   CI chain compares the coef checkpoint on every set and parameter, and its
   pre-solve check no longer excludes anything. scripts/m13_gate.jl now
   chains on from ppm through the coefficient stage (coef) and the coef ->
