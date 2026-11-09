@@ -20,8 +20,9 @@
 # harness's TJLREF. prep_ext.dsc exits unless %DSC% is YES (L12), which
 # init_ext.dsc leaves YES only with discrete-capacity data (refused there,
 # init_ext.jl). The other extensions (ECB, MACRO, ETL, CLI, ABS, MCA, and
-# STAGES at preppm.mod L214) are refused, as are %POWERFLO% YES (L37,
-# powerflo.vda), GR_VARGEN data (L38, resloadc.vda), %VINTOPT% 1 (L42-43,
+# STAGES at preppm.mod L214) are refused, as are gas grids under %POWERFLO%
+# YES (L37, powerflo.vda PREP: `powerflo_prep!`, M1.3 change 27a), GR_VARGEN
+# data (L38, resloadc.vda), %VINTOPT% 1 (L42-43,
 # fillvint.gms with arguments) and %WAVER% YES (L63). L63 is compiled only
 # with %WAVER% YES (`$IFI` takes the rest of the line), so without it the line
 # does nothing. L75 (`$IF NOT DEFINED VNRET $CLEAR RCAP_OCAP`) is a
@@ -37,7 +38,7 @@ function prep_ext_unported(tm)
     end
     gswitch(tm, "MACRO", "") == "" || push!(out, "prep_ext.tm/.mlf (MACRO set)")
     dsc_loaded(tm) && append!(out, init_ext_dsc_unported(tm))
-    yes("POWERFLO") && push!(out, "prep_ext.vda L37 (POWERFLO YES: powerflo.vda)")
+    yes("POWERFLO") && append!(out, powerflo_unported(tm))
     hasdata(tm, "GR_VARGEN", 4) && push!(out, "prep_ext.vda L38 (GR_VARGEN has data: resloadc.vda)")
     # init_ext.vda L132 fills UC_FLOBET from UC_ACTBET at run time: whether UC_FLOBET is DEFINED (L35) then
     # depends on the DD files, which the dumps do not show
@@ -173,6 +174,8 @@ function prep_ext_vda!(st::InterpState)
     # L35-36: $IF DEFINED UC_FLOBET / COM_CSTBAL (G35, G40)
     hasdata(tm, "UC_FLOBET", 5) && fillparm!(st, "UC_FLOBET", "UC_N,R", "P,C", pd(",'0','0','0'"), T, one, ge0)
     hasdata(tm, "COM_CSTBAL", 6) && fillparm!(st, "COM_CSTBAL", "R", "C,S,ITEM,CUR", pd(",'0','0'"), T, one, ge0)
+    # L37: $IFI %POWERFLO%==YES $BATINCLUDE powerflo.vda PREP (M1.3 change 27a)
+    uppercase(strip(gswitch(tm, "POWERFLO", ""), ['\'', '"'])) == "YES" && powerflo_prep!(st)
     # L39: $BATINCLUDE equcrtp.vda PREP_EXT
     equcrtp_prep_ext!(st)
 

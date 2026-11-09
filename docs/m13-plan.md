@@ -122,7 +122,7 @@ GAMS 54.6.1):
 | 25b-3 | Crafted cases demo12_qa (warnings, the run goes on) and demo12_qa99 (a FATAL error, the abort of pp_qack.mod L380) (9 Nov 2026) | | the whole QA log from the input dump (CI: test_qalog.jl); the chain on demo12_qa (gate) |
 | 26 | curex.gms (preppm.mod L27-28): currency conversion from G_CUREX and R_CUREX into each region's currency. JRC-EU-TIMES-cli_ll has G_CUREX data (found 7 Nov 2026 by the nightly run; brought into M1.3 by James, 7 Nov 2026) | 1-84 | prep: JRC-EU-TIMES-cli_ll on James's machine (verdicts only, docs/test-models.md); crafted case demo12_curex, G_CUREX and R_CUREX in a second currency (CI) |
 | 27 | powerflo.vda: the power-flow (PTDF) grid extension, %POWERFLO% YES, which init_ext.vda L134-135 sets when PRC_REACT, GR_PTDF or GG_KGF has data. JRC-EU-TIMES-cli_ll has PRC_REACT data (found 7 Nov 2026; brought into M1.3 by James, 7 Nov 2026). In three parts; the switch stays refused until the last: | | JRC-EU-TIMES-cli_ll on James's machine (verdicts only); demo12 variant 6, PTDF power grid (docs/demo12-variants.md; CI) |
-| 27a | powerflo.vda main block (pp_prelv.vda L114: the grid topology, GR_* sets and parameters, PRC_REACT, COM_LIM) and PREP (prep_ext.vda L37) | 1-204 | prelv and prep checkpoints |
+| 27a | powerflo.vda main block (pp_prelv.vda L114: the grid topology, GR_* sets and parameters, PRC_REACT, COM_LIM) and PREP (prep_ext.vda L37) in the phase-angle formulation (9 Nov 2026); the PTDF formulation and the allocation of generation and demand to nodes (GR_PTDF, GR_DEMFR, GR_ENDFR, GR_GENFR, GR_GENMAP, GR_GENLEV data) stay refused for 27a-2, with demo12 variant 6 proper | 1-204 | prelv and prep checkpoints: crafted case demo12_pf (CI: variant fixture) |
 | 27b | powerflo.vda DECL (mod_vars.mod L95), POWFLO (equ_ext.vda L101, mod_ext.vda L45) and IREAUX (%IREAUXBAL%, L221): the power-flow variables, bounds and equations; CSTBAL and OBJBAL (L372-435) stay refused with COM_CSTBAL data, which neither case has | 206-370 | layers 2-3 |
 | 27c | powerflo.vda RPTB (cost_ann.rpt L175): the reporting block, translated with M1.6 and listed here so the file is tracked | 437-462 | M1.6 |
 
@@ -183,6 +183,25 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 ## Findings so far
 
+- (27a) powerflo.vda, phase-angle grids (`src/ext/vda/powerflo.jl`, 9 Nov
+  2026). PREP interpolates PRC_REACT and the grid parameters
+  (fillparm.gms, filparam.gms); the main block builds the grid from
+  TOP_IRE between the electricity nodes of NRG_GMAP: line directions
+  (GR_FLOW), GR_TOP, GR_ARC, the reactances made equal at both ends of a
+  line between regions, GR_ADMIT, the disjoint grids (GR_GID from EPS,
+  GR_GRID), the DAYNITE checks, RC_GRID, GR_GMAPC, GR_ENDC, GR_ADO and COM_LIM
+  FX on the nodes. Two GAMS points, checked on GAMS 54.6.1: in
+  `gr_sus(rc_grid,rc)` (L103) the two set-indexed groups run independently
+  (not as a diagonal), and `option gr_sus < gr_admit` (L102) fills the
+  repeated domains from the right (G52), so GR_SUS starts as the transpose
+  of GR_ADMIT, which L103-104 then overwrite only in part. Crafted case
+  demo12_pf (PRC_REACT on demo12's REG1-REG2 electricity link) passes the
+  init -> prep and prep -> prelv segments on every symbol and the gate from
+  the input dump to coef (reduce_off); equ_ext.vda L101 and mod_vars.mod L95
+  (DECL and POWFLO, the equations) are 27b and refused at the coef ->
+  pre-solve step. The probe now skips a start-dump symbol the next dump
+  lacks (demo12_pf's coef dump has ADESC, its pre-solve dump has not) and
+  the harness's TJL_SOLVEINFO, as the gate does.
 - (25b-3) Two crafted cases for the QA log (9 Nov 2026). demo12_qa adds data
   the checks warn about (NCAP_TLIFE beyond AGE, an FX share with an UP one,
   COM_PROJ of a non-DEM commodity, NCAP_CEH on a non-CHP process, NCAP_AF

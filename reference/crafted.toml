@@ -227,3 +227,18 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_qa99/demo12_qa99.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_qa99"]
+
+# TIMES_Demo demo12 + demo12_pf/pf.dd (9 Nov 2026): a line reactance (PRC_REACT) on demo12's
+# electricity link between REG1 and REG2, which sets %POWERFLO% YES: the DC power-flow grid
+# in the phase-angle formulation (powerflo.vda; M1.3 changes 27a-27b, demo12 variant 6 begun).
+[[model]]
+name = "TIMES_Demo-demo12_pf"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_pf/demo12_pf.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_pf"]

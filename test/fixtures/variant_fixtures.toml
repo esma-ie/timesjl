@@ -116,3 +116,14 @@ variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
+
+# Variant 6 begun (M1.3 change 27a, 9 Nov 2026): a phase-angle DC power-flow grid (PRC_REACT on
+# demo12's electricity link; powerflo.vda PREP and main block). The equations (DECL, POWFLO) are
+# change 27b: until then generation refuses the whole variant.
+[[variant]]
+prefix   = "demo12_pf"
+model    = "TIMES_Demo-demo12_pf"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = ["(variant POWERFLO)"]

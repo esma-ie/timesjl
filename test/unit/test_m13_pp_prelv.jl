@@ -70,7 +70,9 @@ end
 @testset "pp_prelv.vda: refused paths" begin
     fx = only(filter(f -> f["prefix"] == "demo12_off", TOML.parsefile(joinpath(FIXTURES, "public_fixtures.toml"))["fixture"]))
     tm = TimesModel(joinpath(FIXTURES, "demo12_off_prep"); switches=merge(fx["switches"], Dict("POWERFLO" => "YES")))
-    @test any(s -> occursin("L114", s), pp_prelv_unported(tm))
+    @test isempty(pp_prelv_unported(tm))                              # phase-angle grids: M1.3 change 27a
+    TIMES.gput!(tm, "GR_PTDF", Dict{NTuple{6,String},Float64}(("REG1", "2005", "ELCTECOA00", "ELC", "REG2", "ELC") => 0.5))
+    @test any(s -> occursin("GR_PTDF", s), pp_prelv_unported(tm))   # the PTDF formulation stays refused (27a-2)
 end
 
 # init_ext.vda L134-135: %POWERFLO% YES comes from the data, not the run file, and a
@@ -86,7 +88,7 @@ end
     TIMES.gput!(tm, "PRC_REACT", Dict{NTuple{3,String},Float64}(("REG1", "2005", "ELCTECOA00") => 0.1))
     TIMES.data_switches!(tm)
     @test TIMES.gswitch(tm, "POWERFLO", "") == "YES"
-    @test any(s -> occursin("L114", s), pp_prelv_unported(tm))
+    @test isempty(pp_prelv_unported(tm))                              # phase-angle grids are translated (27a)
     @test !("MY_F" in TIMES.preppm_shape_symbols(tm))               # powerflo.vda L80 assigns it again
     @test !("RXX" in TIMES.ppmain_life_symbols(tm))                 # powerflo.vda L121-122
 end
