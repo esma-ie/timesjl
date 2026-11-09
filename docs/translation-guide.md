@@ -637,3 +637,8 @@ those checks, their figures and their crafted cases are not published
 - 9 Nov 2026: M1.4 starts (James), alongside the end of M1.3, as CLAUDE.md
   allows; its gate waits for the M1.3 gate. Plan: docs/m14-plan.md (five
   changes, each checked against the `input/` dumps).
+- 9 Nov 2026: M1.4 (1): the DD and run-file parser (`src/dd/ddparse.jl`):
+  the GAMS syntax of the open suite's DD files, scalar parameters, and
+  GAMS's label list; anything else stops with its file and line. Every DD
+  and run file of the five open models parses (OTUS9r: 49 MB, 1.15 million
+  records, 2.5 s).
