@@ -598,3 +598,6 @@ those checks, their figures and their crafted cases are not published
   eqobjinv.mod L18-274 (with coef_alt.lin INV). The probe gains a coef ->
   presolve segment; every core model and the demo12 cases pass; new crafted
   case TIMES_Demo-demo12_objinv (case 2b, decommissioning; CI fixtures).
+- 9 Nov 2026: M1.3 (25-2): eqobjfix.mod (with coef_alt.lin FIX) and
+  eqobsalv.mod data statements. New GAMS semantics: G52 (`OPTION <` and
+  `<=` match repeated domains from opposite ends).
