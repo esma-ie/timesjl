@@ -15,3 +15,15 @@ using TIMES: GNum, GEPS, gassign!
     gassign!(d, ("a", "d"), 1.5)
     @test d[("a", "d")] == 1.5
 end
+
+@testset "gset: an alias follows its target's current state (PYR, ALIAS(PASTYEAR,PYR))" begin
+    # TIMES.jl computes PASTYEAR in preprocessing; PYR read after that must be the new PASTYEAR, as in
+    # GAMS, not PASTYEAR's records in the dump (found by the M1.4 from-DD gate on TIMES-NZ, REDUCE YES)
+    tm = TIMES.TimesModel(joinpath(@__DIR__, "..", "fixtures", "demo12_off_input"))
+    @test TIMES.gset(tm, "PYR").keys == TIMES.gset(tm, "PASTYEAR").keys
+    new = Set(TIMES.gset(tm, "PASTYEAR").keys)
+    pop!(new, first(TIMES.gset(tm, "PASTYEAR").keys))
+    TIMES.gput!(tm, "PASTYEAR", new)
+    @test Set(TIMES.gset(tm, "PYR").keys) == new
+    @test !haskey(tm.data.sets, "PYR")                  # never cached under the alias's own name
+end

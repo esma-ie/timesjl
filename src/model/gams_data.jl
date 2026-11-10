@@ -292,9 +292,20 @@ function DumpData(dir::AbstractString)
     return DumpData(dump, Dict{String,Any}(), Dict{String,Any}(), ord)
 end
 
-"The set `name` from the dump (cached)."
-gset(d::DumpData, name::AbstractString)::GamsSet =
-    get!(() -> GamsSet(Reference.read_symbol(d.dump, name)), d.sets, uppercase(name))
+"""
+The set `name` from the dump (cached). An alias (`ALIAS(PASTYEAR,PYR)`) is its target as it is now:
+the set TIMES.jl holds for the target once it has computed it, not the target's records in the dump,
+and it is never cached under its own name, so that it follows the target as GAMS's alias does.
+"""
+function gset(d::DumpData, name::AbstractString)::GamsSet
+    s = get(d.sets, uppercase(name), nothing)
+    s === nothing || return s
+    info = get(d.dump.symbols, uppercase(name), nothing)
+    if info !== nothing && info.kind === :alias && info.alias_with !== nothing && info.alias_with != "*"
+        return gset(d, info.alias_with)
+    end
+    return get!(() -> GamsSet(Reference.read_symbol(d.dump, name)), d.sets, uppercase(name))
+end
 
 "The parameter `name` from the dump (cached)."
 gparam(d::DumpData, name::AbstractString)::GamsParam =
