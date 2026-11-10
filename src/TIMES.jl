@@ -17,10 +17,12 @@ const TIMES_GAMS_VERSION = v"4.9.7"
 const TIMES_GAMS_COMMIT = "d9a6a25"
 
 import JuMP
+using LazyArtifacts   # lazy artifacts need the module itself loaded (Artifacts.toml, src/dd/sources.jl)
 
 include("reference/Reference.jl")
 include("dd/ddparse.jl")
 include("dd/compile.jl")
+include("dd/sources.jl")
 include("model/gams_data.jl")
 include("model/mod_vars.jl")
 include("model/equations.jl")

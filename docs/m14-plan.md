@@ -128,7 +128,7 @@ runs the chain from DD files on demo12 and the crafted cases.
 | --- | --- | --- |
 | 2-4 | `src/dd/compile.jl`: the compile phase to maindrv.mod | done for the open core models (draft PR) |
 | 2b | the compile phase of maindrv.mod and its includes: declarations and compile-time data | done for the open core models (9 Nov, draft PR #86) |
-| 2c | the TIMES source as a Julia Artifact (approved by James, 10 Nov 2026) | next |
+| 2c | the TIMES source as a Julia Artifact (approved by James, 10 Nov 2026) | done (10 Nov): `Artifacts.toml`, `times_source()`; CI compiles demo12 from its DD files |
 | 5 | scale, wiring, `m13_gate.jl --from dd` | as planned |
 
 ### Change 2b, 9 Nov 2026 (late evening)

@@ -647,3 +647,8 @@ those checks, their figures and their crafted cases are not published
   and the DD files: on every open suite model, both variants, the files
   included equal GAMS's listing, and every set, parameter and label of the
   input dump is identical (`scripts/m14_probe.jl`). New GAMS rules G55-G58.
+- 10 Nov 2026: M1.4 (2c): the TIMES v4.9.7 source is a pinned download
+  (`Artifacts.toml`, `times_source()`), and so is TIMES_Demo. CI now compiles
+  demo12 from its own DD files, with no GAMS, and checks it against the input
+  dump. A CI check found the rule for which variables and equations GAMS writes
+  (G57) was incomplete; it is corrected, with a GAMS experiment.

@@ -56,6 +56,13 @@ stacks, when every step must reproduce the original's results?
 The GAMS code is authoritative. Where it disagrees with the documentation the
 difference is logged in [`docs/discrepancies.md`](docs/discrepancies.md).
 
+To read a model's `.run` and `.dd` files, TIMES.jl compiles TIMES's own files as GAMS
+does, so it needs the v4.9.7 source. It downloads that commit's GitHub archive on
+first use and checks it by hash ([`Artifacts.toml`](Artifacts.toml),
+`TIMES.times_source()`). To use a local clone of the same commit instead, set
+`TIMESJL_TIMES_SOURCE`. The open demo models (`etsap-TIMES/TIMES_Demo` @ 962db86,
+CC BY 4.0, IEA-ETSAP) come the same way (`TIMES.times_demo_dir()`).
+
 ## Phases
 
 **Phase 1 — faithful translation.** Same sets, parameters, variables,
