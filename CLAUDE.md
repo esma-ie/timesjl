@@ -75,6 +75,12 @@ Any mismatch blocks the merge. Justified differences go in
   the suite. `run_references.ps1` stops if the GAMS it finds is another major
   version (`-GamsMajor`, default 54), and `-Resume` redoes any run made with
   another version. References made with GAMS 52.1.0 are rerun.
+- cuOpt lane (James, 10 Nov 2026; `scripts/cuopt/README.md`): informational
+  layer 3 with NVIDIA cuOpt on the GPU, never a merge gate. Nightly on a
+  GitHub T4 runner for the public fixtures (GPU-share sweep 25/50/100% with
+  MPS), and in WSL2 on James's workstation for local runs (TIM allowed, results
+  stay there). cuOpt's CPU side keeps the 12-thread limit; the GPU is not
+  limited by it.
 - Single model by hand, from the repo root: pass a `--root` for every
   placeholder that model uses (see `reference/suite.toml`), e.g.
   `python reference/python/make_reference.py --out ../timesjl-reference --solvers CPLEX,HIGHS --root times_source=../TIMES_model --root times_demo=../TIMES_Demo --model TIMES_Demo-demo12`

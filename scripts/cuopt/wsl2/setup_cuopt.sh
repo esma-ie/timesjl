@@ -7,8 +7,9 @@
 # 1. checks the GPU (cuOpt: Volta or newer, compute capability 7.0+; CUDA 13: 7.5+)
 # 2. installs Julia (juliaup) if missing
 # 3. installs the cuOpt 26.10 library (pip wheel libcuopt-mathopt-cuNN) in a venv
-# 4. writes ~/.config/timesjl/cuopt.env (LD_LIBRARY_PATH, thread limits) and
-#    sources it from ~/.bashrc
+# 4. writes ~/.config/timesjl/cuopt.env (LD_LIBRARY_PATH, CPU thread limits),
+#    sources it from ~/.bashrc, and writes ~/.config/timesjl/cuopt-nightly.conf
+#    (what the local nightly solves) unless it exists
 # 5. clones esma-ie/TIMESjl on the Linux file system (fast; /mnt/c is slow)
 # 6. instantiates scripts/cuopt and solves a small LP on the GPU
 # 7. unless --no-demo: the cuOpt layer-3 check on the demo12 CI fixture
@@ -65,7 +66,7 @@ awk -v c="$CC" -v m="$MIN_CC" 'BEGIN { exit !(c + 0 >= m + 0) }' ||
 # --- 2. Packages and Julia ----------------------------------------------------
 say "System packages"
 NEED=()
-for p in python3-venv python3-pip git curl ca-certificates; do
+for p in python3-venv python3-pip git curl ca-certificates rsync; do
   dpkg -s "$p" >/dev/null 2>&1 || NEED+=("$p")
 done
 if [ ${#NEED[@]} -gt 0 ]; then
@@ -115,6 +116,24 @@ grep -qF "$ENVFILE" "$HOME/.bashrc" 2>/dev/null || echo "$LINE" >> "$HOME/.bashr
 . "$ENVFILE"
 echo "ok (new shells load it from ~/.bashrc)"
 
+NIGHTLY_CONF="$HOME/.config/timesjl/cuopt-nightly.conf"
+if [ ! -f "$NIGHTLY_CONF" ]; then
+  cat > "$NIGHTLY_CONF" <<'CONF'
+# What the local cuOpt nightly solves (scripts/cuopt/wsl2/nightly_local.sh).
+# Edit freely; the next night picks it up. Results stay on this machine.
+REF=main                      # branch the WSL checkout is moved to before each night
+FIXTURES=demo12_off           # public CI fixtures: comma-separated, all, or empty for none
+REF_MODELS=""                 # reference runs, e.g. "OTNYC-reference OTCGEN-reference" (TIM allowed: local only)
+REF_WIN=/mnt/c/git/esma/timesjl-reference
+REF_LINUX="$HOME/timesjl-reference"
+ROOTS=""                      # "name=path ..." for reference runs whose run file was not kept
+METHODS="barrier pdlp"
+SHARES=100                    # WSL2 has no MPS, so only the full GPU here
+KEEP_NIGHTS=30
+CONF
+  echo "wrote $NIGHTLY_CONF"
+fi
+
 # --- 5. TIMESjl checkout ------------------------------------------------------------
 say "TIMESjl at $DIR ($REF)"
 if [ -d "$DIR/.git" ]; then
@@ -136,7 +155,7 @@ git -C "$DIR" log -1 --format='%h %s'
 # --- 6. Julia environment and a GPU smoke test ------------------------------------------
 say "scripts/cuopt environment"
 cd "$DIR"
-julia --project=scripts/cuopt -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
+julia --project=scripts/cuopt -e 'using Pkg; Pkg.resolve(); Pkg.instantiate(); Pkg.precompile()'
 
 say "Smoke test: a small LP on the GPU (barrier + crossover)"
 julia --project=scripts/cuopt -e '
@@ -158,22 +177,26 @@ julia --project=scripts/cuopt -e '
 mkdir -p "$OUTDIR"
 if [ "$DEMO" = 1 ]; then
   say "cuOpt layer 3 on the demo12 CI fixture"
-  julia --project=scripts/cuopt scripts/cuopt/cuopt_layer3.jl "$OUTDIR/demo12_off.json" \
-    --only demo12_off --method barrier --method pdlp --quiet || true
+  scripts/cuopt/sweep.sh --out "$OUTDIR/setup-demo12" --shares 100 -- --only demo12_off --quiet || true
 fi
 
 cat <<EOF
 
 Done. Results go to $OUTDIR. Next, from $DIR in a new shell:
 
-  # every public CI fixture (what the nightly GPU workflow runs)
-  julia --project=scripts/cuopt scripts/cuopt/cuopt_layer3.jl $OUTDIR/fixtures.json --summary $OUTDIR/fixtures.md
+  # every public CI fixture
+  scripts/cuopt/sweep.sh --out $OUTDIR/fixtures -- --only all --quiet
+
+  # the nightly, by hand (what the scheduled task runs; settings in $NIGHTLY_CONF)
+  scripts/cuopt/wsl2/nightly_local.sh
 
   # a reference run from the workstation (copy it to the Linux side first: /mnt/c is slow)
   rsync -a /mnt/c/git/esma/timesjl-reference/<model>/ ~/timesjl-reference/<model>/
   julia --project=scripts/cuopt scripts/cuopt/cuopt_layer3.jl $OUTDIR/<model>.json --ref ~/timesjl-reference <model>
 
-A cuOpt run counts as one of the four CPU-heavy runs allowed at once on the
-workstation; the Windows run slots do not see WSL. TIM's results stay on this
-machine (CLAUDE.md).
+A cuOpt run uses at most $TIMESJL_THREADS CPU threads (cuOpt's CPU side; the GPU
+is not limited) and counts as one of the four CPU-heavy runs allowed at once on
+the workstation. The scheduled nightly takes a Windows run slot for it; runs
+started by hand here do not, so keep count. TIM's results stay on this machine
+(CLAUDE.md).
 EOF
