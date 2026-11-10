@@ -15,27 +15,32 @@
     2. Updates WSL and installs the Ubuntu distribution (Ubuntu-26.04 when
        WSL offers it, else Ubuntu-24.04). A new distribution asks for a Linux
        user name and password; run this script again after that.
-    3. Writes %USERPROFILE%\.wslconfig (processors, optional memory) unless
-       one exists already.
+    3. Writes %USERPROFILE%\.wslconfig only when -Processors or -Memory is
+       given and none exists. By default WSL sees every core: the CPU limit
+       that matters is per run (cuOpt's CPU side uses TIMESJL_THREADS, 12),
+       and the GPU is never limited by either.
     4. Runs setup_cuopt.sh inside Ubuntu: Julia, the cuOpt 26.10 library,
        a TIMESjl checkout on the Linux side, a GPU smoke test and demo12.
+    5. With -RegisterNightly, registers the scheduled task that runs the
+       local nightly in WSL every night at -NightlyAt (register_nightly.ps1).
 
     Nothing of GAMS, CPLEX, VEDA or the reference runs on Windows changes.
     WSL2 is a lightweight VM: shut it down with 'wsl --shutdown'.
 
 .PARAMETER Ref
-    Branch or commit of esma-ie/TIMESjl to set up (main once the cuOpt lane
-    is merged; until then its pull-request branch).
+    Branch or commit of esma-ie/TIMESjl to set up (default main).
 #>
 [CmdletBinding()]
 param(
     [string]$Distro = 'Ubuntu-26.04',
     [string]$Fallback = 'Ubuntu-24.04',
     [ValidateSet('12', '13')][string]$Cuda = '12',
-    [int]$Processors = 12,
+    [int]$Processors = 0,          # 0: no cap (WSL's default: every core)
     [string]$Memory = '',          # e.g. '128GB'; empty: WSL's default (half of the RAM)
     [string]$Ref = 'main',
-    [switch]$NoDemo
+    [switch]$NoDemo,
+    [switch]$RegisterNightly,
+    [string]$NightlyAt = '01:17'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -86,9 +91,11 @@ $cfg = Join-Path $env:USERPROFILE '.wslconfig'
 if (Test-Path $cfg) {
     Write-Host "$cfg exists; left as it is:"
     Get-Content $cfg | ForEach-Object { Write-Host "   $_" }
+} elseif (-not $Processors -and -not $Memory) {
+    Write-Host 'none written: WSL keeps its defaults (every core, half of the RAM)'
 } else {
-    $lines = @('[wsl2]', "# TIMES.jl cuOpt lane (scripts/cuopt/wsl2/setup_wsl2.ps1): at most $Processors threads",
-               "processors=$Processors")
+    $lines = @('[wsl2]', '# TIMES.jl cuOpt lane (scripts/cuopt/wsl2/setup_wsl2.ps1)')
+    if ($Processors) { $lines += "processors=$Processors" }
     if ($Memory) { $lines += "memory=$Memory" }
     [IO.File]::WriteAllText($cfg, ($lines -join "`r`n") + "`r`n", (New-Object Text.UTF8Encoding $false))
     Write-Host "wrote $cfg; restarting WSL so it takes effect"
@@ -106,4 +113,10 @@ $shArgs = @('--cuda', $Cuda, '--ref', $Ref)
 if ($NoDemo) { $shArgs += '--no-demo' }
 & wsl.exe -d $target -- bash $linuxTmp @shArgs
 if ($LASTEXITCODE -ne 0) { throw "setup_cuopt.sh failed (exit code $LASTEXITCODE)." }
+
+# --- 5. The local nightly -------------------------------------------------------------
+if ($RegisterNightly) {
+    Say 'Scheduled task for the local nightly'
+    & (Join-Path $PSScriptRoot 'register_nightly.ps1') -Distro $target -At $NightlyAt
+}
 Say "Done. Open Ubuntu with: wsl -d $target"
