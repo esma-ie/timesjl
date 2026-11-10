@@ -62,12 +62,27 @@ struct DDOther
     line::Int
 end
 
-const DDItem = Union{DDSymbol,DDDirective,DDOther}
+"An ALIAS statement (source mode): `names[1]` is the set, the others its aliases."
+struct DDAlias
+    names::Vector{String}
+    file::String
+    line::Int
+end
+
+const DDItem = Union{DDSymbol,DDDirective,DDOther,DDAlias}
 
 # keywords that open a statement; only SET(S) and PARAMETER(S) carry data here, OPTION(S) is kept as
-# DDOther, the rest are refused (none occurs in the suite's DD and run files)
+# DDOther, the rest are refused (none occurs in the suite's DD and run files). Source mode (TIMES's own
+# declaration files, change 2) adds SCALAR(S) and ALIAS, and keeps executable statements as DDOther
+# ("EXEC") for the hand-written Julia that translates them.
 const DD_DATA_KEYWORDS = Dict("set" => :set, "sets" => :set, "parameter" => :parameter, "parameters" => :parameter)
+const DD_SOURCE_KEYWORDS = Dict("scalar" => :scalar, "scalars" => :scalar, "variable" => :variable,
+    "variables" => :variable, "equation" => :equation, "equations" => :equation)
 const DD_OTHER_KEYWORDS = Set(["option", "options"])
+# source mode: variables and equations are declared like sets (name, domain, text; kinds :variable and
+# :equation); MODEL, FILE and ACRONYM statements are skipped; any other statement is executable
+const DD_VARTYPES = Set(["positive", "negative", "free", "binary", "integer", "sos1", "sos2", "semicont", "semiint"])
+const DD_SKIP_KEYWORDS = Set(["model", "models", "file", "files", "acronym", "acronyms"])
 const DD_REFUSED_KEYWORDS = Set(["scalar", "scalars", "table", "alias", "acronym", "acronyms", "singleton",
     "variable", "variables", "positive", "negative", "free", "binary", "integer", "equation", "equations",
     "model", "models", "solve", "display", "loop", "if", "while", "for", "repeat", "abort", "file", "files",
@@ -78,8 +93,9 @@ mutable struct DDCursor
     i::Int          # next byte
     line::Int       # line of byte i
     file::String
+    source::Bool    # TIMES source files: ranges, (a,b) lists, SET.x, SCALAR, ALIAS, executable statements
 end
-DDCursor(s::AbstractString, file) = DDCursor(Vector{UInt8}(codeunits(String(s))), 1, 1, String(file))
+DDCursor(s::AbstractString, file, source=false) = DDCursor(Vector{UInt8}(codeunits(String(s))), 1, 1, String(file), source)
 
 @inline ddpeek(c::DDCursor, k=0) = c.i + k <= length(c.b) ? c.b[c.i+k] : 0x00
 @inline ddeof(c::DDCursor) = c.i > length(c.b)
@@ -189,17 +205,63 @@ function ddlabel!(c::DDCursor)
     String(c.b[a:c.i-1])
 end
 
-# a key: labels joined by '.', no blanks between them; `(a,b)` lists and `*` ranges are refused
-function ddkey!(c::DDCursor)
-    ddpeek(c) == UInt8('(') && ddfail(c, "a parenthesised label list is outside the syntax TIMES.jl reads")
-    labels = String[ddlabel!(c)]
-    while ddpeek(c) == UInt8('.')
+# A key: labels joined by '.', no blanks between them. In DD files that is all; in source mode a
+# position may also be a range `a*b` or a parenthesised list of (dotted) alternatives, `DEM.(1.NRG,
+# 2.MAT)`, and the key stands for every combination, in the order written (GAMS manual, "Data Entry:
+# Sets": the label list with parentheses and the range operator).
+function ddkeys!(c::DDCursor)::Vector{Vector{String}}
+    keys = [String[]]
+    while true
+        seg = ddsegment!(c)
+        keys = [vcat(k, s) for k in keys for s in seg]
+        if c.source && ddpeek(c) in DD_BLANK
+            # source mode: blanks before the dot (eqbndcst.mod L22, `INVALL   .(INV.COST, ...)`), when a
+            # label or a list follows it (not a value such as .5)
+            j = c.i
+            while j <= length(c.b) && c.b[j] in DD_BLANK
+                j += 1
+            end
+            if j < length(c.b) && c.b[j] == UInt8('.') && (c.b[j+1] == UInt8('(') || (ddidentchar(c.b[j+1]) && !(UInt8('0') <= c.b[j+1] <= UInt8('9'))))
+                c.i = j
+            end
+        end
+        ddpeek(c) == UInt8('.') || return keys
         c.i += 1
-        ddpeek(c) == UInt8('(') && ddfail(c, "a parenthesised label list is outside the syntax TIMES.jl reads")
-        push!(labels, ddlabel!(c))
+        c.source && ddskip!(c; newlines=false)
     end
-    ddpeek(c) == UInt8('*') && ddfail(c, "a label range (*) is outside the syntax TIMES.jl reads")
-    labels
+end
+
+function ddsegment!(c::DDCursor)::Vector{Vector{String}}
+    if ddpeek(c) == UInt8('(')
+        c.source || ddfail(c, "a parenthesised label list is outside the syntax TIMES.jl reads")
+        c.i += 1
+        alts = Vector{String}[]
+        while true
+            ddskip!(c)
+            append!(alts, ddkeys!(c))
+            ddskip!(c)
+            ch = ddpeek(c)
+            c.i += 1
+            ch == UInt8(')') && return alts
+            ch == UInt8(',') || ddfail(c, "expected ',' or ')' in a label list")
+        end
+    end
+    lab = ddlabel!(c)
+    ddpeek(c) == UInt8('*') || return [[lab]]
+    c.source || ddfail(c, "a label range (*) is outside the syntax TIMES.jl reads")
+    c.i += 1
+    [[x] for x in ddrange(c, lab, ddlabel!(c))]
+end
+
+# the labels of a range a*b: the same prefix and increasing numbers (1*200, 0*100, 1960*2200);
+# a number keeps its width when it has leading zeros (GAMS: t01*t12)
+function ddrange(c::DDCursor, a::String, b::String)
+    ma, mb = match(r"^(.*?)(\d+)$", a), match(r"^(.*?)(\d+)$", b)
+    (ma === nothing || mb === nothing || ma[1] != mb[1]) && ddfail(c, "not a range: $a*$b")
+    lo, hi = parse(Int, ma[2]), parse(Int, mb[2])
+    lo <= hi || ddfail(c, "a decreasing range: $a*$b")
+    w = length(ma[2]) == length(mb[2]) && startswith(ma[2], "0") && length(ma[2]) > 1 ? length(ma[2]) : 0
+    [ma[1] * (w > 0 ? lpad(string(n), w, '0') : string(n)) for n in lo:hi]
 end
 
 const DD_SPECIAL = Dict("eps" => (:eps, 0.0), "inf" => (:inf, Inf), "+inf" => (:inf, Inf), "-inf" => (:minf, -Inf),
@@ -236,6 +298,9 @@ function ddscalar(c::DDCursor)
     a > length(c.b) || c.b[a] in (UInt8('\n'), UInt8(','), UInt8('/'))
 end
 
+# `SET.` followed by a name, at the cursor (any case)
+ddsetref(c::DDCursor) = c.i + 4 <= length(c.b) && lowercase(String(c.b[c.i:c.i+3])) == "set." && ddidentchar(c.b[c.i+4])
+
 # element text after a set record's key: quoted, or unquoted up to a comma, a '/' or the end of the line
 function ddtext!(c::DDCursor)
     ddskip!(c; newlines=false)
@@ -265,18 +330,28 @@ function dddata!(c::DDCursor, kind::Symbol)
             continue
         end
         line = c.line
-        if kind === :parameter && ddscalar(c)
-            # a scalar parameter's list holds only its value (G_DYEAR / 2005 /): no key
+        if kind !== :set && ddscalar(c)
+            # a scalar's list holds only its value (G_DYEAR / 2005 /): no key
             v, sp = ddvalue!(c)
             push!(recs, DDRecord(String[], v, sp, "", line))
-        elseif kind === :parameter
-            labels = ddkey!(c)
+        elseif kind !== :set
+            keys = ddkeys!(c)
             ddskip!(c; newlines=false)
             v, sp = ddvalue!(c)
-            push!(recs, DDRecord(labels, v, sp, "", line))
+            for k in keys
+                push!(recs, DDRecord(k, v, sp, "", line))
+            end
+        elseif c.source && ddsetref(c)
+            # SET.name in a set's list: every member of that set (EOHYEAR / SET.BOHYEAR, EOH /);
+            # expanded when the data is applied, from the set as it stands then
+            c.i += 4
+            push!(recs, DDRecord([ddident!(c)], NaN, :setref, "", line))
         else
-            labels = ddkey!(c)
-            push!(recs, DDRecord(labels, NaN, :none, ddtext!(c), line))
+            keys = ddkeys!(c)
+            text = ddtext!(c)
+            for k in keys
+                push!(recs, DDRecord(k, NaN, :none, text, line))
+            end
         end
         ddskip!(c; newlines=false)
         ch = ddpeek(c)
@@ -320,6 +395,39 @@ function ddsymbol!(c::DDCursor, kind::Symbol)
     DDSymbol(kind, name, domain, text, true, dddata!(c, kind), c.file, line)
 end
 
+# the rest of a statement up to its ';' (quotes respected; newlines kept), consuming the ';'
+function ddtosemicolon!(c::DDCursor)
+    a = c.i
+    q = 0x00
+    depth = 0       # IF(x, a; b) is one statement: a ';' inside parentheses does not end it
+    while !ddeof(c)
+        ch = ddpeek(c)
+        if ddbol(c) && ch == UInt8('*')
+            # a comment line inside the statement (a LOOP that spans an include: timslice.mod L35)
+            ddskipline!(c)
+            continue
+        elseif ch == UInt8('\n')
+            q = 0x00        # a quoted string ends with its line
+        end
+        if q != 0x00
+            ch == q && (q = 0x00)
+        elseif ch == UInt8('\'') || ch == UInt8('"')
+            q = ch
+        elseif ch == UInt8('(')
+            depth += 1
+        elseif ch == UInt8(')')
+            depth -= 1
+        elseif ch == UInt8(';') && depth <= 0
+            s = String(c.b[a:c.i-1])
+            c.i += 1
+            return s
+        end
+        ch == UInt8('\n') && (c.line += 1)
+        c.i += 1
+    end
+    nothing     # the end of the text came first: the statement goes on after it (see `rest` in parse_dd)
+end
+
 """
     parse_dd(text; file="<string>") -> Vector{DDItem}
     parse_dd_file(path) -> Vector{DDItem}
@@ -328,9 +436,23 @@ Read a TIMES DD or run file into its statements, in file order: `DDSymbol` (one 
 or PARAMETER statement), `DDDirective` (a dollar-control line) and `DDOther` (an OPTION statement).
 A statement ends at its `;`, at the next keyword (GAMS lets Veda's DD files leave the `;` out) or
 at the end of the file. Syntax outside the subset of docs/m14-plan.md throws a `DDSyntaxError`.
+
+`source=true` reads TIMES's own declaration files (initsys.mod, initmty.mod and their includes; M1.4
+change 2) after their `%name%` switches are substituted: it adds SCALAR(S) statements, ALIAS
+(`DDAlias`), ranges `a*b`, parenthesised label lists, `SET.name` in a set's list (a `:setref`
+record), and keeps executable statements whole as `DDOther("EXEC", ...)`.
 """
-function parse_dd(text::AbstractString; file::AbstractString="<string>")
-    c = DDCursor(text, file)
+function parse_dd(text::AbstractString; file::AbstractString="<string>", source::Bool=false, firstline::Int=1,
+                  rest::Union{Nothing,Base.RefValue{Tuple{String,Int}}}=nothing)
+    c = DDCursor(text, file, source)
+    c.line = firstline
+    # a statement still open at the end of the text: handed back in `rest` (text, first line) when
+    # asked for (a statement of TIMES code that goes on after a dollar line), an error otherwise
+    function unfinished(st, stline)
+        rest === nothing && throw(DDSyntaxError(c.file, stline, "statement without ';'"))
+        rest[] = (String(c.b[st:end]), stline)
+        items
+    end
     # a UTF-8 byte-order mark is not part of the text
     length(c.b) >= 3 && c.b[1:3] == [0xef, 0xbb, 0xbf] && (c.i = 4)
     items = DDItem[]
@@ -348,13 +470,28 @@ function parse_dd(text::AbstractString; file::AbstractString="<string>")
         end
         ddidentchar(ch) || ddfail(c, "expected a statement, found $(repr(Char(ch)))")
         line = c.line
+        st = c.i
         word = ddident!(c)
         kw = lowercase(word)
-        if haskey(DD_DATA_KEYWORDS, kw)
-            kind = DD_DATA_KEYWORDS[kw]
+        if c.source && kw in DD_VARTYPES
+            # POSITIVE VARIABLE(S) ...: the type word, then the keyword
+            ddskip!(c)
+            nxt = lowercase(ddident!(c))
+            nxt in ("variable", "variables") || ddfail(c, "expected VARIABLE after $word")
+            kw = "variable"
+        end
+        if haskey(DD_DATA_KEYWORDS, kw) || (c.source && haskey(DD_SOURCE_KEYWORDS, kw))
+            kind = haskey(DD_DATA_KEYWORDS, kw) ? DD_DATA_KEYWORDS[kw] : DD_SOURCE_KEYWORDS[kw]
+            word = uppercase(kw)
+            n0 = length(items)
             while true
                 ddskip!(c) && break                      # a dollar line ends the statement
-                ddeof(c) && break
+                if ddeof(c)
+                    # TIMES code: GAMS reads a declaration on past the dollar lines between its parts
+                    # (eqdeclr.mod's EQUATIONS statement), so it waits for the next block too
+                    c.source && rest !== nothing && (resize!(items, n0); return unfinished(st, line))
+                    break
+                end
                 ch = ddpeek(c)
                 ch == UInt8(';') && (c.i += 1; break)
                 ch == UInt8(',') && (c.i += 1; continue)
@@ -363,7 +500,8 @@ function parse_dd(text::AbstractString; file::AbstractString="<string>")
                 a, l = c.i, c.line
                 nxt = lowercase(ddident!(c))
                 c.i, c.line = a, l
-                (haskey(DD_DATA_KEYWORDS, nxt) || nxt in DD_OTHER_KEYWORDS || nxt in DD_REFUSED_KEYWORDS) && break
+                (haskey(DD_DATA_KEYWORDS, nxt) || nxt in DD_OTHER_KEYWORDS || nxt in DD_REFUSED_KEYWORDS ||
+                 (c.source && nxt in DD_VARTYPES)) && break
                 push!(items, ddsymbol!(c, kind))
             end
         elseif kw in DD_OTHER_KEYWORDS
@@ -372,9 +510,36 @@ function parse_dd(text::AbstractString; file::AbstractString="<string>")
                 ddpeek(c) == UInt8('\n') && (c.line += 1)
                 c.i += 1
             end
-            ddeof(c) && ddfail(c, "$word statement without ';'")
+            ddeof(c) && return unfinished(st, line)
             push!(items, DDOther(word, String(strip(String(c.b[a:c.i-1]))), c.file, line))
             c.i += 1
+        elseif c.source && kw in DD_SKIP_KEYWORDS
+            # MODEL, FILE, ACRONYM: no data TIMES.jl keeps
+            s = ddtosemicolon!(c)
+            s === nothing && return unfinished(st, line)
+            push!(items, DDOther(uppercase(word), s, c.file, line))
+        elseif c.source && kw == "alias"
+            # ALIAS(a,b,c) or ALIAS (a,b): the set and its aliases
+            ddskip!(c; newlines=false)
+            ddpeek(c) == UInt8('(') || ddfail(c, "expected '(' after ALIAS")
+            c.i += 1
+            names = String[]
+            while true
+                ddskip!(c)
+                push!(names, ddpeek(c) == UInt8('*') ? (c.i += 1; "*") : ddident!(c))
+                ddskip!(c)
+                ch = ddpeek(c)
+                c.i += 1
+                ch == UInt8(')') && break
+                ch == UInt8(',') || ddfail(c, "expected ',' or ')' in ALIAS")
+            end
+            push!(items, DDAlias(names, c.file, line))
+        elseif c.source && kw != "table"
+            # an executable statement (an assignment, IF, LOOP, ABORT, PUT, ...): kept whole, up to its
+            # ';', for the hand-written Julia that translates it (keyed by file and line)
+            s = ddtosemicolon!(c)
+            s === nothing && return unfinished(st, line)
+            push!(items, DDOther("EXEC", word * s, c.file, line))
         elseif kw in DD_REFUSED_KEYWORDS
             throw(DDSyntaxError(c.file, line, "a $(uppercase(word)) statement is outside the syntax TIMES.jl reads"))
         else
@@ -383,7 +548,7 @@ function parse_dd(text::AbstractString; file::AbstractString="<string>")
     end
 end
 
-parse_dd_file(path::AbstractString) = parse_dd(read(path, String); file=path)
+parse_dd_file(path::AbstractString; source::Bool=false) = parse_dd(read(path, String); file=path, source)
 
 """
     LabelTable()

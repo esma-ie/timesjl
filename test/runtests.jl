@@ -16,6 +16,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "M1.4: DD and run-file parser" begin
         include("unit/test_ddparse.jl")
     end
+    @testset "M1.4: GAMS compile phase to maindrv.mod" begin
+        include("unit/test_ddcompile.jl")
+    end
     @testset "Reference: layer 1 comparison" begin
         include("unit/test_compare.jl")
     end
