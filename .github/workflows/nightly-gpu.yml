@@ -1,25 +1,36 @@
 name: Nightly GPU (cuOpt)
 
 # Layer 3 with NVIDIA cuOpt on a GitHub GPU runner (scripts/cuopt/README.md):
-# the public CI fixtures, solved by cuOpt (barrier and PDLP, each with
-# crossover) and checked against the GAMS optima at 1e-6.
+# public CI fixtures solved by cuOpt (barrier and PDLP, each with crossover)
+# and checked against the GAMS optima at 1e-6, at one or more shares of the
+# GPU (scripts/cuopt/sweep.sh: NVIDIA MPS caps a run to 25% or 50% of the
+# GPU's threads; one level at a time).
 #
 # Informational: pull requests do not trigger it and it is not a required
-# check. Off until the repository variable CUOPT_NIGHTLY is "true". It runs on
-# the GPU larger runner named by the variable GPU_RUNNER (default gpu-t4: Linux,
-# 4 vCPU, Tesla T4 16 GB, NVIDIA GPU-optimised image). Larger runners are billed
-# per minute, also on public repositories.
+# check. On since 10 Nov 2026 (James); set the repository variable
+# CUOPT_NIGHTLY to "false" to switch it off. It runs on the GPU larger runner
+# named by the variable GPU_RUNNER (default gpu-t4: Linux, 4 vCPU, Tesla T4
+# 16 GB, NVIDIA GPU-optimised image). Larger runners are billed per minute,
+# also on public repositories.
+#
+# What it runs: the workflow inputs (manual runs), else the repository
+# variables CUOPT_FIXTURES, CUOPT_GPU_SHARES and CUOPT_METHODS, else
+# demo12_off at 25, 50 and 100% with barrier and PDLP. CUOPT_FIXTURES=all
+# runs every public fixture with a GAMS optimum.
 
 on:
   schedule:
     - cron: '17 2 * * *'   # 02:17 UTC every night
   workflow_dispatch:
     inputs:
-      methods:
-        description: 'cuOpt methods, space-separated: barrier, pdlp, dual_simplex'
-        default: 'barrier pdlp'
       only:
-        description: 'Fixture prefixes, comma-separated (empty: every fixture with a GAMS optimum)'
+        description: 'Fixtures, comma-separated, or all (empty: variable CUOPT_FIXTURES, else demo12_off)'
+        default: ''
+      shares:
+        description: 'GPU shares in percent, space-separated (empty: variable CUOPT_GPU_SHARES, else 25 50 100)'
+        default: ''
+      methods:
+        description: 'cuOpt methods, space-separated: barrier, pdlp, dual_simplex (empty: variable CUOPT_METHODS, else barrier pdlp)'
         default: ''
       cuda:
         description: 'CUDA major version of the cuOpt wheel'
@@ -37,17 +48,22 @@ concurrency:
 jobs:
   cuopt:
     name: cuOpt layer 3 (GPU)
-    if: github.repository == 'esma-ie/TIMESjl' && vars.CUOPT_NIGHTLY == 'true'
+    if: github.repository == 'esma-ie/TIMESjl' && vars.CUOPT_NIGHTLY != 'false'
     runs-on: ${{ vars.GPU_RUNNER || 'gpu-t4' }}
-    timeout-minutes: 90
+    timeout-minutes: 180
     env:
       CUOPT_WHEEL: libcuopt-mathopt-cu${{ inputs.cuda || '12' }}==26.10.*   # cuOpt.jl 0.5.0 loads only 26.10
       TIMESJL_THREADS: '4'                                                   # the runner's vCPUs
+      FIXTURES: ${{ inputs.only || vars.CUOPT_FIXTURES || 'demo12_off' }}
+      SHARES: ${{ inputs.shares || vars.CUOPT_GPU_SHARES || '25 50 100' }}
+      METHODS: ${{ inputs.methods || vars.CUOPT_METHODS || 'barrier pdlp' }}
     steps:
       - uses: actions/checkout@v4
 
       - name: GPU
-        run: nvidia-smi
+        run: |
+          nvidia-smi
+          command -v nvidia-cuda-mps-control || echo "no nvidia-cuda-mps-control: levels below 100% will be skipped"
 
       - uses: actions/setup-python@v5
         with:
@@ -68,26 +84,21 @@ jobs:
       - name: Instantiate scripts/cuopt
         run: julia --project=scripts/cuopt -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
 
-      - name: cuOpt layer 3 on the public fixtures
-        env:
-          METHODS: ${{ inputs.methods || 'barrier pdlp' }}
-          ONLY: ${{ inputs.only }}
+      - name: cuOpt layer 3 at each GPU share
         run: |
-          args=(cuopt.json --summary cuopt.md --quiet)
+          echo "fixtures: $FIXTURES; GPU shares: $SHARES; methods: $METHODS"
+          args=(--only "$FIXTURES" --quiet)
           for m in $METHODS; do args+=(--method "$m"); done
-          if [ -n "$ONLY" ]; then args+=(--only "$ONLY"); fi
-          julia --project=scripts/cuopt scripts/cuopt/cuopt_layer3.jl "${args[@]}"
+          scripts/cuopt/sweep.sh --out cuopt --shares "$SHARES" -- "${args[@]}"
 
       - name: Job summary
         if: always()
-        run: if [ -f cuopt.md ]; then cat cuopt.md >> "$GITHUB_STEP_SUMMARY"; fi
+        run: if [ -f cuopt/sweep.md ]; then cat cuopt/sweep.md >> "$GITHUB_STEP_SUMMARY"; fi
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: cuopt-layer3-${{ github.run_id }}
-          path: |
-            cuopt.json
-            cuopt.md
+          path: cuopt/
           retention-days: 30
           if-no-files-found: ignore
