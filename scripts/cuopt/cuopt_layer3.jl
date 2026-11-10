@@ -9,7 +9,7 @@
 # whose matrix differs from GAMS's is reported as skipped, so a cuOpt result
 # is never read against a translation error.
 #
-#   julia --project=scripts/cuopt scripts/cuopt/cuopt_layer3.jl <out.json> [--fixtures] [--only p1,p2]
+#   julia --project=scripts/cuopt scripts/cuopt/cuopt_layer3.jl <out.json> [--fixtures] [--only p1,p2 | all]
 #   julia --project=scripts/cuopt scripts/cuopt/cuopt_layer3.jl <out.json> --ref <dir> [--root name=path ...] <model> ...
 #
 # Options:
@@ -23,7 +23,12 @@
 #   --quiet          no cuOpt log
 #
 # Barrier and PDLP run with crossover, so the point compared is a vertex.
-# Threads follow the local run limits (CLAUDE.md): TIMESJL_THREADS, default 12.
+# CPU threads follow the local run limits (CLAUDE.md): TIMESJL_THREADS, default 12.
+# They bound cuOpt's CPU-side work only (presolve, the host side of barrier's
+# factorisation, crossover); the GPU is never limited by them. A share of the
+# GPU is set from outside the process by scripts/cuopt/sweep.sh (NVIDIA MPS),
+# which passes it here in TIMESJL_GPU_SHARE (percent) and TIMESJL_MPS (on/off)
+# for the report.
 #
 # Writes check results only (counts, statuses, objectives, timings), in the
 # record shape of scripts/parity_report.jl. A run of a model that is not
@@ -256,7 +261,8 @@ secs(x) = x isa Real && isfinite(x) ? string(round(x; digits=1)) : "–"
 function write_summary(io, out)
     m = out["meta"]
     println(io, "## cuOpt layer 3\n")
-    println(io, "cuOpt ", m["cuopt_version"], " on ", m["gpu"], "; commit `", m["commit"], "`, Julia ", m["julia"], ", ",
+    println(io, "cuOpt ", m["cuopt_version"], " on ", m["gpu"], " (GPU share ", m["gpu_share"], "%, MPS ", m["mps"],
+            "; ", m["threads"], " CPU threads); commit `", m["commit"], "`, Julia ", m["julia"], ", ",
             m["date"], " UTC. Methods: ", join(label.(m["methods"]), ", "), "; gating: ",
             isempty(m["gate"]) ? "none" : join(m["gate"], ", "), ". Pass = objective within 1e-6 of GAMS's and ",
             "cuOpt's optimum feasible in GAMS's matrix (1e-6).\n")
@@ -300,7 +306,7 @@ function parse_args(args)
         elseif a == "--summary"
             summary = val(); i += 2
         elseif a == "--only"
-            only = Set(split(val(), ",")); i += 2
+            o = val(); only = o == "all" ? nothing : Set(split(o, ",")); i += 2
         elseif a == "--quiet"
             kw[:quiet] = true; i += 1
         else
@@ -324,6 +330,8 @@ function cuopt_main(args)
                                                       "cuopt_version" => version, "gpu" => gpu_info(),
                                                       "methods" => s.methods, "gate" => sort!(collect(s.gate)),
                                                       "pdlp_tol" => s.pdlp_tol, "time_limit" => s.time_limit,
+                                                      "gpu_share" => parse(Int, get(ENV, "TIMESJL_GPU_SHARE", "100")),
+                                                      "mps" => get(ENV, "TIMESJL_MPS", "off"),
                                                       "parameters" => Dict(m => cuopt_parameters(m, s) for m in s.methods)),
                            "runs" => Any[], "checks" => Any[])
     println("cuOpt ", version, " on ", out["meta"]["gpu"])
