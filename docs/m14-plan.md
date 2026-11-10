@@ -129,7 +129,7 @@ runs the chain from DD files on demo12 and the crafted cases.
 | 2-4 | `src/dd/compile.jl`: the compile phase to maindrv.mod | done for the open core models (draft PR) |
 | 2b | the compile phase of maindrv.mod and its includes: declarations and compile-time data | done for the open core models (9 Nov, draft PR #86) |
 | 2c | the TIMES source as a Julia Artifact (approved by James, 10 Nov 2026) | done (10 Nov): `Artifacts.toml`, `times_source()`; CI compiles demo12 from its DD files |
-| 5 | scale, wiring, `m13_gate.jl --from dd` | as planned |
+| 5 | scale, wiring, `m13_gate.jl --from-dd` | done (10 Nov): `write_dump`; the chain, the matrix and the HiGHS solve from DD files with no GAMS state; CI on demo12; nightly on the open models |
 
 ### Change 2b, 9 Nov 2026 (late evening)
 
@@ -147,6 +147,30 @@ finds:
 The compile takes 1 s (demo12) to 8 s (OTUS9r). The GAMS rules this needed are G55 to G58 and the
 addition to G35. Next: the TIMES source as an Artifact (2c, James's decision), then change 5: a
 `DumpData` from the compile, and `m13_gate.jl` from DD files.
+
+### Change 5, 10 Nov 2026
+
+`write_dump` (`src/dd/writedump.jl`) writes the compile as the harness's dump format, so everything
+that reads `input/` runs from DD files. `scripts/m13_gate.jl --from-dd <timesjl-sources> [--solve]`:
+
+1. compiles the run's own run file and DD files, writes the dump and compares it with GAMS's
+   `input/` (every set and parameter at 1e-9, the label list);
+2. runs the chain on TIMES.jl's state alone: no checkpoint dump is read into it, unlike the M1.3
+   gate's carry, so a step that TIMES.jl does not do exactly would show at the next checkpoint;
+3. generates the model and compares it with GAMS's CONVERT matrix (layer 2);
+4. with `--solve`, solves it with HiGHS and compares the objective with GAMS/CPLEX's (layer 3).
+
+CI does the same on demo12 (`test/unit/test_m13_chain.jl`), and `run_overnight.ps1` on the open
+core models. Variables and equations are written without their type (K2, proposed).
+
+The first run without carry found a bug that the M1.3 gate's carry had hidden. `gset` read an alias
+(`PYR`, `ALIAS(PASTYEAR,PYR)`) as its target's records in the dump and cached them, so after
+TIMES.jl had computed `PASTYEAR` (one more year by prelv), `PYR` was stale. With carry the dump was
+the last checkpoint's, which had the new `PASTYEAR`; from DD files it is the input dump. Under
+REDUCE YES (`as_run`), pp_reduce.red L25 (`PRC_CAP` of a process with past investments) then
+missed processes. TIMES-NZ, OTCGEN and OTUS9r showed it from ppm on, though HiGHS still found
+GAMS's objective. Fixed: an alias is now its target as TIMES.jl holds it (`gset`,
+`src/model/gams_data.jl`), with a unit test.
 
 ## Open questions (flag, do not guess)
 

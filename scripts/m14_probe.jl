@@ -16,12 +16,7 @@ using TIMES
 using TIMES: compile_run, grecords, gdx_uels, gdx_symbols
 using TIMES.Reference: load_dump, read_symbol, SV_EPS
 
-const REFGAMS = joinpath(@__DIR__, "..", "reference", "gams")      # the harness's .tjlref files
-const MODEL_DIRS = Dict(
-    "TIMES_Demo-demo12" => "TIMES_Demo/model",
-    "TIMES-NZ-steady-v308" => "TIMES-NZ/dd/steady-v308", "TIMES-NZ-shift-v308" => "TIMES-NZ/dd/shift-v308",
-    "OTCGEN-gc_ref" => "OTCGEN/dd/gc_ref", "OTNYC-s1_nyc_ref" => "OTNYC/dd/s1_nyc_ref",
-    "OTUS9r-reference" => "OTUS9r/dd/reference", "OTUS9r-tax1_wo_mou" => "OTUS9r/dd/tax1_wo_mou")
+include(joinpath(@__DIR__, "m14_models.jl"))      # REFGAMS, MODEL_DIRS, dd_model_dir
 
 # GAMS's Include File Summary (level, file name), less the run file and the harness's .tjlref files
 function gams_includes(lst)
@@ -43,7 +38,7 @@ function probe(ref, sources, model, variant; full=true)
     isfile(run) && isdir(joinpath(dir, "input")) || return println("== $model/$variant: no input dump, skipped")
     g = nothing
     t = @elapsed try
-        g = compile_run(run; dirs=[joinpath(sources, MODEL_DIRS[model]), REFGAMS], full,
+        g = compile_run(run; dirs=[dd_model_dir(sources, model), REFGAMS], full,
                         globals=Dict("RUN_NAME" => model))     # the harness's --run_name
     catch e
         return println("== $model/$variant: compile stops: ", sprint(showerror, e))
@@ -109,8 +104,7 @@ function main(args)
     full = !("--pre" in args)
     models = [a for (j, a) in enumerate(args) if j > 1 && j != i && j != i + 1 && a != "--pre"]
     for m in models
-        (startswith(m, "TIM-") || startswith(m, "JRC")) && error("open models only (CLAUDE.md): $m")
-        haskey(MODEL_DIRS, m) || error("unknown model $m")
+        dd_model_dir(sources, m)               # open models only
         for v in ("reduce_off", "as_run")
             probe(ref, sources, m, v; full)
         end

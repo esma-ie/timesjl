@@ -100,3 +100,47 @@ chain_symbols(d; qa=true) = sort([i.name for i in values(d.dump.symbols) if i.ki
         @test isapprox(JuMP.objective_value(tm.model), gobj; rtol=1e-6)
     end
 end
+
+# M1.4 change 5: the same run with no GAMS state at all. The input is compiled from demo12's own run
+# and DD files (the pinned TIMES_Demo and TIMES sources, test_ddsource.jl) and written as a dump;
+# TIMES.jl's state then goes on alone through every segment (no checkpoint dump is read into it) to
+# the model, which is compared with GAMS's matrix and objective (scripts/m13_gate.jl --from-dd).
+using TIMES: compile_run, write_dump, times_demo_dir, qa_warnings!
+using TIMES.Reference: load_dump, compare_dumps
+
+@testset "M1.4: DD files -> input -> pre-solve -> model, TIMES_Demo demo12, no GAMS state" begin
+    fx = only(filter(f -> f["prefix"] == "demo12_off", TOML.parsefile(joinpath(FIXTURES, "public_fixtures.toml"))["fixture"]))
+    g = compile_run(joinpath(FIXTURES, "demo12_off_run", "tjl_presolve.run");
+                    dirs=[times_demo_dir(), joinpath(@__DIR__, "..", "..", "reference", "gams")],
+                    globals=Dict("RUN_NAME" => "TIMES_Demo-demo12"))
+    dir = write_dump(g, mktempdir(); source="demo12 reduce_off, compiled from its DD files")
+    r = compare_dumps(load_dump(dir), load_dump(joinpath(FIXTURES, "demo12_off_input")))
+    @test length(r.symbols) > 800 && all(ispass, r.symbols) && isempty(r.only_left) && isempty(r.only_right)
+    @test load_dump(dir).uels == load_dump(joinpath(FIXTURES, "demo12_off_input")).uels
+    tm = TimesModel(dir; switches=fx["switches"])
+    qa_warnings!(tm, g.warnings)
+    names = chain_symbols(tm.data)
+    for (a, b, steps) in M13_CHAIN
+        foreach(f -> f(tm), steps)
+    end
+    coef_cpt!(tm); coef_nio!(tm); coef_ptr!(tm); coef_obj!(tm); coef_alt!(tm); coef_shp!(tm); coef_ext!(tm)
+    foreach(f -> f(tm), M13_COEF_PRESOLVE)
+    ref = DumpData(joinpath(FIXTURES, "demo12_off_presolve"))
+    r = layer1(tm, ref, filter(n -> haskey(ref.dump.symbols, n) && n != "TJL_SOLVEINFO", names))
+    foreach(d -> ispass(d) || println("DD files -> presolve: ", d, " ", d.examples), r)
+    @test length(r) > 800 && all(ispass, r)
+    qok, note = qa_compare(qa_text(tm), read(joinpath(FIXTURES, "demo12_off_qa_check.log"), String); complete=true)
+    qok || println("QA log: ", note)
+    @test qok
+    generate!(tm)
+    cmp = compare_lp(canonical_from_jump(tm.model), canonical_from_dump(joinpath(FIXTURES, "demo12_off_matrix", "matrix"),
+                                                                        joinpath(FIXTURES, "demo12_off_matrix", "dictmap")))
+    ispass(cmp) || foreach(println, cmp.examples)
+    @test ispass(cmp)
+    JuMP.set_optimizer(tm.model, HiGHS.Optimizer); JuMP.set_silent(tm.model)
+    JuMP.optimize!(tm.model)
+    @test JuMP.termination_status(tm.model) == JuMP.OPTIMAL
+    for (_, gobj) in JSON.parsefile(joinpath(FIXTURES, "demo12_off_solution.json"))["objval"]
+        @test isapprox(JuMP.objective_value(tm.model), gobj; rtol=1e-6)
+    end
+end
