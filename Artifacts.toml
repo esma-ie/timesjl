@@ -1,0 +1,22 @@
+# Pinned downloads (Julia Artifacts), fetched on first use and checked by hash (M1.4 change 2c).
+# git-tree-sha1: Tar.tree_hash of the GitHub archive; sha256: of the .tar.gz.
+
+# The TIMES v4.9.7 source TIMES.jl translates (GPL-3.0; etsap-TIMES/TIMES_model @ d9a6a25).
+# The DD reader compiles TIMES's own files from it (src/dd/sources.jl).
+[TIMES_model]
+git-tree-sha1 = "ec377a9871f8b9cf214f07b9b6f9d38d46552949"
+lazy = true
+
+    [[TIMES_model.download]]
+    url = "https://github.com/etsap-TIMES/TIMES_model/archive/d9a6a25ad25ca080202a53d694de816ac3f7324e.tar.gz"
+    sha256 = "fc7f904d41dc2575f5140b89188ef960ec2b3d90863de62c2210b02171c52461"
+
+# TIMES_Demo (CC BY 4.0; etsap-TIMES/TIMES_Demo @ 962db86), the open demo models. CI compiles
+# demo12 from its DD files (test/unit/test_ddsource.jl).
+[TIMES_Demo]
+git-tree-sha1 = "b06e71621ee435a4193bdcffe350aa1e93c18e2e"
+lazy = true
+
+    [[TIMES_Demo.download]]
+    url = "https://github.com/etsap-TIMES/TIMES_Demo/archive/962db8603aa00850b8581e6374b4f0559c47dd52.tar.gz"
+    sha256 = "b7fabab834a397f9dd2868879e64f561853c01f8fd4cae6281f06011877b08f8"

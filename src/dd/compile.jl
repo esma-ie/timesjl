@@ -275,7 +275,8 @@ function gstatements!(g::GamsCompile, text::AbstractString, file, firstline; sou
         elseif it isa DDAlias
             galias!(g, it.names, it.file, it.line)
         elseif it isa DDOther
-            gnoterefs!(g, it.text)
+            # a MODEL statement does not count as naming its equations (G57)
+            it.keyword in ("MODEL", "MODELS") || gnoterefs!(g, it.text)
             # executable statements before maindrv.mod run after compilation (INIT_EXEC); those after it
             # run after the input checkpoint, in TIMES.jl's own translation (M1.1-M1.3), so are skipped
             it.keyword == "EXEC" && !g.later && push!(g.exec, (basename(it.file), it.line, it.text))
@@ -294,6 +295,14 @@ function gfind(g::GamsCompile, name::AbstractString, from::AbstractString)
     for d in [dirname(from); g.dirs], n in names
         p = joinpath(d, n)
         isfile(p) && return p
+    end
+    # GAMS on Windows, where the references run, finds a file whatever the case of its name; so does
+    # the reader on any system, so a run file written on Windows compiles on Linux (M1.4 change 2c)
+    for d in [dirname(from); g.dirs], n in names
+        dir = joinpath(d, dirname(n))
+        isdir(dir) || continue
+        m = findfirst(f -> lowercase(f) == lowercase(basename(n)), readdir(dir))
+        m === nothing || return joinpath(dir, readdir(dir)[m])
     end
     nothing
 end
@@ -756,12 +765,15 @@ gnoterefs!(g::GamsCompile, text::AbstractString) =
 """
     gdx_symbols(g) -> Vector{GSym}
 
-The symbols `execute_unload` writes, in declaration order: every set, parameter and alias, and the
-variables and equations that compiled code refers to. GAMS leaves out a variable that nothing refers
-to (VAS_EXPOBJ, referred to only after eqobj.mod's `\$EXIT`; checked with GAMS 54.6.1, G57).
+The symbols `execute_unload` writes, in declaration order: every set, parameter and alias, every
+variable and equation with a domain, and the scalar variables and equations that compiled code
+refers to. GAMS leaves out a scalar variable or equation that no compiled statement names (VAS_EXPOBJ,
+named only after eqobj.mod's `\$EXIT`); a MODEL statement does not count (G57, checked with
+GAMS 54.6.1 on 9 and 10 Nov 2026).
 """
-gdx_symbols(g::GamsCompile) = sort!([s for s in values(g.syms) if !(s.kind in (:variable, :equation)) || uppercase(s.name) in g.refs];
-    by=x -> x.order)
+gdx_symbols(g::GamsCompile) =
+    sort!([s for s in values(g.syms) if !(s.kind in (:variable, :equation)) || s.dim > 0 || uppercase(s.name) in g.refs];
+          by=x -> x.order)
 
 "A compiled symbol's records in GAMS order: keys, and the values (parameters) or element text (sets)."
 function grecords(g::GamsCompile, s::GSym)

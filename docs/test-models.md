@@ -204,6 +204,12 @@ so **CI again checks every translated equation family and coefficient file
 against GAMS on an openly licensed model**. The fixture's licence is CC BY
 4.0 with attribution to IEA-ETSAP (`test/fixtures/public_fixtures.toml`).
 
+From 10 Nov 2026 (M1.4 change 2c) CI also compiles demo12 from its own run and DD
+files, with no GAMS (`test/unit/test_ddsource.jl`). The DD files come from the pinned
+download of `etsap-TIMES/TIMES_Demo` @ 962db86 (`Artifacts.toml`); the run file is the
+harness's patched copy (`test/fixtures/demo12_off_run`, CC BY 4.0, IEA-ETSAP). The result
+is checked against the `demo12_off_input` dump.
+
 Coverage the removed tests gave, and where it has to come from now:
 
 | Removed test | What it checked | Open-model replacement |

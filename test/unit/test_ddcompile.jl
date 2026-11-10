@@ -89,7 +89,7 @@ end
             # a scalar's 0 stays 0 under $ONEPS; arguments beyond 9
             "SCALAR Z0 / 0 /;\n\$BATINCLUDE args.mod 1 2 3 4 5 6 7 8 9 10 eleven\n" *
             # blanks before the dot of a key (eqbndcst.mod L22)
-            "SET PAIR(I,I) / a   .(a,b) /;\nE1(I).. V1(I) =E= 1;\nVARIABLE UNUSED;\n",
+            "SET PAIR(I,I) / a   .(a,b) /;\nE1(I).. V1(I) =E= 1;\nVARIABLE UNUSED, UNUSEDI(I);\nEQUATION EMOD;\nMODEL M / E1, EMOD /;\n",
         "args.mod" => "SET ARG11 / %11 /;\n")
     dir = mktempdir()
     for (n, t) in files
@@ -108,6 +108,8 @@ end
     @test first(grecords(g, gsym(g, "PAIR"))) == [["a", "a"], ["a", "b"]]
     @test gsym(g, "AFTER") !== nothing                       # the run file goes on after maindrv.mod
     names = [s.name for s in gdx_symbols(g)]
-    @test "E1" in names && "V1" in names && !("UNUSED" in names)   # G57
+    # G57: an unused scalar variable or equation is left out, and a MODEL statement does not count as
+    # a use; one with a domain is always written
+    @test "E1" in names && "V1" in names && "UNUSEDI" in names && !("UNUSED" in names) && !("EMOD" in names)
     @test [x[2] for x in g.trace] == ["m.run", "maindrv.mod", "args.mod"]
 end

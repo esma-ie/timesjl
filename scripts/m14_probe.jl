@@ -9,11 +9,14 @@
 #
 # <model> is a reference folder name, e.g. TIMES_Demo-demo12; both variants are compiled. --pre stops
 # at `$BATINCLUDE maindrv.mod` (changes 2-4) instead of compiling the whole program (change 2b).
+# The TIMES source is the pinned download (`times_source()`, change 2c; TIMESJL_TIMES_SOURCE names a
+# local clone instead); --sources gives the models' folders.
 # Only open models (CLAUDE.md); TIM and JRC-EU-TIMES are refused.
 using TIMES
-using TIMES: GamsCompile, gams_compile!, grecords, gdx_uels, gdx_symbols
+using TIMES: compile_run, grecords, gdx_uels, gdx_symbols
 using TIMES.Reference: load_dump, read_symbol, SV_EPS
 
+const REFGAMS = joinpath(@__DIR__, "..", "reference", "gams")      # the harness's .tjlref files
 const MODEL_DIRS = Dict(
     "TIMES_Demo-demo12" => "TIMES_Demo/model",
     "TIMES-NZ-steady-v308" => "TIMES-NZ/dd/steady-v308", "TIMES-NZ-shift-v308" => "TIMES-NZ/dd/shift-v308",
@@ -38,10 +41,10 @@ function probe(ref, sources, model, variant; full=true)
     dir = joinpath(ref, model, variant)
     run = joinpath(dir, "raw", "tjl_presolve.run")
     isfile(run) && isdir(joinpath(dir, "input")) || return println("== $model/$variant: no input dump, skipped")
-    g = GamsCompile(dirs=[joinpath(sources, "TIMES_model"), joinpath(sources, MODEL_DIRS[model])]; full)
-    g.globals["RUN_NAME"] = model          # the harness's --run_name
+    g = nothing
     t = @elapsed try
-        gams_compile!(g, run)
+        g = compile_run(run; dirs=[joinpath(sources, MODEL_DIRS[model]), REFGAMS], full,
+                        globals=Dict("RUN_NAME" => model))     # the harness's --run_name
     catch e
         return println("== $model/$variant: compile stops: ", sprint(showerror, e))
     end
@@ -58,11 +61,13 @@ function probe(ref, sources, model, variant; full=true)
         tr = "to maindrv.mod"
     end
     # the symbols declared
-    miss = sort([i.name for (k, i) in d.symbols if !haskey(g.syms, k)])
+    # with the whole program, the symbols GAMS's GDX file holds (G57) in both directions
     written = full ? gdx_symbols(g) : collect(values(g.syms))
+    wnames = Set(uppercase(s.name) for s in written)
+    miss = sort([i.name for (k, i) in d.symbols if !(k in wnames)])
     extra = sort([s.name for s in written if !haskey(d.symbols, uppercase(s.name))])
-    full && !isempty(miss) && push!(notes, "declared by GAMS only: $(length(miss)) $(first(miss, 8))")
-    !isempty(extra) && push!(notes, "declared by the reader only: $(join(extra, ", "))")
+    full && !isempty(miss) && push!(notes, "written by GAMS only: $(length(miss)) $(first(miss, 8))")
+    !isempty(extra) && push!(notes, "written by the reader only: $(join(extra, ", "))")
     # every set and parameter
     same = 0; n = 0
     for s in values(g.syms)
