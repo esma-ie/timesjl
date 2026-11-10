@@ -120,13 +120,15 @@ runs the chain from DD files on demo12 and the crafted cases.
   at run time, in CI and for users. Change 2 was to generate Julia from initsys and initmty; that
   does not scale to the whole program (about 250 files). Proposal (decision for James): a pinned
   Julia Artifact of `etsap-TIMES/TIMES_model` @ d9a6a25, downloaded on first use and checked by
-  hash; CI uses the same artifact. Until then the scripts take `--sources`.
+  hash; CI uses the same artifact. Until then the scripts take `--sources`. (James, 10 Nov 2026: approved, a pinned
+  download of `etsap-TIMES/TIMES_model`.) He also asked that the run from DD files to the matrix and
+  the solution join the existing chain and the probe set (change 5).
 
 | # | What | Status |
 | --- | --- | --- |
 | 2-4 | `src/dd/compile.jl`: the compile phase to maindrv.mod | done for the open core models (draft PR) |
 | 2b | the compile phase of maindrv.mod and its includes: declarations and compile-time data | done for the open core models (9 Nov, draft PR #86) |
-| 2c | the TIMES source as a Julia Artifact (after James's decision) | |
+| 2c | the TIMES source as a Julia Artifact (approved by James, 10 Nov 2026) | next |
 | 5 | scale, wiring, `m13_gate.jl --from dd` | as planned |
 
 ### Change 2b, 9 Nov 2026 (late evening)
@@ -159,7 +161,8 @@ addition to G35. Next: the TIMES source as an Artifact (2c, James's decision), t
 3. **`$IF DEFINED` on a symbol declared with an empty `//` list (G35):** answered
    9 Nov 2026: it counts as defined (GAMS experiment), and so does a `$MACRO` name. Still open: an
    assignment compiled after maindrv.mod also makes a symbol DEFINED, which the reader does not track
-   (no open suite model's include trace depends on it).
+   (no open suite model's include trace depends on it). The tests to add are logged in issue #87
+   (James, 10 Nov 2026).
 4. **Duplicate keys inside one data statement:** GAMS's behaviour is not
    confirmed. The reader lets the later record win, as `$ONMULTI` merges do; every open suite model
    matches the input dumps, so none depends on it either way.
