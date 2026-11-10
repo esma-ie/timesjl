@@ -45,7 +45,7 @@ function untranslated_families(tm::TimesModel)
     # %POWERFLO% YES: phase-angle grids are translated (EQ_GR_POWFLO, M1.3 change 27b); PTDF, node allocation,
     # gas grids and the N-1 constraint EQ_GR_XBND are not
     if yes("POWERFLO")
-        foreach(w -> note!("(variant POWERFLO)", "powerflo.vda", w), powerflo_main_unported(tm))
+        foreach(w -> note!("(variant POWERFLO)", "powerflo.vda", w), powerflo_model_unported(tm))
         isempty(P("GR_XBND", 2)) || note!("EQ_GR_XBND", "powerflo.vda L336-358", "GR_XBND has data")
     end
     uppercase(gswitch(tm, "MACRO", "NO")) in ("YES", "CSA", "MSA", "MLF") &&

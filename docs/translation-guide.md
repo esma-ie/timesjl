@@ -657,3 +657,8 @@ those checks, their figures and their crafted cases are not published
   `scripts/m13_gate.jl --from-dd` runs the chain on TIMES.jl's state alone,
   then the matrix against GAMS's CONVERT export and, with `--solve`, the HiGHS
   objective against GAMS/CPLEX's. CI does it on demo12.
+- 10 Nov 2026: M1.3 (27a-2): powerflo.vda's allocation of generation and
+  sectoral demand to the grid nodes (L40-47, L109-162), which JRC-EU-TIMES
+  needs. Crafted case demo12_pfa (demo12_pf with GR_GENLEV, GR_GENMAP,
+  GR_GENFR, GR_ENDFR data): the M1.3 chain PASS to coef, both variants; the
+  model waits for EQ_GR_GENALL and EQ_GR_DEMALL (27b-2).
