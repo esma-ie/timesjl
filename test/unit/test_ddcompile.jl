@@ -113,3 +113,22 @@ end
     @test "E1" in names && "V1" in names && "UNUSEDI" in names && !("UNUSED" in names) && !("EMOD" in names)
     @test [x[2] for x in g.trace] == ["m.run", "maindrv.mod", "args.mod"]
 end
+
+@testset "an assignment makes its symbol DEFINED (G35; preppm.mod L27-28, R_CUREX)" begin
+    using TIMES: gassignees
+    @test gassignees("R_CUREX(R,CURR,CUR)\$NO=0") == ["R_CUREX"]
+    @test gassignees("R_CUREX(R,CURR,CUR)\$(NOT R_CUREX(R,CURR,CUR))\$=G_CUREX(CURR,CUR)") == ["R_CUREX"]
+    @test gassignees("IF(CNT=DONE+1,CNT=DONE)") == ["CNT"]                 # the first `=` compares
+    @test gassignees("LOOP((R,P)\$X(R,P),GR_GID(R,P)=1)") == ["GR_GID"]
+    @test gassignees("A(I)\$((B(I)=1)\$B(I))=YES") == ["A"]
+    @test gassignees("V.UP(I) = 1") == String[]                           # an attribute (issue #87)
+    @test gassignees("X(I)\$(Y(I) <= 2) = 3") == ["X"]
+    @test gassignees("E1(I).. V1(I) =E= 1") == String[]
+    # after maindrv.mod, as in preppm.mod: G_CUREX has data, so the assignment to R_CUREX is compiled
+    g = compile_files(Dict(
+        "m.run" => "SET I / a /;\nPARAMETER G(I) / a 1 /;\n\$BATINCLUDE maindrv.mod mod\n",
+        "maindrv.mod" => "PARAMETER R(I), U(I);\n\$IF DEFINED G R(I)\$NO=0;\n\$IF DEFINED R SET RSEEN / r /;\n" *
+                         "\$IF DEFINED U SET USEEN / u /;\n"); full=true)
+    @test gsym(g, "RSEEN") !== nothing                    # R is DEFINED: its assignment was compiled
+    @test gsym(g, "USEEN") === nothing                    # U is only declared
+end

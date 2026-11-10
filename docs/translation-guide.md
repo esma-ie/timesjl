@@ -657,3 +657,8 @@ those checks, their figures and their crafted cases are not published
   `scripts/m13_gate.jl --from-dd` runs the chain on TIMES.jl's state alone,
   then the matrix against GAMS's CONVERT export and, with `--solve`, the HiGHS
   objective against GAMS/CPLEX's. CI does it on demo12.
+- 10 Nov 2026: M1.4 (6): the DD folders of every suite and crafted model
+  from `reference/suite.toml` and `reference/crafted.toml` (`--local` for TIM
+  and JRC-EU-TIMES); CI compiles demo12 and 11 variants from their DD files;
+  the licence level as a run option (K3); `scripts/run_dd.jl` runs any run
+  file from its DD files to the HiGHS solve.

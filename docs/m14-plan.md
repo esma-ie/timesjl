@@ -130,6 +130,7 @@ runs the chain from DD files on demo12 and the crafted cases.
 | 2b | the compile phase of maindrv.mod and its includes: declarations and compile-time data | done for the open core models (9 Nov, draft PR #86) |
 | 2c | the TIMES source as a Julia Artifact (approved by James, 10 Nov 2026) | done (10 Nov): `Artifacts.toml`, `times_source()`; CI compiles demo12 from its DD files |
 | 5 | scale, wiring, `m13_gate.jl --from-dd` | done (10 Nov): `write_dump`; the chain, the matrix and the HiGHS solve from DD files with no GAMS state; CI on demo12; nightly on the open models |
+| 6 | the M1.4 gate's remaining items: the demo12 variants in CI, TIM and JRC-EU-TIMES (local), the licence level, a runner for any run file | done (10 Nov): `scripts/m14_models.jl` reads the DD folders from `reference/suite.toml` and `reference/crafted.toml` (`--local` for TIM and JRC-EU-TIMES); CI compiles demo12 and 11 variants from their DD files; `licencelevel` (K3); `scripts/run_dd.jl` and `run_dd.cmd` |
 
 ### Change 2b, 9 Nov 2026 (late evening)
 
@@ -172,13 +173,36 @@ missed processes. TIMES-NZ, OTCGEN and OTUS9r showed it from ppm on, though HiGH
 GAMS's objective. Fixed: an alias is now its target as TIMES.jl holds it (`gset`,
 `src/model/gams_data.jl`), with a unit test.
 
+### Change 6, 10 Nov 2026
+
+- **DD folders from the suite.** `scripts/m14_models.jl` takes each model's include directories
+  (`idirs`) from `reference/suite.toml` or `reference/crafted.toml`, with every `{root}` a folder of
+  `timesjl-sources`, so the gate and the probe run on any suite or crafted model. A model whose
+  `redistribute` is not `"public"` (TIM, JRC-EU-TIMES) needs `--local`: it runs on James's
+  workstation and its logs stay there (CLAUDE.md).
+- **The demo12 variants in CI.** `test/unit/test_ddsource.jl` compiles demo12 and the 11 variants
+  that have an input fixture from their DD files (TIMES_Demo's and their own in `reference/dd/`)
+  and compares the result with the fixture: the symbols, every set and parameter, the labels, the
+  warning count. Their patched run files are fixtures (`test/fixtures/<prefix>_run`). The 15
+  variants with a reference run all compile to GAMS's input dump (`scripts/m14_probe.jl`, both
+  variants); demo12_qa99 has no reference run on the reference machine.
+- **Licence level.** `compile_run(...; licencelevel)`, 0 by default as the reference workstation's
+  full licence; 2 gives the demo licence's VAR_UC (K3, answering open question 2).
+- **Any run file.** `scripts/run_dd.jl <run file> [--dd <folder> ...] [--solve]` compiles a run file
+  and its DD files, preprocesses, generates the model and solves it with HiGHS, with no GAMS and no
+  reference to compare with. It compiles a copy of the run file with `SOLVE_NOW NO` before
+  maindrv.mod, as the harness does, so that GAMS's solve and report files are not compiled.
+  `scripts/run_dd.cmd` runs it on a run file dragged onto it in Windows Explorer. On TIMES_Demo's
+  own `demo12.run` (REDUCE YES) it gives 3,233 rows and HiGHS's objective 23,960,685.737007916,
+  GAMS/CPLEX's within 4e-15.
+
 ## Open questions (flag, do not guess)
 
 1. **Domain violations.** (Answered 9 Nov 2026: dropped at compile time, G56.) suite.toml says DATAGDX "filters" 84 records in
    each TIMES-NZ case. G32 says GAMS drops them at compile time. Change 4 checks
    the TIMES-NZ `input/` dump. TIMES-NZ's 88 compile warnings against 84
    dropped records leave 4 unexplained.
-2. **`%SYSTEM.LICENSELEVEL%==2` sets VAR_UC** (initmty.mod L448), so a switch
+2. (Answered 10 Nov 2026: the `licencelevel` run option, default 0 as the full licence of the reference workstation; K3 in known-differences.md.) **`%SYSTEM.LICENSELEVEL%==2` sets VAR_UC** (initmty.mod L448), so a switch
    depends on the GAMS licence of the machine. TIMES.jl has no GAMS licence.
    Proposal: a `licencelevel` run option, default as on James's
    workstation, recorded in known-differences.md.
@@ -186,7 +210,9 @@ GAMS's objective. Fixed: an alias is now its target as TIMES.jl holds it (`gset`
    9 Nov 2026: it counts as defined (GAMS experiment), and so does a `$MACRO` name. Still open: an
    assignment compiled after maindrv.mod also makes a symbol DEFINED, which the reader does not track
    (no open suite model's include trace depends on it). The tests to add are logged in issue #87
-   (James, 10 Nov 2026).
+   (James, 10 Nov 2026). Answered for plain assignments on 10 Nov 2026: JRC-EU-TIMES reaches preppm.mod
+   L27-28, where an assignment that never runs (`$NO`) makes R_CUREX defined; the reader now
+   counts compiled assignments (`gassigned!`, G35). Attributes stay open (#87).
 4. **Duplicate keys inside one data statement:** GAMS's behaviour is not
    confirmed. The reader lets the later record win, as `$ONMULTI` merges do; every open suite model
    matches the input dumps, so none depends on it either way.
