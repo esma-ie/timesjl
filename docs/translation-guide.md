@@ -652,3 +652,8 @@ those checks, their figures and their crafted cases are not published
   demo12 from its own DD files, with no GAMS, and checks it against the input
   dump. A CI check found the rule for which variables and equations GAMS writes
   (G57) was incomplete; it is corrected, with a GAMS experiment.
+- 10 Nov 2026: M1.4 (5): from DD files to the solved model with no GAMS
+  state. `write_dump` writes the compile as an input dump;
+  `scripts/m13_gate.jl --from-dd` runs the chain on TIMES.jl's state alone,
+  then the matrix against GAMS's CONVERT export and, with `--solve`, the HiGHS
+  objective against GAMS/CPLEX's. CI does it on demo12.
