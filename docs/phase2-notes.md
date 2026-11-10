@@ -11,6 +11,7 @@ robustness). Phase 1 changes none of them unless a parity check needs it.
 | P2-2 | Coefficient-stage speed | 31 Oct 2026 (M1.2 timings) | On OTNYC (0.5 M rows) the coefficient stage takes 119 s warm against 0.79 s in GAMS on one machine (docs/timings.md); coef_ext, coef_ptr and coef_cpt lead. The same data access as the slow generators (below): string-tuple keys, per-record dictionaries; integer labels and columnar sets would serve both. |
 | P2-3 | Multi-threaded equation generation | 31 Oct 2026, James | A JuMP model is built on one thread, so thread the work around it: index construction and coefficient arithmetic per equation family (or region) on separate tasks, each into its own buffer; then add the rows on one thread, or merge the buffers into one triplet matrix for a single hand-off to the solver. Needs the data fixes first (concrete types, integer labels). Details in "Multi-threaded equation generation (P2-3)" below. |
 | P2-4 | GPU solving (NVIDIA cuOpt) | 9 Nov 2026, James | cuOpt 26.10 through cuOpt.jl: PDLP and barrier on the GPU, with crossover. In Phase 1 an informational lane only (`scripts/cuopt/`): layer 3 with pinned methods on the public fixtures, nightly on a GitHub T4 runner (`.github/workflows/nightly-gpu.yml`) and in WSL2 on James's workstation (Quadro RTX 4000, 8 GB). Questions for Phase 2: on which models and with which method cuOpt reaches 1e-6 parity faster than HiGHS (OTUS9r first: HiGHS does not solve it in reasonable time, docs/m13-plan.md finding 20b-4), and whether barrier's factorisation fits in GPU memory on the largest models. |
+| P2-5 | Schemas for data and equations (Pandera, mathspec): **provisional** | 10 Nov 2026, James | To be confirmed by James before any work starts. Three small pilots, one PR each, none touching generation before M1.7: (a) a schema for every dump symbol, generated from the GAMS declarations `src/dd/compile.jl` parses, checked with Pandera where `gdx2arrow.py` writes the dump; (b) a format 2 dump with integer-coded labels, read without string-tuple keys (serves P2-2 and P2-3); (c) mathspec YAML for `EQ_ACTFLO` and `EQ_COMBAL`, typeset beside Part II and checked against the rows TIMES.jl generates. Details in "Schemas for data and equations (P2-5)" below. |
 
 ## Model generation: where the time goes (21 Oct 2026)
 
@@ -129,6 +130,69 @@ Measurement:
 - Unconfirmed, to check: GAMS appears to generate on one thread. If so, this
   is where TIMES.jl could beat GAMS's generation time rather than only
   match it.
+
+## Schemas for data and equations (P2-5, provisional, 10 Nov 2026)
+
+Provisional: raised by James on 10 Nov 2026 for assessment. No work starts
+until he confirms it.
+
+The tools:
+
+- **Pandera** (https://pypi.org/project/pandera/; MIT; Python 3.10+;
+  0.35.0, 25 Oct 2026): dataframe schemas (dtypes, value checks, unique
+  keys) for pandas, polars and other backends; schemas save to YAML or JSON.
+  On polars a LazyFrame gets schema-level checks only, unless
+  `PANDERA_VALIDATION_DEPTH=SCHEMA_AND_DATA` is set.
+- **mathspec** (https://github.com/energy-models/mathspec; MIT code;
+  Python 3.12+; 0.4.0, 22 Oct 2026; alpha, one maintainer, breaking changes
+  without deprecation): an LP's dimensions, parameters, variables,
+  constraints and objective as YAML, checked for names and dimensions without
+  data, and typeset to LaTeX, Typst or Markdown. Fragments compose with
+  `merge` and `override` (`adds_to:` adds a term to another fragment's sum).
+  It builds no models. Not to be confused with BlockScience's MSML, a
+  dynamical-systems tool.
+- **Legolas.jl** (https://beacon-biosignals.github.io/Legolas.jl/dev):
+  versioned Arrow table schemas in Julia (`name@version` in the file's
+  metadata), the Julia counterpart for reading dumps. Licence still to check.
+
+What they are for here:
+
+- **Documentation that fails CI when it drifts.** A generated data
+  dictionary of every TIMES set and parameter, and an equation reference per
+  family beside Part II, with differences logged in `docs/discrepancies.md`.
+- **Speed, indirectly.** Declared types let the loader build concrete,
+  columnar containers once, with integer labels: the prerequisites of P2-2
+  and P2-3. Production runs will start from DD files (M1.4), not dumps, so
+  the gain comes from Julia types generated from the same declarations;
+  Pandera guards the reference and parity path only.
+- **TIMES-Verify.** A language-neutral contract (data schema plus equation
+  spec) that Rust and Python ports, and partners' donated models, can be
+  checked against without Julia.
+
+Pilots, one PR each:
+
+1. **Data schemas.** Generate one schema per symbol from the declarations
+   (`GSym` in `src/dd/compile.jl`: kind, domain, dimension). Check dumps in
+   `gdx2arrow.py` when written and in `src/reference/dump.jl` when read:
+   column types; `__sv` codes 0-3, with -0.0 for EPS and NaN for NA/UNDEF;
+   every label in `uels.arrow`; domain membership; unique keys; record counts
+   against the manifest. CI on public fixtures only. Measure validation time
+   on OTUS9r.
+2. **Format 2 dump.** `d1`..`dN` as Arrow dictionary-encoded int32 indices
+   into `uels.arrow`; the reader keeps the codes and builds no
+   `NTuple{N,String}` keys. First check whether UEL index order is the rank
+   `gams_sort!` uses. LP-identical: layer 2 at 1e-9 is the gate.
+3. **Equation specs.** mathspec YAML for `EQ_ACTFLO` (simple) and
+   `EQ_COMBAL` (hard), GAMS names kept; typeset and compared with Part II; a
+   CI check that every generated row carries the spec's dimensions and only
+   the variables its expression names. Record what mathspec cannot express
+   (sets computed in preprocessing, `%VAR%` macros, REDUCE paths, EPS terms).
+
+Rules: every schema is generated from the declarations, never written by
+hand, so they stay the single source. No generator reads a schema or spec
+before M1.7. Pandera and mathspec are MIT, compatible with
+GPL-3.0-or-later. After the pilots: keep, narrow to the data schemas, or
+drop.
 
 ## Memory
 
