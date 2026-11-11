@@ -39,7 +39,6 @@ answer yet.
 | 10 Nov 2026 | #90 | Where to test GPU scaling: open core-model reference runs as a release asset, or a sweep on native Linux? | none given | Open |
 | 10 Nov 2026 | #90 | Wednesday's full cuOpt suite: set `CUOPT_FIXTURES=all` and `CUOPT_GPU_SHARES=100`? | yes | Open; a GitHub setting only James can make. |
 | 10 Nov 2026 | #91 | K2 known difference: the input dump from DD files lists variables and equations without their GAMS type | approve K2 | Approved by merge (10 Nov 2026); confirm. |
-| 11 Nov 2026 | #94 | CPLEX solves (about 2.4 h each) for layer 3 on the 8 new JRC-EU-TIMES scenarios? | none given; not needed for the DD probe, chain or matrix check | Open; #94 not merged. |
 
 ## Decisions in the chat (not in a PR list)
 
@@ -71,12 +70,12 @@ answer yet.
 
 ## Log by pull request
 
-### #94 Suite: the other eight JRC-EU-TIMES WIMBY scenarios (open)
+### #94 Suite: the other eight JRC-EU-TIMES WIMBY scenarios (open; both decisions answered)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Add the other eight JRC-EU-TIMES scenarios to the suite? | Yes; the nightly makes their checkpoints and runs the DD probe. | James, 11 Nov 2026 |
-| 2 | CPLEX solves (about 2.4 h each) for layer 3 on the eight? | Not decided. | open |
+| 1 | Add the other eight JRC-EU-TIMES scenarios to the suite? | Yes, all eight; the nightly makes their checkpoints and runs the DD probe. | James, 11 Nov 2026 |
+| 2 | CPLEX solves (about 2.4 h each) for layer 3 on the eight? | Yes, all eight, both variants, started 11 Nov 2026 13:16 on the workstation: 3 runs at a time that day only (12 threads each, 12 threads kept free for other work), reduce_off first. Results stay local; verdicts, counts and timings may be published. | James, 11 Nov 2026 |
 
 ### #93 M1.3 (27a-2): powerflo.vda, the allocation of generation and demand to grid nodes (merged 2026-11-11)
 
