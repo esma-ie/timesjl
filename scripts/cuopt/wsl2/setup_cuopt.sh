@@ -155,7 +155,7 @@ git -C "$DIR" log -1 --format='%h %s'
 # --- 6. Julia environment and a GPU smoke test ------------------------------------------
 say "scripts/cuopt environment"
 cd "$DIR"
-julia --project=scripts/cuopt -e 'using Pkg; Pkg.resolve(); Pkg.instantiate(); Pkg.precompile()'
+julia --project=scripts/cuopt -e 'using Pkg; any(r -> r.name == "General", Pkg.Registry.reachable_registries()) || Pkg.Registry.add("General"); Pkg.resolve(); Pkg.instantiate(); Pkg.precompile()'
 
 say "Smoke test: a small LP on the GPU (barrier + crossover)"
 julia --project=scripts/cuopt -e '

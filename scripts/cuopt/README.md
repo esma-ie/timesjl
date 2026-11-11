@@ -135,7 +135,9 @@ powershell -ExecutionPolicy Bypass -File scripts\cuopt\wsl2\setup_wsl2.ps1 -Regi
    workstation's four run slots (`reference/python/runlimits.py`, as
    `make_reference.py` does) and runs `nightly_local.sh` in WSL. The task wakes
    the computer, runs while James is logged on, and catches up after a
-   missed night.
+   missed night. `-Until <date>` sets the last night it may start. James
+   (11 Nov 2026): it runs until 8 Dec 2026, then it is stopped and reassessed
+   (`register_nightly.ps1 -Distro Ubuntu-24.04 -Until 2026-12-08`).
 
 `nightly_local.sh` moves the WSL checkout to `main` (unless it has local
 changes), then solves what `~/.config/timesjl/cuopt-nightly.conf` lists:
