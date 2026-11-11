@@ -242,3 +242,18 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_pf/demo12_pf.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_pf"]
+
+# TIMES_Demo demo12_pf + demo12_pfa/pfa.dd (10 Nov 2026): the allocation of generation and sectoral
+# demand to the grid nodes (GR_GENLEV, GR_GENMAP, GR_GENFR, GR_ENDFR; powerflo.vda L40-47,
+# L109-162; M1.3 change 27a-2).
+[[model]]
+name = "TIMES_Demo-demo12_pfa"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_pfa/demo12_pfa.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa"]

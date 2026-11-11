@@ -1,0 +1,49 @@
+* TIMES.jl crafted case demo12_pfa (reference/crafted.toml, 10 Nov 2026): demo12_pf (a line
+* reactance on demo12's electricity link REG1-REG2, so a two-node DC power-flow grid with ELC as
+* each region's node) plus the allocation of generation and sectoral demand to the grid nodes
+* (powerflo.vda L40-47, L109-162; M1.3 change 27a-2). The data reach every statement of that
+* block: grid connection levels 1, 2 (from 2.4, rounded) and 3 on the sectoral electricity
+* commodities, and one on the node ELC (removed, L116); generation types with weights that are
+* normalised; a process name as a generation type; sectoral demand fractions, one on a grid node
+* (removed, L110); the interpolation option of year 0.
+PARAMETER GR_GENLEV
+/
+REG1.RSDELC 1
+REG1.AGRELC 3
+REG2.COMELC 2.4
+REG2.ELC 1
+/;
+PARAMETER GR_GENMAP
+/
+REG1.FTE-RSDELC.DIS 1
+REG1.FTE-AGRELC.DIS 0.5
+REG1.FTE-AGRELC.AGR 1.5
+REG1.ELCTECOA00.COA 1
+REG1.ELCTEGAS00.GAS 0.5
+REG1.ELCTEGAS00.OIL 0.5
+REG1.ELCTNGAS01.GAS 2
+REG2.FTE-COMELC.CMR 2
+REG2.ELCTECOA00.COA 1
+REG2.ELCREWIN00.REN 3
+/;
+PARAMETER GR_GENFR
+/
+REG1.2005.ELC.DIS 1
+REG1.2005.ELC.AGR 0.8
+REG1.2020.ELC.AGR 0.6
+REG1.0.ELC.AGR 3
+REG1.2005.ELC.COA 1
+REG1.2005.ELC.GAS 0.4
+REG2.2005.ELC.CMR 0.5
+REG2.2005.ELC.FTE-COMELC 1
+REG2.2005.ELC.REN 1
+/;
+PARAMETER GR_ENDFR
+/
+REG1.2005.ELC.RSDELC 0.6
+REG1.2005.ELC.AGRELC 0.4
+REG1.2020.ELC.RSDELC 0.7
+REG2.2005.ELC.COMELC 1
+REG2.2005.ELC.RSDELC 0.25
+REG2.2005.ELC.ELC 0.5
+/;

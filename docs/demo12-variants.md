@@ -40,7 +40,7 @@ MACRO, stochastics, ETL, climate and damage after M1.7.
 | 4 | Dynamic time slices | | 4.3.2, Mar 2019 (varying cycles); 4.4.1, Feb 2020 (time-slice trees, `dynslite.vda`) | User Note `User_Note-TIMES-Dynamic-timeslices.docx` | |
 | 3 | Flexible time-slice storage (STSFLX) | | 4.5.8, Sep 2021 | User Note `TIMES-Experimental-STS-Variant.pdf` | |
 | 7a | Recent attributes, first batch | | 4.6.3-4.7.5, Jul 2022 - Oct 2023: `G_RFRIR`, `NCAP_AFSX`, emissions on CHP activity, non-vintaged `ACT_FLO`, `NCAP_ICOM` for past investments | Version.log | |
-| 6 | PTDF power grid | | 4.8.4, Dec 2024 - 4.9.0, Jul 2025 (on the DC power flow of 3.3.6, Jul 2012) | User Note `TIMES-Grid-Features.pdf`; `powerflo.vda` | begun 9 Nov 2026: demo12_pf, a phase-angle grid on the REG1-REG2 link (M1.3 change 27a); the PTDF case follows with 27a-2 (with M1.3 change 27, the public case for JRC-EU-TIMES's power flow; moved ahead of variants 4, 3 and 7a by James, 7 Nov 2026) |
+| 6 | PTDF power grid | | 4.8.4, Dec 2024 - 4.9.0, Jul 2025 (on the DC power flow of 3.3.6, Jul 2012) | User Note `TIMES-Grid-Features.pdf`; `powerflo.vda` | begun 9 Nov 2026: demo12_pf, a phase-angle grid on the REG1-REG2 link (M1.3 change 27a); demo12_pfa adds the allocation of generation and sectoral demand to the grid nodes (M1.3 change 27a-2, 10 Nov 2026; the model waits for 27b-2); the PTDF case follows (with M1.3 change 27, the public case for JRC-EU-TIMES's power flow; moved ahead of variants 4, 3 and 7a by James, 7 Nov 2026) |
 | 7b | Recent attributes, second batch | | 4.9.2-4.9.3, Oct 2025 - Feb 2026: bounds on absolute power rate levels, OCOM flows from retirements | Version.log | |
 
 Later, outside Phase 1's core and VDA scope: lumpy investments and early
