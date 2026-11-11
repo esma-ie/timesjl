@@ -17,6 +17,11 @@
     missed night, and never runs twice at once. What it solves is set in
     ~/.config/timesjl/cuopt-nightly.conf inside WSL.
 
+    -Until <date> ends the task: no run starts after that day (James, 11 Nov 2026:
+    the local nightly runs until 8 Dec 2026, then is reassessed):
+
+        powershell -ExecutionPolicy Bypass -File scripts\cuopt\wsl2\register_nightly.ps1 -Until 2026-12-08
+
     This file and nightly_task.py are used from this Windows checkout; the
     WSL checkout (~/git/TIMESjl) is the one the nightly updates and runs.
 #>
@@ -24,6 +29,7 @@
 param(
     [string]$Distro = 'Ubuntu-26.04',
     [string]$At = '01:17',
+    [string]$Until = '',
     [string]$Dir = '~/git/TIMESjl',
     [string]$Python = '',
     [string]$TaskName = 'TIMESjl cuOpt nightly (WSL2)',
@@ -48,6 +54,8 @@ if (-not (Test-Path (Join-Path $repo 'reference\python\runlimits.py'))) { throw 
 
 $action = New-ScheduledTaskAction -Execute $Python -Argument "`"$task`" --distro $Distro --dir $Dir" -WorkingDirectory $repo
 $trigger = New-ScheduledTaskTrigger -Daily -At $At
+# -Until: the last day a run may start (the trigger's end boundary, 23:59:59 that day)
+if ($Until) { $trigger.EndBoundary = ([datetime]$Until).Date.AddDays(1).AddSeconds(-1).ToString('s') }
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -WakeToRun -MultipleInstances IgnoreNew `
     -ExecutionTimeLimit (New-TimeSpan -Hours 10) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
@@ -55,6 +63,7 @@ Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Se
     -Description 'TIMES.jl: cuOpt layer 3 in WSL2, local only (scripts/cuopt/wsl2/nightly_task.py)' -Force | Out-Null
 
 Write-Host "Registered '$TaskName': every night at $At, $Distro, checkout $Dir."
+if ($Until) { Write-Host "  Ends:      no run starts after $(([datetime]$Until).ToString('d MMM yyyy'))." }
 Write-Host "  Log:       $env:LOCALAPPDATA\timesjl\cuopt-nightly.log"
 Write-Host "  Results:   \\wsl.localhost\$Distro\home\<your Linux user>\timesjl-cuopt\nightly\latest\"
 Write-Host "  Run now:   Start-ScheduledTask -TaskName '$TaskName'"

@@ -80,7 +80,8 @@ Any mismatch blocks the merge. Justified differences go in
   GitHub T4 runner for the public fixtures (GPU-share sweep 25/50/100% with
   MPS), and in WSL2 on James's workstation for local runs (TIM allowed, results
   stay there). cuOpt's CPU side keeps the 12-thread limit; the GPU is not
-  limited by it.
+  limited by it. The local WSL2 nightly runs until 8 Dec 2026, then is
+  stopped and reassessed (James, 11 Nov 2026; `register_nightly.ps1 -Until`).
 - Single model by hand, from the repo root: pass a `--root` for every
   placeholder that model uses (see `reference/suite.toml`), e.g.
   `python reference/python/make_reference.py --out ../timesjl-reference --solvers CPLEX,HIGHS --root times_source=../TIMES_model --root times_demo=../TIMES_Demo --model TIMES_Demo-demo12`
