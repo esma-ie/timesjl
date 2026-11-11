@@ -29,21 +29,19 @@ answer yet.
 | --- | --- | --- | --- | --- |
 | 3 Nov 2026 | chat | Keep the "within 5x GAMS, warm" speed target in Phase 1 (M1.7), or move it to Phase 2? | none given | Open. `docs/translation-guide.md` L86 still has it at M1.7. |
 | 4 Nov 2026 | #30 | Add `scripts/m13_replay.jl` (needs GAMS, about 7 min) to the nightly run? | none given | Open |
-| 5 Nov 2026 | #35 | A speed-up of shared code (`gams_sort!`) during Phase 1, with identical results | merge it | Approved by merge (5 Nov 2026); confirm. Rule-level: Phase 1 does no performance tuning. |
-| 6 Nov 2026 | #54 | Allow LP-identical data-structure fixes before M1.7? | none given | Open; rule-level (departure from the Phase 1 rules). |
-| 6 Nov 2026 | #61 | Count one-way cross-evaluation (CPLEX's optimum in TIMES.jl) as OTUS9r's layer 3 at the M1.3 gate? | yes; HiGHS on OTUS9r looked at separately | Approved by merge (6 Nov 2026); confirm. Rule-level: layer 3 asks for both directions. |
 | 8 Nov 2026 | chat | Harness fix as one small PR: CHECK status for a non-optimal solve; redo `ppm/` and `coef/` made with older GAMS | one small PR | Open; no PR yet. |
 | 8 Nov 2026 | #68 | A demo12 variant with trade between regions, to check the EXP term: now, or before the M1.3 gate? | none given | Open |
 | 10 Nov 2026 | #89 | Keep P2-5 (data and equation schemas) on the Phase 2 backlog, with its three pilots after M1.7? | keep; all pilots after M1.7 | Open; provisional until James confirms. |
 | 10 Nov 2026 | #90 | Which other outcomes turn the cuOpt nightly red? | proposed in the chat | Open |
 | 10 Nov 2026 | #90 | Where to test GPU scaling: open core-model reference runs as a release asset, or a sweep on native Linux? | none given | Open |
 | 10 Nov 2026 | #90 | Wednesday's full cuOpt suite: set `CUOPT_FIXTURES=all` and `CUOPT_GPU_SHARES=100`? | yes | Open; a GitHub setting only James can make. |
-| 10 Nov 2026 | #91 | K2 known difference: the input dump from DD files lists variables and equations without their GAMS type | approve K2 | Approved by merge (10 Nov 2026); confirm. |
 
 ## Decisions in the chat (not in a PR list)
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 11 Nov 2026 | The decision-log rule (#96 decision 1): yes. | `CLAUDE.md` (#96) |
+| 11 Nov 2026 | The four rule-level questions approved only by merge (#96 decision 2): yes to all four. #35 and #54: changes to internal code or data structures are allowed in Phase 1 when the generated LP stays identical (layer 2 at 1e-9, same rows, columns and order). #61: one-way cross-evaluation counts as OTUS9r's layer 3 at the M1.3 gate. #91: K2 approved. The other open decisions are to be reviewed with James. | `CLAUDE.md` (#96); `docs/known-differences.md` K2 |
 | 11 Nov 2026 | TIMES version: stay on v4.9.7 (`d9a6a25`) until the M1.3 gate closes; then move to v4.9.8 (`7064680`, 5 Nov 2026) as a whole: re-pin the source download (`Artifacts.toml`), translate the v4.9.8 diff (six files), rerun every GAMS reference with v4.9.8. Rule-level; explicit yes. | `CLAUDE.md` Baseline (#96) |
 | 11 Nov 2026 | CPLEX solves for the eight new JRC scenarios (#94 decision 2): with REDUCE NO (the harness's reduce_off variant) every scenario is infeasible under TIMES v4.9.7 (one EQL_ACTBND row that REDUCE removes); PSI's own setup (as_run) passes presolve at the size of the 28 Oct v4.8.3 solve. TIMES v4.9.7 is not at fault. Layer-3 solves run on as_run; reduce_off keeps its checkpoints and matrix only. | this log; local logs |
 | 3 Nov 2026 | Phase 1 plan approved; work through it and stop only to depart from it. | `CLAUDE.md` (#23) |
@@ -72,7 +70,14 @@ answer yet.
 
 ## Log by pull request
 
-### #94 Suite: the other eight JRC-EU-TIMES WIMBY scenarios (open; both decisions answered)
+### #96 Decision log: docs/decisions.md, backfilled from #21-#95; the rule in CLAUDE.md (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | The decision-log rule in `CLAUDE.md` | Yes. | James, 11 Nov 2026 |
+| 2 | The open decisions: four rule-level ones approved only by merge (#35, #54, #61, #91) and nine never answered | Yes to the four; the rest to be reviewed with James (Open decisions). | James, 11 Nov 2026 |
+
+### #94 Suite: the other eight JRC-EU-TIMES WIMBY scenarios (merged 2026-11-11)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
@@ -92,14 +97,14 @@ answer yet.
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
 | 1 | Record K3 (GAMS licence level as the `licencelevel` run option) as approved? | Approved. | James, 9 Nov 2026 (#84) |
-| 2 | K2 recorded as approved from the merge of #91: right? | Recorded; explicit yes still needed (Open decisions). | accepted by merge, 11 Nov 2026 |
+| 2 | K2 recorded as approved from the merge of #91: right? | Approved explicitly. | James, 11 Nov 2026 (#96) |
 | 3 | Leave issue #87 open only for attributes (`V.UP(i) = 1`)? | Left open for that. | accepted by merge, 11 Nov 2026 |
 
 ### #91 M1.4 (5): from DD files to the solved model, with no GAMS state; alias fix (merged 2026-11-10)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Approve K2 in `docs/known-differences.md`? | Recorded as approved from the merge; explicit yes still needed (Open decisions). | accepted by merge, 10 Nov 2026 |
+| 1 | Approve K2 in `docs/known-differences.md`? | Approved. | James, 11 Nov 2026 (#96) |
 | 2 | Nightly HiGHS solves for demo12, OTCGEN, OTNYC; TIMES-NZ and OTUS9r stop at the matrix? | As proposed; the full TIMES-NZ solve is run by hand. | accepted by merge, 10 Nov 2026 |
 | 3 | Alias fix in `gset` (a stale copy of PYR) | Fixed, with a unit test. | accepted by merge, 10 Nov 2026 |
 
@@ -299,7 +304,7 @@ answer yet.
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Accept one-way cross-evaluation as OTUS9r's layer 3 for the M1.3 gate? | Counted so; explicit yes still needed (Open decisions). | accepted by merge, 6 Nov 2026 |
+| 1 | Accept one-way cross-evaluation as OTUS9r's layer 3 for the M1.3 gate? | Yes (`CLAUDE.md`, Validation). | James, 11 Nov 2026 (#96) |
 
 ### #59 M1.3 (20b-3): prepret.dsc L66-80, VAR_RCAP and VAR_SCAP bounds (merged 2026-11-06)
 
@@ -331,7 +336,7 @@ answer yet.
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Allow LP-identical data-structure fixes before M1.7? | Not decided. | open |
+| 1 | Allow LP-identical data-structure fixes before M1.7? | Yes: allowed when the generated LP stays identical (`CLAUDE.md`, Phase 1 rules). | James, 11 Nov 2026 (#96) |
 
 ### #53 demo12 variant 5: retrofits and lifetime extensions (merged 2026-11-05)
 
@@ -427,7 +432,7 @@ answer yet.
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | A speed-up in shared code during Phase 1, with the same record order? | Merged; explicit yes still needed (Open decisions). | accepted by merge, 5 Nov 2026 |
+| 1 | A speed-up in shared code during Phase 1, with the same record order? | Yes: allowed when the generated LP stays identical (`CLAUDE.md`, Phase 1 rules). | James, 11 Nov 2026 (#96) |
 
 ### #33 M1.3 (11a): ppmain.mod L800-821, pp_chp.mod (merged 2026-11-05)
 

@@ -17,6 +17,10 @@ Claude Code in the terminal, VS Code, or the desktop app).
 ## Phase 1 rules (faithful translation)
 - Match GAMS results exactly. Do not reformulate, aggregate, substitute or
   tune for performance; that is Phase 2.
+- Exception (James, 11 Nov 2026; #35, #54): a change to internal code or data
+  structures, such as a speed-up of shared code, is allowed when the
+  generated LP stays identical: layer 2 at 1e-9, with the same rows, columns
+  and order. The equations and GAMS semantics are still translated as written.
 - Keep the GAMS names (`EQ_COMBAL`, `VAR_ACT`, `COEF_CPT`, ...).
 - Cite the GAMS source in every docstring: `# GAMS: <file> L<start>-<end>, v4.9.7`.
 - Write `$`-conditions as explicit sparse index sets. Never build dense
@@ -60,6 +64,10 @@ Claude Code in the terminal, VS Code, or the desktop app).
 | Matrix | rows, columns, coefficients, RHS, bounds vs CONVERT DumpGDX | 1e-9 |
 | Solution | objective; each optimum cross-evaluated in the other model | 1e-6 |
 | Reporting | report parameters and `.vd` vs GAMS | 1e-6 |
+
+OTUS9r at the M1.3 gate (James, 11 Nov 2026; #61): layer 3 is checked one
+way, CPLEX's GAMS optimum cross-evaluated in TIMES.jl; HiGHS on OTUS9r is
+looked at separately.
 
 Any mismatch blocks the merge. Justified differences go in
 `docs/known-differences.md`.
