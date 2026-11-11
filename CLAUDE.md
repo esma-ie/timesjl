@@ -40,6 +40,15 @@ Claude Code in the terminal, VS Code, or the desktop app).
   for a plan approval per change, and stop only to depart from it. James
   reviews PRs at two check-ins, 9:00 and 16:30 (from 5 Nov 2026). Each PR starts with a
   "Decisions for you" list.
+- Decision log (James, 11 Nov 2026): every question in a PR's "Decisions for
+  you" list or at a check-in goes into `docs/decisions.md` with its outcome.
+  A merge accepts a recommendation the PR already builds in. A question with
+  no built-in default, or a choice the PR made for him, stays on the log's
+  "Open decisions" list and is asked again at each 9:00 check-in until James
+  answers; nothing that depends on it starts. Rule-level decisions (known
+  differences, licences and test data, departures from these rules or the
+  plan) need James's explicit yes; a merge never counts. Update the log in
+  each PR, and record the outcome when it merges or James answers.
 
 ## Validation (every PR)
 | Layer | Check | Tolerance |
