@@ -5,18 +5,19 @@
 #   - every set and parameter: keys, record order, values, EPS, element text;
 #   - the dump's label order (G55).
 #
-#   julia --project=test scripts/m14_probe.jl <reference dir> --sources <timesjl-sources> [--pre] <model> ...
+#   julia --project=test scripts/m14_probe.jl <reference dir> --sources <timesjl-sources> [--pre] [--local] <model> ...
 #
 # <model> is a reference folder name, e.g. TIMES_Demo-demo12; both variants are compiled. --pre stops
 # at `$BATINCLUDE maindrv.mod` (changes 2-4) instead of compiling the whole program (change 2b).
 # The TIMES source is the pinned download (`times_source()`, change 2c; TIMESJL_TIMES_SOURCE names a
 # local clone instead); --sources gives the models' folders.
-# Only open models (CLAUDE.md); TIM and JRC-EU-TIMES are refused.
+# The DD folders are the suite's (scripts/m14_models.jl). TIM and JRC-EU-TIMES need --local (CLAUDE.md:
+# James's workstation only, their logs kept there).
 using TIMES
 using TIMES: compile_run, grecords, gdx_uels, gdx_symbols
 using TIMES.Reference: load_dump, read_symbol, SV_EPS
 
-include(joinpath(@__DIR__, "m14_models.jl"))      # REFGAMS, MODEL_DIRS, dd_model_dir
+include(joinpath(@__DIR__, "m14_models.jl"))      # REFGAMS, dd_model_dirs, take_local!
 
 # GAMS's Include File Summary (level, file name), less the run file and the harness's .tjlref files
 function gams_includes(lst)
@@ -38,7 +39,7 @@ function probe(ref, sources, model, variant; full=true)
     isfile(run) && isdir(joinpath(dir, "input")) || return println("== $model/$variant: no input dump, skipped")
     g = nothing
     t = @elapsed try
-        g = compile_run(run; dirs=[dd_model_dir(sources, model), REFGAMS], full,
+        g = compile_run(run; dirs=[dd_model_dirs(sources, model); REFGAMS], full,
                         globals=Dict("RUN_NAME" => model))     # the harness's --run_name
     catch e
         return println("== $model/$variant: compile stops: ", sprint(showerror, e))
@@ -98,13 +99,14 @@ function probe(ref, sources, model, variant; full=true)
 end
 
 function main(args)
+    args = take_local!(collect(args))
     ref = args[1]
     i = findfirst(==("--sources"), args)
     sources = args[i+1]
     full = !("--pre" in args)
     models = [a for (j, a) in enumerate(args) if j > 1 && j != i && j != i + 1 && a != "--pre"]
     for m in models
-        dd_model_dir(sources, m)               # open models only
+        dd_model_dirs(sources, m)              # refuses a non-public model without --local
         for v in ("reduce_off", "as_run")
             probe(ref, sources, m, v; full)
         end

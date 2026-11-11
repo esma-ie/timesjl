@@ -5,14 +5,15 @@
 # (presolve, M1.3 change 25), on every set and parameter at 1e-9.
 #
 #   julia --project=test scripts/m13_gate.jl <reference dir> [--root name=path ...] [<model> ...]
-#   julia --project=test scripts/m13_gate.jl <reference dir> --from-dd <timesjl-sources> [--solve] [<model> ...]
+#   julia --project=test scripts/m13_gate.jl <reference dir> --from-dd <timesjl-sources> [--solve] [--local] [<model> ...]
 #
 # --from-dd (M1.4 change 5): no GAMS state at all. The input is compiled from the model's own run and
 # DD files (src/dd/compile.jl, the TIMES source from times_source()) and written as a dump
 # (write_dump), checked against GAMS's input dump, then the chain runs on TIMES.jl's state alone: no
 # checkpoint dump is read into it (no carry), they are only compared. Past pre-solve the model is
 # generated and compared with GAMS's CONVERT matrix (layer 2); with --solve, HiGHS solves it and the
-# objective is compared with GAMS/CPLEX's (layer 3, 1e-6). Open models only (scripts/m14_models.jl).
+# objective is compared with GAMS/CPLEX's (layer 3, 1e-6). The DD folders are the suite's (scripts/m14_models.jl);
+# TIM and JRC-EU-TIMES need --local (James's workstation only, logs kept there).
 #
 # scripts/m13_probe.jl starts each segment from GAMS's own state; here only
 # the input dump comes from GAMS. At a checkpoint the state goes on in a
@@ -32,7 +33,7 @@
 # (UnportedError) ends the chain there; the checkpoints before it still count.
 
 include(joinpath(@__DIR__, "m13_probe.jl"))      # M13_STEPS, M13_SEGMENTS, run_switches, runfile_of, suite_switches
-include(joinpath(@__DIR__, "m14_models.jl"))     # REFGAMS, MODEL_DIRS, dd_model_dir
+include(joinpath(@__DIR__, "m14_models.jl"))     # REFGAMS, dd_model_dirs, take_local!
 import HiGHS, JuMP
 using TIMES: compile_run, write_dump, generate!
 using TIMES.Reference: load_dump, compare_dumps, canonical_from_jump, canonical_from_dump, compare_lp
@@ -69,7 +70,7 @@ parameter at 1e-9, and the label list.
 function dd_input(dir, model, variant, sources, sw)
     run = joinpath(dir, "raw", "tjl_presolve.run")
     out = mktempdir()
-    t = @elapsed g = compile_run(run; dirs=[dd_model_dir(sources, model), REFGAMS], globals=Dict("RUN_NAME" => model))
+    t = @elapsed g = compile_run(run; dirs=[dd_model_dirs(sources, model); REFGAMS], globals=Dict("RUN_NAME" => model))
     tw = @elapsed write_dump(g, out; source="$model $variant: compiled from its DD files by TIMES.jl")
     mine, theirs = load_dump(out), load_dump(joinpath(dir, "input"))
     r = compare_dumps(mine, theirs)
@@ -209,6 +210,7 @@ end
 
 if abspath(PROGRAM_FILE) == @__FILE__
     args = collect(ARGS)
+    take_local!(args)
     solve = "--solve" in args
     filter!(!=("--solve"), args)
     i = findfirst(==("--from-dd"), args)
