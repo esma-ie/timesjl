@@ -14,9 +14,10 @@
 # dump holds (`execute_unload` just before maindrv.mod): every symbol, its records, and the labels;
 # `g.trace` is the listing's Include File Summary, checked against GAMS's by scripts/m14_probe.jl.
 #
-# Known gap: an assignment compiled after maindrv.mod makes its symbol DEFINED for a later
-# `$IF DEFINED` (G35); the reader marks only data statements and macros. No open suite model's
-# include trace depends on it (every one matches GAMS's); to be closed with a GAMS experiment.
+# DEFINED (G35): a data statement (an empty `//` list too), a `$MACRO` name, and an assignment compiled
+# before the `$IF` (gassigned!: preppm.mod L27-28, R_CUREX made DEFINED by an assignment that never
+# runs, `$NO`). The variants of issue #87 (an assignment in a branch not taken, to an attribute) are
+# still to be checked with GAMS.
 #
 # GAMS rules followed (GAMS 54 manual: Dollar Control Options; Data Entry; Compile-Time Variables),
 # and the checks that confirm each against the input/ dumps are in docs/m14-plan.md. Behaviour not
@@ -32,10 +33,11 @@ mutable struct GSym
     alias::String                     # :alias: the set it names
     dim::Int                          # -1 until a domain or a record fixes it
     hasdata::Bool
+    assigned::Bool                    # an assignment to it has been compiled: DEFINED (G35)
     members::Dict{Vector{String},String}                 # sets: member => element text
     vals::Dict{Vector{String},Tuple{Float64,Symbol}}     # parameters, scalars: value, special (:eps, ...)
 end
-GSym(name, kind, order) = GSym(name, kind, String[], "", order, "", -1, false,
+GSym(name, kind, order) = GSym(name, kind, String[], "", order, "", -1, false, false,
     Dict{Vector{String},String}(), Dict{Vector{String},Tuple{Float64,Symbol}}())
 
 "One include level: its file, arguments %1..%n, its \$SETLOCAL and \$SET (scoped) variables."
@@ -277,6 +279,9 @@ function gstatements!(g::GamsCompile, text::AbstractString, file, firstline; sou
         elseif it isa DDOther
             # a MODEL statement does not count as naming its equations (G57)
             it.keyword in ("MODEL", "MODELS") || gnoterefs!(g, it.text)
+            # an assignment makes its symbol DEFINED for a later $IF DEFINED, whether or not it would
+            # change anything when run (G35; preppm.mod L27 `R_CUREX(R,CURR,CUR)$NO=0`, tested at L28)
+            it.keyword == "EXEC" && gassigned!(g, it.text)
             # executable statements before maindrv.mod run after compilation (INIT_EXEC); those after it
             # run after the input checkpoint, in TIMES.jl's own translation (M1.1-M1.3), so are skipped
             it.keyword == "EXEC" && !g.later && push!(g.exec, (basename(it.file), it.line, it.text))
@@ -649,7 +654,8 @@ function gcondition1(g::GamsCompile, s::AbstractString, ci::Bool, file, line)
         # DECLARED: the symbol exists; DEFINED: it also has a data statement (G35: whether an empty
         # list // counts is UNCONFIRMED; it counts here, as a data statement)
         x = get(g.syms, uppercase(m[2]), nothing)
-        ok = uppercase(m[2]) in g.macros || (x !== nothing && (lowercase(m[1]) == "declared" || x.kind === :alias || x.hasdata))
+        ok = uppercase(m[2]) in g.macros ||
+             (x !== nothing && (lowercase(m[1]) == "declared" || x.kind === :alias || x.hasdata || x.assigned))
         return (ok, m[3])
     elseif (m = match(r"^exist\s+(\S+)\s*(.*)$"is, s)) !== nothing
         return (gfind(g, m[1], file) !== nothing, m[2])
@@ -753,6 +759,73 @@ function run_exec!(g::GamsCompile)
         fn = get(INIT_EXEC, (f, l), nothing)
         fn === nothing && throw(UnportedError("executable statement at $f L$l: $(first(replace(t, r"\s+" => " "), 80))"))
         fn(g, t)
+    end
+end
+
+"""
+    gassignees(text) -> Vector{String}
+
+The symbols a compiled statement assigns to: each `name`, `name(...)`, with any `\$` conditions
+(`\$name`, `\$name(...)`, `\$(...)`) and `\$=`, before an `=` that is not part of `==`, `=l=`, `=g=`,
+`=e=`, `<=` or `>=`, and that starts the statement or follows `;` or `,` (an `=` after `(` is a
+comparison: `IF(CNT=DONE+1,CNT=DONE)` assigns CNT once). An attribute (`V.UP(i) = 1`) is not
+counted. Lines of LOOP and IF bodies count as GAMS compiles them all.
+"""
+function gassignees(text::AbstractString)
+    s = collect(text)
+    n = length(s)
+    out = String[]
+    isid(c) = isletter(c) || isdigit(c) || c == '_'
+    back(j) = (while j >= 1 && isspace(s[j]); j -= 1; end; j)
+    function openparen(j)                     # s[j] == ')': index of its '('
+        d = 0
+        while j >= 1
+            s[j] == ')' && (d += 1)
+            s[j] == '(' && (d -= 1; d == 0 && return j)
+            j -= 1
+        end
+        return 0
+    end
+    for i in 1:n
+        s[i] == '=' || continue
+        (i < n && s[i+1] == '=') && continue
+        (i > 1 && s[i-1] in ('=', '<', '>')) && continue
+        (i + 2 <= n && lowercase(s[i+1]) in ('l', 'g', 'e', 'n', 'x', 'c', 'b') && s[i+2] == '=') && continue
+        (i > 2 && s[i-2] == '=' && lowercase(s[i-1]) in ('l', 'g', 'e', 'n', 'x', 'c', 'b')) && continue
+        j = back(i - 1)
+        j >= 1 && s[j] == '\$' && (j = back(j - 1))           # \$=
+        name = ""
+        while j >= 1
+            if s[j] == ')'
+                k = openparen(j)
+                k == 0 && break
+                j = back(k - 1)
+                if j >= 1 && s[j] == '\$'                     # \$(...)
+                    j = back(j - 1); continue
+                end
+            end
+            j >= 1 && isid(s[j]) || break
+            e = j
+            while j >= 1 && isid(s[j]); j -= 1; end
+            id = String(s[j+1:e])
+            j = back(j)
+            if j >= 1 && s[j] == '\$'                         # \$name or \$name(...)
+                j = back(j - 1); continue
+            end
+            (j >= 1 && s[j] == '.') && break                 # an attribute
+            (j < 1 || s[j] in (';', ',')) && (isletter(id[1]) || id[1] == '_') && (name = id)
+            break
+        end
+        isempty(name) || push!(out, name)
+    end
+    return out
+end
+
+"Mark the symbols a compiled statement assigns to as DEFINED (G35)."
+function gassigned!(g::GamsCompile, text::AbstractString)
+    for n in gassignees(text)
+        x = get(g.syms, uppercase(n), nothing)
+        x === nothing || (x.assigned = true)
     end
 end
 

@@ -209,6 +209,9 @@ files, with no GAMS (`test/unit/test_ddsource.jl`). The DD files come from the p
 download of `etsap-TIMES/TIMES_Demo` @ 962db86 (`Artifacts.toml`); the run file is the
 harness's patched copy (`test/fixtures/demo12_off_run`, CC BY 4.0, IEA-ETSAP). The result
 is checked against the `demo12_off_input` dump.
+From change 6 (10 Nov 2026) the same test covers the 11 demo12 variants that have an input
+fixture: their own DD files are in `reference/dd/` (CC BY 4.0, as demo12) and their patched run
+files in `test/fixtures/<prefix>_run`.
 
 Coverage the removed tests gave, and where it has to come from now:
 

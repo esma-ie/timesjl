@@ -662,3 +662,8 @@ those checks, their figures and their crafted cases are not published
   needs. Crafted case demo12_pfa (demo12_pf with GR_GENLEV, GR_GENMAP,
   GR_GENFR, GR_ENDFR data): the M1.3 chain PASS to coef, both variants; the
   model waits for EQ_GR_GENALL and EQ_GR_DEMALL (27b-2).
+- 10 Nov 2026: M1.4 (6): the DD folders of every suite and crafted model
+  from `reference/suite.toml` and `reference/crafted.toml` (`--local` for TIM
+  and JRC-EU-TIMES); CI compiles demo12 and 11 variants from their DD files;
+  the licence level as a run option (K3); `scripts/run_dd.jl` runs any run
+  file from its DD files to the HiGHS solve.
