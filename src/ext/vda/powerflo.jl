@@ -214,10 +214,13 @@ function powerflo_main!(tm)
         elseif iszero(z)
             gid[(r2, c2)] = f
         elseif f.v != z.v
-            my_f, done = min(f.v, z.v), max(f.v, z.v)
-            cnt.v == done + 1 && (cnt = GNum(done))
+            # L80-81: MY_F=MIN(F,Z); DONE=MAX(F,Z); IF(CNT=DONE+1,CNT=DONE); GR_GID(..)$(..=DONE) = MY_F.
+            # GAMS MIN keeps EPS (G21): the first grid's ID is EPS, so a grid merged into it gets
+            # EPS, not an exact 0 that a later arc would read as "no grid yet" (NOT F).
+            my_f, done = gmin(f, z), gmax(f, z)
+            cnt.v == done.v + 1 && (cnt = done)
             for k in trackc
-                gget(k).v == done && (gid[k] = GNum(my_f))
+                gget(k).v == done.v && (gid[k] = my_f)
             end
         end
     end
