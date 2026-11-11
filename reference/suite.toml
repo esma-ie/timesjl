@@ -304,3 +304,112 @@ kind = "run"
 run_file = "{jrc_eu_times}/dd/cli_ll/cli_ll.run"
 idirs = ["{jrc_eu_times}/dd/cli_ll"]
 solver_opt_dir = "{jrc_eu_times}/dd/cli_ll"
+
+# The other eight WIMBY scenarios (James, 11 Nov 2026), to accelerate towards the 23 Nov webinar:
+# the same 47 of 48 DD files as cli_ll, only uc_elcpot_wind_xy.dd (wind potentials) differs
+# ({jrc_eu_times}/dd/README.md). Milestone tier; their pre-solve checkpoints and CONVERT matrix
+# need no solve (cli_ll: 197 s pre-solve, 975 s CONVERT), so the M1.4 DD probe and the M1.3 chain
+# run on them; a CPLEX solve (~2.4 h each) only for layer 3.
+[[model]]
+name = "JRC-EU-TIMES-cli_hh"
+tier = "milestone"
+source_repo = "gitea.psi.ch/WIMBY/JRC-EU-TIMES"
+licence_url = "https://gitea.psi.ch/WIMBY/JRC-EU-TIMES/src/branch/main/LICENSE"
+licence_checked = "2026-10-29"
+licence = "GPL-3.0-or-later"
+redistribute = "summary"
+kind = "run"
+run_file = "{jrc_eu_times}/dd/cli_hh/cli_hh.run"
+idirs = ["{jrc_eu_times}/dd/cli_hh"]
+solver_opt_dir = "{jrc_eu_times}/dd/cli_hh"
+
+[[model]]
+name = "JRC-EU-TIMES-cli_hl"
+tier = "milestone"
+source_repo = "gitea.psi.ch/WIMBY/JRC-EU-TIMES"
+licence_url = "https://gitea.psi.ch/WIMBY/JRC-EU-TIMES/src/branch/main/LICENSE"
+licence_checked = "2026-10-29"
+licence = "GPL-3.0-or-later"
+redistribute = "summary"
+kind = "run"
+run_file = "{jrc_eu_times}/dd/cli_hl/cli_hl.run"
+idirs = ["{jrc_eu_times}/dd/cli_hl"]
+solver_opt_dir = "{jrc_eu_times}/dd/cli_hl"
+
+[[model]]
+name = "JRC-EU-TIMES-cli_hm"
+tier = "milestone"
+source_repo = "gitea.psi.ch/WIMBY/JRC-EU-TIMES"
+licence_url = "https://gitea.psi.ch/WIMBY/JRC-EU-TIMES/src/branch/main/LICENSE"
+licence_checked = "2026-10-29"
+licence = "GPL-3.0-or-later"
+redistribute = "summary"
+kind = "run"
+run_file = "{jrc_eu_times}/dd/cli_hm/cli_hm.run"
+idirs = ["{jrc_eu_times}/dd/cli_hm"]
+solver_opt_dir = "{jrc_eu_times}/dd/cli_hm"
+
+[[model]]
+name = "JRC-EU-TIMES-cli_lh"
+tier = "milestone"
+source_repo = "gitea.psi.ch/WIMBY/JRC-EU-TIMES"
+licence_url = "https://gitea.psi.ch/WIMBY/JRC-EU-TIMES/src/branch/main/LICENSE"
+licence_checked = "2026-10-29"
+licence = "GPL-3.0-or-later"
+redistribute = "summary"
+kind = "run"
+run_file = "{jrc_eu_times}/dd/cli_lh/cli_lh.run"
+idirs = ["{jrc_eu_times}/dd/cli_lh"]
+solver_opt_dir = "{jrc_eu_times}/dd/cli_lh"
+
+[[model]]
+name = "JRC-EU-TIMES-cli_lm"
+tier = "milestone"
+source_repo = "gitea.psi.ch/WIMBY/JRC-EU-TIMES"
+licence_url = "https://gitea.psi.ch/WIMBY/JRC-EU-TIMES/src/branch/main/LICENSE"
+licence_checked = "2026-10-29"
+licence = "GPL-3.0-or-later"
+redistribute = "summary"
+kind = "run"
+run_file = "{jrc_eu_times}/dd/cli_lm/cli_lm.run"
+idirs = ["{jrc_eu_times}/dd/cli_lm"]
+solver_opt_dir = "{jrc_eu_times}/dd/cli_lm"
+
+[[model]]
+name = "JRC-EU-TIMES-cli_mh"
+tier = "milestone"
+source_repo = "gitea.psi.ch/WIMBY/JRC-EU-TIMES"
+licence_url = "https://gitea.psi.ch/WIMBY/JRC-EU-TIMES/src/branch/main/LICENSE"
+licence_checked = "2026-10-29"
+licence = "GPL-3.0-or-later"
+redistribute = "summary"
+kind = "run"
+run_file = "{jrc_eu_times}/dd/cli_mh/cli_mh.run"
+idirs = ["{jrc_eu_times}/dd/cli_mh"]
+solver_opt_dir = "{jrc_eu_times}/dd/cli_mh"
+
+[[model]]
+name = "JRC-EU-TIMES-cli_ml"
+tier = "milestone"
+source_repo = "gitea.psi.ch/WIMBY/JRC-EU-TIMES"
+licence_url = "https://gitea.psi.ch/WIMBY/JRC-EU-TIMES/src/branch/main/LICENSE"
+licence_checked = "2026-10-29"
+licence = "GPL-3.0-or-later"
+redistribute = "summary"
+kind = "run"
+run_file = "{jrc_eu_times}/dd/cli_ml/cli_ml.run"
+idirs = ["{jrc_eu_times}/dd/cli_ml"]
+solver_opt_dir = "{jrc_eu_times}/dd/cli_ml"
+
+[[model]]
+name = "JRC-EU-TIMES-cli_mm"
+tier = "milestone"
+source_repo = "gitea.psi.ch/WIMBY/JRC-EU-TIMES"
+licence_url = "https://gitea.psi.ch/WIMBY/JRC-EU-TIMES/src/branch/main/LICENSE"
+licence_checked = "2026-10-29"
+licence = "GPL-3.0-or-later"
+redistribute = "summary"
+kind = "run"
+run_file = "{jrc_eu_times}/dd/cli_mm/cli_mm.run"
+idirs = ["{jrc_eu_times}/dd/cli_mm"]
+solver_opt_dir = "{jrc_eu_times}/dd/cli_mm"

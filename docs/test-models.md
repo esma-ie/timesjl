@@ -63,7 +63,7 @@ conditions:
 | OTCGEN, case gc_ref (`esma-ie/OTCGEN` @ `08af95f`, public from 30 Oct 2026; the DD export of 30 Oct 2026 in its `dd/`) | CC-BY-SA-4.0 (ESMA), over US EPA Generative COMET v0.0.0 (US public domain) | ESMA | references and public fixtures (from M1.2, 30 Oct 2026) |
 | OTNYC, case s1_nyc_ref (`esma-ie/OTNYC` @ `bc1d276`, public from 30 Oct 2026; the DD export of 30 Oct 2026 in its `dd/`) | CC-BY-SA-4.0 (ESMA), over US EPA COMET-NYC v16.0.1 (US public domain) | ESMA | references and public fixtures (from M1.2, 30 Oct 2026) |
 | TIM, cases bau, mitigation_cb2024-300mt and its myopic variant (`esma-ie/times-ireland-model-marei`; James's DD export of 28 Oct 2026 in `timesjl-sources/TIM/dd/`) | CC-BY-NC-SA-4.0 | MaREI, UCC | the named exception: James's machine only, nothing derived committed |
-| JRC-EU-TIMES, PSI WIMBY version, scenario cli_ll (`gitea.psi.ch/WIMBY/JRC-EU-TIMES` @ c18a076; DD and run files extracted from its dumps into `timesjl-sources/JRC-EU-TIMES`) | GPL-3.0-or-later (WIMBY), over JRC-EU-TIMES data (CC-BY-4.0) | WIMBY project (PSI); data JRC | large-model reference, summary results only (James, 29 Oct 2026) |
+| JRC-EU-TIMES, PSI WIMBY version, scenario cli_ll and, from 11 Nov 2026, the other eight WIMBY scenarios cli_hh to cli_mm (`gitea.psi.ch/WIMBY/JRC-EU-TIMES` @ c18a076; DD and run files extracted from its dumps into `timesjl-sources/JRC-EU-TIMES`) | GPL-3.0-or-later (WIMBY), over JRC-EU-TIMES data (CC-BY-4.0) | WIMBY project (PSI); data JRC | large-model reference, summary results only (James, 29 Oct 2026) |
 
 TIM is in the suite from 29 Oct 2026 as the exception above, from James's DD
 export of the esma-ie fork (local source `tim`, never committed).
