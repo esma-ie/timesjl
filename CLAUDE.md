@@ -7,6 +7,9 @@ Claude Code in the terminal, VS Code, or the desktop app).
 ## Baseline
 - Translate only from TIMES v4.9.7, `etsap-TIMES/TIMES_model` @ `d9a6a25`
   (Antti Lehtilä's v4.9.7 commit; James's fork holds the same commit).
+  Version (James, 11 Nov 2026): v4.9.7 until the M1.3 gate closes; then the
+  whole baseline moves to v4.9.8 (`7064680`): the source download re-pinned,
+  its diff translated, every GAMS reference rerun with it.
 - Equation reference: `jamesglynn/TIMES_Documentation`, Part II.
 - If the GAMS code and the documentation disagree, follow the GAMS code and
   log the discrepancy in `docs/discrepancies.md`.

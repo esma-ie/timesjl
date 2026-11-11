@@ -44,6 +44,8 @@ answer yet.
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 11 Nov 2026 | TIMES version: stay on v4.9.7 (`d9a6a25`) until the M1.3 gate closes; then move to v4.9.8 (`7064680`, 5 Nov 2026) as a whole: re-pin the source download (`Artifacts.toml`), translate the v4.9.8 diff (six files), rerun every GAMS reference with v4.9.8. Rule-level; explicit yes. | `CLAUDE.md` Baseline (#96) |
+| 11 Nov 2026 | CPLEX solves for the eight new JRC scenarios (#94 decision 2) stopped after six: TIMES v4.9.7 finds every scenario infeasible (one activity-bound row), where v4.8.3 solved all nine on 28 Oct. Layer 3 for them waits for the cause. | this log; local logs |
 | 3 Nov 2026 | Phase 1 plan approved; work through it and stop only to depart from it. | `CLAUDE.md` (#23) |
 | 3 Nov 2026 | M1.4 (the DD reader) is developed alongside M1.3, in a second Claude tab and worktree. | `CLAUDE.md` (#23) |
 | 3 Nov 2026 | Nightly GAMS and probe runs start at 23:05. | nightly batch script on James's machine |
