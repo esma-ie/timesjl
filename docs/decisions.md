@@ -35,12 +35,12 @@ answer yet.
 | 10 Nov 2026 | #90 | Which other outcomes turn the cuOpt nightly red? | proposed in the chat | Open |
 | 10 Nov 2026 | #90 | Where to test GPU scaling: open core-model reference runs as a release asset, or a sweep on native Linux? | none given | Open |
 | 10 Nov 2026 | #90 | Wednesday's full cuOpt suite: set `CUOPT_FIXTURES=all` and `CUOPT_GPU_SHARES=100`? | yes | Open; a GitHub setting only James can make. |
-| 12 Nov 2026 | chat | Start the solution export of #97 (no report translation) before M1.6 opens, as an experiment, or keep the milestone order? | keep the order unless needed for 23 Nov | Open |
 
 ## Decisions in the chat (not in a PR list)
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 12 Nov 2026 | Start the solution export of #97 (levels and marginals in Arrow format v1; no report translation) now, before M1.6 opens, as an experiment: results from TIMES.jl in a downstream results view for the 23 Nov webinar, reviewed on 20 Nov. Rule-level (departs from the milestone order); explicit yes. M1.3 and M1.4 keep priority for the gates. | #97; this log |
 | 12 Nov 2026 | M1.6 reporting, order of outputs: results for downstream tools first, in Arrow format v1 (#97): the solution (levels and marginals), then the translated report parameters, as the default output of every solve; Veda `.vd` files second. The M1.6 gate is unchanged (report parameters and `.vd` against GAMS at 1e-6). Rule-level (a change to the plan); explicit yes. | `docs/translation-guide.md` (M1.6) when the M1.6 plan is written |
 | 12 Nov 2026 | MPS run files for each open model in its own repository: the GAMS `CONVERT` LP of each scenario, "as run" only, named `<model>+<scenario>+as_run` (`.mps.gz` and `.dict.txt.gz`), described in `mpsrunfiles/README.md` and attached to a release per TIMES version (`mps-times-v4.9.7`), not Git LFS (esma-ie's LFS quota is in use elsewhere and blocked; release assets have no quota). OTUS9r, OTCGEN, OTNYC and an esma-ie fork of TIMES_Demo; not TIMES-NZ (not ESMA's to share). | esma-ie/OTUS9r#1, OTCGEN#1, OTNYC#1, TIMES_Demo#1 (draft releases for James to publish) |
 | 12 Nov 2026 | GAMSPy (TIMES-2-GAMSPy) comparison: on the webinar list only, not in the core probes. | `_handoff` (local) |
