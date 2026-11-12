@@ -43,6 +43,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "Parity on openly licensed models (layers 1-3)" begin
         include("unit/test_public_parity.jl")
     end
+    @testset "M1.6 (#97): the solution as a TIMES.jl dump" begin
+        include("unit/test_solution.jl")
+    end
     @testset "Coefficients: coef_ptr.mod (M1.2)" begin
         include("unit/test_coef_ptr.jl")
     end
