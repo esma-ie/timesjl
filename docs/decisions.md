@@ -40,6 +40,8 @@ answer yet.
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 12 Nov 2026 | MPS run files for each open model in its own repository: the GAMS `CONVERT` LP of each scenario, "as run" only, named `<model>+<scenario>+as_run` (`.mps.gz` and `.dict.txt.gz`), described in `mpsrunfiles/README.md` and attached to a release per TIMES version (`mps-times-v4.9.7`), not Git LFS (esma-ie's LFS quota is in use elsewhere and blocked; release assets have no quota). OTUS9r, OTCGEN, OTNYC and an esma-ie fork of TIMES_Demo; not TIMES-NZ (not ESMA's to share). | esma-ie/OTUS9r#1, OTCGEN#1, OTNYC#1, TIMES_Demo#1 (draft releases for James to publish) |
+| 12 Nov 2026 | GAMSPy (TIMES-2-GAMSPy) comparison: on the webinar list only, not in the core probes. | `_handoff` (local) |
 | 11 Nov 2026 | The decision-log rule (#96 decision 1): yes. | `CLAUDE.md` (#96) |
 | 11 Nov 2026 | The four rule-level questions approved only by merge (#96 decision 2): yes to all four. #35 and #54: changes to internal code or data structures are allowed in Phase 1 when the generated LP stays identical (layer 2 at 1e-9, same rows, columns and order). #61: one-way cross-evaluation counts as OTUS9r's layer 3 at the M1.3 gate. #91: K2 approved. The other open decisions are to be reviewed with James. | `CLAUDE.md` (#96); `docs/known-differences.md` K2 |
 | 11 Nov 2026 | TIMES version: stay on v4.9.7 (`d9a6a25`) until the M1.3 gate closes; then move to v4.9.8 (`7064680`, 5 Nov 2026) as a whole: re-pin the source download (`Artifacts.toml`), translate the v4.9.8 diff (six files), rerun every GAMS reference with v4.9.8. Rule-level; explicit yes. | `CLAUDE.md` Baseline (#96) |
