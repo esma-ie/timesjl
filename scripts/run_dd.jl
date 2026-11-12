@@ -13,7 +13,9 @@
 #      write the result as an input dump (write_dump) to --out (a temporary folder by default);
 #   2. preprocess: the M1.3 chain and the M1.2 coefficients, to the pre-solve state;
 #   3. generate the model (rows, columns, nonzeros);
-#   4. with --solve, solve it with HiGHS (TIMESJL_THREADS threads, 12 by default) and print the objective.
+#   4. with --solve, solve it with HiGHS (TIMESJL_THREADS threads, 12 by default), print the objective and
+#      write the solution (levels and marginals of every variable and equation) to <out>/solution/ in the
+#      harness's dump layout (write_solution, issue #97; reference/python/gdx2arrow.py, format version 1).
 # The QA log TIMES writes (QA_CHECK.LOG) goes to the --out folder. A TIMES feature that TIMES.jl does
 # not translate yet stops the run with "not translated" and the GAMS lines it would need.
 #
@@ -83,6 +85,12 @@ function run_dd(args)
     st = JuMP.termination_status(m)
     println("== $name: HiGHS ", st, " in ", round(ts; digits=1), " s",
             st == JuMP.OPTIMAL ? ", objective $(JuMP.objective_value(m))" : "")
+    if JuMP.has_values(m)
+        sdir = joinpath(out, "solution")
+        tw = @elapsed TIMES.write_solution(tm, sdir; source="$name: solved by TIMES.jl from its DD files",
+                                           solver="HiGHS.jl $(pkgversion(HiGHS))")
+        println("== $name: solution written to $sdir in ", round(tw; digits=1), " s")
+    end
     return st == JuMP.OPTIMAL
 end
 
