@@ -1,0 +1,24 @@
+* TIMES.jl crafted case demo12_mrkx (reference/crafted.toml, 13 Nov 2026; issue #68): market
+* shares of exchange processes that export, so the export term of EQ(l)_FLOMRK
+* (eqflomrk.mod L83-88: VAR_IRE(...,'EXP') when PRC_MARK <= 0) is generated; demo12_flomrk
+* reaches only the import term. Added to TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo @ 962db86,
+* CC BY 4.0):
+* - REG1's electricity link to REG2 (TB_ELC_REG1_REG2_01) with a negative UP share: the
+*   export branch; RX_MARK is set at the last period (eqflomrk.mod L26-27), so the flows are
+*   divided by PRC_MARK and the right-hand side factor is 0;
+* - REG2's electricity export to the outside (EXPELC1) with a negative LO share;
+* - an auxiliary input of electricity on REG1's exports over the link (IRE_FLOSUM), so the
+*   factor (1+IRE_FLOSUM(R,T,P,C,S,'EXP',C,'IN')) of the export term is not 1.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER
+PRC_MARK ' '/
+REG1.2005.TB_ELC_REG1_REG2_01.TB_ELC_REG1_REG2_01.ELC.UP -0.3
+REG2.2005.EXPELC1.EXPELC1.ELC.LO -0.01
+/
+
+PARAMETER
+IRE_FLOSUM ' '/
+REG1.2005.TB_ELC_REG1_REG2_01.ELC.ANNUAL.EXP.ELC.IN 0.02
+/
