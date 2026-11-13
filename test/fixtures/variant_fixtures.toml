@@ -153,3 +153,16 @@ variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
+
+# Crafted case demo12_mrkx (13 Nov 2026, issue #68): market shares of exchange processes that
+# export (negative PRC_MARK on the REG1-REG2 link and on REG2's export EXPELC1, an IRE_FLOSUM
+# input on the exports), the export term of EQ(l)_FLOMRK (eqflomrk.mod L83-88; M1.3 change 23).
+# Preprocessing from the input dump to ppm on every symbol, and the whole model. The presolve
+# dump is shared with test/fixtures/public_fixtures.toml.
+[[variant]]
+prefix   = "demo12_mrkx"
+model    = "TIMES_Demo-demo12_mrkx"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []

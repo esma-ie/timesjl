@@ -108,7 +108,7 @@ GAMS 54.6.1):
 | 20b-4 | prepret.dsc OBJFIX and OBSALV, the objective terms (eqobj.mod L39, eqobjfix.mod L214, eqobsalv.mod L26, L105); the refusal lifted | 134-162 | layers 2-3 OTUS9r; demo12_refit and demo12_refit_afc (CI, whole model) |
 | 21 | equserco.mod: dynamic user constraints in the RHS direction (UC_DYNDIR 'RHS', uc_pasti.mod) | 80-106 | TIMES-NZ, OTCGEN |
 | 22 | uc_*.mod: user-constraint attributes other than GROWTH (CAP, SYNC, ...) | | TIMES-NZ |
-| 23 | eqflomrk.mod: EQ(l)_FLOMRK, market-share flow constraints | | TIMES-NZ |
+| 23 | eqflomrk.mod: EQ(l)_FLOMRK, market-share flow constraints (the export term, L83-88, checked on the crafted case demo12_mrkx, 13 Nov 2026, #68) | | TIMES-NZ; demo12_flomrk, demo12_mrkx (CI) |
 | 24 | eqactups.vda: EQ_SLSIFT, load shifting (with the demo12 load-shifting variant) | 131- | layers 2-3 TIMES-NZ (both variants) |
 | 25 | eqmain.mod preparation and pp_qack.mod: the coef -> pre-solve step, so the CI chain runs end to end (in M1.3, not M1.5: James, 5 Nov 2026) | | presolve (demo12 in CI) |
 | 25-1 | mod_vars.mod L94 (prepret.dsc DECL, its data statements L44-81), eqobj.mod L14-39 (with prepret.dsc EQOBJ L119-131) and eqobjinv.mod L18-274 (with coef_alt.lin INV, L89-118): the investment cases, spreads, corrections and divisors (8 Nov 2026; the step in parts) | 14-39; 18-274 | the probe's coef -> presolve segment: core models, demo12 cases; crafted case demo12_objinv (CI) |
@@ -1306,6 +1306,16 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
   the equations would need untranslated (PTDF, gas grids).
 - Result: demo12_pfa (8,743 and 3,281 rows) and demo12_pfd (8,911 and 3,401 rows) pass layers 2
   and 3 in both variants against GAMS 54.6.1 with CPLEX and HiGHS; demo12_pfd is a public fixture.
+
+### Change 23 follow-up (#68), 13 Nov 2026
+
+- demo12_flomrk reaches only the import term of EQ(l)_FLOMRK. New crafted case demo12_mrkx:
+  negative market shares (PRC_MARK <= 0, so %SIGI% holds) on REG1's electricity link to REG2
+  (UP) and REG2's electricity export EXPELC1 (LO), and an IRE_FLOSUM input on REG1's exports,
+  reach the export term `-(VAR_IRE(...,'EXP')%IRED%)*(1+IRE_FLOSUM(R,T,P,C,S,'EXP',C,'IN'))`
+  (eqflomrk.mod L83-88). GAMS 54.6.1 makes 8 rows (4
+  EQG on EXPELC1, 4 EQL on the link); TIMES.jl's model passes layers 2 and 3 in both variants
+  (8,703 and 3,241 rows) with no code change.
 
 ## Open items
 

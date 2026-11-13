@@ -272,3 +272,19 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_pfd/demo12_pfd.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa", "{crafted}/demo12_pfd"]
+
+# TIMES_Demo demo12 + demo12_mrkx/mrkx.dd (13 Nov 2026, issue #68): market shares of exchange
+# processes that export (a negative PRC_MARK on the REG1-REG2 electricity link and on REG2's
+# electricity export), with an auxiliary input on the exports (IRE_FLOSUM), so the export term of
+# EQ(l)_FLOMRK is generated (eqflomrk.mod L83-88; M1.3 change 23).
+[[model]]
+name = "TIMES_Demo-demo12_mrkx"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_mrkx/demo12_mrkx.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_mrkx"]

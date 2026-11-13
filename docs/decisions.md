@@ -30,7 +30,7 @@ answer yet.
 | 3 Nov 2026 | chat | Keep the "within 5x GAMS, warm" speed target in Phase 1 (M1.7), or move it to Phase 2? | none given | Open. `docs/translation-guide.md` L86 still has it at M1.7. |
 | 4 Nov 2026 | #30 | Add `scripts/m13_replay.jl` (needs GAMS, about 7 min) to the nightly run? | none given | Open |
 | 8 Nov 2026 | chat | Harness fix as one small PR: CHECK status for a non-optimal solve; redo `ppm/` and `coef/` made with older GAMS | one small PR | Open; no PR yet. |
-| 8 Nov 2026 | #68 | A demo12 variant with trade between regions, to check the EXP term: now, or before the M1.3 gate? | none given | Open |
+| 8 Nov 2026 | #68 | A demo12 variant with trade between regions, to check the EXP term: now, or before the M1.3 gate? | none given | Answered 12-13 Nov 2026: keep the test case and get it working soon, before the gate (crafted case demo12_mrkx) |
 | 10 Nov 2026 | #89 | Keep P2-5 (data and equation schemas) on the Phase 2 backlog, with its three pilots after M1.7? | keep; all pilots after M1.7 | Open; provisional until James confirms. |
 | 10 Nov 2026 | #90 | Which other outcomes turn the cuOpt nightly red? | proposed in the chat | Open |
 | 10 Nov 2026 | #90 | Where to test GPU scaling: open core-model reference runs as a release asset, or a sweep on native Linux? | none given | Open |
@@ -40,6 +40,9 @@ answer yet.
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 13 Nov 2026 | #90: the cuOpt nightly also solves the open reference runs OTNYC, OTCGEN and OTUS9r (reduce_off), besides the CI fixtures; a test run the same morning, then the local board updated. Rule-level for the cuOpt lane (informational; still never a merge gate); explicit yes. | `~/.config/timesjl/cuopt-nightly.conf` in WSL2 (REF_MODELS); this log |
+| 13 Nov 2026 | M1.3 order: 27b-2 (the grid allocation rows), then the #68 trade case, then the gate PRs for M1.3 and M1.4 ("ok, go" to each). | this log; #103, the #68 PR |
+| 12 Nov 2026 | #68: keep the demo12 trade test case and get it working soon (before the M1.3 gate). | crafted case demo12_mrkx (the #68 PR) |
 | 12 Nov 2026 | Start the solution export of #97 (levels and marginals in Arrow format v1; no report translation) now, before M1.6 opens, as an experiment: results from TIMES.jl in a downstream results view for the 23 Nov webinar, reviewed on 20 Nov. Rule-level (departs from the milestone order); explicit yes. M1.3 and M1.4 keep priority for the gates. | #97; this log |
 | 12 Nov 2026 | M1.6 reporting, order of outputs: results for downstream tools first, in Arrow format v1 (#97): the solution (levels and marginals), then the translated report parameters, as the default output of every solve; Veda `.vd` files second. The M1.6 gate is unchanged (report parameters and `.vd` against GAMS at 1e-6). Rule-level (a change to the plan); explicit yes. | `docs/translation-guide.md` (M1.6) when the M1.6 plan is written |
 | 12 Nov 2026 | MPS run files for each open model in its own repository: the GAMS `CONVERT` LP of each scenario, "as run" only, named `<model>+<scenario>+as_run` (`.mps.gz` and `.dict.txt.gz`), described in `mpsrunfiles/README.md` and attached to a release per TIMES version (`mps-times-v4.9.7`), not Git LFS (esma-ie's LFS quota is in use elsewhere and blocked; release assets have no quota). OTUS9r, OTCGEN, OTNYC and an esma-ie fork of TIMES_Demo; not TIMES-NZ (not ESMA's to share). | esma-ie/OTUS9r#1, OTCGEN#1, OTNYC#1, TIMES_Demo#1 (draft releases for James to publish) |
@@ -262,7 +265,7 @@ answer yet.
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | A demo12 variant with trade to check the EXP term: now, or before the gate? | Not decided. | open |
+| 1 | A demo12 variant with trade to check the EXP term: now, or before the gate? | Keep the test case and get it working soon (James, 12 Nov 2026), before the M1.3 gate (13 Nov 2026): crafted case demo12_mrkx. | chat |
 
 ### #67 M1.3 (22): uc_*.mod, the user-constraint attribute factors (merged 2026-11-09)
 

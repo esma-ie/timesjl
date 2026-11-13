@@ -676,3 +676,7 @@ those checks, their figures and their crafted cases are not published
   public fixtures. The last translation change of the M1.3 plan (27c, the
   grid's reporting, comes with M1.6); the trade case of #68 and the gate
   follow.
+- 13 Nov 2026: M1.3 change 23 follow-up (#68): crafted case demo12_mrkx,
+  market shares of exchange processes that export, reaches the export term
+  of EQ(l)_FLOMRK (eqflomrk.mod L83-88). Layers 2-3 PASS in both variants
+  with no code change; a public fixture.
