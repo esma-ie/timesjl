@@ -131,12 +131,25 @@ untranslated = []
 
 # Variant 6, change 27a-2 (10 Nov 2026): demo12_pf plus the allocation of generation and sectoral
 # demand to the grid nodes (GR_GENLEV, GR_GENMAP, GR_GENFR, GR_ENDFR; powerflo.vda L40-47,
-# L109-162). Preprocessing from the input dump to ppm on every symbol; the model is refused until
-# EQ_GR_GENALL and EQ_GR_DEMALL are translated (change 27b-2).
+# L109-162). Preprocessing from the input dump to ppm on every symbol; the whole model since
+# change 27b-2 (EQ_GR_GENALL, the IREAUX terms; 13 Nov 2026).
 [[variant]]
 prefix   = "demo12_pfa"
 model    = "TIMES_Demo-demo12_pfa"
 variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
-untranslated = ["(variant POWERFLO)"]
+untranslated = []
+
+# Variant 6, change 27b-2 (13 Nov 2026): demo12_pfa plus a second grid node in REG1 (an
+# intra-regional line with a reactance from ELC to TRAELC), so that GR_DEMFR, GR_ADO and the
+# demand allocation rows EQ_GR_DEMALL exist (powerflo.vda L133-162, L314-340). Preprocessing from
+# the input dump to ppm on every symbol, and the whole model. The presolve dump is shared with
+# test/fixtures/public_fixtures.toml.
+[[variant]]
+prefix   = "demo12_pfd"
+model    = "TIMES_Demo-demo12_pfd"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []

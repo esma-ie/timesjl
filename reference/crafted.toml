@@ -257,3 +257,18 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_pfa/demo12_pfa.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa"]
+
+# TIMES_Demo demo12_pfa + demo12_pfd/pfd.dd (13 Nov 2026): a second grid node in REG1 (an
+# intra-regional line with a reactance from ELC to TRAELC), so that the demand allocation rows
+# EQ_GR_DEMALL are generated (powerflo.vda L314-340; M1.3 change 27b-2).
+[[model]]
+name = "TIMES_Demo-demo12_pfd"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_pfd/demo12_pfd.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa", "{crafted}/demo12_pfd"]

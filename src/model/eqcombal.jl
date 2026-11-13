@@ -21,7 +21,8 @@
 # - blending, L30-35 and L75-80 (BLE_OPR, BLE_ENV, BLE_TP);
 # - elastic demand, L67 and L101 under %TIMESED% (COM_ELAST);
 # - non-linear demand VAR_DEM, L110 (RD_NLP);
-# - cal_ire.mod L30 when %IREAUXBAL% is set.
+# - cal_ire.mod L30 when %IREAUXBAL% is set other than by powerflo.vda DECL (whose
+#   IREAUX terms, L84, are `ireaux!`: M1.3 change 27b-2).
 # The sets these equations read (RCS_COMBAL, RTPCS_VARF, RTP_VNTBYR, ...)
 # come from the pre-solve dump: pp_qack.mod changes them after eqmain.
 
@@ -39,7 +40,8 @@ function combal_unported(tm::TimesModel)
     nonempty_par("COM_ELAST", 5) &&
         throw(UnportedError("eqcombal.mod L67/L101 elastic demand under %TIMESED% (COM_ELAST)"))
     nonempty_par("RD_NLP", 2) && throw(UnportedError("eqcombal.mod L110 non-linear demand VAR_DEM (RD_NLP)"))
-    haskey(tm.switches, "IREAUXBAL") && throw(UnportedError("cal_ire.mod L30 under %IREAUXBAL%"))
+    # %IREAUXBAL% comes from powerflo.vda DECL (L221) under %POWERFLO% (`ireaux!`); set any other way, refused
+    haskey(tm.switches, "IREAUXBAL") && !powerflo_on(tm) && throw(UnportedError("cal_ire.mod L30 under %IREAUXBAL% without %POWERFLO%"))
     return nothing
 end
 
@@ -213,7 +215,8 @@ otherwise empty. The caller's arguments:
 - %6/%7 wrap the process index in a set, `RPC_IRE(%6R,P%7,...)`, which
   restricts both sums; `pfilter(p)` tests membership; `nothing` means none.
   eqpeak.mod L32 passes `PRC_PKNO(` `)`;
-- %5 is only used by %IREAUXBAL% (L30, refused).
+- %5 is only used by %IREAUXBAL% (L30): the callers add powerflo.vda's
+  IREAUX terms with `ireaux!` (M1.3 change 27b-2).
 
 GAMS: cal_ire.mod L16-41, v4.9.7.
 """
@@ -412,6 +415,7 @@ function eq_combal!(tm::TimesModel, eqtype::String, lim::String, kind::String)
         if kind == "BAL"
             cal_fflo!(lhs, tm, GNum(-1.0), "IN", r, t, c, s)
             cal_ire!(lhs, tm, GNum(-1.0), "EXP", "IN", r, t, c, s)
+            ireaux!(lhs, tm, -gv(x.com_ie, (r, t, c, s)), r, t, c, s)                    # L84: cal_ire.mod L30, IREAUXIN
             cal_stgn!(lhs, tm, GNum(-1.0), "IN", r, t, c, s;                              # L87
                       cond=(p, ts) -> !((r, "NST", p) in prc_map) || (r, p, ts) in nstts,
                       f3=(p, v) -> one, f4=(p, v) -> gv(x.stg_eff, (r, v, p)), f6=(p, v) -> one)
