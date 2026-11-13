@@ -7,6 +7,9 @@ Claude Code in the terminal, VS Code, or the desktop app).
 ## Baseline
 - Translate only from TIMES v4.9.7, `etsap-TIMES/TIMES_model` @ `d9a6a25`
   (Antti Lehtilä's v4.9.7 commit; James's fork holds the same commit).
+  Version (James, 11 Nov 2026): v4.9.7 until the M1.3 gate closes; then the
+  whole baseline moves to v4.9.8 (`7064680`): the source download re-pinned,
+  its diff translated, every GAMS reference rerun with it.
 - Equation reference: `jamesglynn/TIMES_Documentation`, Part II.
 - If the GAMS code and the documentation disagree, follow the GAMS code and
   log the discrepancy in `docs/discrepancies.md`.
@@ -14,6 +17,10 @@ Claude Code in the terminal, VS Code, or the desktop app).
 ## Phase 1 rules (faithful translation)
 - Match GAMS results exactly. Do not reformulate, aggregate, substitute or
   tune for performance; that is Phase 2.
+- Exception (James, 11 Nov 2026; #35, #54): a change to internal code or data
+  structures, such as a speed-up of shared code, is allowed when the
+  generated LP stays identical: layer 2 at 1e-9, with the same rows, columns
+  and order. The equations and GAMS semantics are still translated as written.
 - Keep the GAMS names (`EQ_COMBAL`, `VAR_ACT`, `COEF_CPT`, ...).
 - Cite the GAMS source in every docstring: `# GAMS: <file> L<start>-<end>, v4.9.7`.
 - Write `$`-conditions as explicit sparse index sets. Never build dense
@@ -40,6 +47,15 @@ Claude Code in the terminal, VS Code, or the desktop app).
   for a plan approval per change, and stop only to depart from it. James
   reviews PRs at two check-ins, 9:00 and 16:30 (from 5 Nov 2026). Each PR starts with a
   "Decisions for you" list.
+- Decision log (James, 11 Nov 2026): every question in a PR's "Decisions for
+  you" list or at a check-in goes into `docs/decisions.md` with its outcome.
+  A merge accepts a recommendation the PR already builds in. A question with
+  no built-in default, or a choice the PR made for him, stays on the log's
+  "Open decisions" list and is asked again at each 9:00 check-in until James
+  answers; nothing that depends on it starts. Rule-level decisions (known
+  differences, licences and test data, departures from these rules or the
+  plan) need James's explicit yes; a merge never counts. Update the log in
+  each PR, and record the outcome when it merges or James answers.
 
 ## Validation (every PR)
 | Layer | Check | Tolerance |
@@ -48,6 +64,10 @@ Claude Code in the terminal, VS Code, or the desktop app).
 | Matrix | rows, columns, coefficients, RHS, bounds vs CONVERT DumpGDX | 1e-9 |
 | Solution | objective; each optimum cross-evaluated in the other model | 1e-6 |
 | Reporting | report parameters and `.vd` vs GAMS | 1e-6 |
+
+OTUS9r at the M1.3 gate (James, 11 Nov 2026; #61): layer 3 is checked one
+way, CPLEX's GAMS optimum cross-evaluated in TIMES.jl; HiGHS on OTUS9r is
+looked at separately.
 
 Any mismatch blocks the merge. Justified differences go in
 `docs/known-differences.md`.
