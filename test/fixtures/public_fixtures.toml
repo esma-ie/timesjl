@@ -285,3 +285,19 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 3257
 cols = 4485
 nonzeros = 18423
+
+# Crafted case TIMES_Demo-demo12_pfd (reference/crafted.toml: demo12 + pf.dd, pfa.dd, pfd.dd), 13 Nov
+# 2026 (GAMS 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): the
+# phase-angle grid of demo12_pf with the allocation of generation and sectoral demand to grid nodes
+# and a second node in REG1 (M1.3 change 27b-2: EQ_GR_GENALL, EQ_GR_DEMALL, the IREAUX terms of
+# EQ_COMBAL and EQ_PEAK), the whole model. The presolve dump is shared with
+# test/fixtures/variant_fixtures.toml. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_pfd"
+model    = "TIMES_Demo-demo12_pfd"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3401
+cols = 4701
+nonzeros = 19143

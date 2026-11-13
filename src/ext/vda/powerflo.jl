@@ -65,15 +65,15 @@ end
     powerflo_model_unported(tm) -> Vector{String}
 
 The powerflo.vda paths of the model (DECL and the equations) this model would take that are not
-translated: those of the main block, and the allocation of supply and demand to grid nodes
-(EQ_GR_GENALL, EQ_GR_DEMALL and the IREAUX terms, which come with M1.3 change 27b-2) when the
-allocation data exist.
+translated: the PTDF formulation (GR_PTDF data) and the gas grids. The allocation of supply and
+demand to grid nodes (EQ_GR_GENALL, EQ_GR_DEMALL and the IREAUX terms of the balance and peak
+rows) is translated since M1.3 change 27b-2. GR_DEMFR is not tested here: at this stage it holds
+the fractions the main block computed from the sectoral ones (L133-162), which the equations
+read; GR_DEMFR given as input data is refused by the main block (`powerflo_main_unported`).
 """
 function powerflo_model_unported(tm)
-    out = powerflo_main_unported(tm)
-    for (n, k) in (("GR_ENDFR", 4), ("GR_GENFR", 4), ("GR_GENMAP", 3), ("GR_GENLEV", 2))
-        hasdata(tm, n, k) && push!(out, "powerflo.vda L291-336 and IREAUX ($n has data: EQ_GR_GENALL, EQ_GR_DEMALL, allocation to grid nodes)")
-    end
+    out = powerflo_unported(tm)
+    hasdata(tm, "GR_PTDF", 6) && push!(out, "powerflo.vda L59-64, L172-180 (GR_PTDF has data: the PTDF formulation)")
     return out
 end
 
@@ -672,6 +672,300 @@ function eq_gr_powflo!(tm)
             addterm!(rhs, GNum(a), tm, "VAR_COMAUX", r, t, c, s)
             addterm!(rhs, GNum(-a), tm, "VAR_COMAUX", reg, t, com, s)
             gconstraint!(tm, "EQ_GR_POWFLO", (r, t, c, s, reg, com), "E", lhs, rhs) === nothing || (n += 1)
+        end
+    end
+    return n
+end
+
+# --- M1.3 (27b-2): allocation of supply and demand to the grid nodes (POWFLO L290-340, IREAUX L363-370) --
+
+"Whether %POWERFLO% is YES: powerflo.vda DECL ran (mod_vars.mod L95, `prepret_decl!`), which sets %IREAUXBAL% (L221)."
+powerflo_on(tm) = uppercase(strip(gswitch(tm, "POWERFLO", ""), ['\'', '"'])) == "YES"
+
+"""
+    gralloc_context(tm) -> NamedTuple
+
+The node-allocation sets and parameters of powerflo.vda's main block (change 27a-2) that
+EQ_GR_GENALL, EQ_GR_DEMALL and the IREAUX terms read, with their incidence maps, built once per model.
+"""
+function gralloc_context(tm)
+    get!(tm.cache, "GR_ALLOC") do
+        d = tm.data
+        S(n, N) = gset_opt(d, n, N)
+        P(n, N) = gparam_opt(d, n, N)
+        demmap, algmap, gmapc, endc = S("GR_DEMMAP", 3), S("GR_ALGMAP", 3), S("GR_GMAPC", 3), S("GR_ENDC", 3)
+        cg_of_r = Dict{String,Vector{String}}()                       # R -> CG with GR_ALGMAP(R,CG,CG)
+        foreach(k -> k[2] == k[3] && push!(get!(cg_of_r, k[1], String[]), k[2]), algmap.keys)
+        (gnall=S("GR_GNALL", 3), rc_grid=S("RC_GRID", 3), ado=S("GR_ADO", 3).members, genp=S("GR_GENP", 2).members,
+         algmap=algmap.members, allmap=S("GR_ALLMAP", 3).members, demmap=demmap.members, cg_of_r=cg_of_r,
+         alg_by_12=indexby(algmap, (1, 2)),                           # (r,cg) -> GR_ALGMAP(r,cg,com)
+         dem_by_12=indexby(demmap, (1, 2)),                           # (r,c) -> GR_DEMMAP(r,c,com)
+         dem_by_13=indexby(demmap, (1, 3)),                           # (r,c) -> GR_DEMMAP(r,com,c)
+         gmapc_by_12=indexby(gmapc, (1, 2)),                          # (r,nrg_grid) -> GR_GMAPC(r,nrg_grid,c)
+         gmapc_by_13=indexby(gmapc, (1, 3)),                          # (r,c) -> GR_GMAPC(r,nrg_grid,c)
+         endc=endc.members, endc_by_12=indexby(endc, (1, 2)),         # (r,nrg_grid) -> GR_ENDC(r,nrg_grid,com)
+         prcmap=S("GR_PRCMAP", 4),
+         prcmap_of_r=indexby(S("GR_PRCMAP", 4), (1,)),                # r -> GR_PRCMAP(r,p,com,item)
+         genmap=P("GR_GENMAP", 3), genfr=P("GR_GENFR", 4), endfr=P("GR_ENDFR", 4), demfr=P("GR_DEMFR", 4))
+    end
+end
+
+"""
+    ireaux!(expr, tm, mult, r, t, c, s) -> expr
+
+The IREAUX terms of the grid nodes' balances. powerflo.vda DECL sets %IREAUXBAL% to
+`\$BATINCLUDE powerflo.vda IREAUX` (L221), which cal_ire.mod L30 includes with its %2 and %5,
+and L11 jumps to the label `IREAUX%2%5`. Only two calls reach terms:
+
+- EQ_COMBAL's consumption (eqcombal.mod L84, `EXP IN`, %5 = ''): label IREAUXIN (L363-364),
+  %MX% = `COM_IE(R,T,C,S)*`;
+- EQ_PEAK's net imports (eqpeak.mod L31, `IMP OUT`, %5 = '-'): label IREAUXOUT- (L365), %MX% = `-`.
+
+IREAUXOUT (eqcombal.mod L39) and IREAUXIN- (eqpeak.mod L32, L68) are labels at the end of the
+file (L461-462), so those calls add nothing. The terms (L366-369):
+
+    SUM(GR_DEMMAP(R,COM,C),%MX%(VAR_GRIDIO(R,T,C,COM,S,'OUT') - VAR_GRIDIO(R,T,C,COM,S,'IN')\$GR_ALGMAP(R,'NRG',C))) +
+    SUM(GR_DEMMAP(R,C,COM),%MX%(VAR_GRIDIO(R,T,COM,C,S,'IN')\$GR_ALGMAP(R,'NRG',COM) - VAR_GRIDIO(R,T,COM,C,S,'OUT'))) +
+
+`mult` is %MX% times the caller's factor on cal_ire's terms. Nothing unless %POWERFLO% is YES.
+
+GAMS: powerflo.vda L11, L221, L363-370, L461-462; cal_ire.mod L30, v4.9.7.
+"""
+function ireaux!(expr::JuMP.AffExpr, tm, mult::GNum, r::String, t::String, c::String, s::String)
+    powerflo_on(tm) || return expr
+    x = gralloc_context(tm)
+    isempty(x.demmap) && return expr
+    powerflo_vars!(tm)
+    no3 = NTuple{3,String}[]
+    nrg_c = (r, "NRG", c) in x.algmap
+    for (_, com, _) in get(x.dem_by_13, (r, c), no3)                 # GR_DEMMAP(R,COM,C)
+        addterm!(expr, mult, tm, "VAR_GRIDIO", r, t, c, com, s, "OUT")
+        nrg_c && addterm!(expr, -mult, tm, "VAR_GRIDIO", r, t, c, com, s, "IN")
+    end
+    for (_, _, com) in get(x.dem_by_12, (r, c), no3)                 # GR_DEMMAP(R,C,COM)
+        (r, "NRG", com) in x.algmap && addterm!(expr, mult, tm, "VAR_GRIDIO", r, t, com, c, s, "IN")
+        addterm!(expr, -mult, tm, "VAR_GRIDIO", r, t, com, c, s, "OUT")
+    end
+    return expr
+end
+
+"""
+    gr_trade!(expr, tm, k, r, v, t, p, c, ts, ie) -> expr
+
+`VAR_IRE(R,V,T,P,C,TS,IE)\$(NOT RPC_AIRE(R,P,C)) + (VAR_ACT(R,V,T,P,TS)*PRC_ACTFLO(R,V,P,C))\$RPC_AIRE(R,P,C)`
+times `k` (powerflo.vda L302-303, L330-331).
+"""
+function gr_trade!(expr, tm, k::GNum, r, v, t, p, c, ts, ie)
+    if (r, p, c) in gset(tm, "RPC_AIRE")
+        addterm!(expr, k * gv(gparam(tm, "PRC_ACTFLO"), (r, v, p, c)), tm, "VAR_ACT", r, v, t, p, ts)
+    else
+        addterm!(expr, k, tm, "VAR_IRE", r, v, t, p, c, ts, ie)
+    end
+    return expr
+end
+
+"""
+    eq_gr_genall!(tm) -> Int
+
+EQ_GR_GENALL, the generation allocated to the grid nodes (equ_ext.vda L101), one row for each
+grid node C with allocated generation (GR_GNALL) at its commodity timeslices S and each group
+CG with GR_ALGMAP(R,CG,CG):
+
+    EQ_GR_GENALL(RTCS_VARC(GR_GNALL(R,T,C),RTS(S)),CG)\$GR_ALGMAP(R,CG,CG)..
+      SUM((GR_PRCMAP(RP_STD(R,P),COM,ITEM),GR_ALGMAP(R,CG,COM)), GR_GENMAP(R,P,ITEM)*GR_GENFR(R,T,C,ITEM) *
+        SUM((RTP_VINTYR(R,V,T,P),RTPCS_VARF(R,T,P,COM,TS))\$RS_FR(R,S,TS),
+          [cal_red COM COM1 TS P T] * RS_FR(R,S,TS)*(1+RTCS_FR(R,T,COM,S,TS)))\$GR_ALLMAP(R,C,COM)) +
+      SUM((GR_PRCMAP(RP_IRE(R,P),COM,ITEM),RPC_IRE(R,P,COM,IE('IMP')))\$GR_ALGMAP(R,CG,COM), GR_GENMAP(R,P,ITEM)*GR_GENFR(R,T,C,ITEM) *
+        SUM((RTP_VINTYR(R,V,T,P),RTPCS_VARF(R,T,P,COM,TS))\$RS_FR(R,S,TS),
+          (1+IRE_FLOSUM(R,T,P,COM,TS,IE,COM,'OUT')) * [VAR_IRE, or VAR_ACT*PRC_ACTFLO under RPC_AIRE] * RS_FR(R,S,TS))) +
+      SUM((GR_PRCMAP(RPC_STG(R,P,COM),ITEM),GR_ALGMAP(R,CG,COM)), GR_GENMAP(R,P,ITEM)*GR_GENFR(R,T,C,ITEM) *
+        SUM((RTP_VINTYR(R,V,T,P),RPCS_VAR(R,P,COM,TS)),(VAR_SOUT(R,V,T,P,COM,TS)-VAR_SIN(R,V,T,P,COM,TS)\$TOP(R,P,COM,'IN'))*RS_FR(R,S,TS)))
+      +SUM(GR_ALLMAP(R,CG,C),VAR_GRIDIO(R,T,C,C,S,'OUT') - VAR_GRIDIO(R,T,C,C,S,'IN') -
+        SUM(GR_DEMMAP(R,C,COM),VAR_GRIDIO(R,T,COM,C,S,'OUT') - VAR_GRIDIO(R,T,COM,C,S,'IN')\$GR_ALGMAP(R,'NRG',COM)))
+      =E=
+      SUM((GR_ALGMAP(R,CG,COM),GR_ALLMAP(R,C,COM))\$RTC(R,T,COM),VAR_GRIDIO(R,T,COM,C,S,'OUT') + VAR_GRIDIO(R,T,COM,C,S,'IN')\$GR_ALGMAP(R,COM,COM));
+
+The imports are not conditioned on GR_ALLMAP(R,C,COM) and carry no RTCS_FR factor, unlike the
+standard processes; the storage terms have no RS_FR condition (a zero weight makes no entry,
+G5). %cal_red% is cal_nored.red, or cal_red.red under REDUCE (`cal_nored!`). Returns the number
+of rows.
+
+GAMS: powerflo.vda L290-313, v4.9.7.
+"""
+function eq_gr_genall!(tm)
+    powerflo_on(tm) || return 0
+    x = gralloc_context(tm)
+    isempty(x.gnall) && return 0
+    powerflo_vars!(tm)
+    varc_of = indexby(gset(tm, "RTCS_VARC"), (1, 2, 3))              # (r,t,c) -> RTCS_VARC(r,t,c,s)
+    vint_of = indexby(gset(tm, "RTP_VINTYR"), (1, 3, 4))             # (r,t,p) -> RTP_VINTYR(r,v,t,p)
+    varf_of = indexby(gset(tm, "RTPCS_VARF"), (1, 2, 3, 4))          # (r,t,p,c) -> RTPCS_VARF(r,t,p,c,ts)
+    rpcs_var_of = indexby(gset(tm, "RPCS_VAR"), (1, 2, 3))           # (r,p,c) -> RPCS_VAR(r,p,c,ts)
+    rs_fr, rtcs_fr, ire_flosum = gparam(tm, "RS_FR"), gparam(tm, "RTCS_FR"), gparam(tm, "IRE_FLOSUM")
+    rp_std, rp_ire, rpc_ire = gset(tm, "RP_STD"), gset(tm, "RP_IRE"), gset(tm, "RPC_IRE")
+    rpc_stg, top, rtc = gset(tm, "RPC_STG"), gset(tm, "TOP"), gset(tm, "RTC")
+    no3, no4, no5 = NTuple{3,String}[], NTuple{4,String}[], NTuple{5,String}[]
+    n = 0
+    for (r, t, c) in x.gnall, (_, _, _, s) in get(varc_of, (r, t, c), no4), cg in get(x.cg_of_r, r, String[])
+        lhs = JuMP.AffExpr(0.0)
+        for (_, p, com, item) in get(x.prcmap_of_r, (r,), no4)
+            (r, cg, com) in x.algmap || continue                     # GR_ALGMAP(R,CG,COM), all three parts
+            k0 = gv(x.genmap, (r, p, item)) * gv(x.genfr, (r, t, c, item))
+            vints = get(vint_of, (r, t, p), no4)
+            # Normal processes (L293-297)
+            if (r, p) in rp_std && (r, c, com) in x.allmap
+                for (_, v, _, _) in vints, (_, _, _, _, ts) in get(varf_of, (r, t, p, com), no5)
+                    haskey(rs_fr, (r, s, ts)) || continue
+                    cal_nored!(lhs, tm, k0 * (gv(rs_fr, (r, s, ts)) * (1 + gv(rtcs_fr, (r, t, com, s, ts)))), r, v, t, p, com, ts)
+                end
+            end
+            # Imports (L298-303)
+            if (r, p) in rp_ire && (r, p, com, "IMP") in rpc_ire
+                for (_, v, _, _) in vints, (_, _, _, _, ts) in get(varf_of, (r, t, p, com), no5)
+                    haskey(rs_fr, (r, s, ts)) || continue
+                    f = (1 + gv(ire_flosum, (r, t, p, com, ts, "IMP", com, "OUT"))) * gv(rs_fr, (r, s, ts))
+                    gr_trade!(lhs, tm, k0 * f, r, v, t, p, com, ts, "IMP")
+                end
+            end
+            # Net storage output (L304-306)
+            if (r, p, com) in rpc_stg
+                sin = (r, p, com, "IN") in top
+                for (_, v, _, _) in vints, (_, _, _, ts) in get(rpcs_var_of, (r, p, com), no4)
+                    w = k0 * gv(rs_fr, (r, s, ts))
+                    addterm!(lhs, w, tm, "VAR_SOUT", r, v, t, p, com, ts)
+                    sin && addterm!(lhs, -w, tm, "VAR_SIN", r, v, t, p, com, ts)
+                end
+            end
+        end
+        # Net balance (L308-310)
+        if (r, cg, c) in x.allmap
+            addterm!(lhs, GNum(1.0), tm, "VAR_GRIDIO", r, t, c, c, s, "OUT")
+            addterm!(lhs, GNum(-1.0), tm, "VAR_GRIDIO", r, t, c, c, s, "IN")
+            for (_, _, com) in get(x.dem_by_12, (r, c), no3)
+                addterm!(lhs, GNum(-1.0), tm, "VAR_GRIDIO", r, t, com, c, s, "OUT")
+                (r, "NRG", com) in x.algmap && addterm!(lhs, GNum(1.0), tm, "VAR_GRIDIO", r, t, com, c, s, "IN")
+            end
+        end
+        rhs = JuMP.AffExpr(0.0)                                      # L313
+        for (_, _, com) in get(x.alg_by_12, (r, cg), no3)
+            ((r, c, com) in x.allmap && (r, t, com) in rtc) || continue
+            addterm!(rhs, GNum(1.0), tm, "VAR_GRIDIO", r, t, com, c, s, "OUT")
+            (r, com, com) in x.algmap && addterm!(rhs, GNum(1.0), tm, "VAR_GRIDIO", r, t, com, c, s, "IN")
+        end
+        gconstraint!(tm, "EQ_GR_GENALL", (r, t, c, s, cg), "E", lhs, rhs) === nothing || (n += 1)
+    end
+    return n
+end
+
+"""
+    eq_gr_demall!(tm) -> Int
+
+EQ_GR_DEMALL, the demand allocated to the grid nodes (equ_ext.vda L101), one row for each grid
+node C (RC_GRID) at its commodity timeslices S with a demand fraction GR_DEMFR(R,T,C,S), and each
+grid NRG_GRID the node belongs to (GR_GMAPC):
+
+    EQ_GR_DEMALL(RTCS_VARC(RC_GRID(R,T,C),RTS(S)),NRG_GRID)\$(GR_GMAPC(R,NRG_GRID,C)\$GR_DEMFR(R,T,C,S))..
+    * Net injection
+      SUM(GR_ENDC(R,NRG_GRID,COM)\$GR_ADO(R,T,C),
+        SUM(TOP(RP_STD(R,P),COM,'OUT')\$(NOT GR_GENP(R,P)*GR_DEMMAP(R,C,COM)),
+          SUM((RTP_VINTYR(R,V,T,P),RTPCS_VARF(R,T,P,COM,TS))\$RS_FR(R,S,TS),
+            [cal_red COM COM1 TS P T] * RS_FR(R,S,TS)*(1+RTCS_FR(R,T,COM,S,TS))) *
+          (SUM(GR_PRCMAP(R,P,COM,ITEM),GR_GENMAP(R,P,ITEM)*GR_GENFR(R,T,C,ITEM))-GR_ENDFR(R,T,C,COM)*(1+GR_ENDFR(R,T,COM,COM))
+           -GR_DEMFR(R,T,C,S)\$GR_GENP(R,P)\$GR_ENDC(R,NRG_GRID,'NRG')))) +
+    * Exports
+      SUM((GR_PRCMAP(RP_IRE(R,P),COM,ITEM),RPC_IRE(R,P,COM,IE('EXP')))\$GR_ALGMAP(R,'NRG',COM), GR_GENMAP(R,P,ITEM) *
+        (GR_ENDFR(R,T,C,COM) + GR_DEMFR(R,T,C,S)\$GR_ENDC(R,NRG_GRID,'NRG') - GR_GENFR(R,T,C,ITEM))\$GR_ADO(R,T,C) *
+        SUM((RTP_VINTYR(R,V,T,P),RTPCS_VARF(R,T,P,COM,TS))\$RS_FR(R,S,TS),
+          (1+IRE_FLOSUM(R,T,P,COM,TS,IE,COM,'IN')) * [VAR_IRE, or VAR_ACT*PRC_ACTFLO under RPC_AIRE] * RS_FR(R,S,TS))\$GR_ALLMAP(R,C,COM)) +
+    * Net demand shares
+      (SUM(GR_DEMMAP(R,C,COM)\$RTC(R,T,COM), VAR_GRIDIO(R,T,COM,C,S,'IN') -
+         GR_ENDFR(R,T,C,COM) * SUM(RTC(R,T,COM2)\$GR_DEMMAP(R,COM2,COM),VAR_GRIDIO(R,T,COM,COM2,S,'IN'))) -
+       (GR_DEMFR(R,T,C,S)*SUM(GR_GMAPC(R,NRG_GRID,COM)\$(NOT GR_ADO(R,T,COM)),VAR_GRIDIO(R,T,'ACT',COM,S,'IN')))\$GR_ENDC(R,NRG_GRID,'NRG'))\$GR_ADO(R,T,C) +
+    * Aggregate for withdrawals
+      (VAR_GRIDIO(R,T,'ACT',C,S,'IN') -
+       SUM(GR_DEMMAP(R,C,COM)\$RTC(R,T,COM),SUM(GR_GMAPC(R,NRG_GRID,COM2)\$RTC(R,T,COM2),VAR_GRIDIO(R,T,COM,COM2,S,'IN'))))\$(NOT GR_ADO(R,T,C))
+      =E= 0;
+
+`NOT GR_GENP(R,P)*GR_DEMMAP(R,C,COM)` is `NOT (GR_GENP(R,P)*GR_DEMMAP(R,C,COM))`: GAMS's NOT binds
+less tightly than `*` (GAMS operator precedence: `**`, `* /`, `+ -`, relations, NOT, AND, OR).
+Returns the number of rows.
+
+GAMS: powerflo.vda L314-340, v4.9.7.
+"""
+function eq_gr_demall!(tm)
+    powerflo_on(tm) || return 0
+    x = gralloc_context(tm)
+    isempty(x.demfr) && return 0
+    powerflo_vars!(tm)
+    varc_of = indexby(gset(tm, "RTCS_VARC"), (1, 2, 3))              # (r,t,c) -> RTCS_VARC(r,t,c,s)
+    vint_of = indexby(gset(tm, "RTP_VINTYR"), (1, 3, 4))             # (r,t,p) -> RTP_VINTYR(r,v,t,p)
+    varf_of = indexby(gset(tm, "RTPCS_VARF"), (1, 2, 3, 4))          # (r,t,p,c) -> RTPCS_VARF(r,t,p,c,ts)
+    top_of = indexby(gset(tm, "TOP"), (1, 3, 4))                     # (r,c,io) -> TOP(r,p,c,io)
+    prcmap_of = indexby(x.prcmap, (1, 2, 3))                         # (r,p,com) -> GR_PRCMAP(r,p,com,item)
+    rs_fr, rtcs_fr, ire_flosum = gparam(tm, "RS_FR"), gparam(tm, "RTCS_FR"), gparam(tm, "IRE_FLOSUM")
+    rp_std, rp_ire, rpc_ire, rtc = gset(tm, "RP_STD"), gset(tm, "RP_IRE"), gset(tm, "RPC_IRE"), gset(tm, "RTC")
+    no3, no4, no5 = NTuple{3,String}[], NTuple{4,String}[], NTuple{5,String}[]
+    n = 0
+    for (r, t, c) in x.rc_grid, (_, _, _, s) in get(varc_of, (r, t, c), no4)
+        haskey(x.demfr, (r, t, c, s)) || continue                    # $GR_DEMFR(R,T,C,S) (EPS is true, G3)
+        demfr = gv(x.demfr, (r, t, c, s))
+        ado = (r, t, c) in x.ado
+        for (_, g, _) in get(x.gmapc_by_13, (r, c), no3)             # GR_GMAPC(R,NRG_GRID,C)
+            endc_nrg = (r, g, "NRG") in x.endc
+            lhs = JuMP.AffExpr(0.0)
+            if ado
+                # Net injection (L318-324)
+                for (_, _, com) in get(x.endc_by_12, (r, g), no3), (_, p, _, _) in get(top_of, (r, com, "OUT"), no4)
+                    (r, p) in rp_std || continue
+                    genp = (r, p) in x.genp
+                    (genp && (r, c, com) in x.demmap) && continue    # $(NOT GR_GENP(R,P)*GR_DEMMAP(R,C,COM))
+                    fac = GZERO
+                    for (_, _, _, item) in get(prcmap_of, (r, p, com), no4)
+                        fac = fac + gv(x.genmap, (r, p, item)) * gv(x.genfr, (r, t, c, item))
+                    end
+                    fac = fac - gv(x.endfr, (r, t, c, com)) * (1 + gv(x.endfr, (r, t, com, com))) - gif(demfr, genp && endc_nrg)
+                    for (_, v, _, _) in get(vint_of, (r, t, p), no4), (_, _, _, _, ts) in get(varf_of, (r, t, p, com), no5)
+                        haskey(rs_fr, (r, s, ts)) || continue
+                        cal_nored!(lhs, tm, gv(rs_fr, (r, s, ts)) * (1 + gv(rtcs_fr, (r, t, com, s, ts))) * fac, r, v, t, p, com, ts)
+                    end
+                end
+                # Exports (L325-331)
+                for (_, p, com, item) in get(x.prcmap_of_r, (r,), no4)
+                    ((r, p) in rp_ire && (r, p, com, "EXP") in rpc_ire && (r, "NRG", com) in x.algmap &&
+                     (r, c, com) in x.allmap) || continue
+                    fac = gv(x.genmap, (r, p, item)) *
+                          (gv(x.endfr, (r, t, c, com)) + gif(demfr, endc_nrg) - gv(x.genfr, (r, t, c, item)))
+                    for (_, v, _, _) in get(vint_of, (r, t, p), no4), (_, _, _, _, ts) in get(varf_of, (r, t, p, com), no5)
+                        haskey(rs_fr, (r, s, ts)) || continue
+                        f = (1 + gv(ire_flosum, (r, t, p, com, ts, "EXP", com, "IN"))) * gv(rs_fr, (r, s, ts))
+                        gr_trade!(lhs, tm, fac * f, r, v, t, p, com, ts, "EXP")
+                    end
+                end
+                # Net demand shares (L332-335)
+                for (_, _, com) in get(x.dem_by_12, (r, c), no3)
+                    (r, t, com) in rtc || continue
+                    addterm!(lhs, GNum(1.0), tm, "VAR_GRIDIO", r, t, com, c, s, "IN")
+                    e = gv(x.endfr, (r, t, c, com))
+                    for (_, com2, _) in get(x.dem_by_13, (r, com), no3)
+                        (r, t, com2) in rtc && addterm!(lhs, -e, tm, "VAR_GRIDIO", r, t, com, com2, s, "IN")
+                    end
+                end
+                if endc_nrg
+                    for (_, _, com) in get(x.gmapc_by_12, (r, g), no3)
+                        (r, t, com) in x.ado || addterm!(lhs, -demfr, tm, "VAR_GRIDIO", r, t, "ACT", com, s, "IN")
+                    end
+                end
+            else
+                # Aggregate for withdrawals (L336-338)
+                addterm!(lhs, GNum(1.0), tm, "VAR_GRIDIO", r, t, "ACT", c, s, "IN")
+                for (_, _, com) in get(x.dem_by_12, (r, c), no3)
+                    (r, t, com) in rtc || continue
+                    for (_, _, com2) in get(x.gmapc_by_12, (r, g), no3)
+                        (r, t, com2) in rtc && addterm!(lhs, GNum(-1.0), tm, "VAR_GRIDIO", r, t, com, com2, s, "IN")
+                    end
+                end
+            end
+            gconstraint!(tm, "EQ_GR_DEMALL", (r, t, c, s, g), "E", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
         end
     end
     return n

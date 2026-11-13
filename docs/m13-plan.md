@@ -126,6 +126,7 @@ GAMS 54.6.1):
 | 27a | powerflo.vda main block (pp_prelv.vda L114: the grid topology, GR_* sets and parameters, PRC_REACT, COM_LIM) and PREP (prep_ext.vda L37) in the phase-angle formulation (9 Nov 2026); the PTDF formulation and the allocation of generation and demand to nodes (GR_PTDF, GR_DEMFR, GR_ENDFR, GR_GENFR, GR_GENMAP, GR_GENLEV data) stay refused for 27a-2, with demo12 variant 6 proper | 1-204 | prelv and prep checkpoints: crafted case demo12_pf (CI: variant fixture) |
 | 27b | powerflo.vda DECL (mod_vars.mod L95), POWFLO (equ_ext.vda L101, mod_ext.vda L45) and IREAUX (%IREAUXBAL%, L221): the power-flow variables, bounds and equations; CSTBAL and OBJBAL (L372-435) stay refused with COM_CSTBAL data, which neither case has. Done for phase-angle grids (9 Nov 2026): VAR_COMAUX, the reference-node bounds, GR_GRID 'ACT', EQ_GR_POWFLO; EQ_GR_PTDFLO, VIRTCAP, VIRTBND, GENALL, DEMALL (and the IREAUX terms, which need node allocation) come with 27a-2, EQ_GR_XBND with GR_XBND data | 206-370 | layers 2-3: demo12_pf, both variants (CI: public fixture) |
 | 27a-2 | powerflo.vda main block, the allocation of generation and sectoral demand to the grid nodes (GR_ENDFR, GR_GENFR, GR_GENMAP, GR_GENLEV data; JRC-EU-TIMES has them): L40-47 (the add-on nodes and their IRE lines) and L109-162 (GR_GENLEV rounded, GR_PRCMAP, GR_ALLMAP, GR_ALGMAP, GR_DEMMAP, GR_ENDC, the sectoral fractions turned into GR_DEMFR and normalised, GR_GENMAP and GR_GENFR normalised, GR_ADO, GR_GNALL). Still refused: GR_PTDF data (the PTDF formulation, L59-64, L172-180) and GR_DEMFR given as data (L107, L131); the equations that use the allocation (EQ_GR_GENALL, EQ_GR_DEMALL, IREAUX terms) are 27b-2 (10 Nov 2026) | 40-47, 109-162 | prelv to coef: crafted case demo12_pfa, both variants (CI: variant fixture); JRC-EU-TIMES-cli_ll locally (verdicts only) |
+| 27b-2 | powerflo.vda POWFLO, the rows that use the node allocation: EQ_GR_GENALL (L290-313) and EQ_GR_DEMALL (L314-340), and the IREAUX terms (%IREAUXBAL%, L221, L363-370) that cal_ire.mod L30 adds to EQ_COMBAL's consumption (eqcombal.mod L84, label IREAUXIN, times COM_IE) and EQ_PEAK's net imports (eqpeak.mod L31, IREAUXOUT-, negated); the other cal_ire calls jump to the end of the file (L461-462). The model-stage refusal of node-allocation data is lifted; GR_DEMFR as input data stays refused in the main block. New crafted case demo12_pfd (a second grid node in REG1), since demo12 has one node per region, so GR_DEMFR is emptied and no EQ_GR_DEMALL row exists (13 Nov 2026) | 290-340, 363-370 | layers 2-3: demo12_pfa and demo12_pfd, both variants (CI: demo12_pfd public fixture, demo12_pfa and demo12_pfd variant fixtures); the M1.3 chain to presolve on both |
 | 27c | powerflo.vda RPTB (cost_ann.rpt L175): the reporting block, translated with M1.6 and listed here so the file is tracked | 437-462 | M1.6 |
 
 ## Parity (per change)
@@ -1280,6 +1281,31 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 - (0) `execute_unload` without a symbol list writes every symbol of the
   compiled program, so the input dump also holds symbols declared later in
   the source, with their compile-time data.
+
+### Change 27b-2, 13 Nov 2026
+
+- **Where the IREAUX terms go.** powerflo.vda DECL sets %IREAUXBAL% to `$BATINCLUDE powerflo.vda
+  IREAUX` (L221); cal_ire.mod L30 appends its own %2 and %5, and powerflo.vda L11 jumps to the
+  label `IREAUX%2%5`. Of the five calls, only two reach terms: eqcombal.mod L84 (`EXP IN`, label
+  IREAUXIN, `%MX%` = `COM_IE(R,T,C,S)*`, inside the consumption bracket) and eqpeak.mod L31
+  (`IMP OUT` with %5 = '-', label IREAUXOUT-, `%MX%` = `-`). IREAUXOUT and IREAUXIN- are labels
+  on the file's last lines (L461-462), so eqcombal.mod L39 and eqpeak.mod L32 and L68 add nothing.
+- **demo12 cannot reach EQ_GR_DEMALL.** With one grid node per region, the node with the largest
+  demand fraction is the only one; L160 removes its GR_DEMFR, L162 then leaves GR_ADO empty, and
+  the row's `$GR_DEMFR(R,T,C,S)` holds nowhere. JRC-EU-TIMES has several nodes but its model is not
+  generated yet (its chain stops at coef_obj.mod L31-32, ANNCOST LEV). New crafted case
+  demo12_pfd: an intra-regional line from ELC to TRAELC in REG1 with a reactance makes TRAELC a
+  second node; with sectoral fractions at both nodes, TRAELC gets GR_ADO and 24 EQ_GR_DEMALL rows.
+  The 27a-2 preprocessing with two nodes in a region passes the chain from the input dump (both
+  variants), its first check.
+- **The non-ADO branch of EQ_GR_DEMALL** (L336-338) needs a row whose node is not GR_ADO, that
+  is a node that kept GR_DEMFR as the largest: only GR_DEMFR given as data does that (L107, L131),
+  which the main block refuses. Translated, not reached; it is checked when GR_DEMFR data is.
+- **The model-stage refusal.** `powerflo_model_unported` had reused the main block's test for
+  GR_DEMFR data, which after preprocessing holds the computed fractions. It now tests only what
+  the equations would need untranslated (PTDF, gas grids).
+- Result: demo12_pfa (8,743 and 3,281 rows) and demo12_pfd (8,911 and 3,401 rows) pass layers 2
+  and 3 in both variants against GAMS 54.6.1 with CPLEX and HiGHS; demo12_pfd is a public fixture.
 
 ## Open items
 

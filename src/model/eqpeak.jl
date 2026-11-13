@@ -32,7 +32,8 @@
 # - blending, L78 (BLE_OPR);
 # - elastic demand, L85 under %TIMESED% (COM_ELAST); VAR_DEM, L82 (RD_NLP);
 # - the IER extraction-condensing CHP adjustment, L49 (%PEAKCHP%);
-# - %IREAUXBAL% in cal_ire.mod L30. (REDUCE YES goes through cal_fflo_red!, M1.3 change 17b.)
+# - %IREAUXBAL% in cal_ire.mod L30 other than from powerflo.vda DECL (its IREAUX
+#   terms, L31, are `ireaux!`: M1.3 change 27b-2). (REDUCE YES goes through cal_fflo_red!, M1.3 change 17b.)
 # The sets read (COM_PKTS, RPC_PKC, RPC_PKF, COEF_VNT, RTPCS_VARF, ...) come
 # from the pre-solve dump; pp_lvlpk.mod and pp_reduce.red L185 fill them.
 
@@ -46,7 +47,8 @@ function peak_unported(tm::TimesModel)
     nonempty_par("COM_ELAST", 5) && throw(UnportedError("eqpeak.mod L85 elastic demand under %TIMESED% (COM_ELAST)"))
     nonempty_par("RD_NLP", 2) && throw(UnportedError("eqpeak.mod L82 non-linear demand VAR_DEM (RD_NLP)"))
     haskey(tm.switches, "PEAKCHP") && throw(UnportedError("eqpeak.mod L49 %PEAKCHP% (IER extension, prep_ext.ier L21)"))
-    haskey(tm.switches, "IREAUXBAL") && throw(UnportedError("cal_ire.mod L30 under %IREAUXBAL%"))
+    # %IREAUXBAL% comes from powerflo.vda DECL (L221) under %POWERFLO% (`ireaux!`); set any other way, refused
+    haskey(tm.switches, "IREAUXBAL") && !powerflo_on(tm) && throw(UnportedError("cal_ire.mod L30 under %IREAUXBAL% without %POWERFLO%"))
     return nothing
 end
 
@@ -164,6 +166,7 @@ function eq_peak!(tm::TimesModel)
             pkcnt = (p, v, ts) -> gv(ncap_pkcnt, (r, v, p, s))
             # Net imports (L31-32): imports times NCAP_PKCNT, minus exports of PRC_PKNO processes.
             cal_ire!(lhs, tm, out, "IMP", "OUT", r, t, c, s; pk=pkcnt)
+            ireaux!(lhs, tm, -out, r, t, c, s)                     # L31: cal_ire.mod L30, IREAUXOUT- (%MX% = '-')
             ie_pos = ie.v > 0                              # COM_IE(R,T,C,S)>0 (EPS compares as 0, G12)
             exp_pk = (p, v, ts) -> ie_pos ? (-gv(ncap_pkcnt, (r, v, p, s))) / ie : GZERO
             cal_ire!(lhs, tm, out, "EXP", "IN", r, t, c, s; pk=exp_pk, pfilter=p -> (r, p) in prc_pkno)

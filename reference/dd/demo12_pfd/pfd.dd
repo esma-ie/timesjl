@@ -1,0 +1,57 @@
+* TIMES.jl crafted case demo12_pfd (reference/crafted.toml, 13 Nov 2026): demo12_pfa (the
+* REG1-REG2 power-flow grid with the allocation of generation and sectoral demand to grid
+* nodes) plus a second grid node in REG1, so that powerflo.vda generates the demand allocation
+* rows EQ_GR_DEMALL (L314-340; M1.3 change 27b-2), which no open model reaches:
+* - TU_ELC_TRA1, a line with a reactance from ELC to the transport electricity TRAELC inside
+*   REG1 (an intra-regional exchange), makes TRAELC a grid node beside ELC (L37-59);
+* - sectoral demand fractions at both REG1 nodes become GR_DEMFR (L133-139), normalised over the
+*   grid (L149-154); the node with the larger fraction is dropped from GR_DEMFR, and the other
+*   gets GR_ADO and the EQ_GR_DEMALL rows (L155-162);
+* - a generation fraction at TRAELC gives EQ_GR_GENALL rows at the second node too.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET PRC
+/
+TU_ELC_TRA1
+/
+
+SET PRC_MAP
+/
+REG1.IRE.TU_ELC_TRA1
+/
+
+SET PRC_TSL
+/
+REG1.TU_ELC_TRA1.DAYNITE
+/
+
+SET PRC_ACTUNT
+/
+REG1.TU_ELC_TRA1.NRG.PJ
+/
+
+SET TOP_IRE
+/
+ REG1.ELC.REG1.TRAELC.TU_ELC_TRA1
+/
+
+SET PRC_DESC
+/
+ REG1.TU_ELC_TRA1 'Crafted: line from ELC to the transport electricity node (TIMES.jl demo12_pfd)'
+/
+
+PARAMETER PRC_REACT /
+REG1.2005.TU_ELC_TRA1 0.1
+/;
+
+PARAMETER GR_ENDFR /
+REG1.2005.TRAELC.RSDELC 0.4
+REG1.2005.TRAELC.AGRELC 0.3
+REG1.2020.TRAELC.AGRELC 0.5
+/;
+
+PARAMETER GR_GENFR /
+REG1.2005.TRAELC.COA 0.5
+REG1.2005.TRAELC.DIS 0.25
+/;

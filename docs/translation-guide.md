@@ -667,3 +667,12 @@ those checks, their figures and their crafted cases are not published
   and JRC-EU-TIMES); CI compiles demo12 and 11 variants from their DD files;
   the licence level as a run option (K3); `scripts/run_dd.jl` runs any run
   file from its DD files to the HiGHS solve.
+- 13 Nov 2026: M1.3 (27b-2): powerflo.vda's rows that use the node
+  allocation, EQ_GR_GENALL and EQ_GR_DEMALL (L290-340), and the IREAUX terms
+  of EQ_COMBAL and EQ_PEAK (L363-370 through cal_ire.mod L30). New crafted
+  case demo12_pfd (a second grid node in REG1), since demo12 has one node per
+  region and so no EQ_GR_DEMALL row. demo12_pfa and demo12_pfd pass layers
+  2-3 in both variants and the M1.3 chain to presolve; demo12_pfd joins the
+  public fixtures. The last translation change of the M1.3 plan (27c, the
+  grid's reporting, comes with M1.6); the trade case of #68 and the gate
+  follow.
