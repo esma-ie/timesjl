@@ -277,3 +277,20 @@ variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
+
+# Crafted case demo12_irebnd (14 Nov 2026): IRE_BND records, limits on the trade of a commodity
+# between two regions (eqirebnd.mod L18-69): imports from an internal region (the partner's
+# exports times IRE_FLO), imports from and exports to an external region, bounds at, above and
+# finer than the flow's timeslice level, a new import process at SEASON, records below the
+# commodity's level that are added up (ppmain.mod L995), interpolation option 5, FX and LO with
+# the value EPS, UP INF, a partner without a link and a record of an external region.
+# Preprocessing from the input dump to ppm on every symbol, the thirteen rows
+# (test/unit/test_eqirebnd.jl), and the whole model. The presolve dump is shared with
+# test/fixtures/public_fixtures.toml.
+[[variant]]
+prefix   = "demo12_irebnd"
+model    = "TIMES_Demo-demo12_irebnd"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []

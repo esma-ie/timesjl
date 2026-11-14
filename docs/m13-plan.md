@@ -134,6 +134,7 @@ GAMS 54.6.1):
 | 31 | EQ(l)_BNDNET and EQ(l)_BNDPRD, refused since M1.1: bounds on the net amount and the production of a commodity at a timeslice above the level it is tracked at, written as equations over the tracked timeslices below | eqbndcom.mod 16-24; eqmain.mod 54-59 | layers 1 to 3 on the crafted case demo12_bndc, both variants, from the DD files (CI: test_eqbndcom.jl, the public and variant fixtures) |
 | 32 | EQ(l)_FLOBND, refused since M1.1: bounds on process flows that cannot be bounds of one flow variable (above the flow's timeslice level, a commodity group, a vintaged process, an exchange process, a flow REDUCE replaces), written as equations over the flow variables. Two corrections of `bnd_data!` (bnd_flo.mod L16 and L31) that the crafted case showed | eqflobnd.mod 15-43; eqmain.mod 111-113; bnd_flo.mod 16, 31 | layers 1 to 3 on the crafted case demo12_flobnd, both variants, from the DD files (CI: test_eqflobnd.jl, the public and variant fixtures) |
 | 33 | EQ(l)_FLOFR, refused since M1.1: the share of a process flow in a timeslice (FLO_FR), against the flow of the year, of the parent timeslice, or a variable of an aggregate flow (records 'N') | eqflofr.mod 15-27; eqmain.mod 118-120 | layers 1 to 3 on the crafted case demo12_flofr, both variants, from the DD files (CI: test_eqflofr.jl, the public and variant fixtures) |
+| 34 | EQ(l)_IREBND, refused since M1.1: limits on the trade of a commodity between a region and one partner region (IRE_BND): imports from an internal region as the partner's exports, imports from and exports to an external region as the region's own flows (the marketplace branch, L46-51, stays refused with RPC_MARKET) | eqirebnd.mod 18-69; eqmain.mod 152-154 | layers 1 to 3 on the crafted case demo12_irebnd, both variants, from the DD files (CI: test_eqirebnd.jl, the public and variant fixtures) |
 
 ## Parity (per change)
 
@@ -1667,8 +1668,71 @@ Not part of the gate, for the record:
   rows, the records that give no row), the public fixture (layers 2 and 3), the variant
   fixture (input -> ppm on every symbol; the whole model) and the DD-file compile case.
 - Still refused among the bound equations, each to follow as its own change: EQ(l)_IREBND
-  (eqirebnd.mod), EQ(l)_XBND (eqxbnd.mod). `untranslated_families` lists every family still
-  refused.
+  (eqirebnd.mod; change 34), EQ(l)_XBND (eqxbnd.mod). `untranslated_families` lists every
+  family still refused.
+
+### Change 34, 14 Nov 2026: EQ(l)_IREBND
+
+- The fourth of the refused equation families. eqirebnd.mod L18-69, included three times from
+  eqmain.mod L152-154 (G with LO where the value is not zero, E with FX, L with UP where the
+  value is not INF): an IRE_BND record (region, year, commodity, timeslice, partner region, IMP
+  or EXP) gives a row `trade of the commodity with the partner in S =l= IRE_BND`, summed over
+  the exchange processes that link the two regions.
+- The domain (L18-19): a milestone year, an internal region R, the commodity tracked at S
+  (RCS_COMTS), and some exchange process of R with the commodity in that direction (RPC_IRE).
+- The body, each point confirmed against GAMS's matrix on the crafted case:
+  - Imports from an internal region through a process with an exchange equation
+    (RPC_EQIRE(R,P,C,'IMP')), L23-32: the exports of the partner, with the coefficients of
+    EQ_IRE (IRE_FLO of the importing timeslice, IRE_CCVT, IRE_TSCVT, RS_FR, RTCS_FR).
+    `REG(ALL_REG)` binds the partner of the equation as an internal region.
+  - Imports otherwise (from an external region), L35-41: the import flows of R itself through
+    the processes with a link from the partner (TOP_IRE).
+  - Exports, L56-62: the export flows of R itself through the processes with a link to the
+    partner. The marketplace branch (L46-51, RPC_MARKET(R,P,C,'EXP')) stays refused:
+    `ire_unported` raises for RPC_MARKET data (eqire.mod L23-38), so it cannot be reached.
+  - L30, L39, L60: a flow at a timeslice at or below S counts in full (TS_MAP); a flow at a
+    timeslice above S counts with the share G_YRFR(R,S)/G_YRFR(R,TS) (RS_BELOW). So a bound at
+    WD takes 0.479 of an import that runs at the season W, and the year's share of WD of the
+    dummy import, which runs at ANNUAL.
+  - A flow is VAR_IRE, or VAR_ACT * PRC_ACTFLO where the activity is the exchange (RPC_AIRE,
+    under REDUCE).
+  - An FX with the value EPS gives a row with the right-hand side zero; a LO with the value
+    EPS and an UP INF give no row (eqmain.mod L152, L154). A record whose partner has no link
+    gives a row without a variable, which GAMS leaves out of the model. A record of an
+    external region stays in the data and gives no row.
+- `eq_irebnd!` (src/model/eqirebnd.jl), called in `generate!` after `eq_ire!`, in the order of
+  eqmain.mod L152-154. The refusal in `untranslated_families` is removed. No earlier code
+  needed a change.
+- The data statements were translated before: preppm.mod L193 (interpolation), ppmain.mod L995
+  (pp_lvlbd.mod: records below the commodity's level are added up to it) and pp_prelv.vda L91
+  (NE, the commodities with a trade bound). Until now they were checked on crafted unit
+  states; the new case is the first whole run with IRE_BND data, and they pass on it as they
+  stand.
+- New crafted case demo12_irebnd (demo12 + irebnd.dd): 17 IRE_BND records; a new electricity
+  import of REG1 that runs at SEASON (IMPELC2: a bound at a DAYNITE timeslice is finer than
+  its flow); IRE_FLO of the electricity trade from REG2 to REG1 below 1 and different in each
+  timeslice (0.96, 0.97, 0.95, 0.98). Rows: electricity into REG1 from REG2 at ANNUAL (UP 300)
+  and at WD (LO 20); electricity out of REG2 to REG1 at the season S (UP 100); gas into REG1
+  from REG2 (LO 10) and out of REG2 to REG1 (UP 400) on the gas link; electricity into REG1
+  from the external region IMPEXP at WD (UP 100) and at S (UP 400); coal into REG1 from
+  MINRNW (UP 4000 with option 5: rows in 2020, 2030 and 2050, the sum of three mining steps);
+  gas out of REG1 to IMPEXP (LO 5); FX EPS on electricity into REG2 at SN; gas into REG1 from
+  IMPEXP at SD (LO 50) and WD (LO 100), added up to LO 150 at ANNUAL. No row: LO EPS, UP INF,
+  electricity from MINRNW (no link), a record of the external region IMPEXP.
+- GAMS 54.6.1: both variants optimal, objective 23,939,060.0779 (demo12: 23,960,685.7370; the
+  new import is cheaper); 13 rows in each variant (4 G, 1 E, 8 L). Four bind: the LO on
+  electricity from REG2 at WD (the partner exports 20/0.95 = 21.05), the LO on gas from REG2
+  (10), the LO on gas exports (5) and the UP on coal in 2020 (4000).
+- Result: the step probe passes all 70 steps (35 in each variant). The chain from the DD
+  files: DD files -> input PASS (824 sets and parameters), every checkpoint to the pre-solve
+  dump PASS (823 symbols), both QA logs identical, the model against GAMS's matrix PASS
+  (reduce_off 8,738 rows, 9,699 columns, 31,553 nonzeros; as run 3,252, 4,497 and 18,477),
+  HiGHS against GAMS/CPLEX PASS (relative difference 1.4e-15 and 1.6e-16). CI:
+  test/unit/test_eqirebnd.jl (the data, layer 2, the thirteen rows term by term, the records
+  that give no row), the public fixture (layers 2 and 3), the variant fixture (input -> ppm on
+  every symbol; the whole model) and the DD-file compile case.
+- Still refused among the bound equations: EQ(l)_XBND (eqxbnd.mod), to follow as its own
+  change. `untranslated_families` lists every family still refused.
 
 ## Open items
 

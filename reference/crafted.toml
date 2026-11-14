@@ -425,3 +425,21 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_flofr/demo12_flofr.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_flofr"]
+
+# TIMES_Demo demo12 + demo12_irebnd/irebnd.dd (14 Nov 2026): limits on the trade of a commodity
+# between two regions (IRE_BND), the equations EQ(l)_IREBND (eqirebnd.mod L18-69): imports from
+# an internal region (the partner's exports times IRE_FLO), imports from and exports to an
+# external region, bounds at, above and finer than the flow's timeslice level, a new import
+# process at SEASON, records below the commodity's level (ppmain.mod L995), FX and LO with the
+# value EPS, UP INF, a partner without a link (M1.3 change 34).
+[[model]]
+name = "TIMES_Demo-demo12_irebnd"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_irebnd/demo12_irebnd.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_irebnd"]
