@@ -1,7 +1,7 @@
 # Variable bounds: bndmain.mod and the bnd_*.mod files it includes.
 #
 # GAMS: bndmain.mod L15-87, bnd_act.mod L13-24, bnd_flo.mod L12-39,
-# bnd_stg.mod L12-27, bnd_set.mod L20-25, bnd_cum.mod L12-40, v4.9.7 (maindrv.mod L92 includes
+# bnd_stg.mod L12-27, bnd_set.mod L20-25, bnd_cum.mod L12-48, v4.9.7 (maindrv.mod L92 includes
 # bndmain.mod with %2 = 0, after eqmain.mod and before pp_qack.mod).
 #
 # GAMS keeps bounds as attributes of variable records, independent of
@@ -41,8 +41,7 @@
 # concern columns no equation references (docs/discrepancies.md U5).
 #
 # Not translated yet; data or switches that need them raise UnportedError:
-# elastic demand (bnd_elas.mod), cumulative
-# cost bounds (bnd_cum.mod L44-48), MACRO (bnd_macro.tm),
+# elastic demand (bnd_elas.mod), MACRO (bnd_macro.tm),
 # STAGES, dynamic timeslices (dynslite.vda, NORTS), VDA trade bounds
 # (bnd_ire.vda, PREMILE), DSC semi-continuous capacity (mod_vars.dsc L18-19,
 # NCAP_SEMI), damage (eqdamage.mod L141-156), MACRO/MICRO demand
@@ -105,7 +104,6 @@ function bounds_unported(tm::TimesModel)
     stepped(tm) && throw(UnportedError("bounds under TIMESTEP (maindrv.mod L38-40: %R_T% is 'R,SUBT(T)'; solve.stp)"))
     haskey(tm.switches, "RPOINT") && uppercase(tm.switches["RPOINT"]) != "NO" &&
         throw(UnportedError("bounds under RPOINT (spoint.mod)"))
-    notempty_par("REG_CUMCST", 6) && throw(UnportedError("bnd_cum.mod L44-48 (cumulative cost bounds)"))
     notempty_par("NORTS", 3) && throw(UnportedError("dynslite.vda BOUNDS (dynamic timeslices)"))
     notempty_set("PREMILE", 1) && throw(UnportedError("bnd_ire.vda (VDA fixed trade before PREMILE)"))
     notempty_par("NCAP_SEMI", 3) && throw(UnportedError("mod_vars.dsc L18-19 (semi-continuous capacity)"))
@@ -510,8 +508,22 @@ with FLO_CUM and COM_CUM as stored, that is after bnd_cum.mod L12-20 and
 L27-38 ([`bnd_cum_flo`](@ref) and [`bnd_cum_com`](@ref), applied once by
 `bnd_data!`; GAMS's pre-solve dump holds them the same way). %CUFSCAL% is 10
 and %CUCSCAL% 1000 unless the run sets them (eqmain.mod L16-17).
-GAMS: bnd_cum.mod L23-24 and L39-40, v4.9.7 (included with %1 = COM_VAR
-since %2 = 0, bndmain.mod L64).
+
+Then the bounds on the costs of a region (EQ_BNDCST, eqbndcst.jl), from
+REG_CUMCST as eqbndcst.mod L42-47 leaves it (`eqmain_prep!`):
+
+    LOOP(COST_GMAP(COSTCAT,COSTAGG,COSTYPE),
+      VAR_CUMCST.LO(R,YEAR,ALLYEAR,COSTCAT,CUR)\$REG_CUMCST(R,YEAR,ALLYEAR,COSTCAT,CUR,'UP') = -INF);
+    VAR_CUMCST.UP(R,YEAR,ALLYEAR,COSTCAT,CUR) \$= REG_CUMCST(R,YEAR,ALLYEAR,COSTCAT,CUR,'UP');
+    VAR_CUMCST.LO(R,YEAR,ALLYEAR,COSTCAT,CUR) \$= REG_CUMCST(R,YEAR,ALLYEAR,COSTCAT,CUR,'LO');
+    VAR_CUMCST.FX(R,YEAR,ALLYEAR,COSTCAT,CUR) \$= REG_CUMCST(R,YEAR,ALLYEAR,COSTCAT,CUR,'FX');
+
+An aggregate (a first index of COST_GMAP) with an upper bound is free below:
+its taxes less subsidies can be negative. The statements run in this order, so
+a lower or fixed bound overrides the -INF. L42 (`\$IFI %MACRO%==YES \$EXIT`)
+does not act: MACRO is refused.
+GAMS: bnd_cum.mod L23-24, L39-40 and L44-48, v4.9.7 (included with %1 =
+COM_VAR since %2 = 0, bndmain.mod L64).
 """
 function bnd_cum!(bt::BoundTable, tm::TimesModel)
     tab = gtable(gparam(tm, "FLO_CUM"))                                         # L23-24
@@ -528,6 +540,20 @@ function bnd_cum!(bt::BoundTable, tm::TimesModel)
         (bd in ("LO", "UP") && kind in ("NET", "PRD") && (y,) in allyear && (ll,) in allyear) || continue
         n = get(ctab, (r, kind, y, ll, c, "N"), GZERO)
         setbound!(bt, tm, "VAR_CUMCOM", (r, c, kind, y, ll), bd == "LO" ? :lo : :up, x * cscal * (n + 1))
+    end
+    cst = gparam_opt(tm.data, "REG_CUMCST", 6)                                  # L44-48
+    isempty(cst) && return bt
+    reg, costagg = gset(tm, "REG"), gset(tm, "COSTAGG")
+    aggregates = Set(k[1] for k in gset(tm, "COST_GMAP"))
+    recs = [(k, gv(cst, k)) for k in cst.keys
+            if (k[1],) in reg && (k[2],) in allyear && (k[3],) in allyear && (k[4],) in costagg]
+    for ((r, y, ll, cat, cur, bd), _) in recs                                   # L44-45
+        (bd == "UP" && cat in aggregates) && setbound!(bt, tm, "VAR_CUMCST", (r, y, ll, cat, cur), :lo, GNum(-Inf))
+    end
+    for (bd, which) in (("UP", :up), ("LO", :lo), ("FX", :fx))                  # L46, L47, L48
+        for ((r, y, ll, cat, cur, b), x) in recs
+            b == bd && setbound_if!(bt, tm, "VAR_CUMCST", (r, y, ll, cat, cur), which, x)
+        end
     end
     return bt
 end

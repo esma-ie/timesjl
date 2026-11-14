@@ -141,6 +141,7 @@ GAMS 54.6.1):
 | 36 | Dispatching in the linear formulation, refused since M1.1 (James, 14 Nov 2026: the gate is not passed until the remaining refused features are translated; unit commitment first): the preparation and the equations EQ_CAPLOAD, EQ_ACTRAMP, EQ(l)_ACTUPS, EQL_ACTUPC, EQ_ACTPL and EQ_ACTRMPC with the variables VAR_UPS and VAR_UDP; their terms in EQ_OBJVAR, EQE_ACTEFF, EQ(l)_CAPACT, EQ(l)_CAFLAC and EQL_CAPFLO; eqlducs.vda for a model without start-up types. The unit commitment by start-up type (eqlducs.vda L12-124, the case demo12_uc) is the next change | eqactups.vda 9-117; eqobjvar.mod 36-37, 39; pp_actef.vda 78-80; equ_ext.vda 75; eqlducs.vda 15, 38-39 | layers 1 to 3 on the crafted case demo12_disp, both variants, from the DD files (CI: test_eqactups.jl, the public and variant fixtures) |
 | 37 | EQ(l)_BLND, refused since M1.1: refinery blending. The quality of a blend (BLE) made of blending streams (OPR) held against its specifications (SPE), at most, at least, equal or free; with the blending preparation, the terms of the blending variable in the balance, the peak equation and the objective, and the blending costs in the currency conversion | eqblnd.mod 67-71; eqmain.mod 249-252; ppmain.mod 1246-1333; coef_obj.mod 93-94; eqobjvar.mod 105-107; eqcombal.mod 30-35, 75-80; eqpeak.mod 78; curex.gms 59-60 | layers 1 to 3 on the crafted case demo12_blnd, both variants, from the DD files (CI: test_eqblnd.jl, the public and variant fixtures) |
 | 38 | EQ(l)_CAPVAC, refused since M1.1: the simulated vintages of PRC_SIMV processes (COEF_CSV, RTP_VINTYR over the simulated vintages, AFSV) and their capacity-activity equation, in place of EQ(l)_CAPACT and EQ(l)_CAFLAC | coef_csv.mod 11-77; eqcapvac.mod 14-28; eqmain.mod 67; mod_equa.mod 74 | layers 1 to 3 on the crafted case demo12_capvac, both variants, from the DD files (CI: test_eqcapvac.jl, the public and variant fixtures, the chain from DD files) |
+| 39 | EQ_BNDCST and VAR_CUMCST, refused since M1.3 (25-3): bounds on the costs of a region by cost type (REG_BNDCST in one period, REG_CUMCST over a range of years): investment costs with decommissioning, investment taxes and subsidies, fixed costs, taxes and subsidies, commodity and flow taxes and subsidies, and fourteen aggregates of them | eqbndcst.mod 42-77, 81-213; eqmain.mod 192; bnd_cum.mod 44-48 | layers 1 to 3 on the crafted case demo12_bndcst, both variants, from the DD files (CI: test_eqbndcst.jl, the public and variant fixtures, the chain from DD files) |
 
 ## Parity (per change)
 
@@ -369,12 +370,13 @@ Not part of the gate, for the record:
 - (25-3) The rest of eqmain.mod and equ_ext.vda (`src/model/eqmain_prep.jl`,
   9 Nov 2026): AFS (eqcapact.mod L20, the `L` include), eqbndcst.mod's block
   (SUPERYR, YK1; RT_IAN, RTP_IAN and CST_ANNC stay empty without cost-bound
-  data, which is refused), RVPT and RTP_OFF (L199-202), the user-constraint
+  data; with it they are filled from change 39 on), RVPT and RTP_OFF (L199-202), the user-constraint
   maps (L211-226, from `uc_setup` and `uc_tmap`, now stored), RP_PL and AFS
   (equ_ext.vda L77-79), and RP_UPR (eqactups.vda L33, which is outside the
   dispatching IF and so empties RP_UPR in a model with ACT_TIME but no
   ACT_CSTRMP). Refused: the dispatching preparation (eqactups.vda L9-32,
-  with RP_UPL, RP_PL or ACT_CSTRMP) and REG_BNDCST/REG_CUMCST. A residual
+  with RP_UPL, RP_PL or ACT_CSTRMP) and REG_BNDCST/REG_CUMCST
+  (REG_BNDCST/REG_CUMCST translated in change 39). A residual
   inventory (every set and parameter of the pre-solve dump after the
   translated steps) on the core models and nine demo12 cases now shows only
   what 25-4 covers: bndmain.mod's data statements (NCAP_BND), pp_qack.mod
@@ -2123,6 +2125,112 @@ Not part of the gate, for the record:
     coef_csv.mod on nothing; the result is the same, no rows);
   - the statements L52-63 with a FIL that holds the milestone years: with GAMS 54.6.1 they
     never run with data (G60).
+
+### Change 39, 14 Nov 2026: EQ_BNDCST (eqbndcst.mod L42-77 and L81-213, bnd_cum.mod L44-48)
+
+- GAMS: eqbndcst.mod L42-77 (data statements) and L81-213 (the equation), included from
+  eqmain.mod L192; bnd_cum.mod L44-48 (the bounds of VAR_CUMCST). Refused since change
+  25-3 (`eqmain_prep_unported`, `untranslated_families`, `bounds_unported`); the three
+  refusals are removed.
+- What the family does: REG_CUMCST(r,y1,y2,agg,cur,bd) bounds the cost of a region of one
+  type over the years y1 to y2, and REG_BNDCST(r,t,agg,cur,bd) in one milestone year (it
+  is copied to REG_CUMCST(r,t,t,...), L42). For each bounded entry there is one row
+  EQ_BNDCST(r,y1,t,y2,agg,cur), which sets the variable VAR_CUMCST(r,y1,y2,agg,cur) equal
+  to the cost expression; the bound is on the variable. t is the period of y2 in SUPERYR
+  (the last period if y2 lies after the horizon). Part II §6.3.13 (the equation) and §5.7
+  (the variable).
+  - Ten cost types have their own terms: INV (L90-96, plus the decommissioning costs
+    L99-103), INVTAX and INVSUB (L106-118), FOM, FOMTAX and FOMSUB (L121-160, each with a
+    second term for a shaped cost: RTP_SHAPE '1', '2', '3' with SHAPE and MULTI), COMTAX
+    and COMSUB (L164-172, on VAR_COMNET and VAR_COMPRD), FLOTAX and FLOSUB (L175-207, on
+    the flows of ordinary processes through cal_red, and of exchange processes with their
+    auxiliary flows IRE_FLOSUM).
+  - Fourteen aggregates (COST_GMAP, L20-35) are rows that sum the VAR_CUMCST of their
+    components (L210), a subsidy with -1 where the aggregate is "taxes minus subsidies"
+    and with +1 in FIXSUB and ALLSUB. A bound on an aggregate gives every component an
+    upper bound INF (L44-45), so the component rows exist. A LO or FX alone gets an upper
+    bound INF (L46-47), because the row's condition is the UP entry (L81).
+  - A row of INV, INVTAX or INVSUB in one milestone year uses the precomputed annual
+    coefficients CST_ANNC (L51-76, RT_IAN); a row over a range of years sums year by year
+    in the equation (L90-94, L106-109, L113-116). CST_ANNC exists only for the vintages
+    of periods that have such a single-period bound themselves (RTP_IAN, L52 and L69), so
+    a single-period row leaves out the vintages of the other periods (discrepancies.md
+    D39). The decommissioning term (L99-103) has no RT_IAN condition and CST_ANNC
+    'INVCOST' holds the decommissioning costs too (L60-64), so a single-period INV row
+    has them twice (D37). FLOTAX and FLOSUB take the net of a flow's tax and subsidy
+    (D38). All three are in GAMS's matrix, and TIMES.jl follows.
+  - bnd_cum.mod L44-48: each of the fourteen aggregates gets the lower bound -INF where
+    it has an UP entry (L44-45: an aggregate can be negative); then UP, LO and FX are
+    assigned with `$=` (an UP with the value EPS is a bound of zero).
+- Code: `eqmain_prep!` (src/model/eqmain_prep.jl) now holds L42-77: REG_CUMCST, TRACKP,
+  RT_IAN, RTP_IAN, YK1, CST_ANNC 'INVCOST' (with decommissioning), 'INVTAX', 'INVSUB',
+  YKK. `eq_bndcst!` (src/model/eqbndcst.jl, new) builds the rows, called in `generate!`
+  after `eq_stgflo!`, in the order of eqmain.mod L192. `bnd_cum!` (src/model/bndmain.jl)
+  sets the bounds of VAR_CUMCST. One comment in src/model/equserco.jl reworded (it said
+  eqbndcst.mod is not translated). One list of earlier code changed (next item).
+- Found on the rebase onto change 36: `eqmain_prep_symbols` (the symbols the eqmain step
+  settles, which the step probe compares with the pre-solve dump) named the scratch set
+  UNCD7 for every model. eqmain.mod writes UNCD7 only inside the dispatching IF
+  (eqactups.vda L10 and L28). In this case the decommissioning data leave 11 entries in
+  it (eqobjinv.mod L245-247), and pp_qack.mod L258 and L339-342 replace them later with
+  the empty set of the dump, so the probe failed at the eqmain step in both variants
+  (UNCD7: 11 against 0) while the chain from the DD files and the model passed. UNCD7 is
+  now on the list only with dispatching data; `pp_qack_data!` compares it in every
+  model, as before. After the fix the probe passes all 70 steps on this case, on
+  demo12, on demo12_disp (UNCD7 still compared there) and on demo12_objinv (the other
+  case with decommissioning data). test/unit/test_eqbndcst.jl runs the same step
+  comparison in CI.
+- New crafted case demo12_bndcst (demo12 + bndcst.dd): cost data demo12 does not have
+  (NCAP_ITAX, NCAP_ISUB; a 10-year life for REG1's ELCTNOIL01; NCAP_DCOST, NCAP_DLIFE and
+  NCAP_DLAG on ELCTNOIL01 and ELCNNNUC01; NCAP_FTAX and NCAP_FSUB with the shapes and
+  multipliers NCAP_FOMX, NCAP_FOMM, NCAP_FTAXX, NCAP_FSUBX, NCAP_FSUBM; COM_TAXNET,
+  COM_SUBNET, COM_TAXPRD, COM_SUBPRD; FLO_TAX and FLO_SUB on power plants, on the
+  electricity link and the gas link between the regions, one flow with both a tax and a
+  subsidy; an auxiliary flow INDCO2 on the gas link), 17 REG_BNDCST records and 18
+  REG_CUMCST records: every one of the ten cost types; the aggregates INVTAXSUB, INVALL,
+  FOMALL, FIX, FIXALL, ALLTAX, ALLSUB and ALLTAXSUB; interpolation option 5; a LO alone;
+  an FX; an UP with the value EPS; ranges that start before the horizon (2000, 2005),
+  end after it (2100) or lie inside one period (2022-2024, 2020-2020).
+- GAMS 54.6.1: both variants optimal with CPLEX and HiGHS, objective 123,667,622.0772.
+  79 rows EQ_BNDCST and 79 columns VAR_CUMCST in each variant; 2,177 nonzeros in the rows
+  with REDUCE off and 2,169 as run. Seven of the bounds are at their limit in the optimum
+  (REG1: COMTAX 2007-2018, COMSUB 2015-2050, COMTAX 2020, FLOSUB 2021-2060 (FX), COMTAX
+  2045-2100; REG2: ALLTAX 2005-2050, FIX 2010-2030).
+- Result: the step probe passes all 70 steps (35 in each variant). The chain from the DD
+  files: DD files -> input PASS (824 sets and parameters, no compile warning), every
+  checkpoint to the pre-solve dump PASS (823 symbols), both QA logs identical, the model
+  against GAMS's matrix PASS at 1e-9 (reduce_off 8,774 rows, 9,748 columns, 33,808
+  nonzeros; as run 3,312, 4,564 and 20,646), HiGHS against GAMS/CPLEX PASS (relative
+  difference of the objective 4.8e-15 with REDUCE off and 1.5e-14 as run). CI:
+  test/unit/test_eqbndcst.jl (71 tests: every set and parameter of the pre-solve dump
+  from the ppm dump; the eqmain step on the symbols it settles; the statements of
+  L42-77; layer 2; the rows recomputed from
+  REG_CUMCST and SUPERYR; chosen rows term by term; the bounds of VAR_CUMCST; no data, no
+  rows), the public fixture (layers 2 and 3), the variant fixture (input -> ppm on every
+  symbol; the whole model), the DD-file compile case and the chain from DD files (28
+  cases now).
+- Branches the case reaches in one variant only: an exchange flow as VAR_IRE and its
+  auxiliary flow as IRE_FLOSUM * VAR_IRE with REDUCE off; as VAR_ACT * PRC_ACTFLO
+  (RPC_AIRE) as run.
+- Translated as GAMS has it, reached by no case in the repository (flagged; TODO for a
+  later release):
+  - OBJ = LIN and VARCOST = LIN (the three other forms of %TPULSE%, L85-87). demo12 runs
+    with OBJ MOD.
+  - The UC_ATTR lines L50 and L67 (TRACKP: CST_ANNC for the processes of a user constraint
+    with the attribute INVCOST, INVTAX, INVSUB or ANNUL). The lines are translated, but
+    the user-constraint term that reads CST_ANNC (uc_ncap.mod L39) is still refused in
+    equserco.jl, so no model can reach them yet (an open decision of #123).
+  - A first year y1 before the horizon that YK holds a pair for. In the case the range
+    2000-2012 starts before every year of YK, and the FLOTAX row then has the variable
+    alone, in GAMS as in TIMES.jl.
+  - A currency other than the region's own (demo12 has one currency).
+- Not part of this change: solve.stp L196 (the stepped run fixes VAR_CUMCST; M1.5),
+  PAR_CUMCST (rptmisc.rpt L153, rptlite.rpt L93; M1.6), the stochastic forms (%SWT%,
+  %SWS%, %SOW%, L78-79, L83, L162, L209; STAGES is refused by the generation driver),
+  bnd_cum.mod L42 (the exit under MACRO).
+- D37 and D39 look like mistakes in TIMES v4.9.7 and not like intended behaviour, but the
+  source says nothing on it. Whether v4.9.8 changes eqbndcst.mod was not checked (the
+  baseline is v4.9.7 until the M1.3 gate closes).
 
 ## Open items
 

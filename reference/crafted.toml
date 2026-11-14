@@ -514,3 +514,22 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_capvac/demo12_capvac.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_capvac"]
+
+# TIMES_Demo demo12 + demo12_bndcst/bndcst.dd (14 Nov 2026): bounds on the costs of a region by
+# cost type (REG_BNDCST, REG_CUMCST), the equation EQ_BNDCST and the variable VAR_CUMCST
+# (eqbndcst.mod L42-77 and L81-213, bnd_cum.mod L44-48): taxes and subsidies on investments,
+# fixed costs (with shapes and multipliers), commodities and flows (ordinary and exchange
+# processes), decommissioning costs; bounds of single periods (with the annual coefficients
+# CST_ANNC) and over ranges of years, on the ten cost types and on aggregates, UP, LO, FX and
+# the value EPS (M1.3 change 39).
+[[model]]
+name = "TIMES_Demo-demo12_bndcst"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_bndcst/demo12_bndcst.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_bndcst"]
