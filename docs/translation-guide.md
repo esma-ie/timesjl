@@ -765,3 +765,9 @@ those checks, their figures and their crafted cases are not published
   TIMES-NZ-steady, OTCGEN and OTNYC. CI runs the chain from DD files on
   demo12, and on the crafted cases in pieces that meet at GAMS's dumps
   (a decision for James). The gate waits for the M1.3 gate and for James's yes.
+- 14 Nov 2026: M1.4 (9): CI runs every crafted case that has a run file
+  and a matrix fixture (20 cases) from its DD files to the model in one
+  run, with no GAMS state: the compile, the pre-solve state, the matrix
+  and the HiGHS objective each against GAMS (`test/unit/test_m13_chain.jl`,
+  `dd_chain`). demo12_uc compiles and stops at the refusal of unit
+  commitment (eqlducs.vda), which the test checks.
