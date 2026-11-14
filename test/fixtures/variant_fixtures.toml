@@ -294,3 +294,22 @@ variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
+
+# Crafted case demo12_xbnd (14 Nov 2026): IRE_XBND records, limits on the total exchange of a
+# commodity of a region (eqxbnd.mod L17-56): an internal region (all its exchange processes with
+# the commodity in the direction, whatever the partner) and an external region (the flows of the
+# internal regions in the other direction, through IRE_TSCVT), bounds at, above and finer than
+# the flow's timeslice level and finer than the commodity's, a new import process at SEASON, a
+# user IRE_TSCVT to a timeslice of an external region, interpolation option 5, FX and LO with
+# the value EPS, UP INF, a commodity without an exchange process, an external region's
+# timeslice without IRE_TSCVT and an external region without a link.
+# Preprocessing from the input dump to ppm on every symbol, the seventeen rows
+# (test/unit/test_eqxbnd.jl), and the whole model. The presolve dump is shared with
+# test/fixtures/public_fixtures.toml.
+[[variant]]
+prefix   = "demo12_xbnd"
+model    = "TIMES_Demo-demo12_xbnd"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []

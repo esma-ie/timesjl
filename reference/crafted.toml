@@ -443,3 +443,21 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_irebnd/demo12_irebnd.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_irebnd"]
+
+# TIMES_Demo demo12 + demo12_xbnd/xbnd.dd (14 Nov 2026): limits on the total exchange of a
+# commodity of a region (IRE_XBND), the equations EQ(l)_XBND (eqxbnd.mod L17-56): bounds of an
+# internal region (all its exchange processes, whatever the partner) at, above and finer than
+# the flow's timeslice level, bounds of an external region (the flows of the internal regions
+# in the other direction, through IRE_TSCVT), a new import process at SEASON, FX and LO with
+# the value EPS, UP INF, a commodity without an exchange process (M1.3 change 35).
+[[model]]
+name = "TIMES_Demo-demo12_xbnd"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_xbnd/demo12_xbnd.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_xbnd"]

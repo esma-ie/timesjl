@@ -89,6 +89,14 @@ answer yet.
 
 ## Log by pull request
 
+### #115 M1.3 (35): EQ(l)_XBND, eqxbnd.mod L17-56, crafted case demo12_xbnd (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the new crafted case demo12_xbnd (demo12 + xbnd.dd, CC BY 4.0; a public fixture, a variant fixture and a DD-file compile case, about 7 MB)? | Recommended: yes. Built in. | open |
+| 2 | The refusal of IRE_XBND data is lifted: the three equations are translated, for internal and external regions, and checked on demo12_xbnd. No earlier code needed a change. With this the bound equations of eqmain.mod are all translated. | Built in. | open |
+| 3 | Two other uses of IRE_XBND in GAMS are not part of this change: dynslite.vda L36 (turned-off timeslices) and solve.stp L257-263 (the stepped run, M1.5). Both stay with the features they belong to, which are still refused (TS_OFF data with DYNTS; a stepped run). | Built in. | open |
+
 ### #114 M1.3 (34): EQ(l)_IREBND, eqirebnd.mod L18-69, crafted case demo12_irebnd (open)
 
 | # | Question | Decided | How |
