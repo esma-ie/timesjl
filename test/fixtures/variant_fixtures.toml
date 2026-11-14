@@ -262,3 +262,18 @@ variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
+
+# Crafted case demo12_flofr (14 Nov 2026): FLO_FR records, the share of a process flow in a
+# timeslice (eqflofr.mod L15-27): shares of the year's flow and of the parent timeslice's, records
+# at ANNUAL that are levelised, the variable of the annual flow (the year '0' at ANNUAL), a record
+# 'N' of the user, records below the flow's level that are added up, a vintaged process, a LO with
+# the value EPS and records that give nothing. Preprocessing from the input dump to ppm on every
+# symbol (ppmain.mod L992, pp_prelv.vda L99-109 on real data), the twenty-seven rows (test/unit/test_eqflofr.jl), and the whole model. The presolve dump is shared
+# with test/fixtures/public_fixtures.toml.
+[[variant]]
+prefix   = "demo12_flofr"
+model    = "TIMES_Demo-demo12_flofr"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []

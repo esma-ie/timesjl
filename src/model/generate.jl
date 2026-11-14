@@ -63,7 +63,6 @@ function untranslated_families(tm::TimesModel)
     # --- eqmain.mod families ---------------------------------------------------
     # Families whose domain needs a parameter or set that is empty in a model without them.
     for (fam, gams, sym, N, kind) in (
-            ("EQ(l)_FLOFR", "eqflofr.mod L15", "FLO_FR", 6, :p),
             ("EQ_BNDCST", "eqbndcst.mod L81", "REG_CUMCST", 6, :p),
             ("EQ(l)_BLND", "eqblnd.mod L67", "BLE_TP", 3, :s),
             ("EQ(l)_CAPVAC", "coef_csv.mod, mod_equa.mod L74", "PRC_SIMV", 2, :s),
@@ -155,6 +154,7 @@ function generate!(tm::TimesModel)
     n += eq_cumflo!(tm)              # L92
     n += eq_combal!(tm)              # L98-106
     n += eq_flobnd!(tm)              # L111-113
+    n += eq_flofr!(tm)               # L118-120
     n += eq_floshr!(tm)              # L125-134
     n += eq_flomrk!(tm)              # L139-141
     n += eq_ire!(tm)                 # L146

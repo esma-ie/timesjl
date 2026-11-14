@@ -1,0 +1,68 @@
+* TIMES.jl crafted case demo12_flofr (reference/crafted.toml, 14 Nov 2026): the share of a process
+* flow in a timeslice (FLO_FR), the equations EQ(l)_FLOFR (eqflofr.mod L15-27, with the data
+* statements of ppmain.mod L992 and pp_prelv.vda L99-109). Added to TIMES_Demo demo12
+* (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0). The timeslices: ANNUAL; the seasons S and W;
+* SD, SN (in S) and WD, WN (in W). The power plants run at DAYNITE or SEASON; ELCTNGAS01 is the
+* vintaged process. A row reads: fraction * reference flow =L= (LO), =E= (FX, N) or =G= (UP) the
+* flow in the timeslice.
+* - ELCREHYD00, electricity at WD, UP 0.40 in REG1 2020: the flow's own level; a value above
+*   zero is a share of the flow of the whole year.
+* - ELCTEGAS00, gas input at SD, LO -0.6 in REG1 2020: a negative value is a share of the flow of
+*   the parent timeslice, here the season S.
+* - ELCTNGAS01, electricity at the season W, FX 0.5 in REG1 2020: above the flow's level, on the
+*   vintaged process: a sum over the vintages and the timeslices of W.
+* - ELCRNWIN01, electricity at ANNUAL, UP 1.1 in REG1 2030: a record at ANNUAL is levelised
+*   (pp_prelv.vda L100-103): a record 'N' at each season (a variable for the flow of the season
+*   divided by the season's share of the year) and an UP in each of the four timeslices of the
+*   flow (1.1 times the timeslice's share of the year), against the variable of its season.
+* - ELCTECOA00 (SEASON), coal input at ANNUAL, LO 0.9 in REG1 2030: levelised, with a record 'N'
+*   at ANNUAL (a variable for the flow of the year) and a LO in each season.
+* - FTE-RSDELC, electricity input: the record at the year 0 and ANNUAL asks for a variable of the
+*   annual flow (pp_prelv.vda L105-109: 'N' 1 at ANNUAL, 'N' EPS at the seasons); UP 0.35 at SD
+*   and UP 0.5 at the season W in REG1 2020, against that variable. The rows of the two records
+*   'N' EPS have no coefficient other than the EPS.
+* - ELCTNGAS01, gas input: the same with LO 0.15 at SN in REG2 2030, on the vintaged process: a
+*   variable of the annual flow for each vintage.
+* - ELCNENUC00 (SEASON), electricity at SD and SN, UP 0.3 each, in REG1 2020: below the flow's
+*   level; ppmain.mod L992 (pp_lvlbd.mod) adds them up to UP 0.6 at the season S, which gives a
+*   row. At WD alone, UP 0.45, in REG2 2020: no UP at WN, so nothing is added up and no row.
+* - ELCRESOL00, electricity at WD, UP 0.3 in REG1 2030, a period in which the process is not
+*   available: no row.
+* - ELCREWIN00, electricity in REG2 2020: N 1 at the season W, a variable for the flow of W, and
+*   UP 0.6 at WD, a share of that flow.
+* - ELCTEGAS00, electricity at WN, LO 0.10 in REG2 2020 with interpolation and forward
+*   extrapolation (option 5): records in 2020, 2030 and 2050, a row in 2020 only (the process is
+*   not available later).
+* - ELCRNWIN01, electricity at SN, LO with the value EPS in REG2 2030: a row, 0 =L= the flow at
+*   SN, with EPS coefficients on the flows of the season S.
+* - ELCTNGAS01, the CO2 emission at SD, UP 0.25 in REG2 2020: an emission flow on the vintaged
+*   process.
+* - IMPELC1, the electricity import at WD, UP 0.5 in REG1 2020: an exchange process: no row
+*   (the equation is for standard processes, RP_FLO).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER
+FLO_FR ' '/
+REG1.2020.ELCREHYD00.ELC.WD.UP 0.40
+REG1.2020.ELCTEGAS00.ELCGAS.SD.LO -0.6
+REG1.2020.ELCTNGAS01.ELC.W.FX 0.5
+REG1.2030.ELCRNWIN01.ELC.ANNUAL.UP 1.1
+REG1.2030.ELCTECOA00.ELCCOA.ANNUAL.LO 0.9
+REG1.0.FTE-RSDELC.ELC.ANNUAL.UP 1
+REG1.2020.FTE-RSDELC.ELC.SD.UP 0.35
+REG1.2020.FTE-RSDELC.ELC.W.UP 0.5
+REG2.0.ELCTNGAS01.ELCGAS.ANNUAL.LO 1
+REG2.2030.ELCTNGAS01.ELCGAS.SN.LO 0.15
+REG1.2020.ELCNENUC00.ELC.SD.UP 0.3
+REG1.2020.ELCNENUC00.ELC.SN.UP 0.3
+REG2.2020.ELCNENUC00.ELC.WD.UP 0.45
+REG1.2030.ELCRESOL00.ELC.WD.UP 0.3
+REG2.2020.ELCREWIN00.ELC.W.N 1
+REG2.2020.ELCREWIN00.ELC.WD.UP 0.6
+REG2.0.ELCTEGAS00.ELC.WN.LO 5
+REG2.2020.ELCTEGAS00.ELC.WN.LO 0.10
+REG2.2030.ELCRNWIN01.ELC.SN.LO EPS
+REG2.2020.ELCTNGAS01.ELCCO2.SD.UP 0.25
+REG1.2020.IMPELC1.ELC.WD.UP 0.5
+/

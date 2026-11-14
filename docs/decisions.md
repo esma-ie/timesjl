@@ -89,6 +89,13 @@ answer yet.
 
 ## Log by pull request
 
+### #113 M1.3 (33): EQ(l)_FLOFR, eqflofr.mod L15-27, crafted case demo12_flofr (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the new crafted case demo12_flofr (demo12 + flofr.dd, CC BY 4.0; a public fixture, a variant fixture and a DD-file compile case, about 7 MB)? | Recommended: yes. Built in. | open |
+| 2 | The refusal of FLO_FR data is lifted: the three equations are translated and checked on demo12_flofr. No earlier code needed a change. | Built in. | open |
+
 ### #112 M1.3 (32): EQ(l)_FLOBND, eqflobnd.mod L15-43, crafted case demo12_flobnd (open)
 
 | # | Question | Decided | How |
