@@ -22,14 +22,18 @@
 #   bounds, so here every record starts at its default: 0/+INF for a
 #   POSITIVE VARIABLE, -INF/+INF for a free one (mod_vars.mod).
 #
-# Parameters bndmain changes. bndmain.mod L44-45 (NCAP_BND), L51 (CAP_BND),
-# bnd_flo.mod L16 (FLO_BND) and bnd_cum.mod L12-20 (FLO_CUM) modify their
-# input parameters before taking bounds from them. They are translated and
-# applied to local copies. Built from the pre-solve dump, the input already
-# holds the modified values; each modification is idempotent, and the tests
-# check FLO_CUM from the coef/ dump (before bndmain) against the pre-solve
-# dump. bnd_flo.mod L22-23 (marks for EQ_FLOBND under the '%DFLBL%' year) do
-# not affect bounds and belong with eqflobnd.mod.
+# Parameters bndmain changes. bndmain.mod L44-45 (NCAP_BND), L51 (CAP_BND)
+# and bnd_flo.mod L16 (FLO_BND) modify their input parameters before taking
+# bounds from them. They are translated and applied to local copies. Built
+# from the pre-solve dump, the input already holds the modified values, and
+# each of these modifications is idempotent. bnd_cum.mod L12-20 (FLO_CUM) and
+# L27-38 (COM_CUM, RC_CUMCOM) are not: with an 'N' record, L13 and L27 would
+# copy the factor of the first pass over the lead it was read from. So
+# `bnd_data!` (qack_prep.jl) is the one place that applies them, with
+# `bnd_cum_flo` and `bnd_cum_com`, and `bnd_cum!` takes the bounds from
+# FLO_CUM and COM_CUM as stored: from the pre-solve dump, or from the chain
+# after `bnd_data!`. bnd_flo.mod L22-23 (marks for EQ_FLOBND under the
+# '%DFLBL%' year) do not affect bounds and belong with eqflobnd.mod.
 #
 # Sets: bndmain runs before pp_qack.mod, which then removes RTPCS_VARF
 # members (RPC_CONLY, L47) and RTP members (NO_RVP, L54). Built from the
@@ -501,13 +505,15 @@ end
     VAR_CUMCOM.LO(R,C,%1,YEAR,LL)\$COM_CUM(R,%1,YEAR,LL,C,'LO') = COM_CUM(R,%1,YEAR,LL,C,'LO')*(1/%CUCSCAL%)*(COM_CUM(R,%1,YEAR,LL,C,'N')+1);
     VAR_CUMCOM.UP(R,C,%1,YEAR,LL)\$COM_CUM(R,%1,YEAR,LL,C,'UP') = COM_CUM(R,%1,YEAR,LL,C,'UP')*(1/%CUCSCAL%)*(COM_CUM(R,%1,YEAR,LL,C,'N')+1);
 
-with FLO_CUM from [`bnd_cum_flo`](@ref) and COM_CUM from
-[`bnd_cum_com`](@ref); %CUFSCAL% is 10 and %CUCSCAL% 1000 unless the run
-sets them (eqmain.mod L16-17). GAMS: bnd_cum.mod L23-24 and L39-40, v4.9.7
-(included with %1 = COM_VAR since %2 = 0, bndmain.mod L64).
+with FLO_CUM and COM_CUM as stored, that is after bnd_cum.mod L12-20 and
+L27-38 ([`bnd_cum_flo`](@ref) and [`bnd_cum_com`](@ref), applied once by
+`bnd_data!`; GAMS's pre-solve dump holds them the same way). %CUFSCAL% is 10
+and %CUCSCAL% 1000 unless the run sets them (eqmain.mod L16-17).
+GAMS: bnd_cum.mod L23-24 and L39-40, v4.9.7 (included with %1 = COM_VAR
+since %2 = 0, bndmain.mod L64).
 """
 function bnd_cum!(bt::BoundTable, tm::TimesModel)
-    tab = bnd_cum_flo(tm)
+    tab = gtable(gparam(tm, "FLO_CUM"))                                         # L23-24
     allyear = gset(tm, "ALLYEAR")
     scal = GNum(1 / parse(Float64, gswitch(tm, "CUFSCAL", "10")))
     for ((r, p, c, y, ll, bd), x) in sort!(collect(tab); by=first)
@@ -515,7 +521,7 @@ function bnd_cum!(bt::BoundTable, tm::TimesModel)
         n = get(tab, (r, p, c, y, ll, "N"), GZERO)
         setbound!(bt, tm, "VAR_CUMFLO", (r, p, c, y, ll), bd == "LO" ? :lo : :up, x * scal * (n + 1))
     end
-    ctab, _ = bnd_cum_com(tm)                                                   # L39-40
+    ctab = gtable(gparam(tm, "COM_CUM"))                                        # L39-40
     cscal = GNum(1 / parse(Float64, gswitch(tm, "CUCSCAL", "1000")))
     for ((r, kind, y, ll, c, bd), x) in sort!(collect(ctab); by=first)
         (bd in ("LO", "UP") && kind in ("NET", "PRD") && (y,) in allyear && (ll,) in allyear) || continue

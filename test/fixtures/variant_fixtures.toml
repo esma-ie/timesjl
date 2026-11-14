@@ -166,3 +166,17 @@ variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
+
+# Crafted case demo12_cumc (14 Nov 2026): cumulative bounds FLO_CUM, COM_CUMNET and COM_CUMPRD
+# with FX, N (a MULTI row), negative and after-horizon records, and UC_CUMCOM user constraints
+# whose ranges get a -INF lower bound (bnd_cum.mod L12-40). Preprocessing from the input dump to
+# ppm on every symbol, the ppm -> pre-solve step with the model from that state
+# (test/unit/test_bnd_cum.jl), and the whole model. The presolve dump is shared with
+# test/fixtures/public_fixtures.toml.
+[[variant]]
+prefix   = "demo12_cumc"
+model    = "TIMES_Demo-demo12_cumc"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []

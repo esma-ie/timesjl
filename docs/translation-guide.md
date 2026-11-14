@@ -680,3 +680,11 @@ those checks, their figures and their crafted cases are not published
   market shares of exchange processes that export, reaches the export term
   of EQ(l)_FLOMRK (eqflomrk.mod L83-88). Layers 2-3 PASS in both variants
   with no code change; a public fixture.
+- 14 Nov 2026: M1.3 change 25-4 follow-up: bnd_cum.mod L12-20 and L27-38,
+  the statements that change FLO_CUM, COM_CUM and RC_CUMCOM before the
+  cumulative bounds are set, are applied once in `bnd_data!` and written
+  back (FX, N with a MULTI row, negative and after-horizon records, the
+  -INF default of L38); the refusal is lifted and `bnd_cum!` reads the
+  bounds from the stored tables. New crafted case demo12_cumc: the step
+  probe, the chain from the DD files and layers 2-3 PASS in both variants; a
+  public fixture.
