@@ -695,3 +695,8 @@ those checks, their figures and their crafted cases are not published
   exchange and storage processes are lifted. New crafted case demo12_ashar:
   the step probe, the chain from the DD files and layers 2-3 PASS in both
   variants; a public fixture.
+- 14 Nov 2026: M1.3 change 29: coef_obj.mod L31-32, the control switch
+  ANNCOST LEV (ACL, MINYR, RPT_OPT('OBJ','2')), no longer refused. New
+  crafted cases demo12_lev (OBJ MOD: MINYR stays MIYR_V1) and demo12_levstd
+  (OBJ AUTO: MINYR restored): the step probe, the chain from the DD files
+  and layers 2-3 PASS in both variants of both; public fixtures.

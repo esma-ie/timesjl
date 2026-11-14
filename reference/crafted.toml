@@ -326,3 +326,33 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_ashar/demo12_ashar.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_ashar"]
+
+# TIMES_Demo demo12 with the control switch ANNCOST LEV (14 Nov 2026): coef_obj.mod L31-32.
+# demo12 runs with OBJ MOD (%CTST% is '**0'), so MINYR becomes MIYR_V1 and stays so: Y_EOH and
+# what reads MINYR after it change, and with them the objective coefficients (M1.3).
+[[model]]
+name = "TIMES_Demo-demo12_lev"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_lev/demo12_lev.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_lev"]
+
+# TIMES_Demo demo12 with OBJ AUTO and ANNCOST LEV (14 Nov 2026): the other branch of
+# coef_obj.mod L31-32. %CTST% is empty, so L32 restores MINYR; ACL keeps it and
+# RPT_OPT('OBJ','2') is 1 (both read by the reports only) (M1.3).
+[[model]]
+name = "TIMES_Demo-demo12_levstd"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_levstd/demo12_levstd.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_levstd"]

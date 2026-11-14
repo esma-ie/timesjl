@@ -195,3 +195,27 @@ variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
+
+# Crafted case demo12_lev (14 Nov 2026): demo12 with the control switch ANNCOST LEV; OBJ MOD, so %CTST% is '**0' and MINYR stays MIYR_V1 (coef_obj.mod L31-32).
+# Preprocessing from the input dump to ppm on every symbol, the ppm -> pre-solve step with the
+# model from that state (test/unit/test_anncost.jl), and the whole model. The presolve dump is
+# shared with test/fixtures/public_fixtures.toml.
+[[variant]]
+prefix   = "demo12_lev"
+model    = "TIMES_Demo-demo12_lev"
+variant  = "as_run"
+reduce   = true
+switches = { ANNCOST = "LEV", BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []
+
+# Crafted case demo12_levstd (14 Nov 2026): demo12 with OBJ AUTO and ANNCOST LEV; %CTST% is empty, so MINYR is restored (coef_obj.mod L31-32).
+# Preprocessing from the input dump to ppm on every symbol, the ppm -> pre-solve step with the
+# model from that state (test/unit/test_anncost.jl), and the whole model. The presolve dump is
+# shared with test/fixtures/public_fixtures.toml.
+[[variant]]
+prefix   = "demo12_levstd"
+model    = "TIMES_Demo-demo12_levstd"
+variant  = "as_run"
+reduce   = true
+switches = { ANNCOST = "LEV", BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "AUTO", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []

@@ -129,6 +129,7 @@ GAMS 54.6.1):
 | 27b-2 | powerflo.vda POWFLO, the rows that use the node allocation: EQ_GR_GENALL (L290-313) and EQ_GR_DEMALL (L314-340), and the IREAUX terms (%IREAUXBAL%, L221, L363-370) that cal_ire.mod L30 adds to EQ_COMBAL's consumption (eqcombal.mod L84, label IREAUXIN, times COM_IE) and EQ_PEAK's net imports (eqpeak.mod L31, IREAUXOUT-, negated); the other cal_ire calls jump to the end of the file (L461-462). The model-stage refusal of node-allocation data is lifted; GR_DEMFR as input data stays refused in the main block. New crafted case demo12_pfd (a second grid node in REG1), since demo12 has one node per region, so GR_DEMFR is emptied and no EQ_GR_DEMALL row exists (13 Nov 2026) | 290-340, 363-370 | layers 2-3: demo12_pfa and demo12_pfd, both variants (CI: demo12_pfd public fixture, demo12_pfa and demo12_pfd variant fixtures); the M1.3 chain to presolve on both |
 | 27c | powerflo.vda RPTB (cost_ann.rpt L175): the reporting block, translated with M1.6 and listed here so the file is tracked | 437-462 | M1.6 |
 | 28 | eqashar.vda with pp_lvlfc.mod (coef_ext.vda L79): RPCG_ASHAR and the levelling of FLO_ASHAR, refused until now; EQ(l)_ASHAR's exchange branch and storage terms, refused since M1.1 (James, 14 Nov 2026: the refused features are translated now, one change each, each with a crafted demo12 case) | 16-33; 51, 56-65, 75-76 | every checkpoint and layers 2-3 on the crafted case demo12_ashar, both variants (CI: test_ashar.jl) |
+| 29 | coef_obj.mod, the control switch ANNCOST LEV, refused since M1.2: ACL takes MINYR, MINYR becomes MIYR_V1, RPT_OPT('OBJ','2') is 1, and MINYR is restored when %CTST% is empty | 31-32 | every checkpoint and layers 2-3 on the crafted cases demo12_lev (OBJ MOD) and demo12_levstd (OBJ AUTO), both variants (CI: test_anncost.jl) |
 
 ## Parity (per change)
 
@@ -1389,6 +1390,35 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
   demo12_ashar is a public fixture, a variant fixture (input -> ppm), a DD-file compile case
   and the case of test/unit/test_ashar.jl (ppm -> pre-solve on every symbol, each branch, and
   the model from that state against GAMS's matrix).
+
+### Change 29, 14 Nov 2026: coef_obj.mod L31-32, ANNCOST LEV
+
+- The two lines: `$IFI '%ANNCOST%'==LEV ACL=MINYR; MINYR=MIYR_V1; RPT_OPT('OBJ','2')=1;` and
+  `$IFI '%ANNCOST%%CTST%'==LEV MINYR=ACL;`. The second holds only when %CTST% is empty (OBJ AUTO
+  or STD without OBLONG; initmty.mod L426-430), and then puts MINYR back. With OBJ MOD, ALT or
+  LIN, or with OBLONG, MINYR stays MIYR_V1: Y_EOH (L33) starts one year later than without the
+  switch, and eqobjinv.mod L86 (OBJ_PASTI) reads the new MINYR, so the objective changes.
+  ppm_ext.mlf L8 sets MINYR the same way, but only under MACRO MLF, which is refused.
+- ACL and RPT_OPT('OBJ','2') are read by the reports only (cost_ann.rpt L16, L26, L90;
+  rpt_obj.rpt L127; the levelised annual costs, M1.6). They are state at the coef and pre-solve
+  checkpoints, so they are set now. The other ANNCOST lines are reporting (cost_ann.rpt
+  L165-167, wrtbprice.mod L30) or MACRO (eqobjann.tm L69).
+- `coef_obj!` translates the two lines where they stand, between Y, YK (L29-30, the old MINYR)
+  and Y_EOH (L33, the new one), and no longer refuses the switch.
+- Two crafted cases, both demo12 with only its run file changed: demo12_lev (ANNCOST LEV; demo12
+  runs with OBJ MOD, so %CTST% is '**0') and demo12_levstd (OBJ AUTO and ANNCOST LEV; %CTST% is
+  empty). GAMS 54.6.1 with CPLEX and HiGHS, both variants optimal. demo12_lev: MINYR 2005, ACL
+  2004, 48 years in Y_EOH (49 without the switch), objective 23,957,430.74 against demo12's
+  23,960,685.74. demo12_levstd: MINYR 2004, ACL 2004, 49 years in Y_EOH.
+- Result: the step probe passes all 70 steps on both cases; the chain from the DD files
+  (`m13_gate.jl --from-dd --solve`) passes every checkpoint, the QA log, layer 2 and the HiGHS
+  objective against CPLEX in both variants of both cases (relative difference under 1e-14); the
+  model from GAMS's pre-solve dump passes layers 2 and 3 with CPLEX and HiGHS. Both cases are
+  public fixtures, variant fixtures (input -> ppm), DD-file compile cases and the cases of
+  test/unit/test_anncost.jl (ppm -> pre-solve on every symbol, the two lines, and the model from
+  that state against GAMS's matrix).
+- JRC-EU-TIMES sets this switch (change 27b-2 above: its chain stopped here), so its chain now
+  goes on past coef_obj.mod; how far is for the next local run (verdicts only).
 
 ## Open items
 

@@ -88,6 +88,14 @@ answer yet.
 
 ## Log by pull request
 
+### #107 M1.3 (29): coef_obj.mod L31-32, the control switch ANNCOST LEV, crafted cases demo12_lev and demo12_levstd (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the two new crafted cases demo12_lev and demo12_levstd (CC BY 4.0, public fixtures, about 7 MB each)? | Recommended: yes, both; one case cannot reach both branches of L32. | open |
+| 2 | The refusal of ANNCOST LEV is lifted: the two lines are translated and checked on the two cases. | Built in. | open |
+| 3 | ACL and RPT_OPT('OBJ','2') are set now although only the reports (M1.6) read them: they are state at the coef and pre-solve checkpoints. | Built in. | open |
+
 ### #106 M1.3 (28): eqashar.vda L16-33 and the exchange and storage branches of EQ(l)_ASHAR, crafted case demo12_ashar (open)
 
 | # | Question | Decided | How |

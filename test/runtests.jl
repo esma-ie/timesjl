@@ -160,6 +160,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "Flow shares against other groups: eqashar.vda on demo12_ashar (M1.3)" begin
         include("unit/test_ashar.jl")
     end
+    @testset "ANNCOST LEV: coef_obj.mod L31-32 on demo12_lev and demo12_levstd (M1.3)" begin
+        include("unit/test_anncost.jl")
+    end
     @testset "demo12 variants: advanced features (docs/demo12-variants.md)" begin
         include("unit/test_variants.jl")
     end

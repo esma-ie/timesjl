@@ -10,7 +10,14 @@
 # them, L156-168), while OBJ_COMNT, OBJ_COMPD and OBJ_IPRIC get their
 # interpolated years written back (fillcost.gms L41).
 #
-# Not translated (UnportedError): `%ANNCOST%` LEV (L31-32), VALIDATE (L114,
+# `%ANNCOST%` LEV (L31-32; M1.3 change 29): ACL takes MINYR, MINYR becomes
+# MIYR_V1 and RPT_OPT('OBJ','2') is set to 1; L32 restores MINYR when `%CTST%`
+# is empty (`$IFI '%ANNCOST%%CTST%'==LEV`). With OBJ MOD, ALT or LIN or with
+# OBLONG, MINYR therefore stays MIYR_V1 for Y_EOH (L33) and for everything
+# that reads it later (eqobjinv.mod L86). ACL and RPT_OPT are read by the
+# reports only (cost_ann.rpt L16, L26, L90; rpt_obj.rpt L127).
+#
+# Not translated (UnportedError): VALIDATE (L114,
 # L137, L191-201), elastic demand shapes under TIMESED/MICRO (L184-189) and
 # blending (L93-94, BLE_OPR) - no reference run has any of them. `$IF
 # DEFINED R_CUREX` (L99) holds exactly when R_CUREX has data at this stage:
@@ -29,7 +36,6 @@
 function coef_obj_unported(tm)
     out = String[]
     sw(n) = uppercase(gswitch(tm, n, ""))
-    sw("ANNCOST") == "LEV" && push!(out, "coef_obj.mod L31-32 (ANNCOST LEV)")
     sw("VALIDATE") == "YES" && push!(out, "coef_obj.mod L114, L137, L191-201 (VALIDATE YES)")
     (sw("TIMESED") == "YES" || sw("MICRO") == "YES") &&
         push!(out, "coef_obj.mod L184-189 (elastic demand shapes, TIMESED/MICRO)")
@@ -340,6 +346,19 @@ function coef_obj!(tm)
     y_set = [k for k in ks if minyr <= yv(k) <= yr_vl]
     gput!(tm, "Y", Set((k,) for k in y_set))
     gput!(tm, "YK", Set((y, k) for y in y_set for k in ks if yv(k) <= yv(y)))
+    # L31-32: %ANNCOST% LEV. ACL = MINYR; MINYR = MIYR_V1; RPT_OPT('OBJ','2') = 1; then
+    # MINYR = ACL when %CTST% is empty (the $IFI compares '%ANNCOST%%CTST%' with LEV)
+    acl = 0.0
+    if uppercase(gswitch(tm, "ANNCOST", "")) == "LEV"
+        acl = minyr
+        minyr = gscalar(tm, "MIYR_V1")
+        rpt_opt = gvalues(tm, "RPT_OPT", 2)
+        foreach(l -> register_uel!(tm.data, l), ("OBJ", "2"))
+        rpt_opt[("OBJ", "2")] = 1.0
+        gput!(tm, "RPT_OPT", rpt_opt)
+        ctst(tm) == "" && (minyr = acl)
+        gput_scalar!(tm, "MINYR", minyr)
+    end
     # L33
     y_eoh = [e[1] for e in S1("EOHYEARS").keys if yv(e[1]) >= minyr]
     gput!(tm, "Y_EOH", Set((e,) for e in y_eoh))
@@ -351,7 +370,7 @@ function coef_obj!(tm)
     fil = Set(y for y in ax.years if yr_v1 <= yv(y) <= yr_vl)
     gput_scalar!(tm, "YR_V1", yr_v1)
     gput_scalar!(tm, "YR_VL", yr_vl)
-    gput_scalar!(tm, "ACL", 0.0)
+    gput_scalar!(tm, "ACL", acl)                # L19 declares it 0; L31 sets it
 
     # L41: interpolate the discount rates
     scratch = FilScratch(tm)                    # filparam.gms and fillcost.gms scratch, carried call to call
