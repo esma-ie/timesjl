@@ -740,3 +740,9 @@ those checks, their figures and their crafted cases are not published
   New crafted case demo12_flofr: layers 1 to 3 PASS in both variants from
   the DD files; no earlier code needed a change. Still refused among the
   bound equations: EQ(l)_IREBND, EQ(l)_XBND.
+- 14 Nov 2026: M1.3 change 34: EQ(l)_IREBND (eqirebnd.mod L18-69,
+  eqmain.mod L152-154): limits on the trade of a commodity between a
+  region and one partner region, as rows. New crafted case demo12_irebnd:
+  layers 1 to 3 PASS in both variants from the DD files; no earlier code
+  needed a change. The marketplace branch (L46-51) stays refused with
+  RPC_MARKET. Still refused among the bound equations: EQ(l)_XBND.

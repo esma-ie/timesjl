@@ -175,6 +175,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "Flow fractions: eqflofr.mod on demo12_flofr (M1.3)" begin
         include("unit/test_eqflofr.jl")
     end
+    @testset "Trade bounds: eqirebnd.mod on demo12_irebnd (M1.3)" begin
+        include("unit/test_eqirebnd.jl")
+    end
     @testset "demo12 variants: advanced features (docs/demo12-variants.md)" begin
         include("unit/test_variants.jl")
     end

@@ -89,6 +89,14 @@ answer yet.
 
 ## Log by pull request
 
+### #114 M1.3 (34): EQ(l)_IREBND, eqirebnd.mod L18-69, crafted case demo12_irebnd (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the new crafted case demo12_irebnd (demo12 + irebnd.dd, CC BY 4.0; a public fixture, a variant fixture and a DD-file compile case, about 7 MB)? | Recommended: yes. Built in. | open |
+| 2 | The refusal of IRE_BND data is lifted: the three equations are translated and checked on demo12_irebnd. No earlier code needed a change. | Built in. | open |
+| 3 | One branch of the equation stays refused: exports from a marketplace region (eqirebnd.mod L46-51), with the market-based trade it belongs to (RPC_MARKET, eqire.mod L23-38, refused since M1.1). The suite models that generate today have no such data. | Built in; it follows with market-based trade. | open |
+
 ### #113 M1.3 (33): EQ(l)_FLOFR, eqflofr.mod L15-27, crafted case demo12_flofr (open)
 
 | # | Question | Decided | How |
