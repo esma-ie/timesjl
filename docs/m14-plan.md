@@ -136,6 +136,7 @@ runs the chain from DD files on demo12 and the crafted cases.
 | 6 | the M1.4 gate's remaining items: the demo12 variants in CI, TIM and JRC-EU-TIMES (local), the licence level, a runner for any run file | done (10 Nov): `scripts/m14_models.jl` reads the DD folders from `reference/suite.toml` and `reference/crafted.toml` (`--local` for TIM and JRC-EU-TIMES); CI compiles demo12 and 11 variants from their DD files; `licencelevel` (K3); `scripts/run_dd.jl` and `run_dd.cmd` |
 | 8 | compile warnings as GAMS counts them; TIMES's GDX filter of records outside their domain sets (setglobs.gms L13-24, gdxfilter.gms L4-19); a key given twice in one data statement | done (14 Nov): 88 warnings on TIMES-NZ as GAMS; the three cases where GAMS keeps such a record stop the run; a key given twice stops as GAMS error 172 (G56, G59) |
 | 9 | CI: every crafted case from its DD files to the model in one run (the gate's second criterion) | done (14 Nov): `test/unit/test_m13_chain.jl` runs 20 crafted cases from their DD files to GAMS's matrix and objective with no GAMS state; demo12_uc compiles and then stops at the refusal of unit commitment (eqlducs.vda) |
+| 9b | the four older crafted cases in the one run: a run file and an input fixture for demo12_red17b, demo12_ips, demo12_ucrt and demo12_objinv | done (14 Nov): 24 crafted cases go from their DD files to GAMS's matrix and objective in CI |
 | gate | the evidence for each criterion | "Gate close-out, 14 Nov 2026" below; the gate waits for the M1.3 gate and for James's yes |
 
 ### Change 2b, 9 Nov 2026 (late evening)
@@ -304,10 +305,15 @@ equals its input fixture and the chain then stops in `coef_ext!` with "not yet t
 eqlducs.vda L12-41". The test checks that message, so it fails on the day unit commitment is
 translated; the case then moves into the list with a matrix fixture.
 
-Four crafted cases with a matrix fixture are not in the run: demo12_red17b, demo12_ips,
-demo12_ucrt and demo12_objinv are fixtures of the model only (pre-solve dump, matrix, solution)
-and have no run file or input fixture in the repository. Adding them takes two small fixtures
-each from the reference runs on the workstation; that is the next small PR.
+Four crafted cases with a matrix fixture were not in the run: demo12_red17b, demo12_ips,
+demo12_ucrt and demo12_objinv were fixtures of the model only (pre-solve dump, matrix, solution)
+and had no run file or input fixture in the repository.
+
+Change 9b, 14 Nov 2026: the four join. Each gets `<prefix>_run` (the run file of its as_run
+reference, `raw/tjl_presolve.run`, line ends made LF) and `<prefix>_input` (the `input/` dump of
+the same reference run, GAMS 54.6.1; about 1.1 MB each), copied as `scripts/make_variant_fixture.jl`
+copies a dump. The test picks up every public fixture that has a run file, so no test code
+changes but the count: 24 crafted cases, all PASS (compile, pre-solve state, matrix, objective).
 
 ### Gate close-out, 14 Nov 2026
 
@@ -330,7 +336,7 @@ with this code (change 8, Result). The batch runs the whole chain again once the
 | The M1.3 chain from DD files to the pre-solve dump, no GAMS state | Same runs: init, prep, prelv, ppm, coef and presolve, every set and parameter at each, with the QA log. | PASS, 10 of 10 |
 | TIM-bau | Checked locally (results stay on James's machine). | local |
 | CI runs the chain from DD files on demo12 | `test/unit/test_m13_chain.jl`, "M1.4: DD files -> input -> pre-solve -> model": compile, `write_dump`, the input fixture, the chain to presolve, the QA log, the model against GAMS's matrix and objective. | PASS |
-| CI runs the chain from DD files on the crafted cases | Change 9: `test/unit/test_m13_chain.jl`, "M1.4: DD files -> model, crafted cases, no GAMS state". Each of the 20 crafted cases with a run file, a matrix and a solution fixture goes in one run, as run (REDUCE on), on TIMES.jl's state alone: the compile against its input fixture (every symbol, every label), the chain to the pre-solve state against its pre-solve fixture (every set and parameter), the model against GAMS's matrix, and the HiGHS optimum against GAMS's objective. The 20: demo12_refit, refit_afc, curex, ucdyn, ucattr, flomrk, ls, lst, pf, pfd, mrkx, cumc, ashar, lev, levstd, bndc, flobnd, flofr, irebnd, xbnd. demo12_uc (unit commitment) compiles as its input fixture and then stops with the refusal of eqlducs.vda, which is not translated; the test checks that message. Not in the one run: demo12_red17b, demo12_ips, demo12_ucrt and demo12_objinv (matrix fixtures, but no run file or input fixture in the repository yet), demo12_qa and demo12_step (compiled from their DD files in `test_ddsource.jl`; no matrix fixture), demo12_pfa and demo12_qa99 (no run file in the repository). Before change 9 CI ran the crafted cases in pieces that met at GAMS's dumps (`test_ddsource.jl`, `test_variants.jl`, `test_public_parity.jl`); those tests stay. | PASS, 20 of 20; demo12_uc stops at unit commitment (decision for James) |
+| CI runs the chain from DD files on the crafted cases | Change 9: `test/unit/test_m13_chain.jl`, "M1.4: DD files -> model, crafted cases, no GAMS state". Each of the 24 crafted cases with a run file, a matrix and a solution fixture goes in one run, as run (REDUCE on), on TIMES.jl's state alone: the compile against its input fixture (every symbol, every label), the chain to the pre-solve state against its pre-solve fixture (every set and parameter), the model against GAMS's matrix, and the HiGHS optimum against GAMS's objective. The 24: demo12_red17b, ips, ucrt, objinv (change 9b), demo12_refit, refit_afc, curex, ucdyn, ucattr, flomrk, ls, lst, pf, pfd, mrkx, cumc, ashar, lev, levstd, bndc, flobnd, flofr, irebnd, xbnd. demo12_uc (unit commitment) compiles as its input fixture and then stops with the refusal of eqlducs.vda, which is not translated; the test checks that message. Not in the one run: demo12_qa and demo12_step (compiled from their DD files in `test_ddsource.jl`; no matrix fixture), demo12_pfa and demo12_qa99 (no run file in the repository). Before change 9 CI ran the crafted cases in pieces that met at GAMS's dumps (`test_ddsource.jl`, `test_variants.jl`, `test_public_parity.jl`); those tests stay. | PASS, 24 of 24; demo12_uc stops at unit commitment (decision for James) |
 
 Beyond the gate, from the same batch (James, 10 Nov 2026: the matrix and the solution join the
 chain from DD files):

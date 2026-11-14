@@ -1,0 +1,89 @@
+* TIMES.jl crafted case demo12_ips (reference/crafted.toml): TIMES_Demo demo12.run
+* (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0) unchanged but for the include of
+* ips.dd after bounds-uc_wsets.dd (5 Nov 2026).
+$TITLE  TIMES -- VERSION 4.1.0
+OPTION RESLIM=50000, PROFILE=1, SOLVEOPT=REPLACE;
+OPTION ITERLIM=999999, LIMROW=0, LIMCOL=0, SOLPRINT=OFF;
+$OFFLISTING
+
+* [TIMES.jl reference harness] removed: option LP=CBC;
+*--If you want to use an optimizer other than cplex/xpress, enter it here:
+*OPTION LP=MyOptimizer;
+
+
+* reduction of equation system
+$SET REDUCE  YES
+*--------------------------------------------------------------*
+* BATINCLUDE calls should all be with lower case file names!!! *
+*--------------------------------------------------------------*
+
+* initialize the environment variables
+$   SET DSCAUTO               YES 
+$   SET VDA                   YES 
+$   SET DEBUG                 NO
+$   SET DUMPSOL               NO
+* [TIMES.jl reference harness] overridden: $   SET SOLVE_NOW             YES
+$   SET XTQA                  YES
+* VAR_UC being set so that non-binding constraints appear in results
+$   SET VAR_UC                YES 
+$   SET OBJ                   MOD
+$   SET SOLVEDA               YES
+$   SET DATAGDX               YES
+ OPTION BRATIO=1;
+
+* merge declarations & data
+$   ONMULTI
+
+* the times-slices MUST come 1st to ensure ordering OK
+$BATINCLUDE demo12_ts.dd
+
+* perform fixed declarations
+$SET BOTIME 1960
+* [TIMES.jl reference harness] override
+$SET SOLVE_NOW NO
+$BATINCLUDE initsys.mod
+
+* declare the (system/user) empties
+$BATINCLUDE initmty.mod TJLREF
+
+* read scenario data
+$BATINCLUDE base.dd
+$BATINCLUDE newtechs.dd
+$BATINCLUDE trade_param.dd
+$BATINCLUDE dem_ref.dd
+$BATINCLUDE syssettings.dd
+$BATINCLUDE peak_rsv.dd
+$BATINCLUDE refinery.dd
+$BATINCLUDE demproj_dtcar.dd
+$BATINCLUDE uc_nuc_maxcap.dd
+$BATINCLUDE bounds-uc_wsets.dd
+$BATINCLUDE ips.dd
+
+*SET MILESTONYR /2005,2006,2010,2015,2020,2025,2030,2035,2040,2045,2050/;
+* Reduced model to fit with GAMS community license
+SET MILESTONYR /2005,2010,2015,2020,2030,2050/;
+
+$SET RUN_NAME demo12
+
+
+$ SET VEDAVDD YES
+
+* do the rest
+* [TIMES.jl reference harness] M1.3 input checkpoint: the state the main driver starts from
+$IF SET TJL_CHECKPOINTS execute_unload 'tjl_input.gdx';
+$ BATINCLUDE maindrv.mod mod
+* [TIMES.jl reference harness] solve information for timing and parity checks
+$IF NOT SET MODEL_NAME $SET MODEL_NAME TIMES
+PARAMETER TJL_SOLVEINFO(*) 'TIMES.jl reference harness: model attributes after solve';
+TJL_SOLVEINFO('modelstat') = %MODEL_NAME%.modelstat;
+TJL_SOLVEINFO('solvestat') = %MODEL_NAME%.solvestat;
+TJL_SOLVEINFO('objval')    = %MODEL_NAME%.objval;
+TJL_SOLVEINFO('numequ')    = %MODEL_NAME%.numequ;
+TJL_SOLVEINFO('numvar')    = %MODEL_NAME%.numvar;
+TJL_SOLVEINFO('numnz')     = %MODEL_NAME%.numnz;
+TJL_SOLVEINFO('resgen')    = %MODEL_NAME%.resgen;
+TJL_SOLVEINFO('resusd')    = %MODEL_NAME%.resusd;
+TJL_SOLVEINFO('etsolve')   = %MODEL_NAME%.etsolve;
+TJL_SOLVEINFO('etsolver')  = %MODEL_NAME%.etsolver;
+TJL_SOLVEINFO('iterusd')   = %MODEL_NAME%.iterusd;
+execute_unload 'tjl_solveinfo.gdx', TJL_SOLVEINFO;

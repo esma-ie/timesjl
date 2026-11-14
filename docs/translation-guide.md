@@ -771,3 +771,6 @@ those checks, their figures and their crafted cases are not published
   and the HiGHS objective each against GAMS (`test/unit/test_m13_chain.jl`,
   `dd_chain`). demo12_uc compiles and stops at the refusal of unit
   commitment (eqlducs.vda), which the test checks.
+- 14 Nov 2026: M1.4 (9b): a run file and an input fixture for
+  demo12_red17b, demo12_ips, demo12_ucrt and demo12_objinv, so 24 crafted
+  cases go from their DD files to the model in CI.

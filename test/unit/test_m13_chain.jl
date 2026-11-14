@@ -174,13 +174,13 @@ const PUBLIC_FX = TOML.parsefile(joinpath(FIXTURES, "public_fixtures.toml"))["fi
     dd_chain(only(filter(f -> f["prefix"] == "demo12_off", PUBLIC_FX)); qalog=true)
 end
 
-# Every public fixture of a crafted case that has its run file (<prefix>_run): 20 cases, each a whole
+# Every public fixture of a crafted case that has its run file (<prefix>_run): 24 cases, each a whole
 # model. demo12_uc (unit commitment) has no matrix fixture: its compile is checked, and the chain
 # stops in coef_ext! with the refusal of eqlducs.vda, which is not translated.
 const CRAFTED_FX = filter(f -> f["prefix"] != "demo12_off" && isdir(joinpath(FIXTURES, f["prefix"] * "_run")), PUBLIC_FX)
 
 @testset "M1.4: DD files -> model, crafted cases, no GAMS state" begin
-    @test length(CRAFTED_FX) == 20
+    @test length(CRAFTED_FX) == 24
     @testset "$(fx["prefix"])" for fx in CRAFTED_FX
         dd_chain(fx)
     end
