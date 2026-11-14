@@ -132,6 +132,7 @@ GAMS 54.6.1):
 | 29 | coef_obj.mod, the control switch ANNCOST LEV, refused since M1.2: ACL takes MINYR, MINYR becomes MIYR_V1, RPT_OPT('OBJ','2') is 1, and MINYR is restored when %CTST% is empty | 31-32 | every checkpoint and layers 2-3 on the crafted cases demo12_lev (OBJ MOD) and demo12_levstd (OBJ AUTO), both variants (CI: test_anncost.jl) |
 | 30 | Stepped (myopic) runs, the preparation before solve.stp, refused since M1.2: coef_alt.lin L81 (no RTP_CAPVL under TIMESTEP) and eqobsalv.mod L23-25 (OBJ_SUMS, OBJ_SUMS3, SALV_INV and OBJSCC cleared, the salvage preparation left to the steps). The stepped solve itself (maindrv.mod L38-40 and L109-113, solve.stp) is M1.5: model generation and the bounds still refuse the run | coef_alt.lin 81; eqobsalv.mod 23-25 | every checkpoint to the new `equ` checkpoint (harness 0.3.3), and the pre-solve dump less the 27 symbols the loop of solve.stp assigns, on the crafted case demo12_step, both variants (CI: test_stepped.jl) |
 | 31 | EQ(l)_BNDNET and EQ(l)_BNDPRD, refused since M1.1: bounds on the net amount and the production of a commodity at a timeslice above the level it is tracked at, written as equations over the tracked timeslices below | eqbndcom.mod 16-24; eqmain.mod 54-59 | layers 1 to 3 on the crafted case demo12_bndc, both variants, from the DD files (CI: test_eqbndcom.jl, the public and variant fixtures) |
+| 32 | EQ(l)_FLOBND, refused since M1.1: bounds on process flows that cannot be bounds of one flow variable (above the flow's timeslice level, a commodity group, a vintaged process, an exchange process, a flow REDUCE replaces), written as equations over the flow variables. Two corrections of `bnd_data!` (bnd_flo.mod L16 and L31) that the crafted case showed | eqflobnd.mod 15-43; eqmain.mod 111-113; bnd_flo.mod 16, 31 | layers 1 to 3 on the crafted case demo12_flobnd, both variants, from the DD files (CI: test_eqflobnd.jl, the public and variant fixtures) |
 
 ## Parity (per change)
 
@@ -1532,6 +1533,77 @@ Not part of the gate, for the record:
 - The other bound equations still refused follow, each as its own change: EQ(l)_FLOBND
   (eqflobnd.mod), EQ(l)_FLOFR (eqflofr.mod), EQ(l)_IREBND (eqirebnd.mod), EQ(l)_XBND
   (eqxbnd.mod). `untranslated_families` lists every family still refused.
+
+### Change 32, 14 Nov 2026: EQ(l)_FLOBND
+
+- The second of the refused equation families. eqflobnd.mod L15-43, included three times from
+  eqmain.mod L111-113 (G with LO, E with FX, L with UP): a FLO_BND record that cannot be a
+  bound of one flow variable gives a row, the sum of the process's flow variables of the
+  commodity (or of the commodities of the group) at the timeslices at or below the record's,
+  over the vintages, against the bound. bnd_flo.mod L16-24 marks such records with an EPS at
+  the year '0' (%DFLBL%): every record of a commodity group, and of a single commodity where
+  the process is vintaged, is an exchange process, or has the flow replaced under REDUCE (by
+  the activity, RPC_FFUNC, or by the emitting flows, RPC_EMIS). The other records are bounds of
+  VAR_FLO at the flow's own timeslices (bnd_flo.mod L27-29) or, under REDUCE, of VAR_ACT for
+  the activity flow (L34-39); both were translated already (`bnd_flo!`).
+- The domain (L17-20): the process is available in the period (RTP_VARA), and some flow
+  variable of the commodity or group (RTPCS_VARF) has a timeslice TS at or below the record's S
+  (TS_MAP) that is strictly below S (RS_BELOW) or whose record is marked. Three points of GAMS
+  semantics, each confirmed against GAMS's matrix on the crafted case:
+  - `RS_BELOW(R,S,TS) OR FLO_BND(R,'0',P,CG,S,BD)`: a stored EPS is true in a logical
+    expression, so a marked record gives a row at the flow's own timeslice.
+  - `$FLO_BND(R,T,P,CG,S,BD)` is true for a stored EPS as well: a LO record with the value EPS
+    on an emission flow or on a group gives a row with a right-hand side of zero (the LO include
+    has no condition on the value).
+  - The condition of the UP include, `FLO_BND NE INF`, is on the body and not on the domain
+    (L41): for an UP record with the value INF the body is empty, `0 =L= 0`, and GAMS writes no
+    row.
+- The body (L24-41): the flows of a standard process (RP_FLO) enter through `%cal_red%`, so
+  under REDUCE a replaced flow is the activity times its coefficient (`cal_nored!`, which hands
+  to `cal_red!`). The flows of an exchange process (RP_IRE) enter as VAR_IRE, or under REDUCE as
+  VAR_ACT * PRC_ACTFLO where the flow is the activity (RPC_AIRE). With a single commodity,
+  imports and exports add up; with a commodity group the exports count negative, so the bound
+  is on the net import (L37).
+- `eq_flobnd!` (src/model/eqflobnd.jl), called in `generate!` after `eq_combal!`, in the order
+  of mod_equa.mod L88-90. The refusal in `untranslated_families` is removed.
+- **Two corrections of earlier code** (`bnd_data!`, src/model/qack_prep.jl, M1.3 change 25-4),
+  both shown by the step probe on the new case, at pp_clean:
+  - bnd_flo.mod L16 deletes the LO records with the value zero (an EPS) of flows that are not
+    emission flows of a standard process. The statement is controlled by T and C, so it reaches
+    only single commodities in milestone years. `bnd_data!` applied it to every record, and so
+    deleted the LO EPS record of a commodity group, which GAMS keeps and writes as a row.
+  - bnd_flo.mod L31, `OPTION CLEAR=TRACKPC`, was missing. A FLO_BND record that stays a bound
+    of VAR_FLO left its (process, commodity) in TRACKPC, pp_qack.mod L51-52 then read it as a
+    flow to keep, and one RPG_RED entry too many was left (REDUCE). `bnd_flo!` (bndmain.jl),
+    which sets the bounds, had both statements right; only the data path was wrong. No open
+    suite model has FLO_BND data in its input, and the earlier crafted cases with FLO_BND data
+    (demo12_red17b) pass unchanged.
+- New crafted case demo12_flobnd (demo12 + flobnd.dd), 21 FLO_BND records. Rows: gas input of
+  ELCTEGAS00 at ANNUAL (above the flow's level); electricity of ELCREHYD00 at the season W, LO;
+  gas input of the vintaged ELCTNGAS01 at WD and its electricity at W, FX; oil input of
+  ELCTEOIL00 at SD (a row under REDUCE only: without REDUCE a bound of VAR_FLO); the CO2
+  emission of ELCTEGAS00 at ANNUAL, and at SD with LO EPS; the output group of REFEOIL00, UP and
+  LO EPS; the import IMPELC1 at ANNUAL and at WN; the two-way exchange process
+  TB_ELC_REG1_REG2_01, ELC at the season S with interpolation option 5 (rows in 2020, 2030 and
+  2050), and the group NRG at W, UP and LO (the net import). Bounds that stay on a variable:
+  diesel input of FTE-AGROIL (VAR_FLO) and electricity of ELCREBIO00 at WN (VAR_ACT under
+  REDUCE). No row: an UP INF, a LO EPS on a single commodity (deleted by L16), a timeslice
+  below the flow's level, a period in which the process is not available.
+- GAMS 54.6.1: both variants optimal, objective 23,964,228.0773 (demo12: 23,960,685.7370);
+  15 rows without REDUCE (4 G, 1 E, 10 L) and 16 with it (4 G, 1 E, 11 L). Six rows bind, among
+  them the gas input of ELCTEGAS00 (marginal -1.379), the import IMPELC1 in REG1 2030 (-23.966)
+  and the output group of REFEOIL00 (-4.911).
+- Result: the step probe passes all 70 steps (35 in each variant). The chain from the DD
+  files: DD files -> input PASS (824 sets and parameters), every checkpoint to the pre-solve
+  dump PASS (823 symbols), both QA logs identical, the model against GAMS's matrix PASS
+  (reduce_off 8,710 rows, 9,669 columns, 31,452 nonzeros; as run 3,249, 4,485 and 18,437),
+  HiGHS against GAMS/CPLEX PASS (relative difference 6.5e-15 and 6.8e-15). CI:
+  test/unit/test_eqflobnd.jl (the marks and the deleted and kept LO EPS records, layer 2, the
+  sixteen rows term by term, the bounds that stay on a variable, the records that give no
+  row), the public fixture (layers 2 and 3), the variant fixture (input -> ppm on every
+  symbol, which holds the two corrections; the whole model) and the DD-file compile case.
+- Still refused among the bound equations, each to follow as its own change: EQ(l)_FLOFR
+  (eqflofr.mod), EQ(l)_IREBND (eqirebnd.mod), EQ(l)_XBND (eqxbnd.mod).
 
 ## Open items
 

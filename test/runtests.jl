@@ -169,6 +169,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "Commodity bounds above the tracked level: eqbndcom.mod on demo12_bndc (M1.3)" begin
         include("unit/test_eqbndcom.jl")
     end
+    @testset "Flow bounds as equations: eqflobnd.mod on demo12_flobnd (M1.3)" begin
+        include("unit/test_eqflobnd.jl")
+    end
     @testset "demo12 variants: advanced features (docs/demo12-variants.md)" begin
         include("unit/test_variants.jl")
     end

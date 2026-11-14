@@ -727,3 +727,10 @@ those checks, their figures and their crafted cases are not published
   New crafted case demo12_bndc: layers 1 to 3 PASS in both variants from the
   DD files. The other bound equations still refused follow one by one:
   EQ(l)_FLOBND, EQ(l)_FLOFR, EQ(l)_IREBND, EQ(l)_XBND.
+- 14 Nov 2026: M1.3 change 32: EQ(l)_FLOBND (eqflobnd.mod L15-43,
+  eqmain.mod L111-113): bounds on process flows that cannot be bounds of
+  one flow variable, as rows. New crafted case demo12_flobnd: layers 1 to 3
+  PASS in both variants from the DD files. The case showed two faults in
+  `bnd_data!` (bnd_flo.mod L16 applied to commodity groups; L31, the clear
+  of TRACKPC, missing), both corrected. Still refused among the bound
+  equations: EQ(l)_FLOFR, EQ(l)_IREBND, EQ(l)_XBND.

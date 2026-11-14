@@ -247,3 +247,18 @@ variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
+
+# Crafted case demo12_flobnd (14 Nov 2026): FLO_BND records above the flow's timeslice level, on
+# a vintaged process, on flows REDUCE replaces, on a commodity group and on exchange processes,
+# which GAMS writes as the equations EQ(l)_FLOBND (eqflobnd.mod L15-43; marked in bnd_flo.mod
+# L16-24); two bounds that stay on a variable, LO records with the value EPS, an UP with the value
+# INF and two records that give nothing. Preprocessing from the input dump to ppm on every symbol,
+# the sixteen rows (test/unit/test_eqflobnd.jl), and the whole model. The presolve dump is shared
+# with test/fixtures/public_fixtures.toml.
+[[variant]]
+prefix   = "demo12_flobnd"
+model    = "TIMES_Demo-demo12_flobnd"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []

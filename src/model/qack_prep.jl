@@ -37,6 +37,7 @@ The data statements of bndmain.mod and its includes (the bounds themselves are `
     LOOP(T,FLO_BND(R,'0',P,C,S,BD)\$FLO_BND(R,T,P,C,S,BD) = EPS\$(NOT TRACKPC(R,P,C));
            FLO_BND(R,'0',P,CG,S,BD)\$((NOT C(CG))\$FLO_BND(R,T,P,CG,S,BD)) = EPS);                   (L22-23)
     TRACKPC(RPC_ACT(R,P,C)) = NO;                                                                    (L24)
+    OPTION CLEAR=TRACKPC;                                                                            (L31)
     TRACKP(RP(R,P))\$((NOT PRC_VINT(R,P))\$PRC_MAP(R,'STG',P)) = YES;
     STG%2_BND(R,T,P,C,S,BD)\$((NOT TOP(R,P,C,'%2'))\$RP_STG(R,P)) = 0; ... OPTION CLEAR=TRACKP;      (bnd_stg.mod L17-27, IN and OUT)
     NCAP_BND(RTP_OFF,'UP') = EPS;                                                                    (bndmain.mod L44)
@@ -62,9 +63,11 @@ function bnd_data!(tm::TimesModel)
     # bnd_flo.mod L16-24
     flo_bnd = gvalues(tm, "FLO_BND", 6)
     rpc_emis, rp_flo = S("RPC_EMIS", 3), S("RP_FLO", 2)
-    for (k, x) in collect(flo_bnd)
+    cset = S("COM", 1)
+    for (k, x) in collect(flo_bnd)                 # L16: T and C control the statement, so a group's record stays
         (r, t, p, c, s, bd) = k
-        (bd == "LO" && x == 0.0 && !((r, p, c) in rpc_emis) && (r, p) in rp_flo) && delete!(flo_bnd, k)   # an EPS LO bound
+        (bd == "LO" && (t,) in T && (c,) in cset && x == 0.0 && !((r, p, c) in rpc_emis) && (r, p) in rp_flo) &&
+            delete!(flo_bnd, k)                    # an EPS LO bound
     end
     trackpc = gmembers(tm, "TRACKPC", 3)
     rtpc = S("RTPC", 4)
@@ -74,7 +77,6 @@ function bnd_data!(tm::TimesModel)
     vint, ffunc = S("PRC_VINT", 2), S("RPC_FFUNC", 3)
     filter!(k -> !((k[1], k[2]) in vint || k in ffunc || k in rpc_emis), trackpc)
     # L22-23: LOOP(T, FLO_BND(R,'0',P,C,S,BD)$FLO_BND(R,T,P,C,S,BD) = EPS$(NOT TRACKPC(R,P,C)); ... groups: EPS)
-    cset = S("COM", 1)
     for (r, t, p, c, s, bd) in [k for k in keys(flo_bnd) if (k[2],) in T]
         if (c,) in cset
             gassign!(flo_bnd, (r, "0", p, c, s, bd), (r, p, c) in trackpc ? GZERO : GEPS)
@@ -82,8 +84,9 @@ function bnd_data!(tm::TimesModel)
             gassign!(flo_bnd, (r, "0", p, c, s, bd), GEPS)
         end
     end
-    filter!(k -> !(k in S("RPC_ACT", 3)), trackpc)
-    gput!(tm, "FLO_BND", flo_bnd); gput!(tm, "TRACKPC", trackpc)
+    # L24 takes RPC_ACT out of TRACKPC for the bounds of L27-29 (`bnd_flo!`, bndmain.jl); L31 then
+    # clears it (OPTION CLEAR=TRACKPC), so pp_qack.mod L51 starts from an empty set
+    gput!(tm, "FLO_BND", flo_bnd); gput!(tm, "TRACKPC", Set{NTuple{3,String}}())
     # bnd_stg.mod L17-27 (SIN with IN, SOUT with OUT)
     top, rp_stg = S("TOP", 4), S("RP_STG", 2)
     for (io, name) in (("IN", "STGIN_BND"), ("OUT", "STGOUT_BND"))
