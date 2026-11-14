@@ -408,3 +408,20 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_flobnd/demo12_flobnd.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_flobnd"]
+
+# TIMES_Demo demo12 + demo12_flofr/flofr.dd (14 Nov 2026): the share of a process flow in a
+# timeslice (FLO_FR), the equations EQ(l)_FLOFR (eqflofr.mod L15-27): shares of the flow of the
+# year and of the parent timeslice, a vintaged process, records at ANNUAL (levelised,
+# pp_prelv.vda L100-103), the variable of the annual flow (L105-109), records 'N', records above
+# and below the flow's timeslice level, a LO with the value EPS (M1.3 change 33).
+[[model]]
+name = "TIMES_Demo-demo12_flofr"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_flofr/demo12_flofr.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_flofr"]

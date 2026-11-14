@@ -133,6 +133,7 @@ GAMS 54.6.1):
 | 30 | Stepped (myopic) runs, the preparation before solve.stp, refused since M1.2: coef_alt.lin L81 (no RTP_CAPVL under TIMESTEP) and eqobsalv.mod L23-25 (OBJ_SUMS, OBJ_SUMS3, SALV_INV and OBJSCC cleared, the salvage preparation left to the steps). The stepped solve itself (maindrv.mod L38-40 and L109-113, solve.stp) is M1.5: model generation and the bounds still refuse the run | coef_alt.lin 81; eqobsalv.mod 23-25 | every checkpoint to the new `equ` checkpoint (harness 0.3.3), and the pre-solve dump less the 27 symbols the loop of solve.stp assigns, on the crafted case demo12_step, both variants (CI: test_stepped.jl) |
 | 31 | EQ(l)_BNDNET and EQ(l)_BNDPRD, refused since M1.1: bounds on the net amount and the production of a commodity at a timeslice above the level it is tracked at, written as equations over the tracked timeslices below | eqbndcom.mod 16-24; eqmain.mod 54-59 | layers 1 to 3 on the crafted case demo12_bndc, both variants, from the DD files (CI: test_eqbndcom.jl, the public and variant fixtures) |
 | 32 | EQ(l)_FLOBND, refused since M1.1: bounds on process flows that cannot be bounds of one flow variable (above the flow's timeslice level, a commodity group, a vintaged process, an exchange process, a flow REDUCE replaces), written as equations over the flow variables. Two corrections of `bnd_data!` (bnd_flo.mod L16 and L31) that the crafted case showed | eqflobnd.mod 15-43; eqmain.mod 111-113; bnd_flo.mod 16, 31 | layers 1 to 3 on the crafted case demo12_flobnd, both variants, from the DD files (CI: test_eqflobnd.jl, the public and variant fixtures) |
+| 33 | EQ(l)_FLOFR, refused since M1.1: the share of a process flow in a timeslice (FLO_FR), against the flow of the year, of the parent timeslice, or a variable of an aggregate flow (records 'N') | eqflofr.mod 15-27; eqmain.mod 118-120 | layers 1 to 3 on the crafted case demo12_flofr, both variants, from the DD files (CI: test_eqflofr.jl, the public and variant fixtures) |
 
 ## Parity (per change)
 
@@ -1603,7 +1604,71 @@ Not part of the gate, for the record:
   row), the public fixture (layers 2 and 3), the variant fixture (input -> ppm on every
   symbol, which holds the two corrections; the whole model) and the DD-file compile case.
 - Still refused among the bound equations, each to follow as its own change: EQ(l)_FLOFR
-  (eqflofr.mod), EQ(l)_IREBND (eqirebnd.mod), EQ(l)_XBND (eqxbnd.mod).
+  (eqflofr.mod; change 33), EQ(l)_IREBND (eqirebnd.mod), EQ(l)_XBND (eqxbnd.mod).
+
+### Change 33, 14 Nov 2026: EQ(l)_FLOFR
+
+- The third of the refused equation families. eqflofr.mod L15-27, included three times from
+  eqmain.mod L118-120 (L with LO, E with LNX = N and FX, G with UP): a FLO_FR record at the
+  timeslice S gives a row `fraction * reference flow =l= flow in S`, so a lower bound on the
+  share is an =L= row and an upper bound an =G= row. The flows enter through `%cal_red%`,
+  summed over the vintages (RTP_VINTYR).
+- The domain (L15): a milestone year, RTPC, a standard process (RP_FLO), and a flow variable of
+  the commodity (RPCS_VAR) at a timeslice at or below S (TS_MAP). Exchange processes get no
+  row.
+- The reading of the body, each point confirmed against GAMS's matrix on the crafted case:
+  - A value above zero is a share of the flow of the whole year (L19: every timeslice of the
+    flow, RTPCS_VARF). A negative value, or an EPS, is a share of the flow of the parent
+    timeslice of S (only the timeslices with RS_FR(R,SL,TS)); the fraction is the absolute
+    value (L21), and the absolute value of an EPS is an EPS.
+  - A record 'N' at S defines a variable for the flow of S: `VAR_FLO(S) * N` equals the sum
+    of the flow variables at and below S (L17 with L25-27; IPS = IN, N).
+  - Where the parent timeslice SL of S has a record 'N' (an EPS counts as true), the
+    reference flow of a bound is that variable: VAR_FLO at SL or at ANNUAL (TS_ANN), each
+    where its record 'N' is above zero (L18). An EPS is not above zero, so the EPS records of
+    pp_prelv.vda L109 send the reference to the variable of the annual flow.
+  - L27, `MIN(0,FLO_FR) -> BD(L)`: `->` is GAMS's logical implication. The right-hand side is
+    dropped only for a record 'N' with a negative value or an EPS. An 'N' with the value EPS
+    therefore gives the row `EPS * VAR_FLO(S) =E= 0`, which GAMS keeps; in the matrix it has
+    no coefficient other than zero.
+  - A LO record with the value EPS gives the row `0 =L= flow in S`, with EPS coefficients on
+    the flows of the parent timeslice.
+- `eq_flofr!` (src/model/eqflofr.jl), called in `generate!` after `eq_flobnd!`, in the order of
+  eqmain.mod L118-120. The refusal in `untranslated_families` is removed. No earlier code
+  needed a change.
+- The data statements were translated before: preppm.mod L191 (interpolation), ppmain.mod L992
+  (pp_lvlbd.mod: records below the flow's level are added up to it; an UP only where the UP
+  records below cover the whole of the timeslice above) and pp_prelv.vda L99-109 (a record at
+  ANNUAL is levelised, L100-103; the records 'N' of the variable of the annual flow, L105-109).
+  Until now they were checked on crafted unit states (change 8b, the case "bnd"); the new case
+  is the first whole run with FLO_FR data, and they pass on it as they stand.
+- New crafted case demo12_flofr (demo12 + flofr.dd), 21 FLO_FR records. Rows: electricity of
+  ELCREHYD00 at WD, UP 0.4 (share of the year); gas input of ELCTEGAS00 at SD, LO -0.6 (share
+  of the season); electricity of the vintaged ELCTNGAS01 at the season W, FX 0.5, and its CO2
+  at SD, UP 0.25 (an emission flow); ELCRNWIN01 at ANNUAL, UP 1.1, levelised into a variable
+  for each season and a row in each DAYNITE timeslice; the coal input of the SEASON process
+  ELCTECOA00 at ANNUAL, LO 0.9, levelised into a variable for the year and a row in each
+  season; FTE-RSDELC and (vintaged) the gas input of ELCTNGAS01 with a record at the year '0'
+  and ANNUAL, which gives the variable of the annual flow, the two 'N' EPS rows and bounds
+  against that variable; ELCREWIN00 with a record 'N' at W and an UP at WD against the variable
+  of W; ELCNENUC00 (SEASON) with UP 0.3 at SD and SN, added up to UP 0.6 at S; ELCTEGAS00 in
+  REG2 at WN with interpolation option 5 (a row in 2020, the last period of the process);
+  ELCRNWIN01 in REG2 at SN, LO EPS. No row: an UP at WD alone on a SEASON process, a period
+  without the process, the import IMPELC1.
+- GAMS 54.6.1: both variants optimal, objective 23,960,866.3307 (demo12: 23,960,685.7370); 27
+  rows in each variant (6 L, 11 E, 10 G). Two bind: the UP of ELCREWIN00 at WD (marginal
+  121.97) and the row of its variable of W (-73.18).
+- Result: the step probe passes all 70 steps (35 in each variant). The chain from the DD
+  files: DD files -> input PASS (824 sets and parameters), every checkpoint to the pre-solve
+  dump PASS (823 symbols), both QA logs identical, the model against GAMS's matrix PASS
+  (reduce_off 8,722 rows, 9,688 columns, 31,492 nonzeros; as run 3,260, 4,504 and 18,476),
+  HiGHS against GAMS/CPLEX PASS (relative difference 7.2e-15 in both). CI:
+  test/unit/test_eqflofr.jl (the levelised and added-up records, layer 2, the twenty-seven
+  rows, the records that give no row), the public fixture (layers 2 and 3), the variant
+  fixture (input -> ppm on every symbol; the whole model) and the DD-file compile case.
+- Still refused among the bound equations, each to follow as its own change: EQ(l)_IREBND
+  (eqirebnd.mod), EQ(l)_XBND (eqxbnd.mod). `untranslated_families` lists every family still
+  refused.
 
 ## Open items
 

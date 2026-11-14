@@ -734,3 +734,9 @@ those checks, their figures and their crafted cases are not published
   `bnd_data!` (bnd_flo.mod L16 applied to commodity groups; L31, the clear
   of TRACKPC, missing), both corrected. Still refused among the bound
   equations: EQ(l)_FLOFR, EQ(l)_IREBND, EQ(l)_XBND.
+- 14 Nov 2026: M1.3 change 33: EQ(l)_FLOFR (eqflofr.mod L15-27,
+  eqmain.mod L118-120): the share of a process flow in a timeslice, as
+  rows, with the variables of aggregate flows that the records 'N' define.
+  New crafted case demo12_flofr: layers 1 to 3 PASS in both variants from
+  the DD files; no earlier code needed a change. Still refused among the
+  bound equations: EQ(l)_IREBND, EQ(l)_XBND.
