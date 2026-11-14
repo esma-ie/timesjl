@@ -61,6 +61,7 @@ mutable struct GamsCompile
     onwarning::Bool
     warnings::Int                     # compile warnings (domain violations under $ONWARNING; G54)
     warnlog::Vector{String}
+    outside::Vector{Tuple{GSym,Vector{String}}}   # records dropped for a label outside its domain set (G56)
     exec::Vector{Tuple{String,Int,String}}    # executable statements queued: file, line, text
     dirs::Vector{String}              # include search path after the including file's folder
     done::Bool                        # reached $BATINCLUDE maindrv.mod (or, with `full`, the end of the run file)
@@ -77,7 +78,7 @@ end
 
 function GamsCompile(; dirs=String[], licencelevel::Int=0, full::Bool=false)
     GamsCompile(Dict{String,String}(), GLevel[], Dict{String,GSym}(), 0, LabelTable(),
-        false, false, false, false, 0, String[], Tuple{String,Int,String}[], String.(dirs), false, licencelevel,
+        false, false, false, false, 0, String[], Tuple{GSym,Vector{String}}[], Tuple{String,Int,String}[], String.(dirs), false, licencelevel,
         full, false, "", 0, "", Tuple{Int,String}[], Set{String}(), Set{String}())
 end
 
@@ -197,38 +198,57 @@ gmembers1(s::GSym) = Set(k[1] for k in keys(s.members) if length(k) == 1)
 # Apply one data statement. Labels enter the label list in the order they are read; a record whose
 # label is outside a domain set is dropped with a warning under $ONWARNING (GAMS error 170 as a
 # warning), and is an error without it (G32). The domain sets are taken as they stand at this point.
+# GAMS itself keeps such a record until TIMES filters the data (setglobs.gms L13-24); the cases
+# where that differs from dropping it here stop the run: gdomain_filter! (G56).
+# A key given twice in one data statement is GAMS error 172 ("Element is redefined"), with or
+# without $ONMULTI, also through SET.name and for a record outside its domain; a zero that is not
+# stored (no $ONEPS) does not count (G59; GAMS experiments, 14 Nov 2026).
 function gdata!(g::GamsCompile, s::GSym, recs::Vector{DDRecord}, file, line)
     s.hasdata && !g.onmulti && !isempty(recs) && compile_error(file, line, "data for $(s.name) given twice without \$ONMULTI")
     s.hasdata = true
     doms = [guniverse(g, d) ? nothing : gmembers1(gsym(g, d)) for d in s.domain]
+    seen = Set{Vector{String}}()        # the keys this statement has given a record
     for r in recs
         if r.special === :setref
             src = gsym(g, r.labels[1])
             src === nothing && compile_error(file, r.line, "SET.$(r.labels[1]): unknown set")
             for (k, t) in sort!(collect(src.members); by=x -> [labelpos(g.labels, l) for l in x[1]])
-                gput!(g, s, k, t, (NaN, :none), doms, file, r.line)
+                gput!(g, s, k, t, (NaN, :none), doms, seen, file, r.line)
             end
             continue
         end
         key = [intern!(g.labels, l) for l in r.labels]
-        gput!(g, s, key, r.text, (r.value, r.special), doms, file, r.line)
+        gput!(g, s, key, r.text, (r.value, r.special), doms, seen, file, r.line)
     end
 end
 
-function gput!(g::GamsCompile, s::GSym, key::Vector{String}, text, val, doms, file, line)
+function gput!(g::GamsCompile, s::GSym, key::Vector{String}, text, val, doms, seen, file, line)
     if s.dim < 0
         s.dim = length(key)
     elseif length(key) != s.dim
         compile_error(file, line, "$(s.name) has $(s.dim) dimensions, a record has $(length(key))")
     end
+    # a zero of a parameter is not a record without $ONEPS (a scalar's zero is)
+    nozero = s.kind !== :set && val[2] === :none && val[1] == 0.0 && !isempty(key) && !g.oneps
+    if !nozero
+        key in seen && compile_error(file, line, "$(s.name) $(join(key, '.')): given twice in one data statement (GAMS error 172, element is redefined)")
+        push!(seen, key)
+    end
+    # GAMS marks every label outside its domain set ($170) and counts one warning for each, so a
+    # record with two such labels counts two warnings and is dropped once (TIMES-NZ: 84 records,
+    # 88 warnings; G56)
+    bad = 0
     for (i, d) in enumerate(doms)
         d === nothing && continue
-        if !(key[i] in d)
-            g.onwarning || compile_error(file, line, "domain violation for $(s.name): $(join(key, '.'))")
-            g.warnings += 1
-            push!(g.warnlog, "$file:$line: domain violation for $(s.name): $(join(key, '.'))")
-            return
-        end
+        key[i] in d && continue
+        g.onwarning || compile_error(file, line, "domain violation for $(s.name): $(join(key, '.'))")
+        g.warnings += 1
+        push!(g.warnlog, "$file:$line: domain violation for $(s.name): $(join(key, '.')) (position $i)")
+        bad += 1
+    end
+    if bad > 0
+        push!(g.outside, (s, copy(key)))
+        return
     end
     if s.kind === :set
         # a member given again takes its new text (OTNYC COM_DESC: base.dd, then techelc.dd, whose text
@@ -241,9 +261,10 @@ function gput!(g::GamsCompile, s::GSym, key::Vector{String}, text, val, doms, fi
             # a scalar's 0 stays 0 under $ONEPS (ACL, ERRLEV, ... in the input dumps)
             s.vals[key] = (0.0, :none)
         elseif sp === :none && v == 0.0
-            # a zero in data: EPS under $ONEPS; otherwise not stored (and an earlier value removed:
-            # UNCONFIRMED for a data statement under $ONMULTI)
-            g.oneps ? (s.vals[key] = (0.0, :eps)) : delete!(s.vals, key)
+            # a zero in data: EPS under $ONEPS; otherwise not stored, and it removes the value an
+            # earlier data statement gave ($ONMULTI) but not one given earlier in this statement
+            # (G59; GAMS experiment, 14 Nov 2026)
+            g.oneps ? (s.vals[key] = (0.0, :eps)) : (key in seen || delete!(s.vals, key))
         else
             s.vals[key] = (v, sp)
         end
@@ -251,6 +272,43 @@ function gput!(g::GamsCompile, s::GSym, key::Vector{String}, text, val, doms, fi
 end
 
 # ---- statements ---------------------------------------------------------------------------------
+
+# GAMS: setglobs.gms L13-24 (the first file maindrv.mod includes, L23) with gdxfilter.gms L4-19, v4.9.7.
+# Under $ONWARNING GAMS keeps a record with a label outside its domain set in memory. TIMES
+# removes those records before any of its code runs: with %DATAGDX% YES and compile warnings it
+# unloads all data to _dd_.gdx and loads it again filtered (`$onFiltered`, `$LOADR`), and the
+# filter checks each record against the domain sets as GAMS holds them then. The reader drops the
+# record where it is read (gput!), which gives the same data (the TIMES-NZ input dumps: 84
+# records) except in three cases. None is translated; each stops the run here, where maindrv.mod
+# starts, and no suite model has one (GAMS experiments, 14 Nov 2026: small programs, and demo12
+# with such records, displayed before maindrv.mod runs):
+#  1. no filter runs (%DATAGDX% is not YES): GAMS keeps the records;
+#  2. the record is of a one-dimensional set or parameter: GAMS keeps it, and TIMES's code runs
+#     with it, because the filter loads no scalar and no one-dimensional symbol again
+#     (gdxfilter.gms L11: sed deletes their `$LOAD` lines). A member kept this way also counts for
+#     the data that follows: a region outside ALL_REG stays in REG, and its records in other
+#     parameters get no warning and stay. GAMS's dumps do not show such a record: an
+#     `execute_unload` of all symbols leaves out the records outside their domains;
+#  3. every label of the record is in its domain set by now (the member was given later, under
+#     $ONMULTI): the filter keeps the record.
+# %G2X6% (L24) is YES on every GAMS from 23.6 (initmty.mod L22).
+function gdomain_filter!(g::GamsCompile, file, line)
+    isempty(g.outside) && return nothing
+    n, first1 = length(g.outside), g.warnlog[1]
+    gvar(g, "DATAGDX") == "YES" || throw(UnportedError(
+        "$n records with a label outside its domain set, without \$SET DATAGDX YES: GAMS keeps them " *
+        "(setglobs.gms L13: no GDX filter). First: $first1"))
+    for (s, key) in g.outside
+        s.dim == 1 && throw(UnportedError(
+            "$(s.name) $(key[1]): a label outside its domain set in a one-dimensional symbol: GAMS keeps " *
+            "the record, because TIMES's GDX filter loads no one-dimensional symbol again (gdxfilter.gms L11)"))
+        doms = [guniverse(g, d) ? nothing : gmembers1(gsym(g, d)) for d in s.domain]
+        all(i -> doms[i] === nothing || key[i] in doms[i], eachindex(doms)) && throw(UnportedError(
+            "$(s.name) $(join(key, '.')): a label outside its domain set where the record is given, and " *
+            "in the set by the end of the data: GAMS keeps the record (gdxfilter.gms L12-16)"))
+    end
+    return nothing
+end
 
 function gstatements!(g::GamsCompile, text::AbstractString, file, firstline; source::Bool, final::Bool=false)
     # TIMES code: a statement still open at the end (it goes on after a dollar line) waits in g.pending
@@ -448,6 +506,7 @@ function gdollar!(g::GamsCompile, s::AbstractString, file, line)
         isempty(parts) && compile_error(file, line, "\$$cmd without a file")
         f = parts[1]
         if lowercase(basename(f)) == "maindrv.mod"
+            gdomain_filter!(g, file, line)      # setglobs.gms L13-24 (maindrv.mod L23)
             if !g.full
                 # stop here; a declaration still open before maindrv.mod is complete
                 isempty(strip(g.pending)) || gstatements!(g, "", file, g.pendline; source=true, final=true)
@@ -461,7 +520,8 @@ function gdollar!(g::GamsCompile, s::AbstractString, file, line)
             # setglobs.gms L13 (%DATAGDX% YES and compile warnings): gdxfilter.gms MAIN reloads all data
             # from the _dd_.gdx it wrote (L12-14), with $onFiltered, so the reload drops the records
             # outside their domains, which the compile has dropped already (G56; the TIMES-NZ input dumps
-            # match without it). Its includes are traced as GAMS lists them: itself, then _dd_.dd (L12);
+            # match without it). The cases where GAMS keeps such a record have stopped the run where
+            # maindrv.mod starts (gdomain_filter!). Its includes are traced as GAMS lists them: itself, then _dd_.dd (L12);
             # the listing shows no second gdxfilter.gms for the $ONRECURSE line (L11).
             lv = length(g.stack)
             append!(g.trace, [(lv, "gdxfilter.gms"), (lv + 1, "_dd_.dd")])

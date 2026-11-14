@@ -751,3 +751,17 @@ those checks, their figures and their crafted cases are not published
   internal or external, as rows. New crafted case demo12_xbnd: layers 1
   to 3 PASS in both variants from the DD files; no earlier code needed a
   change. The bound equations of eqmain.mod are now all translated.
+- 14 Nov 2026: M1.4 (8): the DD reader counts compile warnings as GAMS
+  (one for each label outside its domain set: 88 on TIMES-NZ, not 84) and
+  follows TIMES's GDX filter (setglobs.gms L13-24, gdxfilter.gms L4-19):
+  GAMS keeps a record outside its domain until that filter, which removes
+  only records of symbols with two or more dimensions. The three cases
+  where GAMS keeps such a record stop the run with a message (G56). A key
+  given twice in one data statement stops as GAMS error 172 (G59).
+- 14 Nov 2026: M1.4 gate close-out (docs/m14-plan.md, "Gate close-out"):
+  from the DD files, with no GAMS state, the five open core models PASS in
+  both variants to `input/`, through the chain to presolve, and against
+  GAMS's matrix; HiGHS reaches GAMS/CPLEX's objective on demo12,
+  TIMES-NZ-steady, OTCGEN and OTNYC. CI runs the chain from DD files on
+  demo12, and on the crafted cases in pieces that meet at GAMS's dumps
+  (a decision for James). The gate waits for the M1.3 gate and for James's yes.
