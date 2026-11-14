@@ -497,3 +497,20 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_blnd/demo12_blnd.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_blnd"]
+
+# TIMES_Demo demo12 + capvac.dd (14 Nov 2026): M1.3 change 38, the simulated vintages of PRC_SIMV processes
+# (coef_csv.mod L11-77) and the equations EQ(l)_CAPVAC (eqcapvac.mod L14-28): eight processes,
+# with past capacity, two and three vintages a period, an NCAP_AF FX (EQE_CAPVAC), an NCAP_AFA
+# LO (EQG_CAPVAC), and two trade processes with an NCAP_AFC on the traded commodity (the flow
+# term of the equation).
+[[model]]
+name = "TIMES_Demo-demo12_capvac"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_capvac/demo12_capvac.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_capvac"]

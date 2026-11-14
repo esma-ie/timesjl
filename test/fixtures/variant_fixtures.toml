@@ -352,3 +352,21 @@ variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
+
+# Crafted case demo12_capvac (14 Nov 2026): PRC_SIMV for eight processes, the simulated vintages
+# (coef_csv.mod L24-74: COEF_CSV, RTP_VINTYR over the simulated vintages, AFSV) and the equations
+# EQ(l)_CAPVAC (eqcapvac.mod L14-28): past capacity in the simulated vintage 2004, alone and
+# beside new vintages, two and three vintages a period, an NCAP_AF FX (EQE_CAPVAC), an NCAP_AFA
+# LO (EQG_CAPVAC), an NCAP_AFC on the output of a standard process (nothing), and a trade
+# process with an NCAP_AFC on the traded commodity (the flow term; the electricity trade, the
+# second such process of the case, has no CAPVAC row with REDUCE).
+# Preprocessing from the input dump to ppm on every symbol, the rows
+# (test/unit/test_eqcapvac.jl), and the whole model. The presolve dump is shared with
+# test/fixtures/public_fixtures.toml.
+[[variant]]
+prefix   = "demo12_capvac"
+model    = "TIMES_Demo-demo12_capvac"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []

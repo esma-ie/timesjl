@@ -2,7 +2,8 @@
 # includes' own preparation, RVPT, the user-constraint maps) and of equ_ext.vda, the third part
 # of the coef -> pre-solve step.
 #
-# In eqmain.mod order (v4.9.7): eqcapact.mod L18-20 (AFS, in the `L` include, L65), eqbndcst.mod
+# In eqmain.mod order (v4.9.7): eqcapact.mod L18-20 (AFS, in the `L` include, L65), coef_csv.mod
+# L24-74 (L67, when PRC_SIMV is DEFINED: the simulated vintages, `coef_csv!` in coef_csv.jl), eqbndcst.mod
 # L14-77 (L192: SUPERYR, the cumulative cost limits, YK1), L199-202 (RVPT, RTP_OFF), L205-226 (the
 # user-constraint maps); then equ_ext.vda L76-79 (RP_PL, AFS), eqactups.vda L9-32 (the dispatching
 # preparation, `eqactups_prep!` in ext/vda/eqactups.jl) and L33 (RP_UPR, outside the dispatching
@@ -35,16 +36,18 @@ end
 
 The sets and parameters eqmain_prep! settles.
 """
-eqmain_prep_symbols(tm) = ["AFS", "SUPERYR", "YK1", "RT_IAN", "RTP_IAN", "CST_ANNC", "RVPT", "RTP_OFF", "UC_TMAP",
-                           "UC_RHSMAP", "UC_RTSUC", "UC_UT", "UC_UTS", "UC_RHSTMP", "RUCTS", "RP_PL", "RP_UPR",
-                           # eqactups.vda L9-32
-                           "AFUPS", "RPS_UPS", "RP_UX", "RTP_VARP", "COEF_AF", "RP_UPS", "RPC_CUR", "ACT_LOSPL",
-                           "ACT_UPS", "UNCD7", "RTP_PL", "RP_UPC"]   # TS_ARRAY (L28) is cleared later (pp_clean)
+eqmain_prep_symbols(tm) = vcat(["AFS", "SUPERYR", "YK1", "RT_IAN", "RTP_IAN", "CST_ANNC", "RVPT", "RTP_OFF", "UC_TMAP",
+                                "UC_RHSMAP", "UC_RTSUC", "UC_UT", "UC_UTS", "UC_RHSTMP", "RUCTS", "RP_PL", "RP_UPR",
+                                # eqactups.vda L9-32
+                                "AFUPS", "RPS_UPS", "RP_UX", "RTP_VARP", "COEF_AF", "RP_UPS", "RPC_CUR", "ACT_LOSPL",
+                                "ACT_UPS", "UNCD7", "RTP_PL", "RP_UPC"],   # TS_ARRAY (L28) is cleared later (pp_clean)
+                               simv_defined(tm) ? coef_csv_symbols(tm) : String[])
 
 """
     eqmain_prep!(tm) -> tm
 
     AFS: LOOP(V,AFS(RTP_VARA(R,T,P),S,BD)\$COEF_AF(R,V,T,P,S,BD)=YES); AFS(RTPS_OFF,BD) = NO;   (eqcapact.mod L20)
+    [\$IF DEFINED PRC_SIMV: coef_csv.mod L24-74, `coef_csv!`]                                  (eqmain.mod L67)
     SUPERYR(PERIODYR(T,LL))\$(YEARVAL(LL) LE YEARVAL(T)) = YES;                                (eqbndcst.mod L38)
     SUPERYR(T+1,LL)\$((YEARVAL(LL) GT YEARVAL(T))\$PERIODYR(T,LL)) = YES;                       (L39)
     LOOP(MIYR_1(T++1),SUPERYR(T,LL)\$(YEARVAL(LL) GT M(T)) = YES);                            (L40)
@@ -59,7 +62,7 @@ eqmain_prep_symbols(tm) = ["AFS", "SUPERYR", "YK1", "RT_IAN", "RTP_IAN", "CST_AN
     [the dispatching preparation: `eqactups_prep!`]                                           (eqactups.vda L9-32)
     OPTION RP_UPR < ACT_CSTRMP;                                                               (L33)
 
-GAMS: eqcapact.mod L18-20, eqbndcst.mod L14-77, eqmain.mod L197-226, equ_ext.vda L76-79,
+GAMS: eqcapact.mod L18-20, coef_csv.mod L24-74, eqbndcst.mod L14-77, eqmain.mod L197-226, equ_ext.vda L76-79,
 eqactups.vda L9-33, v4.9.7.
 """
 function eqmain_prep!(tm::TimesModel)
@@ -82,6 +85,8 @@ function eqmain_prep!(tm::TimesModel)
     end
     rtps_off = S("RTPS_OFF", 4)
     filter!(k -> !((k[1], k[2], k[3], k[4]) in rtps_off), afs)
+    # eqmain.mod L67: $IF DEFINED PRC_SIMV $INCLUDE coef_csv.mod (the AFS entries of PRC_SIMV go to AFSV)
+    simv_defined(tm) && coef_csv!(tm, afs)
 
     # eqbndcst.mod L38-40: SUPERYR
     superyr = gmembers(tm, "SUPERYR", 2)

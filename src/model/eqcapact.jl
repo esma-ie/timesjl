@@ -38,9 +38,10 @@
 #   eqactups.vda L11 (VDA dispatching: the entries that go to AFUPS, for
 #     processes with RP_UPL(R,P,'FX'); they get EQ_CAPLOAD rows instead),
 #   equ_ext.abs L24 (ABS extension, out of Phase 1 scope).
-# equ_ext.vda L79 and eqactups.vda L11 are translated (afs_solve); the others
-# are not, so their trigger data stops generation with an UnportedError
-# instead of generating rows GAMS would not. AFS cannot be checked against a dump directly
+# coef_csv.mod L74, equ_ext.vda L79 and eqactups.vda L11 are translated (afs_solve;
+# the entries coef_csv.mod takes out are AFSV, afsv_solve, the rows of EQ(l)_CAPVAC
+# in eqcapvac.jl). equ_ext.abs L24 needs the ABS extension, which generate! refuses
+# by its switch. AFS cannot be checked against a dump directly
 # (solsetv.v3 L203 clears it after the solve); the generated rows check it.
 #
 # Storage (L28, L50 for RP_STG processes): the storage level VAR_ACT of the
@@ -98,12 +99,12 @@ end
 
 Throw an `UnportedError` when the data would make another GAMS file remove
 AFS entries before the CAPACT rows are generated (eqcapact.mod header in
-eqcapact.jl lists them); otherwise return nothing.
+eqcapact.jl lists them); otherwise return nothing. No data does so now:
+coef_csv.mod L74, equ_ext.vda L79 and eqactups.vda L11 are translated
+(`afs_solve`), and equ_ext.abs L24 is behind the ABS switch, which
+`generate!` refuses.
 """
 function capact_unported_afs_changes(tm::TimesModel)
-    d = tm.data
-    isempty(gset_opt(d, "PRC_SIMV", 2)) ||
-        throw(UnportedError("coef_csv.mod L74 removes AFS entries for PRC_SIMV processes (eqmain.mod L67)"))
     return nothing
 end
 
@@ -111,7 +112,12 @@ end
     afs_solve(tm) -> GamsSet{5}
 
 AFS as it stands when the SOLVE generates the EQ(l)_CAPACT and EQ(l)_CAFLAC
-rows: [`afs_capact`](@ref) (eqcapact.mod L18-20) after the VDA statements
+rows: [`afs_capact`](@ref) (eqcapact.mod L18-20) after coef_csv.mod L74,
+when PRC_SIMV is DEFINED (eqmain.mod L67),
+
+    AFSV(AFS(R,T,P,S,BD))\$=PRC_SIMV(R,P); AFS(AFSV)=NO;
+
+and after the VDA statements
 
     AFS(RTP(R,T,P),S,BDUPX)\$NCAP_AFCS(RTP,'ACT',S) = NO;
     AFUPS(R,T,P,S)\$(...) \$= AFS(R,T,P,S,'UP')\$RP_UPL(R,P,'FX'); AFS(AFUPS,BD)=NO;
@@ -124,13 +130,18 @@ removes the same entries. Note that
 the period T stands in NCAP_AFCS's vintage position. NCAP_AFCS exists only
 with VDA (initmty.vda L26). RTP is read from the pre-solve dump: the only
 later change to it, pp_qack.mod L54 `RTP(NO_RVP) = NO`, removes nothing
-because ppmain.mod L552 clears NO_RVP (it is refilled only for PRC_SIMV,
-L590, which `capact_unported_afs_changes` refuses). The other AFS changes
-are refused by `capact_unported_afs_changes`. Cached per model.
+without PRC_SIMV, because ppmain.mod L552 clears NO_RVP; with PRC_SIMV
+(L590) NO_RVP holds entries of the simulated processes only, and those
+have left AFS. Cached per model.
 """
 function afs_solve(tm::TimesModel)
     return get!(tm.cache, "AFS/solve") do
         afs = afs_capact(tm)
+        if simv_defined(tm)                                     # coef_csv.mod L74: AFS(AFSV)=NO
+            simv = gset_opt(tm.data, "PRC_SIMV", 2)
+            keys = [k for k in afs.keys if !((k[1], k[3]) in simv)]
+            afs = GamsSet{5}("AFS", keys, Set(keys))
+        end
         afcs = gparam_opt(tm.data, "NCAP_AFCS", 5)
         act = Set((r, v, p, s) for (r, v, p, cg, s) in afcs.keys if uppercase(cg) == "ACT")
         keys = afs.keys
@@ -144,6 +155,27 @@ function afs_solve(tm::TimesModel)
         isempty(afups) || (keys = [k for k in keys if !((k[1], k[2], k[3], k[4]) in afups)])
         keys === afs.keys && return afs
         return GamsSet{5}("AFS", keys, Set(keys))
+    end::GamsSet{5}
+end
+
+"""
+    afsv_solve(tm) -> GamsSet{5}
+
+AFSV(R,T,P,S,BD), the domain of EQ(l)_CAPVAC: the [`afs_capact`](@ref) entries
+of the processes in PRC_SIMV, which coef_csv.mod L74 moves out of AFS (before
+equ_ext.vda L79, which acts on AFS only):
+
+    AFSV(AFS(R,T,P,S,BD))\$=PRC_SIMV(R,P); AFS(AFSV)=NO;
+
+PRC_SIMV is the set after coef_csv.mod L27. Cached per model.
+
+GAMS: coef_csv.mod L74, v4.9.7.
+"""
+function afsv_solve(tm::TimesModel)
+    return get!(tm.cache, "AFSV/solve") do
+        simv = gset_opt(tm.data, "PRC_SIMV", 2)
+        keys = [k for k in afs_capact(tm).keys if (k[1], k[3]) in simv]
+        return GamsSet{5}("AFSV", keys, Set(keys))
     end::GamsSet{5}
 end
 

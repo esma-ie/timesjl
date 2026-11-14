@@ -1,0 +1,75 @@
+* TIMES.jl crafted case demo12_capvac (reference/crafted.toml, 14 Nov 2026): processes with
+* simulated vintages (PRC_SIMV), the data of coef_csv.mod L11-77 and the equations EQ(l)_CAPVAC
+* (eqcapvac.mod L14-28). Added to TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0).
+* A simulated-vintage process keeps at most three vintages of activity and flows in a period:
+* the period itself, the first vintage year still in use, and a year between them when the two
+* are far apart (%TRIVINT%, 6 by default). COEF_CSV gives the capacity of the true vintages to
+* the simulated ones, and the capacity-activity equation is EQ(l)_CAPVAC, not EQ(l)_CAPACT or
+* EQ(l)_CAFLAC. The periods: 2005, 2010, 2015, 2020, 2030, 2050; the year before the first
+* period, 2004, holds the past capacity.
+* As GAMS 54.6.1 runs coef_csv.mod (TIMES v4.9.7), a new vintage counts only in the periods
+* where its own year is a simulated vintage, and is not shared between the two simulated
+* vintages around it (coef_csv.mod L48 `OPTION FIL < T` leaves FIL empty; docs/m13-plan.md).
+* The processes:
+* - REG1 ELCTNGAS01 (new gas plant, DAYNITE, life 30, vintaged in demo12, first investment
+*   2010): two vintages in 2020 and 2030, three in 2050.
+*   With an NCAP_AFC on its output ELC at ANNUAL (0.8). TIMES takes no commodity availability
+*   from it: a standard process whose primary group is one commodity keeps the activity term
+*   (ppm_ext.vda L123), so the line changes nothing.
+* - REG1 TU_GAS_REG2_REG1_01 (gas import from REG2, ANNUAL) and REG1 TB_ELC_REG1_REG2_01
+*   (electricity trade with REG2 in both directions, DAYNITE): trade processes, each with an
+*   NCAP_AFC on its traded commodity at ANNUAL (0.9 and 0.7). Their ANNUAL rows take the flow
+*   term of the equation (RPS_CAFLAC), the imports and exports divided by the availability; the
+*   DAYNITE rows of the electricity trade take the activity term. (With REDUCE the run has no
+*   CAPVAC row for the electricity trade.)
+* - REG1 ELCREHYD00 (existing hydro, two past investments, 1960 and 1980, no new capacity): the
+*   past vintages only, both in the simulated vintage 2004.
+* - REG1 ELCTNCOA01 (new coal plant, SEASON, life 40, first investment 2010), with a past
+*   investment in 2004 (0.5): the simulated vintage 2004 in every period, beside one or two new
+*   vintages (three vintages in 2020, 2030 and 2050).
+* - REG1 ELCRNWIN01 (new wind, DAYNITE, life 20): with an NCAP_AF FX at SD (0.3): EQE_CAPVAC.
+* - REG2 ELCTNCOA01: NCAP_START 2005 (2006 in demo12, so the first investment is in 2005) and a
+*   past investment in 2004 (0.4): the past capacity is the simulated vintage 2004, and the
+*   vintage 2005 is a simulated vintage in 2005 only.
+* - REG2 ELCTNGAS01: with an NCAP_AFA LO (0.1): EQG_CAPVAC.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET PRC_SIMV /
+REG1.ELCTNGAS01
+REG1.ELCREHYD00
+REG1.ELCTNCOA01
+REG1.ELCRNWIN01
+REG2.ELCTNCOA01
+REG2.ELCTNGAS01
+REG1.TU_GAS_REG2_REG1_01
+REG1.TB_ELC_REG1_REG2_01
+/
+
+PARAMETER
+NCAP_AF ' '/
+REG1.2010.ELCRNWIN01.SD.FX 0.3
+/
+
+PARAMETER
+NCAP_AFA ' '/
+REG2.2010.ELCTNGAS01.LO 0.1
+/
+
+PARAMETER
+NCAP_AFC ' '/
+REG1.2005.ELCTNGAS01.ELC.ANNUAL 0.8
+REG1.2005.TU_GAS_REG2_REG1_01.GAS.ANNUAL 0.9
+REG1.2005.TB_ELC_REG1_REG2_01.ELC.ANNUAL 0.7
+/
+
+PARAMETER
+NCAP_PASTI ' '/
+REG1.2004.ELCTNCOA01 0.5
+REG2.2004.ELCTNCOA01 0.4
+/
+
+PARAMETER
+NCAP_START ' '/
+REG2.ELCTNCOA01 2005
+/
