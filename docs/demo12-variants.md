@@ -34,7 +34,7 @@ MACRO, stochastics, ETL, climate and damage after M1.7.
 
 | # | Variant | Case | First release (Version.log) | GAMS | Status |
 | --- | --- | --- | --- | --- | --- |
-| 2 | Dispatching and unit commitment | `TIMES_Demo-demo12_uc` | 3.7.0, Aug 2014 (ramping, `eqactups.vda`); 3.9.0, Oct 2015 (linear dispatch); 3.9.7, Jul 2016 (unit commitment by start-up type, `eqlducs.vda`), announced 4.0.0 | `eqactups.vda`, `eqlducs.vda` | made (5 Nov 2026); the linear dispatching is translated, layers 1-3 PASS on the crafted case demo12_disp (M1.3 change 36, 14 Nov 2026); the unit commitment by start-up type follows on demo12_uc |
+| 2 | Dispatching and unit commitment | `TIMES_Demo-demo12_uc` | 3.7.0, Aug 2014 (ramping, `eqactups.vda`); 3.9.0, Oct 2015 (linear dispatch); 3.9.7, Jul 2016 (unit commitment by start-up type, `eqlducs.vda`), announced 4.0.0 | `eqactups.vda`, `eqlducs.vda` | made (5 Nov 2026); the linear dispatching is translated, layers 1-3 PASS on the crafted case demo12_disp (M1.3 change 36, 14 Nov 2026); the unit commitment by start-up type is translated, layers 1-3 PASS on demo12_uc and on the crafted case demo12_ucv (M1.3 change 40, 14 Nov 2026) |
 | 5 | Retrofits and lifetime extensions | `TIMES_Demo-demo12_refit` | 4.1.2, Mar 2017 (`PRC_REFIT`); 4.1.6, 4.6.4, 4.6.7-8, 4.7.1 | User Note `TIMES-Refits-Note.pdf`; `prepret.dsc`, `ppmain.mod` L484-487 | made (5 Nov 2026); translated, layers 2-3 PASS (M1.3 change 20b, 6 Nov 2026) |
 | 1 | Load shifting | `TIMES_Demo-demo12_ls`, `TIMES_Demo-demo12_lst` | 4.3.0, Jan 2019 (`STG_SIFT`); 4.3.6 (asymmetric) | User Note `TIMES-Load-Shifting.pdf`; `eqactups.vda` | made (8 Nov 2026); translated, layers 2-3 PASS (M1.3 change 24) |
 | 4 | Dynamic time slices | | 4.3.2, Mar 2019 (varying cycles); 4.4.1, Feb 2020 (time-slice trees, `dynslite.vda`) | User Note `User_Note-TIMES-Dynamic-timeslices.docx` | |
@@ -61,6 +61,12 @@ feature is translated before the M1.3 gate).
   costs of a region by cost type (REG_BNDCST, REG_CUMCST), EQ_BNDCST and
   VAR_CUMCST, `eqbndcst.mod`, `bnd_cum.mod` L44-48. No User Note; made from
   the GAMS source and Part II §6.3.13. Translated, layers 2-3 PASS.
+- `TIMES_Demo-demo12_ucv` (14 Nov 2026, M1.3 change 40): unit commitment by
+  start-up type, the branches of `eqlducs.vda` that variant 2 (demo12_uc)
+  does not reach: a vintaged plant whose start-up and shut-down phases reach
+  the neighbouring timeslice of the day, and a plant at SEASON. No User Note
+  and no formulation in Part II; made from the GAMS source. Translated,
+  layers 2-3 PASS.
 
 ## Variant 2: dispatching and unit commitment (5 Nov 2026)
 
@@ -99,6 +105,29 @@ the DD files on both variants. demo12_uc still stops at the unit commitment
 by start-up type (`eqlducs.vda` L12-124, two groups, seven families), the
 next change. The discrete unit commitment (`$SET DUC YES`) is a TODO for a
 later release.
+
+14 Nov 2026 (M1.3 change 40): the unit commitment by start-up type
+(`eqlducs.vda` L12-124, with the costs of the start-ups by type in
+`eqobjvar.mod` L38) is translated, so nothing of demo12_uc is refused any
+more: layers 1 to 3 PASS from the DD files on both variants (200 rows of
+the seven families and 72 VAR_UPT columns; as_run 3,641 rows, 4,853 columns
+and 19,871 nonzeros; reduce_off 9,071, 10,005 and 32,823). Its reference
+was remade with the solve: objective 23,961,066.4677, the same as
+demo12_disp's, so the optimum pays no start-up cost by type and layer 2 is
+the check of these rows. In demo12_uc every start-up and shut-down time is
+shorter than a timeslice of the day. The crafted case
+`TIMES_Demo-demo12_ucv` (`reference/dd/demo12_ucv/ucv.dd`) adds what that
+leaves out: on the vintaged gas plant ELCTNGAS01 in REG2, start-up times of
+3, 9 and 20 hours, a shut-down time of 19 hours and minimum on-line and
+off-line times of 40 and 14 hours, with the losses of every start-up type
+and of the shut-down; on the coal plant ELCTECOA00 in REG1 (SEASON), times
+in thousands of hours and a loss without `ACT_LOSPL` FX. The times are
+chosen to reach the terms between timeslices, not to describe a real
+plant. GAMS 54.6.1, both variants: 800 rows of the seven families and 282
+VAR_UPT columns, objective 23,960,685.7370 (demo12's). TIMES.jl: layers 1
+to 3 PASS from the DD files on both variants. CI fixtures `demo12_uc` and
+`demo12_ucv`, whole model. Branches no case reaches: `docs/m13-plan.md`,
+change 40.
 
 ## Variant 5: retrofits and lifetime extensions (5 Nov 2026)
 

@@ -65,10 +65,9 @@ function untranslated_families(tm::TimesModel)
             ("EQ_OBJELS / EQL_COMCES", "eqobjels.mod, mod_equa.mod L30/L80", "RCJ", 4, :s),
             ("EQ_DAMAGE / EQ_OBJDAM", "eqdamage.mod, mod_equa.mod L209-210", "DAM_COST", 4, :p),
             # VDA (always loaded, initmty.mod L458) and DSC extensions
-            # the dispatching equations of eqactups.vda L39-117 are translated (eq_actups!)
+            # the dispatching equations of eqactups.vda L39-117 (eq_actups!) and the unit commitment by
+            # start-up type of eqlducs.vda L67-124 (eq_lducs!) are translated
             ("EQL_STGCCL", "eqactups.vda L121", "STG_MAXCYC", 3, :p),
-            ("eq_sdlogic/eq_sudupt/eq_sdslant", "eqlducs.vda L67-81", "RP_DPL", 3, :s),
-            ("eq_sdminon/eq_sudload/eq_sudtime/eq_sudpll", "eqlducs.vda L94-118", "RP_DP", 2, :s),
             ("eq_sdind_1/eq_sdind_0", "eqlducs.vda L158-169", "DP_UNS", 7, :p),
             ("EQG_UCMAX/EQG_UCSUMAX", "ucbet.vda L46-125", "UC_GMAX", 5, :s),
             ("EQ_OBJBAL", "powerflo.vda (mod_ext.vda L42-43)", "COM_CSTBAL", 6, :p),
@@ -110,6 +109,7 @@ GAMS: eqmain.mod L34 (objective), L41 (EQ_ACTFLO), L47-49 (EQ(l)_ACTBND), L54-59
 (EQ_CUMFLO), L98-106 (EQ_COMBAL, EQE_COMPRD), L146 (EQ_IRE), L152-154 (EQ(l)_IREBND), L159 (EQ_PEAK), L164
 (EQ_PTRANS), L169 (EQ_STGIPS), L170 (EQ_STGAUX), L175 (EQ_STGTSS, EQ_STSBAL), L180-185 (EQ(l)_STGIN/STGOUT), L192 (EQ_BNDCST), L229 (EQE_UCT/UCRT/UCTS/UCRTS, the dynamic EQE_UCSU/UCRSU/UCRSUS/UCSUS and EQE_UCRS), L241-243 (EQ(l)_XBND); equ_ext.vda L85 (EQE_ACTEFF);
 equ_ext.vda L88-89 (EQ(l)_CAFLAC, EQL_CAPFLO); equ_ext.vda L90 (EQ_CAPLOAD, EQ_ACTRAMP, EQ(l)_ACTUPS, EQL_ACTUPC, EQ_ACTPL, EQ_ACTRMPC, EQ_SLSIFT);
+equ_ext.vda L91 (eq_sdlogic, eq_sudupt, eq_sdslant, eq_sdminon, eq_sudload, eq_sudtime, eq_sudpll);
 equ_ext.vda L94-96 (EQ(l)_ASHAR); equ_ext.vda L105-106 (EQN/EQE_UCRTP, EQN_UCRTC); bndmain.mod; solve.mod L37, v4.9.7.
 """
 function generate!(tm::TimesModel)
@@ -146,6 +146,7 @@ function generate!(tm::TimesModel)
     n += eq_caflac!(tm)              # VDA: equ_ext.vda L88-89
     n += eq_actups!(tm)              # VDA: equ_ext.vda L90 (eqactups.vda L39-117)
     n += eq_slsift!(tm)              #   eqactups.vda L131
+    n += eq_lducs!(tm)               # VDA: equ_ext.vda L91 (eqlducs.vda L67-124)
     n += eq_ashar!(tm)               # VDA: equ_ext.vda L94-96
     n += eq_ucrtp!(tm)               # VDA: equ_ext.vda L105-106
     n += eq_gr_powflo!(tm)           # VDA: equ_ext.vda L101 (powerflo.vda POWFLO, M1.3 change 27b)

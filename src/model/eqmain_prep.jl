@@ -8,7 +8,8 @@
 # CST_ANNC, YK1; the equation EQ_BNDCST is in eqbndcst.jl), L199-202 (RVPT, RTP_OFF), L205-226 (the
 # user-constraint maps); then equ_ext.vda L76-79 (RP_PL, AFS), eqactups.vda L9-32 (the dispatching
 # preparation, `eqactups_prep!` in ext/vda/eqactups.jl) and L33 (RP_UPR, outside the dispatching
-# IF, so in every model). The other includes have no data
+# IF, so in every model), eqlducs.vda L46-51 (the unit-commitment processes, `eqlducs_equ!` in
+# ext/vda/eqlducs.jl). The other includes have no data
 # statements that act here: eqflomrk.mod, eqashar.vda and pp_actef.vda jump to their equations
 # under the arguments eqmain.mod and equ_ext.vda pass.
 #
@@ -72,9 +73,10 @@ eqmain_prep_symbols(tm) = vcat(["AFS", "SUPERYR", "REG_CUMCST", "YK1", "RT_IAN",
     AFS(RTP(R,T,P),S,BDUPX)\$NCAP_AFCS(RTP,'ACT',S) = NO;                                      (L79)
     [the dispatching preparation: `eqactups_prep!`]                                           (eqactups.vda L9-32)
     OPTION RP_UPR < ACT_CSTRMP;                                                               (L33)
+    [the unit-commitment processes: `eqlducs_equ!`]                                           (eqlducs.vda L46-51)
 
 GAMS: eqcapact.mod L18-20, coef_csv.mod L24-74, eqbndcst.mod L14-77, eqmain.mod L197-226, equ_ext.vda L76-79,
-eqactups.vda L9-33, v4.9.7.
+eqactups.vda L9-33, eqlducs.vda L46-51, v4.9.7.
 """
 function eqmain_prep!(tm::TimesModel)
     u = eqmain_prep_unported(tm)
@@ -335,5 +337,7 @@ function eqmain_prep!(tm::TimesModel)
     gput!(tm, "AFS", afs)
     # eqactups.vda L33, outside the dispatching IF of L9-32: OPTION RP_UPR < ACT_CSTRMP
     gput!(tm, "RP_UPR", Set((k[1], k[3], k[4]) for k in P("ACT_CSTRMP", 5).keys))
+    # eqlducs.vda L46-51 (equ_ext.vda L91): the unit-commitment processes leave the linear dispatching sets
+    eqlducs_equ!(tm)
     return tm
 end

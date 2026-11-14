@@ -1,0 +1,90 @@
+* TIMES.jl crafted case demo12_ucv (reference/crafted.toml, 14 Nov 2026): unit commitment by
+* start-up type (eqlducs.vda L12-124; Version.log 3.9.7), the branches that demo12_uc does not
+* reach, added to TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0). Linear (LP).
+* The times are chosen to reach the terms of the equations between timeslices, not to
+* describe a real plant.
+* - REG2 ELCTNGAS01 (vintaged, PRC_VINT; DAYNITE, two timeslices of about 12 hours in the
+*   cycle of a day): start-up times of 3, 9 and 20 hours and a shut-down time of 19 hours
+*   (ACT_SDTIME), non-operational times of 10 and 20 hours (ACT_MAXNON), minimum on-line and
+*   off-line times of 40 and 14 hours (ACT_TIME), so that the start-up and shut-down phases
+*   reach the neighbouring timeslice; efficiency losses of every start-up type and of the
+*   shut-down (ACT_LOSSD) with a partial-load loss (ACT_LOSPL FX).
+* - REG1 ELCTECOA00 (not vintaged; SEASON, so its start-up level is ANNUAL): times in
+*   thousands of hours, because its timeslices are seasons. In demo12 each season is its own
+*   cycle of the year (RS_UP), so no term of this plant reaches a neighbouring timeslice.
+*   An ACT_LOSSD without ACT_LOSPL FX (eqlducs.vda L39: the default of 1); no shut-down cost
+*   or time.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER
+ACT_UPS ' '/
+REG2.2005.ELCTNGAS01.ANNUAL.FX 0.3
+REG1.2005.ELCTECOA00.ANNUAL.FX 0.3
+
+/
+
+PARAMETER
+ACT_MINLD ' '/
+REG2.2005.ELCTNGAS01 0.4
+REG1.2005.ELCTECOA00 0.35
+
+/
+
+PARAMETER
+ACT_LOSPL ' '/
+REG2.2005.ELCTNGAS01.FX 0.05
+
+/
+
+PARAMETER
+ACT_TIME ' '/
+REG2.2005.ELCTNGAS01.UP 40
+REG2.2005.ELCTNGAS01.LO 14
+REG1.2005.ELCTECOA00.UP 2500
+REG1.2005.ELCTECOA00.LO 2000
+
+/
+
+PARAMETER
+ACT_CSTSD ' '/
+REG2.2005.ELCTNGAS01.HOT.UP.MEURO05 0.01
+REG2.2005.ELCTNGAS01.WARM.UP.MEURO05 0.02
+REG2.2005.ELCTNGAS01.COLD.UP.MEURO05 0.04
+REG2.2005.ELCTNGAS01.HOT.LO.MEURO05 0.005
+REG1.2005.ELCTECOA00.HOT.UP.MEURO05 0.5
+REG1.2005.ELCTECOA00.WARM.UP.MEURO05 1
+REG1.2005.ELCTECOA00.COLD.UP.MEURO05 2
+
+/
+
+PARAMETER
+ACT_SDTIME ' '/
+REG2.2005.ELCTNGAS01.HOT.UP 3
+REG2.2005.ELCTNGAS01.WARM.UP 9
+REG2.2005.ELCTNGAS01.COLD.UP 20
+REG2.2005.ELCTNGAS01.HOT.LO 19
+REG1.2005.ELCTECOA00.HOT.UP 500
+REG1.2005.ELCTECOA00.WARM.UP 1500
+REG1.2005.ELCTECOA00.COLD.UP 7000
+
+/
+
+PARAMETER
+ACT_MAXNON ' '/
+REG2.2005.ELCTNGAS01.HOT 10
+REG2.2005.ELCTNGAS01.WARM 20
+REG1.2005.ELCTECOA00.HOT 1000
+REG1.2005.ELCTECOA00.WARM 3000
+
+/
+
+PARAMETER
+ACT_LOSSD ' '/
+REG2.2005.ELCTNGAS01.HOT.UP 0.2
+REG2.2005.ELCTNGAS01.WARM.UP 0.25
+REG2.2005.ELCTNGAS01.COLD.UP 0.3
+REG2.2005.ELCTNGAS01.HOT.LO 0.2
+REG1.2005.ELCTECOA00.HOT.UP 0.3
+
+/

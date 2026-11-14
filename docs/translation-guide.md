@@ -817,3 +817,15 @@ those checks, their figures and their crafted cases are not published
   reached by a case: OBJ LIN / VARCOST LIN, and CST_ANNC for user
   constraints (uc_ncap.mod L39 stays refused; docs/m13-plan.md, change 39).
   Three differences from Part II §6.3.13: discrepancies.md D37 to D39.
+- 14 Nov 2026: M1.3 change 40: unit commitment by start-up type in the linear
+  formulation (eqlducs.vda L12-41, L46-51 and L53-124; eqobjvar.mod L38),
+  refused since M1.1: the seven equations eq_sdlogic, eq_sudupt, eq_sdslant,
+  eq_sdminon, eq_sudload, eq_sudtime and eq_sudpll with the variable VAR_UPT.
+  Checked on demo12_uc and the new crafted case demo12_ucv (a vintaged plant
+  whose phases reach the neighbouring timeslice, and a plant at SEASON):
+  layers 1 to 3 PASS in both variants from the DD files (200 and 800 rows of
+  the seven families; 30 crafted cases in the chain from DD files, demo12_uc
+  among them). The refusals in `coef_ext!`, `generate!` and the objective are
+  removed. The discrete form (DUC = YES, a MIP) stays refused, a TODO for a
+  later release. Branches no case reaches: docs/m13-plan.md, change 40.
+  Part II has no formulation of these equations: discrepancies.md D40.

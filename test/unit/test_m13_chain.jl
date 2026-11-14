@@ -174,18 +174,14 @@ const PUBLIC_FX = TOML.parsefile(joinpath(FIXTURES, "public_fixtures.toml"))["fi
     dd_chain(only(filter(f -> f["prefix"] == "demo12_off", PUBLIC_FX)); qalog=true)
 end
 
-# Every public fixture of a crafted case that has its run file (<prefix>_run): 28 cases, each a whole
-# model. demo12_uc (unit commitment) has no matrix fixture: its compile is checked, and the chain
-# stops in coef_ext! with the refusal of eqlducs.vda, which is not translated.
+# Every public fixture of a crafted case that has its run file (<prefix>_run): 30 cases, each a whole
+# model. That is every crafted case with a run fixture: demo12_uc joined with the unit commitment
+# by start-up type (eqlducs.vda L12-124, M1.3 change 40), and demo12_ucv came with it.
 const CRAFTED_FX = filter(f -> f["prefix"] != "demo12_off" && isdir(joinpath(FIXTURES, f["prefix"] * "_run")), PUBLIC_FX)
 
 @testset "M1.4: DD files -> model, crafted cases, no GAMS state" begin
-    @test length(CRAFTED_FX) == 28
+    @test length(CRAFTED_FX) == 30
     @testset "$(fx["prefix"])" for fx in CRAFTED_FX
         dd_chain(fx)
-    end
-    @testset "demo12_uc (compiled, then refused: unit commitment)" begin
-        uc = only(filter(v -> v["prefix"] == "demo12_uc", TOML.parsefile(joinpath(FIXTURES, "variant_fixtures.toml"))["variant"]))
-        @test_throws "not yet translated: eqlducs.vda L12-41" dd_chain(uc; matrix=false)
     end
 end

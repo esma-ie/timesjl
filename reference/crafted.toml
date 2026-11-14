@@ -533,3 +533,22 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_bndcst/demo12_bndcst.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_bndcst"]
+
+# TIMES_Demo demo12 + demo12_ucv/ucv.dd (14 Nov 2026): unit commitment by start-up type
+# (eqlducs.vda L12-124), the branches that demo12_uc does not reach: a vintaged plant at DAYNITE
+# whose start-up and shut-down phases and minimum on-line and off-line times reach the
+# neighbouring timeslice of the day, with the efficiency losses of every start-up type and of
+# the shut-down; and a plant at SEASON (start-up level ANNUAL; each season is its own cycle, so
+# nothing of it reaches a neighbouring timeslice) with an ACT_LOSSD and no ACT_LOSPL 'FX'
+# (M1.3 change 40).
+[[model]]
+name = "TIMES_Demo-demo12_ucv"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_ucv/demo12_ucv.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_ucv"]

@@ -193,6 +193,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "Cost bounds: eqbndcst.mod on demo12_bndcst (M1.3)" begin
         include("unit/test_eqbndcst.jl")
     end
+    @testset "Unit commitment: eqlducs.vda on demo12_uc and demo12_ucv (M1.3)" begin
+        include("unit/test_eqlducs.jl")
+    end
     @testset "demo12 variants: advanced features (docs/demo12-variants.md)" begin
         include("unit/test_variants.jl")
     end

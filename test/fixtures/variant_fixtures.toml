@@ -25,9 +25,11 @@ model    = "TIMES_Demo-demo12_uc"
 variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
-# M1.3 change 36 (14 Nov 2026): the dispatching families of eqactups.vda are translated
-# (checked on demo12_disp, below); the unit commitment by start-up type of eqlducs.vda is not.
-untranslated = ["eq_sdlogic/eq_sudupt/eq_sdslant", "eq_sdminon/eq_sudload/eq_sudtime/eq_sudpll"]
+# M1.3 change 36 (14 Nov 2026): the dispatching families of eqactups.vda (checked on
+# demo12_disp, below). Change 40 (14 Nov 2026): the unit commitment by start-up type of
+# eqlducs.vda L12-124 (test/unit/test_eqlducs.jl), so nothing of the case is refused and it is
+# also in test/fixtures/public_fixtures.toml (the whole model, layers 2 and 3).
+untranslated = []
 
 # Variant 5: retrofits and lifetime extensions (PRC_REFIT; User Note, Version.log 4.1.2,
 # Mar 2017), with early retirement (prepret.dsc, through DSCAUTO YES).
@@ -385,6 +387,27 @@ untranslated = []
 [[variant]]
 prefix   = "demo12_bndcst"
 model    = "TIMES_Demo-demo12_bndcst"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []
+
+# Crafted case demo12_ucv (14 Nov 2026): unit commitment by start-up type (eqlducs.vda L12-124),
+# the branches that demo12_uc does not reach. REG2 ELCTNGAS01 (vintaged, so its capacity is
+# VAR_NCAP by vintage; DAYNITE) has start-up times of 3, 9 and 20 hours, a shut-down time of 19
+# hours, non-operational times of 10 and 20 hours and minimum on-line and off-line times of 40
+# and 14 hours, against timeslices of about 12 hours in the cycle of a day: the start-up and
+# shut-down phases reach the neighbouring timeslice. It has an efficiency loss for every
+# start-up type and for the shut-down (ACT_LOSSD) with a partial-load loss (ACT_LOSPL 'FX').
+# REG1 ELCTECOA00 (not vintaged; SEASON, so its start-up level is ANNUAL; each season is its
+# own cycle, so nothing of it reaches a neighbouring timeslice) has times in thousands of hours,
+# an ACT_LOSSD without ACT_LOSPL 'FX' and no shut-down cost or time.
+# Preprocessing from the input dump to ppm on every symbol, rows of the seven families
+# (test/unit/test_eqlducs.jl), and the whole model. The presolve dump is shared with
+# test/fixtures/public_fixtures.toml.
+[[variant]]
+prefix   = "demo12_ucv"
+model    = "TIMES_Demo-demo12_ucv"
 variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
