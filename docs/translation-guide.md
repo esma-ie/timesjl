@@ -700,3 +700,8 @@ those checks, their figures and their crafted cases are not published
   crafted cases demo12_lev (OBJ MOD: MINYR stays MIYR_V1) and demo12_levstd
   (OBJ AUTO: MINYR restored): the step probe, the chain from the DD files
   and layers 2-3 PASS in both variants of both; public fixtures.
+- 14 Nov 2026: M1.4 (7): initmty.mod L442-444, the checks of the controls
+  SPOINT, TIMESTEP and FIXBOH, run by the DD reader (`INIT_EXEC`): a run file
+  of a restart or stepped (myopic) run compiles. New crafted case demo12_step
+  (TIMESTEP 20): DD files to `ppm/` PASS in both variants; an input fixture
+  in CI. The stepped solve (solve.stp) is M1.5.

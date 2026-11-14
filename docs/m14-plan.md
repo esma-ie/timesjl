@@ -130,6 +130,7 @@ runs the chain from DD files on demo12 and the crafted cases.
 | 2b | the compile phase of maindrv.mod and its includes: declarations and compile-time data | done for the open core models (9 Nov, draft PR #86) |
 | 2c | the TIMES source as a Julia Artifact (approved by James, 10 Nov 2026) | done (10 Nov): `Artifacts.toml`, `times_source()`; CI compiles demo12 from its DD files |
 | 5 | scale, wiring, `m13_gate.jl --from-dd` | done (10 Nov): `write_dump`; the chain, the matrix and the HiGHS solve from DD files with no GAMS state; CI on demo12; nightly on the open models |
+| 7 | the controls of restart and stepped (myopic) runs, initmty.mod L442-444 | done (14 Nov): a run file with SPOINT, TIMESTEP or FIXBOH compiles; crafted case demo12_step (TIMESTEP 20) from its DD files to `ppm/` in both variants; CI compiles it. The stepped solve (solve.stp) is M1.5 |
 | 6 | the M1.4 gate's remaining items: the demo12 variants in CI, TIM and JRC-EU-TIMES (local), the licence level, a runner for any run file | done (10 Nov): `scripts/m14_models.jl` reads the DD folders from `reference/suite.toml` and `reference/crafted.toml` (`--local` for TIM and JRC-EU-TIMES); CI compiles demo12 and 11 variants from their DD files; `licencelevel` (K3); `scripts/run_dd.jl` and `run_dd.cmd` |
 
 ### Change 2b, 9 Nov 2026 (late evening)
@@ -195,6 +196,42 @@ GAMS's objective. Fixed: an alias is now its target as TIMES.jl holds it (`gset`
   `scripts/run_dd.cmd` runs it on a run file dragged onto it in Windows Explorer. On TIMES_Demo's
   own `demo12.run` (REDUCE YES) it gives 3,233 rows and HiGHS's objective 23,960,685.737007916,
   GAMS/CPLEX's within 4e-15.
+
+### Change 7, 14 Nov 2026: the controls of restart and stepped runs
+
+- **What stopped.** initmty.mod L440-447 handle three controls a run file may set: SPOINT (a
+  restart from a saved solution), TIMESTEP (a stepped, or myopic, run: the horizon is solved in
+  steps of that many years) and FIXBOH (the first periods fixed to an earlier solution). L442-444
+  check each one that is set with an executable statement, for example
+  `IF(NOT AGE('%TIMESTEP%'), ABORT 'Invalid Control: TIMESTEP');`. The DD reader runs the few
+  executable statements before maindrv.mod by hand (`INIT_EXEC`) and had no entry for these
+  three, so any run file with one of the controls stopped at "executable statement at
+  initmty.mod".
+- **Translation.** One entry per line: SPOINT must be a member of J (1*999) or YES, TIMESTEP a
+  member of AGE (1*200), FIXBOH a member of ALLYEAR; otherwise the compile stops with GAMS's
+  abort text. The dollar lines around them (L440 `SET ITEM`, L441 `RPOINT NO`, L445-447
+  `STEPPED -` under FIXBOH, `STEPPED +` under TIMESTEP, `VAR_UC YES` under STEPPED) were already
+  compiled as written.
+- **Labels.** The checks name labels and add none. GAMS wants a label named in an executable
+  statement to be known already (compile error 116, "Label is unknown", otherwise): that is what
+  `SET ITEM / "%FIXBOH%", "%TIMESTEP%", "%SPOINT%" /` at L440 is for, and YES is known from
+  initsys.mod L124 (checked with two small programs on GAMS 54.6.1). So the entries only look the
+  label up, and the label order of the input dump is unchanged.
+- **The case.** `reference/dd/demo12_step/demo12_step.run`: demo12's run file with
+  `$SET TIMESTEP 20` (OBJ MOD kept). GAMS 54.6.1, CPLEX and HiGHS, both variants: three stepped
+  solves, the last with demo12's objective 23,960,685.737 (the steps before it end at
+  12,397,965.986 and 20,325,417.763).
+- **Result.** Both variants: DD files to `input/` (834 sets and parameters, 1,709 labels, no
+  compile warning), then `init/`, `prep/`, `prelv/` and `ppm/` (833 symbols) and the QA log, all
+  PASS. The chain ends before the coefficient stage with "not translated: coef_alt.lin L81
+  (TIMESTEP set: stepped solve, M1.5)".
+- **What is left for stepped runs** (not in this change): coef_alt.lin L81 and its STP call,
+  eqobsalv.mod L22-24 (the salvage preparation moves into the steps), maindrv.mod L37-41 and L111
+  and solve.stp (the loop over steps, with the earlier periods fixed to their levels), and the
+  STEPPED, FIXBOH and SPOINT branches of bndmain.mod. They are run options, M1.5.
+- **CI.** `test/unit/test_ddsource.jl`: demo12_step from its DD files against its input fixture
+  (`demo12_step_run`, `demo12_step_input`), STEPPED and VAR_UC as GAMS sets them, and demo12 with
+  the controls given from outside: valid values pass, invalid ones stop with GAMS's abort text.
 
 ## Open questions (flag, do not guess)
 

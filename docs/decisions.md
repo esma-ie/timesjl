@@ -37,7 +37,7 @@ answer yet.
 | 10 Nov 2026 | #90 | Wednesday's full cuOpt suite: set `CUOPT_FIXTURES=all` and `CUOPT_GPU_SHARES=100`? | yes | Open; a GitHub setting only James can make. |
 | 14 Nov 2026 | chat | Workstation batch: count jobs by threads (up to 8 jobs within 36 threads, since most checks use one core) instead of "at most 4 CPU-heavy runs"? Rule-level (the run limits in `CLAUDE.md`). | yes | Open; the batch keeps to 4 runs (3 while development runs use the fourth slot). |
 | 14 Nov 2026 | chat | After the M1.3 gate: translate the refused features and the stepped (myopic) solve on v4.9.7 first, then move the baseline to v4.9.8? Rule-level (`CLAUDE.md` Baseline moves it when the gate closes). | features first, then v4.9.8 | Open |
-| 14 Nov 2026 | chat | Start the stepped solve of myopic runs (TIMESTEP; M1.5, run options) before the M1.3 and M1.4 gates close? Rule-level (milestone order). James, 14 Nov 2026: "make the changes required to solve the myopic runs also today if possible"; an explicit yes to the early start is still asked. | yes, after the M1.3 gate PR | Open; the DD reader's part (initmty.mod L441-447, M1.4) goes ahead. |
+| 14 Nov 2026 | chat | Start the stepped solve of myopic runs (TIMESTEP; M1.5, run options) before the M1.3 and M1.4 gates close? Rule-level (milestone order). James, 14 Nov 2026: "make the changes required to solve the myopic runs also today if possible"; an explicit yes to the early start is still asked. | yes, after the M1.3 gate PR | Open; the DD reader's part (initmty.mod L440-447, M1.4 change 7) is in #108. |
 
 ## Decisions in the chat (not in a PR list)
 
@@ -87,6 +87,14 @@ answer yet.
 | 11 Nov 2026 | Keep this decision log, with its rule. | `docs/decisions.md` |
 
 ## Log by pull request
+
+### #108 M1.4 (7): initmty.mod L442-444, the controls of restart and stepped runs, crafted case demo12_step (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the new crafted case demo12_step (demo12 with TIMESTEP 20; CC BY 4.0; an input fixture of about 1 MB, no matrix or solution fixture yet)? | Recommended: yes; it is the open case for the stepped solve too. | open |
+| 2 | The DD reader no longer stops on a run file that sets SPOINT, TIMESTEP or FIXBOH: the three checks of L442-444 are translated. | Built in. | open |
+| 3 | Start the stepped solve (solve.stp, M1.5) before the M1.3 and M1.4 gates close? Rule-level (milestone order). | Recommended: yes, after the M1.3 gate PR. | open; not built in, a merge does not answer it (Open decisions) |
 
 ### #107 M1.3 (29): coef_obj.mod L31-32, the control switch ANNCOST LEV, crafted cases demo12_lev and demo12_levstd (open)
 

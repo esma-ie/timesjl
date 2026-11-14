@@ -356,3 +356,18 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_levstd/demo12_levstd.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_levstd"]
+
+# TIMES_Demo demo12 as a stepped run, TIMESTEP 20 (14 Nov 2026): initmty.mod L440-447 (the
+# control is checked against AGE; STEPPED and VAR_UC are set), compiled from the DD files
+# (M1.4). The stepped solve itself (solve.stp) is M1.5.
+[[model]]
+name = "TIMES_Demo-demo12_step"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_step/demo12_step.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_step"]

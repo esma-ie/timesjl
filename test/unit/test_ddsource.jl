@@ -74,3 +74,28 @@ end
                                 "demo12_ls", "demo12_lst", "demo12_pf", "demo12_pfd", "demo12_qa")
     check_dd_case("TIMES_Demo-" * p, p * "_run", p * "_input")
 end
+
+# M1.4 change 7: the controls of restart and stepped runs (initmty.mod L440-447). demo12_step sets
+# TIMESTEP 20; L443 runs after compilation and finds 20 in AGE. Input fixture only: the stepped
+# solve (solve.stp) is M1.5.
+@testset "stepped-run controls, initmty.mod L442-444" begin
+    @testset "demo12_step: TIMESTEP 20" begin
+        check_dd_case("TIMES_Demo-demo12_step", "demo12_step_run", "demo12_step_input")
+        g = compile_run(joinpath(FIX, "demo12_step_run", "tjl_presolve.run");
+                        dirs=[case_dirs("TIMES_Demo-demo12_step"); joinpath(REFDIR, "gams")],
+                        globals=Dict("RUN_NAME" => "TIMES_Demo-demo12_step"))
+        @test g.globals["STEPPED"] == "+" && g.globals["VAR_UC"] == "YES"      # L446-447
+    end
+    # demo12 with the controls given as on the command line (--TIMESTEP=5): members of AGE (1*200),
+    # of ALLYEAR (1960*2200), of J (1*999) or YES pass; anything else is GAMS's ABORT
+    ctl(gl) = compile_run(joinpath(FIX, "demo12_off_run", "tjl_presolve.run");
+                          dirs=[case_dirs("TIMES_Demo-demo12"); joinpath(REFDIR, "gams")],
+                          globals=merge(Dict("RUN_NAME" => "TIMES_Demo-demo12"), gl))
+    g = ctl(Dict("TIMESTEP" => "5", "FIXBOH" => "2010", "SPOINT" => "YES"))
+    @test g.globals["STEPPED"] == "+"
+    @test ctl(Dict("FIXBOH" => "2010", "SPOINT" => "3")).globals["STEPPED"] == "-"       # L445
+    @test_throws "Invalid Control: TIMESTEP" ctl(Dict("TIMESTEP" => "250"))
+    @test_throws "Invalid Control: TIMESTEP" ctl(Dict("TIMESTEP" => "YES"))
+    @test_throws "Invalid Control: FIXBOH" ctl(Dict("FIXBOH" => "1950"))
+    @test_throws "Invalid Control: SPOINT" ctl(Dict("SPOINT" => "NO"))
+end
