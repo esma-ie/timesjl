@@ -119,16 +119,6 @@ function untranslated_families(tm::TimesModel)
         k === nothing || note!("EQ_STSLEV and the STSFLX terms of EQ_STSBAL", "eqstgtss.mod L56-73, L88-93",
                                "RP_STL$(gset(tm, "RP_STL").keys[k])")
     end
-    # EQ(l)_ASHAR is translated except for exchange and storage processes
-    # (eqashar.vda L56-65; L51, L75-76).
-    let rp_ire = gset(tm, "RP_IRE"), rp_stg = gset(tm, "RP_STG")
-        k = findfirst(k -> (k[1], k[2]) in rp_ire, P("RPCG_ASHAR", 5).keys)
-        k === nothing || note!("EQ(l)_ASHAR of exchange processes", "eqashar.vda L56-65",
-                               "RPCG_ASHAR$(P("RPCG_ASHAR", 5).keys[k])")
-        k = findfirst(k -> (k[1], k[2]) in rp_stg, P("RPCG_ASHAR", 5).keys)
-        k === nothing || note!("EQ(l)_ASHAR of storage processes", "eqashar.vda L51, L75-76",
-                               "RPCG_ASHAR$(P("RPCG_ASHAR", 5).keys[k])")
-    end
     # User constraints (equserco.jl): nested UCs and the attributes ANNUL
     # (with INVCOST, INVTAX, INVSUB) and ONLINE are not translated.
     isempty(S("UC_GMAP_U", 3)) ||

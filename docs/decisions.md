@@ -88,6 +88,14 @@ answer yet.
 
 ## Log by pull request
 
+### #106 M1.3 (28): eqashar.vda L16-33 and the exchange and storage branches of EQ(l)_ASHAR, crafted case demo12_ashar (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the new crafted case demo12_ashar (CC BY 4.0, a public fixture)? | Recommended: yes. | open |
+| 2 | The refusals of FLO_ASHAR data and of ASHAR rows of exchange and storage processes are lifted: the statements are translated and checked on demo12_ashar. | Built in. | open |
+| 3 | eqashar.vda L24 and the first index 'ACT' (L73-74) are translated but reached by no case (demo12 has no standard process without an activity variable; FLO_SHAR input cannot give the index): refuse them instead? | Recommended: leave translated. | open |
+
 ### #105 M1.3 (25-4 follow-up): bnd_cum.mod L12-38 in full, crafted case demo12_cumc (open)
 
 | # | Question | Decided | How |

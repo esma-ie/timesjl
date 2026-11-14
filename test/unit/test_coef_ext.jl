@@ -95,14 +95,14 @@ end
 @testset "coef_ext refuses untranslated paths" begin
     tm = coef_ext_start(PPM_DEMO12, "resid")
     gput!(tm, "FLO_ASHAR", Dict(("REG1", "2010", "ELCTNGAS01", "NRG", "ELC", "ANNUAL", "UP") => 0.5))
-    @test occursin("eqashar.vda", only(coef_ext_unported(tm)))
-    @test_throws UnportedError coef_ext!(tm)
+    @test isempty(coef_ext_unported(tm))                 # FLO_ASHAR (eqashar.vda L16-33) is translated
     tm = coef_ext_start(PPM_DEMO12, "resid")
     gput!(tm, "RPC_FFUNC", Set([("REG1", "ELCTNGAS01", "ELC")]))
     @test isempty(coef_ext_unported(tm))                 # reduced flows (L62-69) are translated
     tm = coef_ext_start(PPM_DEMO12, "resid")
     gput!(tm, "ACT_MINLD", Dict(("REG1", "2010", "ELCTNGAS01") => 0.4))
     @test occursin("eqlducs.vda", only(coef_ext_unported(tm)))
+    @test_throws UnportedError coef_ext!(tm)
     tm = TimesModel(PPM_DEMO12; switches=merge(COEF_EXT_CASE_SWITCHES, Dict("WAVER" => "YES")))
     @test occursin("fillwave", only(coef_ext_unported(tm)))
 end

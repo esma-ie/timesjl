@@ -30,17 +30,17 @@
 #   records, their ACT_EFF is zeroed, RPCC_FFUNC gains the group pairs;
 #   RPCG_PTRAN cleared unless SENSIS; work sets cleared.
 # - L78-80: eqlducs.vda and eqashar.vda are included; with no
-#   unit-commitment data and no FLO_ASHAR they only clear CG_GRP
-#   (eqashar.vda L16) and UNCD7 (pp_lvlfc.mod L19). powerflo.vda CSTBAL is
-#   included only when COM_CSTBAL has data (`$IF DEFINED`, G35).
+#   unit-commitment data eqlducs.vda does nothing. eqashar.vda L16-33 is
+#   `eqashar_prep!` (src/ext/vda/eqashar.jl): RPCG_ASHAR, the levelling of
+#   FLO_ASHAR, UNCD7. powerflo.vda CSTBAL is included only when COM_CSTBAL
+#   has data (`$IF DEFINED`, G35).
 # - L81-83: COEF_PVT defaults to FPD; VDA_DISC; COEF_ILED of processes with
 #   an NCAP_BND 'N'.
 #
 # Refused: WAVER YES (fillwave.gms); the ETL, CLI, ABS and MACRO extensions;
 # reduced flows (RPC_FFUNC or RPCG_PTRAN not empty: L62-69, which coef_ptr
 # also refuses through KEEP_FLOF); unit-commitment data (eqlducs.vda
-# L12-41); FLO_ASHAR (eqashar.vda L16-33 with pp_lvlfc.mod); COM_CSTBAL
-# (powerflo.vda L372-396).
+# L12-41); COM_CSTBAL (powerflo.vda L372-396).
 
 "The coef_ext.vda paths this model would take that are not translated; empty when coef_ext! can run."
 function coef_ext_unported(tm)
@@ -57,7 +57,6 @@ function coef_ext_unported(tm)
         empty = kind == :set ? isempty(gset_opt(tm.data, s, n)) : isempty(gparam_opt(tm.data, s, n))
         empty || push!(out, "eqlducs.vda L12-41 (unit commitment: $s has data)")
     end
-    isempty(gparam_opt(tm.data, "FLO_ASHAR", 7)) || push!(out, "eqashar.vda L16-33 (FLO_ASHAR has data; pp_lvlfc.mod)")
     isempty(gparam_opt(tm.data, "COM_CSTBAL", 6)) || push!(out, "coef_ext.vda L80, powerflo.vda L372-396 (COM_CSTBAL has data)")
     return out
 end
@@ -71,8 +70,9 @@ vintage), COEF_AFUPS and the ACT_CSTUP annuity, the commodity balance
 pruning (RCS_COMBAL, RTCS_VARC, RPC_CONLY, TOP_IRE), UC_TIME/UC_ON, the
 singleton ACT_EFF groups as COEF_PTRAN with RPCC_FFUNC and ACT_EFF zeroed,
 COEF_PVT defaulted to FPD, VDA_DISC and COEF_ILED; TRACKP, TRACKC, RCS,
-TRACKPC, RP_GRP, CG_GRP, RP_DCGG, RTP_CAPYR, RP_CGC, UNCD7 (and RPCG_PTRAN
-unless SENSIS) left cleared.
+TRACKPC, RP_GRP, CG_GRP, RP_DCGG, RTP_CAPYR, RP_CGC (and RPCG_PTRAN unless
+SENSIS) left cleared; then the "advanced" flow shares ([`eqashar_prep!`](@ref):
+RPCG_ASHAR, FLO_ASHAR levelled, UNCD7).
 
 GAMS: coef_ext.vda L12-83 (maindrv.mod L73), v4.9.7.
 """
@@ -389,9 +389,9 @@ function coef_ext!(tm)
     for (n, N) in (("TRACKPC", 3), ("RP_GRP", 3), ("CG_GRP", 4), ("RP_DCGG", 6), ("RTP_CAPYR", 4), ("RP_CGC", 4))
         gput!(tm, n, Set{NTuple{N,String}}())
     end
-    # L78-79: eqlducs.vda (no unit-commitment data: nothing) and eqashar.vda (no FLO_ASHAR: CG_GRP <= FLO_ASHAR
-    #         is empty, pp_lvlfc.mod L19 clears UNCD7); L80: powerflo.vda CSTBAL is not included (COM_CSTBAL has no data)
-    haskey(tm.data.dump.symbols, "UNCD7") && gput!(tm, "UNCD7", Set{NTuple{7,String}}())
+    # L78: eqlducs.vda (no unit-commitment data: nothing); L79: eqashar.vda L16-33;
+    # L80: powerflo.vda CSTBAL is not included (COM_CSTBAL has no data)
+    eqashar_prep!(tm)
 
     # L81: COEF_PVT(R,T)$(NOT COEF_PVT(R,T)) = FPD(T); L82: VDA_DISC(R,T) $= COEF_PVT(R,T)
     coef_pvt = gvalues(tm, "COEF_PVT", 2)

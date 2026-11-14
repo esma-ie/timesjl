@@ -330,3 +330,18 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 3259
 cols = 4509
 nonzeros = 18511
+
+# Crafted case TIMES_Demo-demo12_ashar (reference/crafted.toml: demo12 + ashar.dd), 14 Nov 2026 (GAMS
+# 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): flow shares that GAMS
+# moves to FLO_ASHAR, on standard, exchange and storage processes (eqashar.vda L16-33 with
+# pp_lvlfc.mod, and EQ(l)_ASHAR with its exchange branch and storage terms), the whole model. The
+# presolve dump is shared with test/fixtures/variant_fixtures.toml. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_ashar"
+model    = "TIMES_Demo-demo12_ashar"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3321
+cols = 4557
+nonzeros = 18661

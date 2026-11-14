@@ -688,3 +688,10 @@ those checks, their figures and their crafted cases are not published
   bounds from the stored tables. New crafted case demo12_cumc: the step
   probe, the chain from the DD files and layers 2-3 PASS in both variants; a
   public fixture.
+- 14 Nov 2026: M1.3 change 28: eqashar.vda L16-33 with pp_lvlfc.mod
+  (`eqashar_prep!`: RPCG_ASHAR and the levelling of FLO_ASHAR, called by
+  `coef_ext!`) and EQ(l)_ASHAR's exchange branch (L56-65) and storage terms
+  (L51, L75-76). The refusals of FLO_ASHAR data and of ASHAR rows of
+  exchange and storage processes are lifted. New crafted case demo12_ashar:
+  the step probe, the chain from the DD files and layers 2-3 PASS in both
+  variants; a public fixture.

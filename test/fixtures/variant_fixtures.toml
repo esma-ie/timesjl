@@ -180,3 +180,18 @@ variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
+
+# Crafted case demo12_ashar (14 Nov 2026): FLO_SHAR records that GAMS moves to FLO_ASHAR (the
+# commodity is not in the group or not a flow of the process; the process is an exchange or
+# storage process), with seasonal shares, a commodity against itself and the reference group IMP
+# (eqashar.vda L16-33 with pp_lvlfc.mod; EQ(l)_ASHAR with its exchange branch L56-65 and storage
+# terms L51, L75-76). Preprocessing from the input dump to ppm on every symbol, the ppm ->
+# pre-solve step with the model from that state (test/unit/test_ashar.jl), and the whole model.
+# The presolve dump is shared with test/fixtures/public_fixtures.toml.
+[[variant]]
+prefix   = "demo12_ashar"
+model    = "TIMES_Demo-demo12_ashar"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []
