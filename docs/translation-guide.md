@@ -746,3 +746,8 @@ those checks, their figures and their crafted cases are not published
   layers 1 to 3 PASS in both variants from the DD files; no earlier code
   needed a change. The marketplace branch (L46-51) stays refused with
   RPC_MARKET. Still refused among the bound equations: EQ(l)_XBND.
+- 14 Nov 2026: M1.3 change 35: EQ(l)_XBND (eqxbnd.mod L17-56, eqmain.mod
+  L241-243): limits on the total exchange of a commodity of a region,
+  internal or external, as rows. New crafted case demo12_xbnd: layers 1
+  to 3 PASS in both variants from the DD files; no earlier code needed a
+  change. The bound equations of eqmain.mod are now all translated.
