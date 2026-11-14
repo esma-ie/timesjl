@@ -24,9 +24,10 @@
 # VNTRT(K,T) in each K term (docs/discrepancies.md G48; `rcapsub!`, M1.3
 # change 20b-2); %RTS% ->
 # S (timslice.mod L31; S+NORTS(R,T,S) only with dynamic timeslices, refused);
-# %UPSCAP0% -> (%UPSCAPS%$PRC_TS(R,P,S))$RP_UPL(R,P,'FX') (equ_ext.vda L75), a
-# unit-commitment term: RP_UPL(R,P,'FX') data is refused (as for EQ_CAPACT),
-# so it is zero. %cal_red% is cal_nored.red (cal_red.jl), with C COM TS P T.
+# %UPSCAP0% -> (%UPSCAPS%$PRC_TS(R,P,S))$RP_UPL(R,P,'FX') (equ_ext.vda L75), the
+# capacity of a dispatched process that is off-line (`upscap0!`; %UPSCAPS%:
+# eqactups.jl header). No test case reaches it yet: it is translated, not
+# parity-checked. %cal_red% is cal_nored.red (cal_red.jl), with C COM TS P T.
 # XPT = {EXP} (initsys.mod L64), IPS = {IN, N} (setglobs.gms L154), ACTCG =
 # {'ACT'} (initmty.mod L140), STL = all timeslices plus the level names
 # (initmty.vda L21-22).
@@ -68,7 +69,7 @@ function eq_caflac!(tm::TimesModel)
     (isempty(rps_caflac) && isempty(ncap_afc)) && return 0
     isempty(gparam_opt(d, "NORTS", 3)) || throw(UnportedError(
         "dynamic timeslices: %RTS% = S+NORTS(R,T,S) in eqcaflac.vda L40 (timslice.mod L31-39)"))
-    capact_unported_afs_changes(tm)   # AFS changes not translated; also %UPSCAP0% (RP_UPL 'FX')
+    capact_unported_afs_changes(tm)   # AFS changes not translated
     n = 0
     for (eqtype, bd) in CAFLAC_VARIANTS
         n += eq_caflac!(tm, eqtype, bd, rps_caflac)
@@ -87,7 +88,7 @@ The capacity part of both equations, without the final factors:
 
 with `f(K)` the rest of the coefficient (COEF_AF(R,K,T,P,S,%2) times
 PRC_CAPACT and G_YRFR for EQ(l)_CAFLAC, NCAP_AFC(R,V,P,CG,S) times PRC_CAPACT
-and G_YRFR for EQL_CAPFLO). %UPSCAP0% is zero (refused data, see header).
+and G_YRFR for EQL_CAPFLO). %UPSCAP0% is added by `upscap0!`.
 
 GAMS: eqcaflac.vda L31-32 and L56-57, v4.9.7.
 """
@@ -101,6 +102,30 @@ function caflac_capacity!(rhs::JuMP.AffExpr, tm::TimesModel, r, v, t, p, f)
         (k,) in milestonyr && addterm!(rhs, c, tm, "VAR_NCAP", r, k, p)
         (k,) in pastyear && addconst!(rhs, c * gv(ncap_pasti, (r, k, p)))
         rcapsub!(rhs, c, tm, r, k, t, p)                        # %RCAPSBM%, MODLYEAR = K (G48; prepret.jl)
+    end
+    return rhs
+end
+
+"""
+    upscap0!(rhs, c, tm, r, v, t, p, s) -> rhs
+
+Add `c * %UPSCAP0%`:
+
+    (-SUM(TS_MAP(R,ALL_TS,S)\$RPS_UPS(R,P,ALL_TS),VAR_UPS(R,V,T,P,ALL_TS,'N'))\$PRC_TS(R,P,S))\$RP_UPL(R,P,'FX')
+
+the capacity of a dispatched process that is off-line in S. No test case
+reaches it yet: translated, not parity-checked.
+
+GAMS: equ_ext.vda L75, coef_ext.vda L30, v4.9.7.
+"""
+function upscap0!(rhs::JuMP.AffExpr, c::GNum, tm::TimesModel, r, v, t, p, s)
+    d = tm.data
+    (r, p, "FX") in gset_opt(d, "RP_UPL", 3) || return rhs
+    (r, p, s) in gset(tm, "PRC_TS") || return rhs
+    ups_of_rp = get!(() -> indexby(gset_opt(d, "RPS_UPS", 3), (1, 2)), tm.cache, "RPS_UPS/rp")
+    tsmap = gset(tm, "TS_MAP")
+    for (_, _, ts) in get(ups_of_rp, (r, p), NTuple{3,String}[])
+        (r, ts, s) in tsmap && addterm!(rhs, -c, tm, "VAR_UPS", r, v, t, p, ts, "N")
     end
     return rhs
 end
@@ -225,6 +250,7 @@ function eq_caflac!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, 
             tail = gv(prc_capact, (r, p)) * gv(g_yrfr, (r, s))
             rhs = caflac_capacity!(JuMP.AffExpr(0.0), tm, r, v, t, p,
                                    k -> gv(coef_af, (r, k, t, p, s, bd)) * tail)
+            upscap0!(rhs, gv(coef_af, (r, v, t, p, s, bd)) * tail, tm, r, v, t, p, s)
             gconstraint!(tm, name, (r, v, t, p, s), eqtype, lhs, rhs) === nothing || (n += 1)
         end
     end
@@ -322,6 +348,7 @@ function eq_capflo!(tm::TimesModel, ncap_afc::GamsParam{5})
             end
             tail = gv(ncap_afc, (r, v, p, cg, s)) * gv(prc_capact, (r, p)) * gv(g_yrfr, (r, s))
             rhs = caflac_capacity!(JuMP.AffExpr(0.0), tm, r, v, t, p, k -> tail)
+            upscap0!(rhs, tail, tm, r, v, t, p, s)
             gconstraint!(tm, "EQL_CAPFLO", (r, v, t, p, cg, s), "L", lhs, rhs) === nothing || (n += 1)
         end
     end

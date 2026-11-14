@@ -4,14 +4,14 @@
 #
 # In eqmain.mod order (v4.9.7): eqcapact.mod L18-20 (AFS, in the `L` include, L65), eqbndcst.mod
 # L14-77 (L192: SUPERYR, the cumulative cost limits, YK1), L199-202 (RVPT, RTP_OFF), L205-226 (the
-# user-constraint maps); then equ_ext.vda L76-79 (RP_PL, AFS) and eqactups.vda L33 (RP_UPR, outside
-# the dispatching IF, so in every model). The other includes have no data
+# user-constraint maps); then equ_ext.vda L76-79 (RP_PL, AFS), eqactups.vda L9-32 (the dispatching
+# preparation, `eqactups_prep!` in ext/vda/eqactups.jl) and L33 (RP_UPR, outside the dispatching
+# IF, so in every model). The other includes have no data
 # statements that act here: eqflomrk.mod, eqashar.vda and pp_actef.vda jump to their equations
 # under the arguments eqmain.mod and equ_ext.vda pass.
 #
 # Not translated (UnportedError): eqbndcst.mod L41-75 with REG_BNDCST or REG_CUMCST data (the
-# cost bounds, refused with EQ_BNDCST); eqactups.vda L9-33, the dispatching preparation, with
-# RP_UPL, RP_PL or ACT_CSTRMP data (refused with its equations); VAR_UC not YES (L205-206).
+# cost bounds, refused with EQ_BNDCST); VAR_UC not YES (L205-206).
 
 """
     eqmain_prep_unported(tm) -> Vector{String}
@@ -23,8 +23,6 @@ function eqmain_prep_unported(tm::TimesModel)
     out = String[]
     (!isempty(gparam_opt(d, "REG_BNDCST", 5)) || !isempty(gparam_opt(d, "REG_CUMCST", 6))) &&
         push!(out, "eqbndcst.mod L41-75: REG_BNDCST / REG_CUMCST data")
-    (!isempty(gset_opt(d, "RP_UPL", 3)) || !isempty(gset_opt(d, "RP_PL", 3)) ||
-     !isempty(gparam_opt(d, "ACT_CSTRMP", 5))) && push!(out, "eqactups.vda L9-33: dispatching (RP_UPL, RP_PL, ACT_CSTRMP)")
     has_uc = !isempty(gparam_opt(d, "UC_RHS", 2)) || !isempty(gparam_opt(d, "UC_RHSR", 3)) ||
              !isempty(gparam_opt(d, "UC_RHST", 3)) || !isempty(gparam_opt(d, "UC_RHSRT", 4)) ||
              !isempty(gparam_opt(d, "UC_RHSTS", 4)) || !isempty(gparam_opt(d, "UC_RHSRTS", 5))
@@ -38,7 +36,10 @@ end
 The sets and parameters eqmain_prep! settles.
 """
 eqmain_prep_symbols(tm) = ["AFS", "SUPERYR", "YK1", "RT_IAN", "RTP_IAN", "CST_ANNC", "RVPT", "RTP_OFF", "UC_TMAP",
-                           "UC_RHSMAP", "UC_RTSUC", "UC_UT", "UC_UTS", "UC_RHSTMP", "RUCTS", "RP_PL", "RP_UPR"]
+                           "UC_RHSMAP", "UC_RTSUC", "UC_UT", "UC_UTS", "UC_RHSTMP", "RUCTS", "RP_PL", "RP_UPR",
+                           # eqactups.vda L9-32
+                           "AFUPS", "RPS_UPS", "RP_UX", "RTP_VARP", "COEF_AF", "RP_UPS", "RPC_CUR", "ACT_LOSPL",
+                           "ACT_UPS", "UNCD7", "RTP_PL", "RP_UPC"]   # TS_ARRAY (L28) is cleared later (pp_clean)
 
 """
     eqmain_prep!(tm) -> tm
@@ -55,9 +56,11 @@ eqmain_prep_symbols(tm) = ["AFS", "SUPERYR", "YK1", "RT_IAN", "RTP_IAN", "CST_AN
     [UC_TMAP, UC_RHSMAP, UC_RTSUC, UC_UT, UC_UTS: `uc_tmap`, `uc_setup`; UC_RHSTMP, RUCTS cleared] (L211-226)
     RP_PL(RP,BD)\$SUM(RPG_PACE(RP,CG),1) = NO;                                                (equ_ext.vda L77)
     AFS(RTP(R,T,P),S,BDUPX)\$NCAP_AFCS(RTP,'ACT',S) = NO;                                      (L79)
-    OPTION RP_UPR < ACT_CSTRMP;                                                               (eqactups.vda L33)
+    [the dispatching preparation: `eqactups_prep!`]                                           (eqactups.vda L9-32)
+    OPTION RP_UPR < ACT_CSTRMP;                                                               (L33)
 
-GAMS: eqcapact.mod L18-20, eqbndcst.mod L14-77, eqmain.mod L197-226, equ_ext.vda L76-79, v4.9.7.
+GAMS: eqcapact.mod L18-20, eqbndcst.mod L14-77, eqmain.mod L197-226, equ_ext.vda L76-79,
+eqactups.vda L9-33, v4.9.7.
 """
 function eqmain_prep!(tm::TimesModel)
     u = eqmain_prep_unported(tm)
@@ -142,8 +145,10 @@ function eqmain_prep!(tm::TimesModel)
     gput!(tm, "RP_PL", rp_pl)
     afcs, rtp = P("NCAP_AFCS", 5), S("RTP", 3)
     filter!(k -> !(k[5] in ("UP", "FX") && (k[1], k[2], k[3]) in rtp && haskey(afcs, (k[1], k[2], k[3], "ACT", k[4]))), afs)
+    # eqactups.vda L9-32 (equ_ext.vda L90): the dispatching preparation; L11 takes its entries out of AFS
+    eqactups_prep!(tm, afs)
     gput!(tm, "AFS", afs)
-    # eqactups.vda L33 (equ_ext.vda L90), outside the dispatching IF of L9-32: OPTION RP_UPR < ACT_CSTRMP
+    # eqactups.vda L33, outside the dispatching IF of L9-32: OPTION RP_UPR < ACT_CSTRMP
     gput!(tm, "RP_UPR", Set((k[1], k[3], k[4]) for k in P("ACT_CSTRMP", 5).keys))
     return tm
 end

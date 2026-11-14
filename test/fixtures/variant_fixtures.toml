@@ -25,8 +25,9 @@ model    = "TIMES_Demo-demo12_uc"
 variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
-untranslated = ["EQ_CAPLOAD", "EQ_ACTRAMP", "EQ(l)_ACTUPS", "EQL_ACTUPC", "EQ_ACTPL", "EQ_ACTRMPC",
-                "eq_sdlogic/eq_sudupt/eq_sdslant", "eq_sdminon/eq_sudload/eq_sudtime/eq_sudpll"]
+# M1.3 change 36 (14 Nov 2026): the dispatching families of eqactups.vda are translated
+# (checked on demo12_disp, below); the unit commitment by start-up type of eqlducs.vda is not.
+untranslated = ["eq_sdlogic/eq_sudupt/eq_sdslant", "eq_sdminon/eq_sudload/eq_sudtime/eq_sudpll"]
 
 # Variant 5: retrofits and lifetime extensions (PRC_REFIT; User Note, Version.log 4.1.2,
 # Mar 2017), with early retirement (prepret.dsc, through DSCAUTO YES).
@@ -309,6 +310,25 @@ untranslated = []
 [[variant]]
 prefix   = "demo12_xbnd"
 model    = "TIMES_Demo-demo12_xbnd"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []
+
+# Crafted case demo12_disp (14 Nov 2026): dispatching in the linear formulation (eqactups.vda
+# L9-117), without the start-up types of eqlducs.vda. REG1 ELCTEGAS00 (not vintaged, so its
+# capacity is VAR_CAP) has the dispatching records of demo12_uc: minimum stable load, ramp
+# limits both ways, start-up costs at DAYNITE, minimum on-line and off-line hours, a maximum
+# number of cycles, a partial-load loss at the minimum load and ramping costs. REG2 ELCTNGAS01
+# (vintaged) has a minimum stable load, an upward ramp limit, start-up costs at SEASON, a
+# partial-load loss over a load range (ACT_LOSPL 'UP' without 'FX') with a cost at ANNUAL
+# (ACT_CSTPL) and a maximum number of cycles.
+# Preprocessing from the input dump to ppm on every symbol, the rows of the seven families
+# (test/unit/test_eqactups.jl), and the whole model. The presolve dump is shared with
+# test/fixtures/public_fixtures.toml.
+[[variant]]
+prefix   = "demo12_disp"
+model    = "TIMES_Demo-demo12_disp"
 variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }

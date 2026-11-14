@@ -461,3 +461,22 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_xbnd/demo12_xbnd.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_xbnd"]
+
+# TIMES_Demo demo12 + demo12_disp/disp.dd (14 Nov 2026): linear dispatching, the equations of
+# eqactups.vda L39-117 (EQ_CAPLOAD, EQ_ACTRAMP, EQE_ACTUPS, EQL_ACTUPS, EQL_ACTUPC, EQ_ACTPL,
+# EQ_ACTRMPC) and their preparation (L9-33): a plant that is not vintaged with ramping, a
+# minimum stable load, partial-load losses, start-up costs at DAYNITE, minimum on-line and
+# off-line hours, a cycle limit and ramping costs (the REG1 records of demo12_uc), and a
+# vintaged plant with a ramp-up limit, start-up costs at SEASON and a partial-load cost
+# (M1.3 change 36).
+[[model]]
+name = "TIMES_Demo-demo12_disp"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_disp/demo12_disp.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_disp"]

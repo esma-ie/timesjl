@@ -5,9 +5,10 @@
 # A load-shifting process is a timeslice storage process whose commodity
 # COM is both stored and delivered (RPC_LS, ppmain.mod L1065-1078); STG_SIFT
 # limits the shifted share and ACT_TIME (LO/UP/N/FX) the advance, delay or
-# balancing time windows. The other families of eqactups.vda (EQ_CAPLOAD,
-# EQ_ACTRAMP, EQ(l)_ACTUPS, EQL_ACTUPC, EQ_ACTPL, EQ_ACTRMPC, EQL_STGCCL) are
-# not translated and stay refused by the generation driver.
+# balancing time windows. The dispatching families of eqactups.vda
+# (EQ_CAPLOAD, EQ_ACTRAMP, EQ(l)_ACTUPS, EQL_ACTUPC, EQ_ACTPL, EQ_ACTRMPC) are
+# in eqactups.jl; EQL_STGCCL (L121-125) is not translated and stays refused
+# by the generation driver.
 #
 # Macro expansions: %EQ% -> EQ, %VAR% -> VAR, %SOW%/%SWT% -> '' (setglobs.gms
 # L348); %R_T% -> 'R,T' (maindrv.mod L39); RTS(S) -> S; %PGPRIM% -> 'ACT'

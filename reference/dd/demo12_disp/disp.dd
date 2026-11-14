@@ -1,0 +1,65 @@
+* TIMES.jl crafted case demo12_disp (reference/crafted.toml, 14 Nov 2026): linear dispatching
+* (eqactups.vda L9-117; Version.log 3.7.0 and 3.9.0), added to TIMES_Demo demo12
+* (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0). No unit commitment by start-up type
+* (eqlducs.vda): that is demo12_uc.
+* - REG1 ELCTEGAS00 (not vintaged): the dispatching records of demo12_uc's uc.dd, unchanged:
+*   ramping (ACT_UPS UP/LO), minimum stable load (ACT_UPS FX, ACT_MINLD), partial-load
+*   efficiency loss (ACT_LOSPL FX), start-up cost at DAYNITE (ACT_CSTUP), minimum on-line and
+*   off-line hours and a cycle limit (ACT_TIME UP/LO/N), ramping costs (ACT_CSTRMP).
+* - REG2 ELCTNGAS01 (vintaged, PRC_VINT): minimum stable load and a ramp-up limit only
+*   (ACT_UPS FX/UP), start-up cost at SEASON (ACT_CSTUP), a partial-load cost (ACT_CSTPL, which
+*   becomes ACT_CSTUP at ANNUAL), an explicit ACT_LOSPL UP with no FX, a cycle limit (ACT_TIME N).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER
+ACT_UPS ' '/
+REG1.2005.ELCTEGAS00.ANNUAL.UP 0.5
+REG1.2005.ELCTEGAS00.ANNUAL.LO 0.5
+REG1.2005.ELCTEGAS00.ANNUAL.FX 0.25
+REG2.2005.ELCTNGAS01.ANNUAL.FX 0.35
+REG2.2005.ELCTNGAS01.ANNUAL.UP 0.4
+
+/
+
+PARAMETER
+ACT_MINLD ' '/
+REG1.2005.ELCTEGAS00 0.3
+
+/
+
+PARAMETER
+ACT_LOSPL ' '/
+REG1.2005.ELCTEGAS00.FX 0.1
+REG2.2005.ELCTNGAS01.UP 0.7
+
+/
+
+PARAMETER
+ACT_CSTUP ' '/
+REG1.2005.ELCTEGAS00.DAYNITE.MEURO05 0.02
+REG2.2005.ELCTNGAS01.SEASON.MEURO05 0.03
+
+/
+
+PARAMETER
+ACT_CSTPL ' '/
+REG2.2005.ELCTNGAS01.MEURO05 0.5
+
+/
+
+PARAMETER
+ACT_TIME ' '/
+REG1.2005.ELCTEGAS00.UP 6
+REG1.2005.ELCTEGAS00.LO 6
+REG1.2005.ELCTEGAS00.N 200
+REG2.2005.ELCTNGAS01.N 100
+
+/
+
+PARAMETER
+ACT_CSTRMP ' '/
+REG1.2005.ELCTEGAS00.UP.MEURO05 0.001
+REG1.2005.ELCTEGAS00.LO.MEURO05 0.001
+
+/
