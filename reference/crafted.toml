@@ -390,3 +390,21 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_bndc/demo12_bndc.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_bndc"]
+
+# TIMES_Demo demo12 + demo12_flobnd/flobnd.dd (14 Nov 2026): bounds on process flows (FLO_BND) that
+# cannot be bounds of one flow variable, which GAMS writes as the equations EQ(l)_FLOBND
+# (eqflobnd.mod L15-43; marked in bnd_flo.mod L16-24): above the flow's timeslice level, on a
+# vintaged process, on a flow REDUCE replaces, on a commodity group, and on exchange processes
+# (import plus export for a commodity, net import for a group); with them bounds that stay on
+# VAR_FLO or VAR_ACT, LO records with the value EPS and an UP with the value INF (M1.3 change 32).
+[[model]]
+name = "TIMES_Demo-demo12_flobnd"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_flobnd/demo12_flobnd.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_flobnd"]

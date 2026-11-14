@@ -1,0 +1,66 @@
+* TIMES.jl crafted case demo12_flobnd (reference/crafted.toml, 14 Nov 2026): bounds on process
+* flows (FLO_BND) that cannot be bounds of one flow variable, which GAMS writes as the equations
+* EQ(l)_FLOBND (eqflobnd.mod L15-43; bnd_flo.mod L16-24 marks the records). Added to TIMES_Demo
+* demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0). The power plants run at DAYNITE (SD, SN,
+* WD, WN, in the seasons S and W) or SEASON; ELCTNGAS01 is the vintaged process.
+* Standard processes:
+* - ELCTEGAS00, gas input at ANNUAL, UP in REG1 2020: above the flow's level, a sum over the
+*   four DAYNITE timeslices. Under REDUCE the flow is replaced by the activity (cal_red.red).
+* - ELCREHYD00, electricity output (the activity flow) at the season W, LO in REG1 2030.
+* - ELCTNGAS01, gas input at WD, UP in REG2 2020: the flow's own level, but the process is
+*   vintaged, so an equation over the vintages (bnd_flo.mod L18).
+* - ELCTNGAS01, electricity output at the season W, FX in REG1 2030.
+* - FTE-AGROIL, diesel input at ANNUAL, UP in REG1 2020: the flow's own level on a process
+*   without vintages: a bound of VAR_FLO and no equation.
+* - ELCTEOIL00, oil input at SD, UP in REG1 2030: the flow's own level. Under REDUCE the flow
+*   variable is replaced by the activity (RPC_FFUNC), so the bound is an equation (L19);
+*   without REDUCE it is a bound of VAR_FLO.
+* - ELCREBIO00, electricity output at WN, UP in REG1 2020: the activity flow at its own level:
+*   a bound of VAR_ACT under REDUCE (bnd_flo.mod L37-39), of VAR_FLO without.
+* - ELCTEGAS00, the CO2 emission (RPC_EMIS, never a bound of the variable, L20) at ANNUAL, UP in
+*   REG1 2020, and at SD (its own level), LO with the value EPS in REG2 2020: the LO EPS record
+*   of an emission flow is kept (L16) and gives a row with a right-hand side of zero.
+* - ELCTEGAS00, gas input at ANNUAL in REG2 2020: UP with the value INF, an equation with an
+*   empty body (eqmain.mod L113), and LO with the value EPS, which L16 deletes.
+* - REFEOIL00, the output group REFEOIL00_NRGO at ANNUAL: UP in REG1 2030 and LO with the value
+*   EPS in REG1 2020. A group is always an equation (L23), and its LO EPS is kept (L16 covers
+*   single commodities only).
+* - ELCRESOL00, solar input at ANNUAL, UP in REG1 2030, a period in which the process is not
+*   available (RTP_VARA): nothing.
+* - ELCTECOA00 (SEASON), coal input at SD, UP in REG1 2020: a timeslice below the flow's level:
+*   nothing.
+* Exchange processes (never bounds of one variable):
+* - IMPELC1, the electricity import at ANNUAL, UP in REG1 2030, and at WN (its own level), UP
+*   in REG2 2020. Under REDUCE the import is the activity (RPC_AIRE).
+* - TB_ELC_REG1_REG2_01 (import and export in both regions), ELC at the season S, UP in REG1
+*   2020 with interpolation and forward extrapolation (option 5): import plus export in 2020,
+*   2030 and 2050.
+* - TB_ELC_REG1_REG2_01, the group NRG at the season W in REG2 2030, UP and LO: with a group
+*   the bound is on the net import, import less export (L37).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER
+FLO_BND ' '/
+REG1.2020.ELCTEGAS00.ELCGAS.ANNUAL.UP 500
+REG1.2030.ELCREHYD00.ELC.W.LO 60
+REG2.2020.ELCTNGAS01.ELCGAS.WD.UP 1500
+REG1.2030.ELCTNGAS01.ELC.W.FX 950
+REG1.2020.FTE-AGROIL.DSL.ANNUAL.UP 160
+REG1.2030.ELCTEOIL00.ELCOIL.SD.UP 50
+REG1.2020.ELCREBIO00.ELC.WN.UP 20
+REG1.2020.ELCTEGAS00.ELCCO2.ANNUAL.UP 100000
+REG2.2020.ELCTEGAS00.ELCCO2.SD.LO EPS
+REG2.2020.ELCTEGAS00.ELCGAS.ANNUAL.UP INF
+REG2.2020.ELCTEGAS00.ELCGAS.ANNUAL.LO EPS
+REG1.2030.REFEOIL00.REFEOIL00_NRGO.ANNUAL.UP 9500
+REG1.2020.REFEOIL00.REFEOIL00_NRGO.ANNUAL.LO EPS
+REG1.2030.ELCRESOL00.ELCSOL.ANNUAL.UP 10
+REG1.2020.ELCTECOA00.ELCCOA.SD.UP 100
+REG1.2030.IMPELC1.ELC.ANNUAL.UP 500
+REG2.2020.IMPELC1.ELC.WN.UP 550
+REG1.0.TB_ELC_REG1_REG2_01.ELC.S.UP 5
+REG1.2020.TB_ELC_REG1_REG2_01.ELC.S.UP 30
+REG2.2030.TB_ELC_REG1_REG2_01.NRG.W.UP 25
+REG2.2030.TB_ELC_REG1_REG2_01.NRG.W.LO -25
+/

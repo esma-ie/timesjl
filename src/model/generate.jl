@@ -11,8 +11,8 @@
 # equation's domain, so a family left out here would silently drop rows. For
 # each untranslated family in the MODEL statement, `untranslated_families`
 # tests a condition that holds whenever that family has at least one row:
-# the family's own domain where it is short (EQ(l)_FLOBND, EQ(l)_IREBND,
-# EQ(l)_XBND), otherwise the
+# the family's own domain where it is short (EQ(l)_IREBND, EQ(l)_XBND),
+# otherwise the
 # non-emptiness of a set or parameter every member of the domain requires
 # (conservative: it may refuse data for which GAMS would generate no row).
 # Untranslated extensions are recognised by a switch or by a symbol only
@@ -61,19 +61,6 @@ function untranslated_families(tm::TimesModel)
     end
 
     # --- eqmain.mod families ---------------------------------------------------
-    # EQ(l)_FLOBND (eqflobnd.mod L15-21; eqmain.mod L111-113)
-    let flo_bnd = gparam(tm, "FLO_BND"), varf_of = indexby(gset(tm, "RTPCS_VARF"), (1, 2, 3)), rtp_vara = gset(tm, "RTP_VARA"),
-        ts_map = gset(tm, "TS_MAP"), gmap = gset(tm, "COM_GMAP"), below = gset(tm, "RS_BELOW"),
-        dflbl = "0"                                                   # initmty.mod L367
-        for (r, t, p, cg, s, bd) in flo_bnd.keys
-            (inT(t) && (r, t, p) in rtp_vara && bd in ("LO", "FX", "UP")) || continue
-            bd == "UP" && flo_bnd.values[(r, t, p, cg, s, bd)] == Inf && continue
-            hit = any(get(varf_of, (r, t, p), NTuple{5,String}[])) do (_, _, _, c, ts)
-                (r, s, ts) in ts_map && (r, cg, c) in gmap && ((r, s, ts) in below || haskey(flo_bnd, (r, dflbl, p, cg, s, bd)))
-            end
-            hit && (note!("EQ(l)_FLOBND", "eqflobnd.mod L15-21", "FLO_BND$((r, t, p, cg, s, bd))"); break)
-        end
-    end
     # Families whose domain needs a parameter or set that is empty in a model without them.
     for (fam, gams, sym, N, kind) in (
             ("EQ(l)_FLOFR", "eqflofr.mod L15", "FLO_FR", 6, :p),
@@ -167,6 +154,7 @@ function generate!(tm::TimesModel)
     n += eq_cumcom!(tm)              # L89-90
     n += eq_cumflo!(tm)              # L92
     n += eq_combal!(tm)              # L98-106
+    n += eq_flobnd!(tm)              # L111-113
     n += eq_floshr!(tm)              # L125-134
     n += eq_flomrk!(tm)              # L139-141
     n += eq_ire!(tm)                 # L146

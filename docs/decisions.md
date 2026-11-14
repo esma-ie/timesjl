@@ -89,6 +89,14 @@ answer yet.
 
 ## Log by pull request
 
+### #112 M1.3 (32): EQ(l)_FLOBND, eqflobnd.mod L15-43, crafted case demo12_flobnd (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the new crafted case demo12_flobnd (demo12 + flobnd.dd, CC BY 4.0; a public fixture, a variant fixture and a DD-file compile case, about 7 MB)? | Recommended: yes. Built in. | open |
+| 2 | The refusal of FLO_BND records that are not bounds of one flow variable is lifted: the three equations are translated and checked on demo12_flobnd. | Built in. | open |
+| 3 | Two corrections of `bnd_data!` (M1.3 change 25-4), shown by the new case: bnd_flo.mod L16 reaches only single commodities in milestone years, and L31 clears TRACKPC. Both follow GAMS as written. No open suite model has FLO_BND data in its input, and the earlier cases with FLO_BND data pass unchanged. | Built in. | open |
+
 ### #111 M1.3 (31): EQ(l)_BNDNET and EQ(l)_BNDPRD, eqbndcom.mod L16-24, crafted case demo12_bndc (open)
 
 | # | Question | Decided | How |
