@@ -20,7 +20,7 @@
 param(
     [string]$Out = "",
     [ValidateSet("light", "dark")][string]$Theme = "light",
-    [int]$Slides = 10
+    [int]$Slides = 12
 )
 $ErrorActionPreference = "Stop"
 if (-not $Out) { $Out = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) "timesjl-slides" }
