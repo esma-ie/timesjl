@@ -359,7 +359,8 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_levstd"]
 
 # TIMES_Demo demo12 as a stepped run, TIMESTEP 20 (14 Nov 2026): initmty.mod L440-447 (the
 # control is checked against AGE; STEPPED and VAR_UC are set), compiled from the DD files
-# (M1.4). The stepped solve itself (solve.stp) is M1.5.
+# (M1.4). The preparation before solve.stp (coef_alt.lin L81, eqobsalv.mod L23-25) is M1.3 change 30,
+# checked on the equ checkpoint (harness 0.3.3). The stepped solve itself (solve.stp) is M1.5.
 [[model]]
 name = "TIMES_Demo-demo12_step"
 tier = "crafted"

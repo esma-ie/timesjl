@@ -89,6 +89,15 @@ answer yet.
 
 ## Log by pull request
 
+### #110 M1.3 (30): stepped runs before solve.stp, coef_alt.lin L81 and eqobsalv.mod L23-25; harness 0.3.3 (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Harness 0.3.3: a new checkpoint `equ/` (after eqmain.mod, maindrv.mod L79-80), written for stepped runs only; other references do not change and need no rerun. | Recommended: yes. Built in. | open |
+| 2 | The pre-solve dump of a stepped run holds the state after the loop of solve.stp, so the chain compares it less the 27 symbols that loop assigns (each traced to its GAMS line); all 27 are compared at `equ/`, before the loop. Not logged as a known difference: GAMS and TIMES.jl agree on every symbol at the state both hold. | Recommended: yes. Built in. | open |
+| 3 | Keep two more fixtures of demo12_step (`ppm`, 2.2 MB; `equ`, 2.6 MB; CC BY 4.0)? | Recommended: yes. Built in. | open |
+| 4 | The stepped solve (solve.stp, M1.5) before the M1.3 and M1.4 gates close: asked in #108 and on the Open decisions list. This change stops where it starts. | Recommended: yes, after the M1.3 gate. | open; not built in, a merge does not answer it (Open decisions) |
+
 ### #109 M1.3 gate close-out: the evidence for each criterion, 13 Nov timings (open)
 
 | # | Question | Decided | How |

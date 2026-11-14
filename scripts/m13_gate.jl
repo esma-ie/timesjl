@@ -31,6 +31,13 @@
 # run's compilation warnings (ppmain.mod L35) are read from the pre-solve
 # listing. Both variants. A path TIMES.jl does not translate yet
 # (UnportedError) ends the chain there; the checkpoints before it still count.
+#
+# A stepped (myopic) run (TIMESTEP; M1.3 change 30) has one more checkpoint, equ (harness 0.3.3:
+# after eqmain.mod and the extensions' equ_ext, maindrv.mod L79-80), compared on every symbol. Its
+# pre-solve dump is not a pre-solve state: with SOLVE_NOW=NO the run still goes through the loop of
+# solve.stp, every step without a solve, so the dump holds the state after the last step. It is
+# compared less the symbols that loop assigns (STEPPED_LOOP_SYMBOLS). No model: the stepped solve
+# is M1.5.
 
 include(joinpath(@__DIR__, "m13_probe.jl"))      # M13_STEPS, M13_SEGMENTS, run_switches, runfile_of, suite_switches
 include(joinpath(@__DIR__, "m14_models.jl"))     # REFGAMS, dd_model_dirs, take_local!
@@ -45,7 +52,35 @@ const M12_COEF = (coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_sh
 
 "The gate's segments: M1.3's preprocessing, the M1.2 coefficient stage, then the coef -> pre-solve step."
 const GATE_SEGMENTS = [filter(s -> s[1] != "coef", M13_SEGMENTS)..., ("ppm", "coef"), ("coef", "presolve")]
-gate_steps(a) = a == "ppm" ? collect(M12_COEF) : [s[3] for s in M13_STEPS if s[1] == a]
+"The coef -> pre-solve steps up to the equ checkpoint of a stepped run (mod_vars.mod, eqmain.mod, equ_ext.vda)."
+const EQU_STEPS = ("prepret_decl", "eqobjinv_prep", "eqobjfix_prep", "eqobsalv_prep", "eqmain_prep")
+
+"The steps of the segment `a` -> `b`."
+function gate_steps(a, b="presolve")
+    a == "ppm" && return collect(M12_COEF)
+    a == "equ" && return [s[3] for s in M13_STEPS if s[1] == "coef" && !(s[2] in EQU_STEPS)]
+    b == "equ" && return [s[3] for s in M13_STEPS if s[1] == "coef" && s[2] in EQU_STEPS]
+    return [s[3] for s in M13_STEPS if s[1] == a]
+end
+
+"The segments of one run: a stepped run with an equ checkpoint (harness 0.3.3) goes coef -> equ -> presolve."
+gate_segments(tm, dir) = TIMES.stepped(tm) && isdir(joinpath(dir, "equ")) ?
+                         [GATE_SEGMENTS[1:end-1]..., ("coef", "equ"), ("equ", "presolve")] : GATE_SEGMENTS
+
+"""
+The sets and parameters the loop of solve.stp (v4.9.7) assigns and does not restore, in a stepped
+run's pre-solve dump (the state after the last step, each step without a solve):
+- L43-57, L111-114, L303-308, the partition into steps: YR_V1, YR_VL, MY_FYEAR, G_OVERLAP, F, Z, SUBT,
+  BACKWARD, RT_PP, NO_RT, and RTC_NET, RTC_PRD (L53);
+- clearsol.stp L9 (L60): RVT;
+- L78-94, UC_RN and R_UC; L97, RTP_CAPYR; L101-103, STP_UCT; L132-134, UNCD1; L155-161, UC_BND; L217, NO_RVP;
+  L225, FIL; L295, PRESOL;
+- L124, coef_alt.lin STP: L160 clears YK1 (eqflomrk.mod left it set);
+- L127, eqobsalv.mod STP EXIT (L26-82 for the last step): OBJ_SUMS, SALV_INV, OBJSCC, OBJ_DCEOH.
+"""
+const STEPPED_LOOP_SYMBOLS = ("YR_V1", "YR_VL", "MY_FYEAR", "G_OVERLAP", "F", "Z", "SUBT", "BACKWARD", "RT_PP", "NO_RT",
+                              "RTC_NET", "RTC_PRD", "RVT", "UC_RN", "R_UC", "RTP_CAPYR", "STP_UCT", "UNCD1", "UC_BND",
+                              "NO_RVP", "FIL", "PRESOL", "YK1", "OBJ_SUMS", "SALV_INV", "OBJSCC", "OBJ_DCEOH")
 
 "Carry `tm`'s state (every symbol read or written, and the switches) into a TimesModel of `dir`."
 function carry(tm, dir)
@@ -158,16 +193,19 @@ function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off"
     else
         tm, ok = dd_input(dir, model, variant, from_dd, sw)
     end
-    for (a, b) in GATE_SEGMENTS
+    stp = TIMES.stepped(tm)
+    for (a, b) in gate_segments(tm, dir)
         isdir(joinpath(dir, b)) || (println("== ", model, "/", variant, ": no ", b, " dump; the chain ends at ", a); break)
         names = gate_symbols(tm.data)                 # the segment's start dump
+        # a stepped run's pre-solve dump is the state after the loop of solve.stp (STEPPED_LOOP_SYMBOLS)
+        stp && b == "presolve" && filter!(n -> !(n in STEPPED_LOOP_SYMBOLS), names)
         t = try
-            @elapsed foreach(f -> f(tm), gate_steps(a))
+            @elapsed foreach(f -> f(tm), gate_steps(a, b))
         catch e
             e isa TIMES.UnportedError || rethrow()
             # Before ppm a refusal fails the gate ("not translated", as run_overnight.ps1 counts it); past
             # ppm it only ends the chain, worded so that run_overnight.ps1 does not count it as a failure
-            past_gate = reached in ("ppm", "coef")
+            past_gate = reached in ("ppm", "coef", "equ")
             println("== ", model, "/", variant, past_gate ? ": the chain ends before $b (" : " $a -> $b: not translated (",
                     sprint(showerror, e), ")")
             break
@@ -178,7 +216,8 @@ function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off"
         bad = filter(!ispass, r)
         ok &= isempty(bad)
         println("== ", model, "/", variant, " input -> ", b, ": ", isempty(bad) ? "PASS" : "FAIL", " (", length(r), " symbols, ",
-                sum(d -> d.n_ref, r; init=0), " GAMS records; ", a, " -> ", b, " in ", round(t; digits=1), " s)")
+                sum(d -> d.n_ref, r; init=0), " GAMS records; ", a, " -> ", b, " in ", round(t; digits=1), " s",
+                stp && b == "presolve" ? "; stepped run: less the $(length(STEPPED_LOOP_SYMBOLS)) symbols the loop of solve.stp assigns" : "", ")")
         for d in bad
             println("     ", d)
             foreach(e -> println("        ", e), d.examples)
@@ -200,10 +239,15 @@ function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off"
     # The gate asks for the chain to ppm (docs/m13-plan.md "Gate"); past it, the coefficient stage and
     # the coef -> pre-solve step go as far as TIMES.jl translates them (reduced flows under REDUCE are
     # refused by the M1.2 coefficient stage, coef_ptr.mod L38-42 and coef_ext.vda L62-69)
-    gate = reached in ("ppm", "coef", "presolve")
+    gate = reached in ("ppm", "coef", "equ", "presolve")
     println("== ", model, "/", variant, ": M1.3 chain", from_dd === nothing ? " " : " from DD files ",
             ok && gate ? "PASS" : "FAIL", " to ", reached, " (TIMES.jl ", round(t_all; digits=1), " s)")
     # M1.4: the model from TIMES.jl's own state, against GAMS's matrix and objective
+    if stp
+        println("== ", model, "/", variant, ": the chain ends before the model (stepped run, TIMESTEP ",
+                TIMES.gswitch(tm, "TIMESTEP", ""), ": the stepped solve, solve.stp, is M1.5)")
+        return ok && gate
+    end
     reached == "presolve" && (from_dd !== nothing || solve) && (ok &= model_check(tm, dir, model, variant; solve))
     return ok && gate
 end

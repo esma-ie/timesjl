@@ -130,6 +130,7 @@ GAMS 54.6.1):
 | 27c | powerflo.vda RPTB (cost_ann.rpt L175): the reporting block, translated with M1.6 and listed here so the file is tracked | 437-462 | M1.6 |
 | 28 | eqashar.vda with pp_lvlfc.mod (coef_ext.vda L79): RPCG_ASHAR and the levelling of FLO_ASHAR, refused until now; EQ(l)_ASHAR's exchange branch and storage terms, refused since M1.1 (James, 14 Nov 2026: the refused features are translated now, one change each, each with a crafted demo12 case) | 16-33; 51, 56-65, 75-76 | every checkpoint and layers 2-3 on the crafted case demo12_ashar, both variants (CI: test_ashar.jl) |
 | 29 | coef_obj.mod, the control switch ANNCOST LEV, refused since M1.2: ACL takes MINYR, MINYR becomes MIYR_V1, RPT_OPT('OBJ','2') is 1, and MINYR is restored when %CTST% is empty | 31-32 | every checkpoint and layers 2-3 on the crafted cases demo12_lev (OBJ MOD) and demo12_levstd (OBJ AUTO), both variants (CI: test_anncost.jl) |
+| 30 | Stepped (myopic) runs, the preparation before solve.stp, refused since M1.2: coef_alt.lin L81 (no RTP_CAPVL under TIMESTEP) and eqobsalv.mod L23-25 (OBJ_SUMS, OBJ_SUMS3, SALV_INV and OBJSCC cleared, the salvage preparation left to the steps). The stepped solve itself (maindrv.mod L38-40 and L109-113, solve.stp) is M1.5: model generation and the bounds still refuse the run | coef_alt.lin 81; eqobsalv.mod 23-25 | every checkpoint to the new `equ` checkpoint (harness 0.3.3), and the pre-solve dump less the 27 symbols the loop of solve.stp assigns, on the crafted case demo12_step, both variants (CI: test_stepped.jl) |
 
 ## Parity (per change)
 
@@ -1449,6 +1450,50 @@ Not part of the gate, for the record:
   that state against GAMS's matrix).
 - JRC-EU-TIMES sets this switch (change 27b-2 above: its chain stopped here), so its chain now
   goes on past coef_obj.mod; how far is for the next local run (verdicts only).
+
+### Change 30, 14 Nov 2026: stepped (myopic) runs before solve.stp
+
+- A stepped run (`$SET TIMESTEP n`; initmty.mod L446 and maindrv.mod L38 set `%STEPPED%` to `+`)
+  solves the horizon in steps of n years, each with the earlier periods fixed to their levels.
+  TIMES.jl refused it at the coefficient stage (`coef_alt.lin` L81). This change translates what
+  such a run does differently before solve.stp starts; the stepped solve itself is M1.5.
+- coef_alt.lin L81, `$IF SET TIMESTEP $GOTO DONE`: L83-86 are skipped, so RTP_CAPVL is not
+  computed (it stays empty). L65-80 (R_DF, RB, COEF_CPT) run as in any run with a non-empty
+  %CTST%. The STP label (L134-158) is called inside each step (solve.stp L124): M1.5.
+- eqobsalv.mod L23-25: `$IF SET TIMESTEP OPTION CLEAR=OBJ_SUMS,CLEAR=OBJ_SUMS3,CLEAR=SALV_INV,
+  CLEAR=OBJSCC;` and, under `%STEPPED%==+` in the eqmain.mod call, `$GOTO EQUA`: the salvage
+  preparation (L26-82) is skipped, since each step runs it (solve.stp L127). `eqobsalv_prep!`
+  leaves the four symbols and the ones L13-17 declare (SALV_DEC, OBJ_SALI, OBJ_DCEOH) empty.
+- `stepped(tm)` (src/coef/coef_alt.jl) is `$IF SET TIMESTEP`. The refusal moves to where the
+  stepped solve starts: `untranslated_families` lists "(stepped run)" (maindrv.mod L38-40: every
+  `%R_T%` equation is generated for SUBT, the periods of one step; L109-113: solve.stp), so
+  `generate!` refuses the run, and `bounds_unported` refuses the bounds under TIMESTEP.
+- **The pre-solve dump of a stepped run is not a pre-solve state.** With SOLVE_NOW=NO, GAMS
+  still goes through the loop of solve.stp, every step without a solve (maindrv.mod L113 comes
+  before the SOLVE_NOW exit, L114). The dump holds the state after the last step: 27 symbols
+  differ from the state before the loop (YR_V1, YR_VL, MY_FYEAR, G_OVERLAP, F, Z, SUBT,
+  BACKWARD, RT_PP, NO_RT, RTC_NET, RTC_PRD, RVT, UC_RN, R_UC, RTP_CAPYR, STP_UCT, UNCD1, UC_BND,
+  NO_RVP, FIL, PRESOL, YK1, OBJ_SUMS, SALV_INV, OBJSCC, OBJ_DCEOH; each traced to its line of
+  solve.stp, clearsol.stp, coef_alt.lin STP or eqobsalv.mod in `STEPPED_LOOP_SYMBOLS`,
+  scripts/m13_gate.jl).
+- **Harness 0.3.3, the `equ` checkpoint.** `reference/gams/equ_ext.tjlref` dumps every symbol
+  after eqmain.mod and the extensions' equ_ext (maindrv.mod L79-80), in stepped runs only
+  (`$IF SET STEPPED`), with the other checkpoints (`--only presolve`; no solve, so the demo
+  licence is enough). It is the state the stepped solve starts from. The chain
+  (`m13_gate.jl`) compares a stepped run at `equ` on every symbol, then at the pre-solve dump
+  less the 27 symbols above, and ends before the model. References of other runs do not change.
+- GAMS 54.6.1 on demo12_step (TIMESTEP 20, the case of M1.4 change 7), reduce_off, CPLEX, for
+  the stepped solve to come: step 1 has 5,921 rows, 6,717 columns and 20,736 nonzeros and ends
+  at 12,397,965.9863; step 2 has 2,975, 4,421 and 12,438 and ends at 20,325,417.7629; step 3
+  has 1,380, 3,179 and 6,930 and ends at 23,960,685.7370, demo12's own objective. The CONVERT
+  export (`matrix/`) is the third step's model.
+- Result, both variants of demo12_step, from the input dump and from the DD files: `init/`,
+  `prep/`, `prelv/` and `ppm/` PASS (833 symbols), `coef/` PASS (958 symbols from the input
+  dump, 833 from the DD files), `equ/` PASS (833
+  symbols; 109,899 GAMS records in reduce_off and 103,264 as run), the pre-solve dump PASS (806
+  symbols), both QA logs identical. CI: test/unit/test_stepped.jl (ppm -> equ on every symbol,
+  the two translated places, the refusal), the variant fixture (input -> ppm; the refusal on
+  the `equ` state) and test_coef_alt.jl.
 
 ## Open items
 

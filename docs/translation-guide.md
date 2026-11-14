@@ -713,3 +713,11 @@ those checks, their figures and their crafted cases are not published
   on the large core models (13 Nov, docs/timings.md), accepted for the gate
   by James on 14 Nov. The gate is passed when James says so (#109).
   Refused features are translated after it, one PR each.
+- 14 Nov 2026: M1.3 change 30: stepped (myopic) runs before solve.stp:
+  coef_alt.lin L81 (no RTP_CAPVL) and eqobsalv.mod L23-25 (the salvage
+  preparation left to the steps). Harness 0.3.3: `equ/`, a checkpoint after
+  eqmain.mod for stepped runs, whose pre-solve dump is the state after the
+  loop of solve.stp. demo12_step PASS at every checkpoint to `equ/` and at
+  the pre-solve dump less the 27 symbols that loop assigns, both variants,
+  from the input dump and from the DD files. Model generation refuses the
+  run: the stepped solve (solve.stp) is M1.5.

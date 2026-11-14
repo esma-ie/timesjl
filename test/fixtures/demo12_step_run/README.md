@@ -9,4 +9,5 @@ the input dump `../demo12_step_input`.
 
 `test/unit/test_ddsource.jl` compiles it with the DD files of the pinned TIMES_Demo download and
 compares the result with `../demo12_step_input` (M1.4 change 7: the stepped-run controls,
-initmty.mod L442-444). The case has no other fixture: the stepped solve is M1.5.
+initmty.mod L442-444). The case's other fixtures are `../demo12_step_ppm` and `../demo12_step_equ`
+(`test/unit/test_stepped.jl`, M1.3 change 30); the stepped solve is M1.5.

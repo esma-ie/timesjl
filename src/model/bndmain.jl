@@ -102,6 +102,7 @@ function bounds_unported(tm::TimesModel)
     for sw in ("SPOINT", "LPOINT", "FIXBOH", "STEPPED")
         haskey(tm.switches, sw) && throw(UnportedError("bounds under $sw (spoint.mod L63-87 / maindrv.mod L40)"))
     end
+    stepped(tm) && throw(UnportedError("bounds under TIMESTEP (maindrv.mod L38-40: %R_T% is 'R,SUBT(T)'; solve.stp)"))
     haskey(tm.switches, "RPOINT") && uppercase(tm.switches["RPOINT"]) != "NO" &&
         throw(UnportedError("bounds under RPOINT (spoint.mod)"))
     notempty_par("REG_CUMCST", 6) && throw(UnportedError("bnd_cum.mod L44-48 (cumulative cost bounds)"))

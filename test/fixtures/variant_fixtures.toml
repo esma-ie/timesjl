@@ -219,3 +219,17 @@ variant  = "as_run"
 reduce   = true
 switches = { ANNCOST = "LEV", BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "AUTO", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
+
+# Crafted case demo12_step (14 Nov 2026): demo12 with the control switch TIMESTEP 20, a stepped (myopic) run.
+# Preprocessing from the input dump to ppm on every symbol, and the ppm -> equ step (test/unit/test_stepped.jl:
+# coef_alt.lin L81, eqobsalv.mod L23-25). `state` names the dump the refusal is checked on: equ, the state after
+# eqmain.mod (maindrv.mod L79-80); the pre-solve dump of a stepped run is the state after the loop of solve.stp.
+# Model generation refuses the run: the stepped solve (solve.stp) is M1.5.
+[[variant]]
+prefix   = "demo12_step"
+model    = "TIMES_Demo-demo12_step"
+variant  = "as_run"
+reduce   = true
+state    = "equ"
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", TIMESTEP = "20", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = ["(stepped run)"]
