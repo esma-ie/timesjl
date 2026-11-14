@@ -70,7 +70,7 @@ end
 # reference run is not on the reference machine.
 @testset "variant $p" for p in ("demo12_uc", "demo12_refit", "demo12_refit_afc", "demo12_curex", "demo12_ucdyn",
                                 "demo12_ucattr", "demo12_flomrk", "demo12_mrkx", "demo12_cumc", "demo12_ashar",
-                                "demo12_lev", "demo12_levstd", "demo12_bndc", "demo12_flobnd", "demo12_flofr",
+                                "demo12_lev", "demo12_levstd", "demo12_bndc", "demo12_flobnd", "demo12_flofr", "demo12_irebnd",
                                 "demo12_ls", "demo12_lst", "demo12_pf", "demo12_pfd", "demo12_qa")
     check_dd_case("TIMES_Demo-" * p, p * "_run", p * "_input")
 end
