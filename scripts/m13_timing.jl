@@ -25,7 +25,7 @@
 # preprocessing on one thread).
 
 include(joinpath(@__DIR__, "m13_gate.jl"))       # M13_STEPS, M13_SEGMENTS, carry, run_switches, ...
-include(joinpath(@__DIR__, "m12_timing.jl"))     # include_summary, profile_lines
+include(joinpath(@__DIR__, "m12_timing.jl"))     # gams_profile.jl: include_summary, profile_lines, prep_ranges
 using Printf
 
 const M13_PARTS = [("init_ext", ["init_ext"]),
@@ -34,19 +34,6 @@ const M13_PARTS = [("init_ext", ["init_ext"]),
                                "ppmain_tsattr", "ppmain_flo", "ppmain_flofs", "ppmain_ire", "ppmain_bnd", "ppmain_cum",
                                "ppmain_stg", "ppmain_uc", "ppmain_ucmap", "ppmain_blend", "ppmain_reduce"]),
                    ("ppm_ext", ["ppm_ext_actef", "ppm_ext"])]
-
-"Global line ranges [from, to) of the three preprocessing parts in one run's listing."
-function prep_ranges(inc)
-    base(x) = lowercase(basename(replace(x, '\\' => '/')))
-    md = only(filter(r -> base(r.file) == "maindrv.mod", inc))
-    kids = sort(filter(r -> r.parent == md.seq, inc); by=r -> r.loc)       # maindrv.mod's own includes
-    pm = first(filter(r -> base(r.file) == "ppmain.mod", kids))
-    ie = last(filter(r -> base(r.file) == "main_ext.mod" && r.loc < pm.loc, kids))   # L55: init_ext
-    pe = first(filter(r -> base(r.file) == "main_ext.mod" && r.loc > pm.loc, kids))  # L58: ppm_ext
-    nx = first(filter(r -> r.loc > pe.loc, kids))
-    return Dict("init_ext" => (ie.gline, pm.gline), "ppmain" => (pm.gline, pe.gline), "ppm_ext" => (pe.gline, nx.gline),
-                "total" => (ie.gline, nx.gline))
-end
 
 "The preprocessing chain from the input dump: seconds per step name."
 function timed_chain(dir, sw)

@@ -1,6 +1,6 @@
 # Parity dashboard
 
-`index.html` is the TIMES.jl parity board: ten 16:9 slides in the ESMA brand
+`index.html` is the TIMES.jl parity board: twelve 16:9 slides in the ESMA brand
 (DM Sans, Dark Green and Dark Yellow, the ESMA logo). Each slide follows the
 usual ESMA slide layout: a title and one-line message, a Dark Yellow accent
 line, then the chart, with the source in the footer.
@@ -14,7 +14,13 @@ line, then the chart, with the source in the footer.
 7. parity by run, public reference models;
 8. equation families against GAMS's matrix;
 9. objective agreement;
-10. coefficient-stage time against GAMS.
+10. coefficient-stage time against GAMS;
+11. run time against model size: seconds against the number of variables in
+    the LP, both on log scales, in two panels (input files to the LP, and the
+    solve), one point per model-scenario pair, variant, language and solver;
+12. where the time goes: the seconds of each part of a run (read input,
+    preprocessing, coefficients, generation, solve, reports), one row per
+    model-scenario pair, language and solver.
 
 ## Slides for a deck
 
@@ -92,6 +98,44 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
 
       julia --project=test scripts/parity_report.jl docs/dashboard/suite-public-otus.json --no-solve --ref ../timesjl-reference --root otus=../timesjl-sources/OTUS9r OTUS9r-reference
 
+- Run timings (slides 11 and 12): the `run-timing` block of `index.html`,
+  written by `scripts/run_timing.jl`. It runs nothing: every number is read
+  from output that exists on James's workstation (runs under the local run
+  limits, at most 12 threads each).
+  - GAMS, one entry per solve run of a GAMS 54 reference: the run's wall time,
+    the LP's size, GAMS's generation time (`resgen`) and solver time
+    (`etsolver`) from `manifest.json`, and the other parts from the run's
+    profile (`raw/tjl_solve_<solver>_profile.txt`, seconds per statement),
+    cut at the files of the Include File Summary. Only numbers are read; no
+    line of a listing or log is copied.
+  - TIMES.jl, one entry per model and variant of a workstation batch
+    (`scripts/m13_gate.jl --dd`): the seconds the gate prints for each step
+    in the batch's `dd-<model>.log`.
+  - Parts: read (GAMS: start-up, compilation and the statements before
+    preprocessing; TIMES.jl: reading the DD files), preprocessing (GAMS
+    `init_ext` to the end of `ppm_ext`; TIMES.jl input to ppm), coefficients
+    (to the SOLVE statement; TIMES.jl ppm to presolve), generation (GAMS
+    `resgen`; TIMES.jl `generate!`), solve (GAMS `etsolver`; TIMES.jl
+    `optimize!` with HiGHS), reports (GAMS: the statements after the solve).
+    The header of `scripts/run_timing.jl` has the detail.
+  - A part that was never timed is `null` in the block and reads "not
+    measured" on the slide (hover gives the reason); nothing is estimated.
+    Today: TIMES.jl's reports (not translated, M1.6), TIMES.jl's whole run,
+    and any TIMES.jl run with CPLEX. "not run" marks the OTUS9r solves, which
+    are checked by cross-evaluation instead of a HiGHS solve.
+  - The first run of each TIMES.jl process also compiles TIMES.jl; it is
+    marked `cold` and drawn faint on slide 11. Slide 12 shows the as-run
+    variant, which is never the first.
+  - Refresh after a new batch (the reference directory, then the batch's log
+    folder and its parity report for the commit and date):
+
+        julia --project=test scripts/run_timing.jl ../timesjl-reference ../timesjl-reference/_probes/nightly-parts-<stamp> --meta ../timesjl-reference/_probes/dashboard-public-solve-<stamp>.json --embed
+
+    Only models with `redistribute = "public"` are read, and `--embed`
+    refuses anything else. `--all` and `--local` (with `--out <file>`) read
+    the other models for a board that stays on the workstation. The output
+    holds no path, host name or log line.
+
 - Local runs (TIM, on James's machine) are reported the same way from a
   reference directory and loaded into the open page with its "Load results
   JSON" button; those files hold counts and statuses only and are not
@@ -121,3 +165,14 @@ or not started. Numbers in cells are the records compared at 1e-9 (layers
 file (`later_overwrites`). Objective slide: CPLEX and HiGHS references on a
 log axis against the 1e-6 gate. Timing slide: the GAMS profile of the
 coefficient stage against TIMES.jl, warm, with the Phase 1 5x target.
+
+Run-time slides (11 and 12): the language is the colour and the shape (GAMS
+a blue circle, TIMES.jl a green square), the solver is the fill (CPLEX
+filled, HiGHS a ring). A faint square is a first run that also compiles
+TIMES.jl; an arrow up marks a solve stopped at its time limit without an
+optimum (it took at least that long); a thin line joins the runs of one LP.
+The two colours pass the colour-vision checks of the `dataviz` palette
+validator on both surfaces (the green is one step darker on dark slides);
+the legend and slide 12's table carry the same information without colour.
+On slide 12 the shading of a cell is the part's share of the run's measured
+time.

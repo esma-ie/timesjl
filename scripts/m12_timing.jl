@@ -26,43 +26,8 @@
 # this stage on one thread).
 
 include(joinpath(@__DIR__, "m12_probe.jl"))     # M12_STEPS, run_switches, runfile_of, suite_switches, parse_probe_args
+include(joinpath(@__DIR__, "gams_profile.jl"))  # include_summary, profile_lines, prep_ranges
 using Printf
-
-"Include File Summary of a GAMS listing: (seq, global line, parent seq, local line, file) per include."
-function include_summary(lst)
-    rows = NamedTuple{(:seq, :gline, :parent, :loc, :file),Tuple{Int,Int,Int,Int,String}}[]
-    inside = false
-    for ln in eachline(lst)
-        if occursin("Include File Summary", ln)
-            inside = true
-            continue
-        end
-        inside || continue
-        f = split(ln)
-        if length(f) >= 7 && all(s -> tryparse(Int, s) !== nothing, (f[1], f[2]))
-            # SEQ GLOBAL TYPE PARENT LOCAL INCLVL FILENAME (TYPE may be two words: "IF EXIST")
-            k = f[3] == "IF" ? 5 : 4
-            push!(rows, (seq=parse(Int, f[1]), gline=parse(Int, f[2]), parent=parse(Int, f[k]),
-                         loc=parse(Int, f[k+1]), file=String(f[end])))
-        elseif !isempty(rows) && !isempty(strip(ln)) && !startswith(strip(ln), "SEQ")
-            break
-        end
-    end
-    return rows
-end
-
-"Seconds per profile record line (global listing line), without Unload records."
-function profile_lines(path)
-    t = Dict{Int,Float64}()
-    for ln in eachline(path)
-        f = split(ln)
-        length(f) >= 5 || continue
-        line, s = tryparse(Int, f[1]), tryparse(Float64, f[3])
-        (line === nothing || s === nothing || f[5] == "Unload") && continue
-        t[line] = get(t, line, 0.0) + s
-    end
-    return t
-end
 
 "Global line ranges [from, to) of the coefficient files in one run's listing, by step name."
 function coef_ranges(inc)
