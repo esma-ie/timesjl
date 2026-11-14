@@ -372,3 +372,21 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_step/demo12_step.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_step"]
+
+# TIMES_Demo demo12 + demo12_bndc/bndc.dd (14 Nov 2026): bounds on the net amount and the production
+# of a commodity above the timeslice level it is tracked at. COM_BNDPRD and COM_BNDNET of ELC
+# (tracked at DAYNITE) at ANNUAL and at a season, LO, UP and FX (one FX with the value EPS), which
+# GAMS writes as the equations EQ(l)_BNDNET and EQ(l)_BNDPRD (eqbndcom.mod L16-24); one bound at
+# the commodity's own level (a bound of VAR_COMPRD) and two records that give no row (LO EPS, UP INF)
+# (M1.3 change 31).
+[[model]]
+name = "TIMES_Demo-demo12_bndc"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_bndc/demo12_bndc.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_bndc"]

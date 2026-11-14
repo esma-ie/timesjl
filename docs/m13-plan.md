@@ -131,6 +131,7 @@ GAMS 54.6.1):
 | 28 | eqashar.vda with pp_lvlfc.mod (coef_ext.vda L79): RPCG_ASHAR and the levelling of FLO_ASHAR, refused until now; EQ(l)_ASHAR's exchange branch and storage terms, refused since M1.1 (James, 14 Nov 2026: the refused features are translated now, one change each, each with a crafted demo12 case) | 16-33; 51, 56-65, 75-76 | every checkpoint and layers 2-3 on the crafted case demo12_ashar, both variants (CI: test_ashar.jl) |
 | 29 | coef_obj.mod, the control switch ANNCOST LEV, refused since M1.2: ACL takes MINYR, MINYR becomes MIYR_V1, RPT_OPT('OBJ','2') is 1, and MINYR is restored when %CTST% is empty | 31-32 | every checkpoint and layers 2-3 on the crafted cases demo12_lev (OBJ MOD) and demo12_levstd (OBJ AUTO), both variants (CI: test_anncost.jl) |
 | 30 | Stepped (myopic) runs, the preparation before solve.stp, refused since M1.2: coef_alt.lin L81 (no RTP_CAPVL under TIMESTEP) and eqobsalv.mod L23-25 (OBJ_SUMS, OBJ_SUMS3, SALV_INV and OBJSCC cleared, the salvage preparation left to the steps). The stepped solve itself (maindrv.mod L38-40 and L109-113, solve.stp) is M1.5: model generation and the bounds still refuse the run | coef_alt.lin 81; eqobsalv.mod 23-25 | every checkpoint to the new `equ` checkpoint (harness 0.3.3), and the pre-solve dump less the 27 symbols the loop of solve.stp assigns, on the crafted case demo12_step, both variants (CI: test_stepped.jl) |
+| 31 | EQ(l)_BNDNET and EQ(l)_BNDPRD, refused since M1.1: bounds on the net amount and the production of a commodity at a timeslice above the level it is tracked at, written as equations over the tracked timeslices below | eqbndcom.mod 16-24; eqmain.mod 54-59 | layers 1 to 3 on the crafted case demo12_bndc, both variants, from the DD files (CI: test_eqbndcom.jl, the public and variant fixtures) |
 
 ## Parity (per change)
 
@@ -1494,6 +1495,43 @@ Not part of the gate, for the record:
   symbols), both QA logs identical. CI: test/unit/test_stepped.jl (ppm -> equ on every symbol,
   the two translated places, the refusal), the variant fixture (input -> ppm; the refusal on
   the `equ` state) and test_coef_alt.jl.
+
+### Change 31, 14 Nov 2026: EQ(l)_BNDNET and EQ(l)_BNDPRD
+
+- The first of the equation families refused since M1.1 (`untranslated_families`), translated
+  after the gate close-out, one family per change. eqbndcom.mod L16-24, included six times from
+  eqmain.mod L54-59 (NET then PRD; G with LO, E with FX, L with UP): a COM_BNDNET or COM_BNDPRD
+  record at a timeslice S that is valid for the commodity (RCS_COMTS) but above the level it is
+  tracked at (NOT COM_TS) gives a row, the sum of VAR_COMNET or VAR_COMPRD over the commodity's
+  own timeslices at or below S (RTCS_VARC with TS_MAP) against the bound. Records at the
+  commodity's own timeslices stay bounds of the variables (bndmain.mod L57-58), and records
+  below that level were summed up to it before (pp_lvlbd.mod); both were translated already,
+  as were RHS_COMBAL and RHS_COMPRD (ppmain.mod L1051-1056), which put the two variables into
+  the commodity balance.
+- The conditions of the includes: LO only where the value is not zero, UP only where it is not
+  INF, FX with no condition on the value. EPS compares as zero (docs/discrepancies.md G12), so a
+  LO record with the value EPS gives no row, and an FX record with the value EPS gives a row
+  with a right-hand side of zero. The crafted case has one of each.
+- `eq_bndcom!` (src/model/eqbndcom.jl), called in `generate!` after `eq_actbnd!`, in the order
+  of mod_equa.mod L63-68. The refusal in `untranslated_families` is removed.
+- New crafted case demo12_bndc (demo12 + bndc.dd): ELC is tracked at DAYNITE. COM_BNDPRD at
+  ANNUAL, LO in REG1 2020 and UP in REG1 2030 (EQG_BNDPRD, EQL_BNDPRD), and FX at the season S
+  in REG2 2030 (EQE_BNDPRD); COM_BNDNET at ANNUAL, LO in REG1 2030 (EQG_BNDNET), UP at the
+  season W in REG2 2020 (EQL_BNDNET) and FX EPS at ANNUAL in REG2 2030 (EQE_BNDNET); a
+  COM_BNDPRD at WD (a bound of VAR_COMPRD); a LO EPS and an UP INF (no row). GAMS 54.6.1: both
+  variants optimal, objective 23,974,265.9168 (demo12: 23,960,685.7370); EQG_BNDPRD, EQL_BNDPRD
+  and EQG_BNDNET bind, with marginals 5.82, -101.01 and 148.60.
+- Result: the step probe passes all 70 steps in both variants. The chain from the DD files:
+  DD files -> input PASS (824 sets and parameters), every checkpoint to the pre-solve dump PASS
+  (823 symbols), both QA logs identical, the model against GAMS's matrix PASS (reduce_off 8,701
+  rows, 9,669 columns, 31,411 nonzeros; as run 3,239, 4,485 and 18,395), HiGHS against
+  GAMS/CPLEX PASS (relative difference 6.4e-15 and 2.5e-15). CI: test/unit/test_eqbndcom.jl
+  (layer 2, the six rows term by term, the bound that stays on the variable, the records that
+  give no row), the public fixture (layers 2 and 3), the variant fixture (input -> ppm, the
+  whole model) and the DD-file compile case.
+- The other bound equations still refused follow, each as its own change: EQ(l)_FLOBND
+  (eqflobnd.mod), EQ(l)_FLOFR (eqflofr.mod), EQ(l)_IREBND (eqirebnd.mod), EQ(l)_XBND
+  (eqxbnd.mod). `untranslated_families` lists every family still refused.
 
 ## Open items
 
