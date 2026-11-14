@@ -751,6 +751,29 @@ INIT_EXEC[("initmty.mod", 369)] = function (g, text)
     end
 end
 
+# initmty.mod L442-444: the controls of restart and stepped runs, each checked only when it is set
+# (`$IF SET SPOINT`, `$IF SET TIMESTEP`, `$IF SET FIXBOH`):
+#   L442 IF((NOT J('%SPOINT%'))$(NOT SAMEAS('%SPOINT%','YES')), ABORT 'Invalid Control: SPOINT');
+#   L443 IF(NOT AGE('%TIMESTEP%'), ABORT 'Invalid Control: TIMESTEP');
+#   L444 IF(NOT ALLYEAR('%FIXBOH%'), ABORT 'Invalid Control: FIXBOH');
+# The text arrives with the control substituted. The statements name labels and add none: GAMS wants
+# a label named in an executable statement to be known already (error 116 otherwise), which is what
+# SET ITEM at L440 is for; YES is known from initsys.mod L124 (checked on GAMS 54.6.1). SPOINT may be
+# a member of J (1*999) or YES; TIMESTEP a member of AGE (1*200); FIXBOH a member of ALLYEAR.
+function init_control(g, text, line, set, name)
+    m = match(Regex("NOT\\s+" * set * "\\(\\s*'([^']*)'\\s*\\)", "i"), text)
+    m === nothing && error("initmty.mod L$line: unexpected text $(repr(text))")
+    i = labelpos(g.labels, m[1])
+    ok = i > 0 && haskey(gsym(g, set).members, [g.labels.labels[i]])
+    name == "SPOINT" && uppercase(rstrip(m[1])) == "YES" && (ok = true)
+    ok || error("initmty.mod L$line: ABORT 'Invalid Control: $name' ($name is $(m[1]), not a member of $set" *
+                (name == "SPOINT" ? " and not YES)" : ")"))
+    nothing
+end
+INIT_EXEC[("initmty.mod", 442)] = (g, text) -> init_control(g, text, 442, "J", "SPOINT")
+INIT_EXEC[("initmty.mod", 443)] = (g, text) -> init_control(g, text, 443, "AGE", "TIMESTEP")
+INIT_EXEC[("initmty.mod", 444)] = (g, text) -> init_control(g, text, 444, "ALLYEAR", "FIXBOH")
+
 # a set's members in GAMS order (by label positions)
 gsorted(g::GamsCompile, s::GSym) = sort!(collect(keys(s.members)); by=k -> [labelpos(g.labels, l) for l in k])
 
