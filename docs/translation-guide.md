@@ -798,3 +798,12 @@ those checks, their figures and their crafted cases are not published
   free row (`gconstraint!` with "N"). REFUNIT 3 and the costs in another
   currency are translated and reached by no case in the repository
   (docs/m13-plan.md, change 37).
+- 14 Nov 2026: M1.3 change 38: EQ(l)_CAPVAC (coef_csv.mod L11-77,
+  eqcapvac.mod L14-28, eqmain.mod L67): the capacity-activity equation of
+  processes with simulated vintages (PRC_SIMV), refused since M1.1. New
+  crafted case demo12_capvac: layers 1 to 3 PASS in both variants from the
+  DD files (27 crafted cases in the chain from DD files). GAMS 54.6.1 runs
+  `OPTION FIL < T` (coef_csv.mod L48) as an empty assignment, so no
+  capacity is shared between simulated vintages; the translation follows
+  GAMS as it runs (discrepancies.md G60, D36; an open decision of #122).
+  The branches no case reaches are listed in docs/m13-plan.md, change 38.

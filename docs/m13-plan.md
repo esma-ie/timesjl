@@ -140,6 +140,7 @@ GAMS 54.6.1):
 | 35 | EQ(l)_XBND, refused since M1.1: limits on the total exchange of a commodity of a region (IRE_XBND), whatever the partner: for an internal region its own flows in the direction, for an external region the flows of the internal regions in the other direction through IRE_TSCVT | eqxbnd.mod 17-56; eqmain.mod 241-243 | layers 1 to 3 on the crafted case demo12_xbnd, both variants, from the DD files (CI: test_eqxbnd.jl, the public and variant fixtures) |
 | 36 | Dispatching in the linear formulation, refused since M1.1 (James, 14 Nov 2026: the gate is not passed until the remaining refused features are translated; unit commitment first): the preparation and the equations EQ_CAPLOAD, EQ_ACTRAMP, EQ(l)_ACTUPS, EQL_ACTUPC, EQ_ACTPL and EQ_ACTRMPC with the variables VAR_UPS and VAR_UDP; their terms in EQ_OBJVAR, EQE_ACTEFF, EQ(l)_CAPACT, EQ(l)_CAFLAC and EQL_CAPFLO; eqlducs.vda for a model without start-up types. The unit commitment by start-up type (eqlducs.vda L12-124, the case demo12_uc) is the next change | eqactups.vda 9-117; eqobjvar.mod 36-37, 39; pp_actef.vda 78-80; equ_ext.vda 75; eqlducs.vda 15, 38-39 | layers 1 to 3 on the crafted case demo12_disp, both variants, from the DD files (CI: test_eqactups.jl, the public and variant fixtures) |
 | 37 | EQ(l)_BLND, refused since M1.1: refinery blending. The quality of a blend (BLE) made of blending streams (OPR) held against its specifications (SPE), at most, at least, equal or free; with the blending preparation, the terms of the blending variable in the balance, the peak equation and the objective, and the blending costs in the currency conversion | eqblnd.mod 67-71; eqmain.mod 249-252; ppmain.mod 1246-1333; coef_obj.mod 93-94; eqobjvar.mod 105-107; eqcombal.mod 30-35, 75-80; eqpeak.mod 78; curex.gms 59-60 | layers 1 to 3 on the crafted case demo12_blnd, both variants, from the DD files (CI: test_eqblnd.jl, the public and variant fixtures) |
+| 38 | EQ(l)_CAPVAC, refused since M1.1: the simulated vintages of PRC_SIMV processes (COEF_CSV, RTP_VINTYR over the simulated vintages, AFSV) and their capacity-activity equation, in place of EQ(l)_CAPACT and EQ(l)_CAFLAC | coef_csv.mod 11-77; eqcapvac.mod 14-28; eqmain.mod 67; mod_equa.mod 74 | layers 1 to 3 on the crafted case demo12_capvac, both variants, from the DD files (CI: test_eqcapvac.jl, the public and variant fixtures, the chain from DD files) |
 
 ## Parity (per change)
 
@@ -2022,6 +2023,106 @@ Not part of the gate, for the record:
 - A note on scripts/m13_gate.jl: without `--from-dd`, `--solve` builds the model without
   `reduce=true`, so the as-run matrix check fails there for any model. Only the path from the
   DD files sets it (L121-122). Not changed here.
+
+### Change 38, 14 Nov 2026: EQ(l)_CAPVAC (coef_csv.mod L11-77, eqcapvac.mod L14-28)
+
+- "Simplified vintaging", refused since M1.1: a process in PRC_SIMV keeps at most three
+  vintages of activity and flows in a period instead of one for every vintage alive.
+  eqmain.mod L67 includes coef_csv.mod when PRC_SIMV is DEFINED (PRC_SIMV data, or %VINTOPT% 2
+  through fillvint.gms L15); its L24-74 are data statements and its L75-77 include
+  eqcapvac.mod three times (E with FX, L with UP, G with LO). The equations are declared in
+  coef_csv.mod L16-19 over (R,ALLYEAR,T,P,S,ALLSOW) and are in the model through mod_equa.mod
+  L74.
+- coef_csv.mod L24-74 (`coef_csv!`, src/model/coef_csv.jl, called from `eqmain_prep!` after
+  AFS is built):
+  - L24-42: for each period T the simulated vintages are marked in COEF_CAP: T itself, the
+    year YEARVAL(TT)-LEAD(TT) of the first vintage TT still alive (PRC_YMIN), and, when the
+    two are more than %TRIVINT% (6) apart, the milestone year in between that maximises the
+    product of the distances to both.
+  - L44: a true vintage that is a marked year is its own simulated vintage (COEF_CSV 1).
+  - L48-50: the past investments go to one simulated vintage, the year MIYR_1-LEAD (2004).
+  - L52-63: the other true vintages are shared between the two simulated vintages around
+    them, by the effective average vintage year PASTSUM.
+  - L65: COEF_CPT is multiplied in. L68-72: RTP_VINTYR of the simulated processes becomes
+    the simulated vintages. L74: their AFS entries move to AFSV.
+- As GAMS 54.6.1 runs it (discrepancies.md G60): L48 `OPTION FIL < T`, with T an alias of
+  MILESTONYR, assigns the empty set (a scratch program: `OPTION FIL < MILESTONYR` gives the
+  milestone years, `OPTION FIL < T` nothing). FIL is then the one year 2004. So YK1 and VTV
+  are empty, L60-63 share nothing, and L65 multiplies COEF_CPT only into the entries of the
+  simulated vintage 2004. The result, in GAMS's dump and matrix and so in TIMES.jl:
+  - new capacity counts in a period only where its own year is a simulated vintage of that
+    period: in its own period, and in a later period that keeps its year as the first or
+    the middle vintage. In the other periods of its life it is in no CAPVAC row. In
+    demo12_capvac the gas plant of REG1 built in 2015 has rows in 2015, 2030 and 2050 and
+    none in 2020; the coal plant of REG2 built in 2005 has a row in 2005 only;
+  - a new vintage has COEF_CSV 1 until the end of its life, without COEF_CPT;
+  - the past investments are in the simulated vintage 2004 with their COEF_CPT.
+  The statements L52-63 are translated as written and act on the FIL GAMS has, so a GAMS
+  that fills FIL would need no change in them. Whether this is accepted as the translation
+  and reported to ETSAP is an open decision (#122, decision 3).
+- ppmain.mod L590 (translated in `ppmain_life!`, change 12) adds to RTP the milestone before
+  the first vintage of a simulated process (NO_RVP); pp_qack.mod L54 takes it out again.
+  With NO_RVP entries the eqobjinv step no longer compares RTP (`eqobjinv_prep_symbols`);
+  RTP is still compared at the earlier checkpoints and at the last step.
+- eqcapvac.mod L14-28 (`eq_capvac!`, src/model/eqcapvac.jl, called in `generate!` after
+  `eq_capact!`): a row for each simulated vintage V of a period T (RTP_VINTYR) and each
+  timeslice and bound type in AFSV, with the sixth index '1' (`%SWX%`, setglobs.gms L365):
+  - left, without RPS_CAFLAC (L17): VAR_ACT(R,V,T,P,TS) over the process timeslices at or
+    below S;
+  - left, with RPS_CAFLAC (L19-22): the flows of the primary group, each times
+    1/PRC_ACTFLO and divided by its NCAP_AFCS (its own, its type's, or 1): VAR_FLO for a
+    standard process, VAR_IRE in both directions for a trade process;
+  - right (L27): `SUM(K$COEF_CSV, COEF_CSV*COEF_AF*VAR_NCAP(K)$T(K) + NCAP_PASTI(K)) *
+    PRC_CAPACT * G_YRFR`. NCAP_PASTI is added as it is, without COEF_CSV or COEF_AF
+    (discrepancies.md D36): REG1 ELCREHYD00 has 977.616 in its ANNUAL row of 2005 and 2010
+    alike (31 GW x 31.536), though the 1960 plant ends within 2010 (COEF_CPT 0.43).
+- AFS: the entries of the simulated processes leave AFS (`afs_solve`) for AFSV
+  (`afsv_solve`), so those processes have no EQ(l)_CAPACT or EQ(l)_CAFLAC row. The refusals
+  are removed: the PRC_SIMV row of `untranslated_families` and the PRC_SIMV stop in
+  `capact_unported_afs_changes`, which now refuses nothing (change 36 took out its RP_UPL
+  stop; the ABS extension is refused by its switch). coef_csv.mod L27
+  `PRC_SIMV(RP)$RP_UPL(RP,'FX')=NO` is translated as GAMS has it.
+- ppm_ext.vda L123 leaves a standard process whose primary group is one commodity without
+  RPS_CAFLAC, so an NCAP_AFC on its output changes nothing here (REG1 ELCTNGAS01 in the
+  case). The flow term is reached through trade processes with a capacity.
+- Part II has no entry for the equation (the text of the PDF has no EQ(l)_CAPVAC, PRC_SIMV
+  or VINTOPT): D36 in docs/discrepancies.md records the equation as the code has it.
+- New crafted case demo12_capvac (demo12 + capvac.dd): PRC_SIMV for eight processes. REG1:
+  the new gas plant (NCAP_AFC 0.8 on ELC, no effect); existing hydro with past investments
+  of 1960 and 1980; the new coal plant with a past investment in 2004 (0.5); new wind with
+  NCAP_AF FX 0.3 at SD (EQE_CAPVAC); the gas import from REG2 (NCAP_AFC 0.9 on GAS at
+  ANNUAL) and the electricity trade with REG2 (NCAP_AFC 0.7 on ELC at ANNUAL), both with
+  the flow term. REG2: the new coal plant with NCAP_START 2005 and a past investment in 2004
+  (0.4); the new gas plant with NCAP_AFA LO 0.1 (EQG_CAPVAC).
+- GAMS 54.6.1, CPLEX and HiGHS: both variants optimal, objective 23,965,603.7765 (demo12:
+  23,960,685.7370). CAPVAC rows: reduce_off 298 (9 E, 9 G, 280 L), as run 263 (9 E, 9 G,
+  245 L); TIMES.jl generates the same rows. With REDUCE the electricity trade has no CAPVAC
+  row, in GAMS and in TIMES.jl, so its rows (the flow term with imports and exports at
+  1/0.7, the DAYNITE rows with the activity) are checked on reduce_off, on the workstation
+  and not in CI.
+- Result: the step probe passes all 70 steps (35 in each variant). The chain from the DD
+  files: DD files -> input PASS (827 sets and parameters, no compile warning), every
+  checkpoint to the pre-solve dump PASS (826 symbols), both QA logs identical, the model
+  against GAMS's matrix PASS (reduce_off 8,776 rows, 9,726 columns, 31,595 nonzeros; as run
+  3,270, 4,516 and 18,462), HiGHS against GAMS/CPLEX PASS (relative difference 6.8e-15 and
+  1.2e-15). CI: test/unit/test_eqcapvac.jl (the data, layer 2, the row counts by process,
+  rows term by term, no PRC_SIMV no rows), the public fixture (layers 2 and 3), the variant
+  fixture (input -> ppm on every symbol; the whole model), the DD-file compile case and the
+  chain from DD files (27 cases now).
+- Translated as GAMS has it, reached by no case in the repository (flagged; TODO for a
+  later release; U6 in docs/discrepancies.md):
+  - the VAR_FLO part of the flow term (eqcapvac.mod L21: a standard process with several
+    commodities in its primary group and an NCAP_AFC; demo12 has none);
+  - EQL_CAPFLO and EQ(l)_CAFLAC beside PRC_SIMV;
+  - %VINTOPT% 2 (fillvint.gms L15 fills PRC_SIMV) and %TRIVINT% other than 6;
+  - coef_csv.mod L27 with RP_UPL 'FX': a simulated process with dispatching data.
+    Dispatching is translated since change 36 (demo12_disp), but no case has both;
+  - a simulated vintage without PRC_ACTFLO in the flow term (1/0: GAMS stops, G9);
+  - a stochastic run (`%SWX%` = ',SOW');
+  - a PRC_SIMV that is DEFINED and empty (`simv_defined` then says no where GAMS runs
+    coef_csv.mod on nothing; the result is the same, no rows);
+  - the statements L52-63 with a FIL that holds the milestone years: with GAMS 54.6.1 they
+    never run with data (G60).
 
 ## Open items
 

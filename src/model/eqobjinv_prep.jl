@@ -38,12 +38,14 @@ discshift(tm) = uppercase(gswitch(tm, "MID_YEAR", "")) == "YES" ? 0.5 : parse(Fl
 The sets and parameters eqobj.mod L14-39 and eqobjinv.mod L18-274 settle
 that nothing later in the coef -> pre-solve step changes (eqobjfix.mod and
 coef_alt.lin FIX rebuild KAGE, INVSTEP, INVSPRED, OBJ_JD and OBJ_YES, and the
-salvage step OBJ_SUMS3).
+salvage step OBJ_SUMS3). RTP is one of them unless NO_RVP has entries (with
+PRC_SIMV, ppmain.mod L590): pp_qack.mod L54 then takes them out of RTP.
 """
-eqobjinv_prep_symbols(tm) = ["K_EOH", "KTYAGE", "SUM_OBJ", "RTP", "OBJ_ICUR", "NCAP_TLIFE", "NCAP_ELIFE",
-                             "NCAP_DLIFE", "NCAP_DELIF", "COR_SALVI", "OBJ_CRF", "OBJ_PASTI", "OPYEAR", "MAXLIFE",
-                             "OBJ_1A", "OBJ_1B", "OBJ_2A", "OBJ_2B", "OBJ_SUMII", "OBJ_SUMIII", "OBJ_DIVI",
-                             "OBJ_DIVIII", "OBJ_IDC", "OBJ_I2", "OBJ_SPRED", "YKAGE"]
+eqobjinv_prep_symbols(tm) = filter(n -> n != "RTP" || isempty(gset_opt(tm.data, "NO_RVP", 3)),
+                                   ["K_EOH", "KTYAGE", "SUM_OBJ", "RTP", "OBJ_ICUR", "NCAP_TLIFE", "NCAP_ELIFE",
+                                    "NCAP_DLIFE", "NCAP_DELIF", "COR_SALVI", "OBJ_CRF", "OBJ_PASTI", "OPYEAR", "MAXLIFE",
+                                    "OBJ_1A", "OBJ_1B", "OBJ_2A", "OBJ_2B", "OBJ_SUMII", "OBJ_SUMIII", "OBJ_DIVI",
+                                    "OBJ_DIVIII", "OBJ_IDC", "OBJ_I2", "OBJ_SPRED", "YKAGE"])
 
 """
     eqobjinv_prep!(tm) -> tm

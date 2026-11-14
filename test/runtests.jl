@@ -187,6 +187,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "Blending: eqblnd.mod on demo12_blnd (M1.3)" begin
         include("unit/test_eqblnd.jl")
     end
+    @testset "Simulated vintages: coef_csv.mod, eqcapvac.mod on demo12_capvac (M1.3)" begin
+        include("unit/test_eqcapvac.jl")
+    end
     @testset "demo12 variants: advanced features (docs/demo12-variants.md)" begin
         include("unit/test_variants.jl")
     end

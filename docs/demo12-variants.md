@@ -54,6 +54,9 @@ feature is translated before the M1.3 gate).
 - `TIMES_Demo-demo12_blnd` (14 Nov 2026, M1.3 change 37): refinery blending,
   `eqblnd.mod`, `ppmain.mod` L1228-1333. No User Note; made from the GAMS
   source and Part II §6.3.12. Translated, layers 2-3 PASS.
+- `TIMES_Demo-demo12_capvac` (14 Nov 2026, M1.3 change 38): simulated
+  vintages (PRC_SIMV), `coef_csv.mod`, `eqcapvac.mod`. No User Note and no
+  entry in Part II; made from the GAMS source. Translated, layers 2-3 PASS.
 
 ## Variant 2: dispatching and unit commitment (5 Nov 2026)
 
