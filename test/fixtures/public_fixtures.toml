@@ -506,3 +506,34 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 3312
 cols = 4564
 nonzeros = 20646
+
+# Crafted case TIMES_Demo-demo12_uc (reference/crafted.toml: demo12 + uc.dd), reference of 14 Nov
+# 2026 (GAMS 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): unit
+# commitment by start-up type in the linear formulation (eqlducs.vda L12-124): EQ_SDLOGIC,
+# EQ_SUDUPT, EQ_SDSLANT, EQ_SDMINON, EQ_SUDLOAD, EQ_SUDTIME and EQ_SUDPLL with the variable
+# VAR_UPT, beside the linear dispatching of another plant, the whole model. The presolve dump is
+# shared with test/fixtures/variant_fixtures.toml. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_uc"
+model    = "TIMES_Demo-demo12_uc"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3641
+cols = 4853
+nonzeros = 19871
+
+# Crafted case TIMES_Demo-demo12_ucv (reference/crafted.toml: demo12 + ucv.dd), 14 Nov 2026 (GAMS
+# 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): the branches of
+# eqlducs.vda L12-124 that demo12_uc does not reach: a vintaged plant whose start-up and shut-down
+# phases reach the neighbouring timeslice, and a plant at SEASON, the whole model. The presolve
+# dump is shared with test/fixtures/variant_fixtures.toml. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_ucv"
+model    = "TIMES_Demo-demo12_ucv"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 4150
+cols = 5402
+nonzeros = 22144

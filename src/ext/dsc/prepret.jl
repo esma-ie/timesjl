@@ -408,8 +408,8 @@ end
 # K (docs/discrepancies.md G48: checked on the crafted case
 # TIMES_Demo-demo12_refit_afc, where reading MODLYEAR as free doubles the
 # coefficients), and eqactups.vda L34-35 (%CAPON% and %MXTMP%, eqactups.jl).
-# The other users (cal_cap.mod, cal_caps.mod, eqlducs.vda, resloadc.vda) are
-# refused with their files.
+# eqlducs.vda L63 (%CAPON%, eqlducs.jl) likewise. The other users
+# (cal_cap.mod, cal_caps.mod, resloadc.vda) are refused with their files.
 
 "Early retirement on (VNRET defined), PRC_RCAP and VNTRT, cached."
 function rcap_ctx(tm::TimesModel)

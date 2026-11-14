@@ -41,7 +41,10 @@ const M12_STEPS = [
      ["COEF_CPT", "NCAP_PASTI", "PRC_RESID", "RTFORC", "RP_STL", "COEF_AFUPS", "ACT_CSTUP", "RCS_COMBAL", "RTCS_VARC",
       "RPC_CONLY", "TOP_IRE", "TRACKC", "TRACKP", "RCS", "UC_TIME", "UC_ON", "R_UC", "COEF_PTRAN", "ACT_EFF", "RPCC_FFUNC",
       "RP_CGC", "TRACKPC", "RP_GRP", "CG_GRP", "RP_DCGG", "RTP_CAPYR", "RPCG_PTRAN", "UNCD7", "COEF_PVT", "VDA_DISC",
-      "COEF_ILED", "ACT_FLO", "RTP_FFCX", "ACT_LOSPL", "DP_LOSD", "RP_UPT"],   # eqlducs.vda L15, L38-39
+      "COEF_ILED", "ACT_FLO", "RTP_FFCX",
+      # eqlducs.vda L15-41
+      "RP_UPT", "RP_DP", "RP_DPL", "ACT_CSTSD", "ACT_SDTIME", "ACT_MAXNON", "ACT_LOSSD", "ACT_LOSPL", "DP_NON", "DP_PSUD",
+      "DP_LOSD"],
      tm -> String[]),
 ]
 

@@ -46,8 +46,8 @@
 #
 # Not translated yet; data or switches that need them raise UnportedError:
 # MACRO (eqobj.tm), OBJANN (eqobjann.tm), ETL, elastic demand (RCJ: eqobjels.mod and EQ_OBJ L89-90), damage
-# costs (DAM_COST: eqdamage.mod changes OBV and SUM_OBJ), the start-up and shut-down costs of unit
-# commitment (RP_UPT: eqobjvar.mod L38), capacity-related flow costs (cal_caps.mod: RPC_CAPFLO/NCAP_COM),
+# costs (DAM_COST: eqdamage.mod changes OBV and SUM_OBJ), capacity-related flow costs (cal_caps.mod:
+# RPC_CAPFLO/NCAP_COM),
 # VALIDATE, STAGES.
 
 """
@@ -79,8 +79,6 @@ function objective_unported(tm::TimesModel)
     yes("STAGES") && throw(UnportedError("stochastic objective (STAGES)"))
     isempty(gparam_opt(d, "DAM_COST", 4)) || throw(UnportedError("damage costs (eqdamage.mod via eqmain.mod L262)"))
     isempty(gset_opt(d, "RCJ", 4)) || throw(UnportedError("elastic demand costs (eqobjels.mod, EQ_OBJ L89-90)"))
-    isempty(gset_opt(d, "RP_UPT", 4)) ||
-        throw(UnportedError("unit-commitment costs in EQ_OBJVAR (eqobjvar.mod L38, RP_UPT)"))
     (isempty(gset_opt(d, "RPC_CAPFLO", 4)) && isempty(gparam_opt(d, "NCAP_COM", 5))) ||
         throw(UnportedError("capacity-related flow costs in EQ_OBJVAR (cal_caps.mod, eqobjvar.mod L98-100)"))
     return nothing
@@ -388,7 +386,7 @@ end
           SUM((RTP_VINTYR(R,V,T,P),PRC_TS(R,P,S)), VAR_ACT(R,V,T,P,S) * POWER(RS_STGAV(R,S),1\$RP_STG(R,P)))) +
       SUM(RTP_VINTYR(R,V,T,P)\$RPC_CUR(R,P,'ACT',CUR),
         SUM(RP_UPS(R,P,TSL,L('UP')),ACT_CSTUP(R,V,P,TSL,CUR)*OBJ_PVT(R,T,CUR)*SUM(TS_GROUP(R,TSL,S),RS_STGPRD(R,S)*VAR_UPS(R,V,T,P,S,L))) +
-        [the start-up and shut-down costs of unit commitment, L38: RP_UPT, refused] +
+        SUM(RP_UPT(R,P,UPT,'UP'),ACT_CSTSD(R,V,P,UPT,'FX',CUR)*OBJ_PVT(R,T,CUR)*SUM(TS_GROUP(R,TSL,S)\$RP_DPL(R,P,TSL),RS_STGPRD(R,S)*VAR_UPT(R,V,T,P,S,UPT))) +
         SUM(RP_UPR(R,P,BDNEQ(BD)),ACT_CSTRMP(R,V,P,BD,CUR)*OBJ_PVT(R,T,CUR)*SUM(PRC_TS(R,P,S),RS_STGPRD(R,S)*VAR_UDP(R,V,T,P,S,BD)))) +
       SUM(RHS_COMBAL(R,T,C,S), VAR_COMNET(R,T,C,S) * SUM(%TPULSE% * SUM(COSTYPE,OBJ_COMNT(R,Y_EOH,C,S,COSTYPE,CUR)))) +
       SUM(RHS_COMPRD(R,T,C,S), VAR_COMPRD(R,T,C,S) * SUM(%TPULSE% * SUM(COSTYPE,OBJ_COMPD(R,Y_EOH,C,S,COSTYPE,CUR)))) +
@@ -455,9 +453,12 @@ function eq_objvar!(tm::TimesModel)
     rpc_cur = gset_opt(dd, "RPC_CUR", 4)
     ups_of_rp = indexby(gset_opt(dd, "RP_UPS", 4), (1, 2))              # (r,p) -> RP_UPS(r,p,tsl,l)
     upr_of_rp = indexby(gset_opt(dd, "RP_UPR", 3), (1, 2))              # (r,p) -> RP_UPR(r,p,bd)
-    ups_rp = sort!(unique!(vcat(collect(keys(ups_of_rp)), collect(keys(upr_of_rp)))))
+    upt_of_rp = indexby(gset_opt(dd, "RP_UPT", 4), (1, 2))              # (r,p) -> RP_UPT(r,p,upt,bd)
+    dpl_of_rp = indexby(gset_opt(dd, "RP_DPL", 3), (1, 2))              # (r,p) -> RP_DPL(r,p,tsl)
+    ups_rp = sort!(unique!(vcat(collect(keys(ups_of_rp)), collect(keys(upr_of_rp)), collect(keys(upt_of_rp)))))
     group_of = indexby(gset_opt(dd, "TS_GROUP", 3), (1, 2))             # (r,tsl) -> TS_GROUP(r,tsl,s)
     act_cstup, act_cstrmp = gparam_opt(dd, "ACT_CSTUP", 5), gparam_opt(dd, "ACT_CSTRMP", 5)
+    act_cstsd = gparam_opt(dd, "ACT_CSTSD", 6)
     obj_pvt, rs_stgprd = gparam_opt(dd, "OBJ_PVT", 3), gparam_opt(dd, "RS_STGPRD", 2)
     # blending costs (L105-107)
     ble_opr_of_r = indexby(gset_opt(tm.data, "BLE_OPR", 3), (1,))      # (r,) -> BLE_OPR(r,ble,opr)
@@ -485,7 +486,7 @@ function eq_objvar!(tm::TimesModel)
                 addterm!(lhs, w * gpower(gv(rs_stgav, (r, s)), (r, p) in rp_stg ? 1 : 0), tm, "VAR_ACT", r, v, t, p, s)
             end
         end
-        # Dispatching costs (L36-39): start-ups (L37) and load changes (L39).
+        # Dispatching costs (L36-39): start-ups (L37), start-ups by type (L38) and load changes (L39).
         for (rr, p) in ups_rp
             (rr == r && (r, p, "ACT", cur) in rpc_cur) || continue
             for (_, v, t, _) in get(vint_of_rp, (r, p), NO4)             # RTP_VINTYR(R,V,T,P)
@@ -495,6 +496,15 @@ function eq_objvar!(tm::TimesModel)
                     k = gv(act_cstup, (r, v, p, tsl, cur)) * pvt
                     for (_, _, s) in get(group_of, (r, tsl), NTuple{3,String}[])
                         addterm!(lhs, k * gv(rs_stgprd, (r, s)), tm, "VAR_UPS", r, v, t, p, s, "UP")
+                    end
+                end
+                for (_, _, upt, bd) in get(upt_of_rp, (r, p), NO4)
+                    bd == "UP" || continue
+                    k = gv(act_cstsd, (r, v, p, upt, "FX", cur)) * pvt
+                    for (_, _, tsl) in get(dpl_of_rp, (r, p), NTuple{3,String}[]),
+                        (_, _, s) in get(group_of, (r, tsl), NTuple{3,String}[])
+
+                        addterm!(lhs, k * gv(rs_stgprd, (r, s)), tm, "VAR_UPT", r, v, t, p, s, upt)
                     end
                 end
                 for (_, _, bd) in get(upr_of_rp, (r, p), NTuple{3,String}[])

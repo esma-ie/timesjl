@@ -138,10 +138,11 @@ GAMS 54.6.1):
 | 33 | EQ(l)_FLOFR, refused since M1.1: the share of a process flow in a timeslice (FLO_FR), against the flow of the year, of the parent timeslice, or a variable of an aggregate flow (records 'N') | eqflofr.mod 15-27; eqmain.mod 118-120 | layers 1 to 3 on the crafted case demo12_flofr, both variants, from the DD files (CI: test_eqflofr.jl, the public and variant fixtures) |
 | 34 | EQ(l)_IREBND, refused since M1.1: limits on the trade of a commodity between a region and one partner region (IRE_BND): imports from an internal region as the partner's exports, imports from and exports to an external region as the region's own flows (the marketplace branch, L46-51, stays refused with RPC_MARKET) | eqirebnd.mod 18-69; eqmain.mod 152-154 | layers 1 to 3 on the crafted case demo12_irebnd, both variants, from the DD files (CI: test_eqirebnd.jl, the public and variant fixtures) |
 | 35 | EQ(l)_XBND, refused since M1.1: limits on the total exchange of a commodity of a region (IRE_XBND), whatever the partner: for an internal region its own flows in the direction, for an external region the flows of the internal regions in the other direction through IRE_TSCVT | eqxbnd.mod 17-56; eqmain.mod 241-243 | layers 1 to 3 on the crafted case demo12_xbnd, both variants, from the DD files (CI: test_eqxbnd.jl, the public and variant fixtures) |
-| 36 | Dispatching in the linear formulation, refused since M1.1 (James, 14 Nov 2026: the gate is not passed until the remaining refused features are translated; unit commitment first): the preparation and the equations EQ_CAPLOAD, EQ_ACTRAMP, EQ(l)_ACTUPS, EQL_ACTUPC, EQ_ACTPL and EQ_ACTRMPC with the variables VAR_UPS and VAR_UDP; their terms in EQ_OBJVAR, EQE_ACTEFF, EQ(l)_CAPACT, EQ(l)_CAFLAC and EQL_CAPFLO; eqlducs.vda for a model without start-up types. The unit commitment by start-up type (eqlducs.vda L12-124, the case demo12_uc) is the next change | eqactups.vda 9-117; eqobjvar.mod 36-37, 39; pp_actef.vda 78-80; equ_ext.vda 75; eqlducs.vda 15, 38-39 | layers 1 to 3 on the crafted case demo12_disp, both variants, from the DD files (CI: test_eqactups.jl, the public and variant fixtures) |
+| 36 | Dispatching in the linear formulation, refused since M1.1 (James, 14 Nov 2026: the gate is not passed until the remaining refused features are translated; unit commitment first): the preparation and the equations EQ_CAPLOAD, EQ_ACTRAMP, EQ(l)_ACTUPS, EQL_ACTUPC, EQ_ACTPL and EQ_ACTRMPC with the variables VAR_UPS and VAR_UDP; their terms in EQ_OBJVAR, EQE_ACTEFF, EQ(l)_CAPACT, EQ(l)_CAFLAC and EQL_CAPFLO; eqlducs.vda for a model without start-up types. The unit commitment by start-up type (eqlducs.vda L12-124, the case demo12_uc) is change 40 | eqactups.vda 9-117; eqobjvar.mod 36-37, 39; pp_actef.vda 78-80; equ_ext.vda 75; eqlducs.vda 15, 38-39 | layers 1 to 3 on the crafted case demo12_disp, both variants, from the DD files (CI: test_eqactups.jl, the public and variant fixtures) |
 | 37 | EQ(l)_BLND, refused since M1.1: refinery blending. The quality of a blend (BLE) made of blending streams (OPR) held against its specifications (SPE), at most, at least, equal or free; with the blending preparation, the terms of the blending variable in the balance, the peak equation and the objective, and the blending costs in the currency conversion | eqblnd.mod 67-71; eqmain.mod 249-252; ppmain.mod 1246-1333; coef_obj.mod 93-94; eqobjvar.mod 105-107; eqcombal.mod 30-35, 75-80; eqpeak.mod 78; curex.gms 59-60 | layers 1 to 3 on the crafted case demo12_blnd, both variants, from the DD files (CI: test_eqblnd.jl, the public and variant fixtures) |
 | 38 | EQ(l)_CAPVAC, refused since M1.1: the simulated vintages of PRC_SIMV processes (COEF_CSV, RTP_VINTYR over the simulated vintages, AFSV) and their capacity-activity equation, in place of EQ(l)_CAPACT and EQ(l)_CAFLAC | coef_csv.mod 11-77; eqcapvac.mod 14-28; eqmain.mod 67; mod_equa.mod 74 | layers 1 to 3 on the crafted case demo12_capvac, both variants, from the DD files (CI: test_eqcapvac.jl, the public and variant fixtures, the chain from DD files) |
 | 39 | EQ_BNDCST and VAR_CUMCST, refused since M1.3 (25-3): bounds on the costs of a region by cost type (REG_BNDCST in one period, REG_CUMCST over a range of years): investment costs with decommissioning, investment taxes and subsidies, fixed costs, taxes and subsidies, commodity and flow taxes and subsidies, and fourteen aggregates of them | eqbndcst.mod 42-77, 81-213; eqmain.mod 192; bnd_cum.mod 44-48 | layers 1 to 3 on the crafted case demo12_bndcst, both variants, from the DD files (CI: test_eqbndcst.jl, the public and variant fixtures, the chain from DD files) |
+| 40 | Unit commitment by start-up type in the linear formulation, refused since M1.1: the preparation (start-up types, their costs and times, the non-operational times DP_NON, the load and the losses of the start-up and shut-down phases DP_PSUD and DP_LOSD), the seven equations eq_sdlogic, eq_sudupt, eq_sdslant, eq_sdminon, eq_sudload, eq_sudtime and eq_sudpll with the variable VAR_UPT, and the start-up costs by type in EQ_OBJVAR. The discrete form (DUC = YES, a MIP) stays refused, a TODO for a later release | eqlducs.vda 12-41, 46-51, 53-124; eqobjvar.mod 38; equ_ext.vda 91; coef_ext.vda 78 | layers 1 to 3 on the crafted cases demo12_uc and demo12_ucv, both variants, from the DD files (CI: test_eqlducs.jl, the public and variant fixtures, the chain from DD files) |
 
 ## Parity (per change)
 
@@ -1823,7 +1824,7 @@ Not part of the gate, for the record:
   with no model to verify it is flagged and listed; a demo12 variant is made where one can
   be, otherwise it is a TODO for a later release. This change is the first half of unit
   commitment: the dispatching of eqactups.vda. The second half, the unit commitment by
-  start-up type of eqlducs.vda L12-124 (the case demo12_uc), is the next change.
+  start-up type of eqlducs.vda L12-124 (the case demo12_uc), is change 40.
 - What the feature is: a process with ACT_UPS data (RP_UPL, ppm_ext.vda L13-14) can have
   part of its capacity off-line in a timeslice. It gets a minimum stable load, ramp limits,
   capacity started up and shut down, minimum on-line and off-line hours, a maximum number
@@ -1882,7 +1883,7 @@ Not part of the gate, for the record:
   - coef_ext.vda's include of eqlducs.vda, for a model without start-up types
     (`eqlducs_prep!`, src/coef/coef_ext.jl): L15 empties RP_UPT and TRACKP, L38 gives
     DP_LOSD, L39 the default of ACT_LOSPL 'FX' (not reached: the case gives the value).
-    With ACT_CSTSD, ACT_SDTIME or ACT_LOSSD data the stage still stops (eqlducs.vda L12-41).
+    With ACT_CSTSD, ACT_SDTIME or ACT_LOSSD data the stage stopped until change 40 (eqlducs.vda L12-41).
 - New crafted case demo12_disp (demo12 + disp.dd), on two gas plants at DAYNITE. REG1
   ELCTEGAS00, not vintaged, has the dispatching records of demo12_uc: ramp limits both ways
   (ACT_UPS 0.5), a minimum stable load (ACT_UPS FX 0.25, raised to ACT_MINLD 0.3), a
@@ -2231,6 +2232,149 @@ Not part of the gate, for the record:
 - D37 and D39 look like mistakes in TIMES v4.9.7 and not like intended behaviour, but the
   source says nothing on it. Whether v4.9.8 changes eqbndcst.mod was not checked (the
   baseline is v4.9.7 until the M1.3 gate closes).
+
+### Change 40, 14 Nov 2026: unit commitment by start-up type (eqlducs.vda L12-124)
+
+- GAMS: eqlducs.vda L12-41 (the preparation, included from coef_ext.vda L78), L46-51 (the
+  EQU section) and L53-124 (the macros and the seven equations), both included from
+  equ_ext.vda L91 after eqactups.vda; eqobjvar.mod L38 (the costs of the start-ups by
+  type). Refused since M1.1 (`coef_ext_unported`, `untranslated_families`, the objective);
+  the three refusals are removed. Change 36 had translated L15 and L38-39 for a model
+  without start-up types. James, 14 Nov 2026: the unit commitment is translated before
+  the M1.4 CI criterion counts as met.
+- What the feature does: a process with start-up costs by type (ACT_CSTSD) and a
+  dispatching load range (ACT_UPS 'FX', so RP_UPL 'FX') is a unit-commitment process
+  (RP_DP), unless it has an EQ(l)_CAFLAC (L17). A start-up is hot, warm or cold (UPT) by
+  how long the capacity was off-line (ACT_MAXNON: the longest off-line time before a hot
+  and before a warm start). Each type has a cost (ACT_CSTSD 'UP'), a duration of the
+  start-up phase (ACT_SDTIME 'UP') and an efficiency loss in that phase (ACT_LOSSD 'UP');
+  the shut-down has one type ('HOT','LO'). The formulation is linear: the variables are
+  capacities, not units. The process loses the linear dispatching rows of eqactups.vda
+  that do not fit it (L46-48) and gets seven families of its own.
+  - Variables, none with bounds: VAR_UDP 'N' (capacity on-line), VAR_UDP 'FX' (on-line
+    capacity above the minimum load), VAR_UPS 'N' (capacity off-line), VAR_UPS 'UP' and
+    'LO' (capacity started up and shut down), VAR_UPS 'FX' (the efficiency loss of the
+    phases), and the new VAR_UPT(r,v,t,p,s,upt) (capacity started up, by type).
+  - eq_sdlogic (L67-70), two rows per timeslice: one balances the capacity on-line
+    between the timeslice before and this one with the start-ups and shut-downs; the
+    other splits the start-ups by type. eq_sudupt (L74-77): a hot or a warm start is at
+    most the capacity shut down within that type's window of off-line time (DP_NON).
+    eq_sdslant (L81-90): the capacity on-line, net of the capacity off-line and of the
+    capacity inside a start-up or shut-down phase, with the phases of the neighbouring
+    timeslices of the cycle. eq_sdminon (L94-97): the on-line capacity above the minimum
+    load against the capacity on-line and the start-ups. eq_sudload (L101-103): the
+    activity as the minimum load of the capacity plus the load above it. eq_sudtime
+    (L107-114): the minimum off-line ('LO') and on-line ('UP') times of ACT_TIME.
+    eq_sudpll (L118-124): the efficiency loss of the phases, for a process with ACT_LOSSD.
+  - eqobjvar.mod L38: the cost of the start-ups by type, ACT_CSTSD 'FX' (the start-up
+    cost of the type plus the hot shut-down cost, L21) times VAR_UPT.
+- GAMS semantics kept (docstrings of src/ext/vda/eqlducs.jl):
+  - An EPS counts as a value in a `$` condition and in `$=`, and as zero in arithmetic
+    and comparisons. L26 stores EPS for every missing ACT_MAXNON, so L27 stores an EPS
+    DP_NON 'UP', which L31 turns into minus the 'LO' value; L32 then clears it for COLD.
+    L22 stores EPS start-up costs, which give the process its RP_UPS and RPC_CUR in
+    eqactups.vda L16-18.
+  - L23, L32 and L35-41 are not limited to RP_DP: they act on any process with
+    ACT_SDTIME or ACT_LOSSD data. L36-41 act on the years in RTP only; a record of
+    another year is left as it is.
+  - L37: `$` binds tighter than `<=`, so the test is (ACT_MINLD$DP_PSUD) <= DP_PSUD,
+    true wherever DP_PSUD is zero.
+  - L38: DP_LOSD takes every year of ACT_LOSSD (years outside RTP too).
+  - L39: `.01**1` is GAMS's real power (0.010000000000000004); the exponent is 0 for a
+    DP_LOSD member without RP_PL 'N', which gives the default 1.
+  - The tests on timeslices (MOD of the mid-points RS_HR in the cycle) are made in
+    Float64 in GAMS's order of operations; MOD takes the sign of its first argument
+    (`rem`). A term whose test fails or whose coefficient is zero is not in the row. A
+    row whose sums are empty is still generated (eq_sudupt: VAR_UPT =L= 0).
+  - eq_sdminon: SMIN over no start-up type is +INF, so the condition fails; when it
+    holds, VAR_UPS 'UP' cancels. ACT_TIME and ACT_SDTIME are read at the vintage.
+  - Every row carries the last index '1' (%SWX%, setglobs.gms L365: the equations are
+    declared over ALLSOW).
+- Code: src/ext/vda/eqlducs.jl (new): `eqlducs_prep!` (L12-41; called by `coef_ext!`, it
+  replaces the short form of change 36 in src/coef/coef_ext.jl), `eqlducs_equ!` (L46-51;
+  called by `eqmain_prep!` after `eqactups_prep!`), `eq_lducs!` (L53-124; called in
+  `generate!` after `eq_actups!`, the order of equ_ext.vda L90-91). src/model/eqobj.jl:
+  the term of eqobjvar.mod L38. The step probe's coef_ext step now compares RP_UPT,
+  RP_DP, RP_DPL, ACT_CSTSD, ACT_SDTIME, ACT_MAXNON, ACT_LOSSD, ACT_LOSPL, DP_NON, DP_PSUD
+  and DP_LOSD too (scripts/m12_probe.jl).
+- Two crafted cases:
+  - demo12_uc (5 Nov 2026; demo12 + uc.dd): REG2's gas plant ELCTEGAS00, not vintaged,
+    DAYNITE: start-up times of 2, 4 and 8 hours and a shut-down time of 1 hour, all
+    shorter than a timeslice of the day (11.5 or 12.5 hours), beside the linear
+    dispatching of REG1's plant. Refused until this change; its reference was remade on
+    14 Nov 2026 with the solve.
+  - demo12_ucv (new; demo12 + ucv.dd), for the branches demo12_uc does not reach. REG2's
+    ELCTNGAS01 (vintaged, DAYNITE): start-up times of 3, 9 and 20 hours, a shut-down
+    time of 19 hours, ACT_MAXNON 10 and 20 hours, ACT_TIME 40 hours on-line and 14
+    off-line, ACT_LOSSD for the three start-up types and the shut-down with ACT_LOSPL
+    'FX'. REG1's ELCTECOA00 (not vintaged, SEASON, so its start-up level is ANNUAL):
+    times in thousands of hours, an ACT_LOSSD without ACT_LOSPL 'FX', no shut-down
+    record, one record in a year outside RTP. The times are chosen to reach the terms
+    between timeslices, not to describe a real plant. It reaches: VAR_NCAP in the
+    capacity term of a vintaged process; RP_UPS and VAR_UDP at ANNUAL; DP_LOSD without
+    RP_PL 'N' (the default 1 of L39); DP_PSUD for all four records; the shut-down term
+    of eq_sudupt (WARM); the neighbour's start-up (COLD) and shut-down terms of
+    eq_sdslant; eq_sdminon with two start-up types; eq_sudtime 'LO' with the shut-down
+    term and 'UP' with the neighbour's HOT and WARM start-ups; eq_sudpll with COLD and
+    WARM at the own timeslice, the shut-down term and neighbour terms with weights other
+    than 1.
+- GAMS 54.6.1, both cases and both variants optimal with CPLEX and HiGHS. Rows of the
+  seven families, the same in both variants:
+
+  | Case | eq_sdlogic | eq_sudupt | eq_sdslant | eq_sdminon | eq_sudload | eq_sudtime | eq_sudpll | rows | nonzeros in them | VAR_UPT |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | demo12_uc | 48 | 48 | 24 | 16 | 16 | 32 | 16 | 200 | 568 | 72 |
+  | demo12_ucv | 188 | 188 | 94 | 66 | 66 | 132 | 66 | 800 | 2,930 | 282 |
+
+  demo12_uc also has the linear dispatching rows of REG1 (32 EQ_CAPLOAD, 32 EQ_ACTRAMP,
+  32 EQE_ACTUPS, 16 EQL_ACTUPS, 40 EQL_ACTUPC, 32 EQ_ACTPL, 16 EQ_ACTRMPC), 88 VAR_UDP
+  and 168 VAR_UPS columns. demo12_ucv has 33 EQE_ACTUPS, 33 EQL_ACTUPS and 56 EQ_ACTPL
+  rows, 193 VAR_UDP and 381 VAR_UPS columns, and no EQ_CAPLOAD, EQ_ACTRAMP, EQL_ACTUPC
+  or EQ_ACTRMPC (L46-48 take them from a unit-commitment process).
+- Result, from the DD files on the workstation, both cases and both variants: the step
+  probe passes all 70 steps of each case (35 in each variant) and the coefficient probe
+  its 7; DD files -> input PASS (824 sets and parameters, no compile warning), every
+  checkpoint to the pre-solve dump PASS (823 symbols), both QA logs identical; the model
+  against GAMS's matrix PASS at 1e-9; HiGHS against GAMS/CPLEX PASS:
+
+  | Case, variant | rows | columns | nonzeros | objective, relative difference |
+  | --- | --- | --- | --- | --- |
+  | demo12_uc, reduce_off | 9,071 | 10,005 | 32,823 | 4.8e-15 |
+  | demo12_uc, as_run | 3,641 | 4,853 | 19,871 | 7.3e-15 |
+  | demo12_ucv, reduce_off | 9,556 | 10,530 | 35,048 | 6.8e-15 |
+  | demo12_ucv, as_run | 4,150 | 5,402 | 22,144 | 5.8e-15 |
+
+  CI: test/unit/test_eqlducs.jl (169 tests: on each case the data as the preparation
+  leaves it, layer 2, and rows of each family term by term; no data, no rows; DUC = YES
+  refused), the public fixtures of both cases (layers 2 and 3), the variant fixtures
+  (input -> ppm on every symbol; the whole model), the DD-file compile case of demo12_ucv
+  and the chain from DD files (30 cases now: demo12_ucv is new, and demo12_uc runs to the
+  end where it was expected to stop). Pkg.test: 34,676 of 34,676; the harness tests 11
+  of 11.
+- Layer 3 says little about the unit commitment on these cases: the objective of
+  demo12_uc equals demo12_disp's (23,961,066.4677) and the objective of demo12_ucv
+  equals demo12's (23,960,685.7370), so the optimum pays no start-up cost by type in
+  either. Layer 2 is the check of the translation: every coefficient of the 200 and 800
+  rows and of the cost term in EQ_OBJVAR, at 1e-9, in both variants.
+- Translated as GAMS has it, reached by no case in the repository (flagged; TODO for a
+  later release, no open model has the data):
+  - a process with EQ(l)_CAFLAC, which L17 takes out of RP_DP;
+  - ACT_TIME 'FX', and a user-given ACT_CSTSD 'FX' (RP_UPT with 'FX');
+  - a missing ACT_MAXNON for HOT or WARM (L26 gives it EPS; in demo12_ucv only COLD has
+    none, and L32 clears COLD);
+  - a WEEKLY level, and a cycle with more than two timeslices (demo12 has two per day);
+  - a neighbour term at SEASON (in demo12 each season is its own cycle of the year);
+  - a HOT start-up in the windows of eq_sdslant and eq_sudpll across timeslices.
+- Not translated: the discrete unit commitment (L126-175 and eqactups.vda L106-109,
+  DUC = YES: binary variables and indicator constraints, a MIP; the switch is refused, a
+  TODO for a later release, an open decision of #120) and the SPRSV term of eq_sudload
+  (the ABS extension, refused with it). Still refused beside them: EQL_STGCCL
+  (STG_MAXCYC) and the user-constraint attribute ONLINE.
+- Part II has no formulation to compare with: its equation overview lists the seven
+  equations with "see separate documentation", §6.3 has no section for them and §5 has
+  no entry for VAR_UPT; the separate document is not in the documentation repository
+  (its User_Notes folder has no unit-commitment note). The translation follows the GAMS
+  source alone (discrepancies.md D40).
 
 ## Open items
 
