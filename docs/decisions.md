@@ -27,31 +27,35 @@ answer yet.
 
 | Asked | Where | Question | Recommended | Status |
 | --- | --- | --- | --- | --- |
-| 3 Nov 2026 | chat | Keep the "within 5x GAMS, warm" speed target in Phase 1 (M1.7), or move it to Phase 2? | none given | Open. `docs/translation-guide.md` L86 still has it at M1.7. |
-| 4 Nov 2026 | #30 | Add `scripts/m13_replay.jl` (needs GAMS, about 7 min) to the nightly run? | none given | Open |
-| 8 Nov 2026 | chat | Harness fix as one small PR: CHECK status for a non-optimal solve; redo `ppm/` and `coef/` made with older GAMS | one small PR | Open; no PR yet. |
-| 8 Nov 2026 | #68 | A demo12 variant with trade between regions, to check the EXP term: now, or before the M1.3 gate? | none given | Answered 12-13 Nov 2026: keep the test case and get it working soon, before the gate (crafted case demo12_mrkx) |
-| 10 Nov 2026 | #89 | Keep P2-5 (data and equation schemas) on the Phase 2 backlog, with its three pilots after M1.7? | keep; all pilots after M1.7 | Open; provisional until James confirms. |
-| 10 Nov 2026 | #90 | Which other outcomes turn the cuOpt nightly red? | proposed in the chat | Open |
-| 10 Nov 2026 | #90 | Where to test GPU scaling: open core-model reference runs as a release asset, or a sweep on native Linux? | none given | Open |
-| 10 Nov 2026 | #90 | Wednesday's full cuOpt suite: set `CUOPT_FIXTURES=all` and `CUOPT_GPU_SHARES=100`? | yes | Open; a GitHub setting only James can make. |
+| 3 Nov 2026 | chat | Keep the "within 5x GAMS, warm" speed target in Phase 1 (M1.7), or move it to Phase 2? | none given | Open. `docs/translation-guide.md` L86 still has it at M1.7. No PR has changed it; issue #116 (model generation on OTCGEN at 10.5 times GAMS) measures against it. |
+| 4 Nov 2026 | #30 | Add `scripts/m13_replay.jl` (needs GAMS, about 7 min) to the nightly run? | none given | Open (#30, decision 3). Checked 14 Nov 2026: the workstation batch does not run it. |
+| 8 Nov 2026 | chat | Harness fix as one small PR: CHECK status for a non-optimal solve; redo `ppm/` and `coef/` made with older GAMS | one small PR | Open; no PR yet. Checked 14 Nov 2026: `make_reference.py` still reports OK for a run that GAMS ends without an optimum. |
+| 10 Nov 2026 | #89 | Keep P2-5 (data and equation schemas) on the Phase 2 backlog, with its three pilots after M1.7? | keep; all pilots after M1.7 | Open (#89, decisions 1 and 2); provisional until James confirms. |
+| 10 Nov 2026 | #90 | Which other outcomes turn the cuOpt nightly red? | proposed in the chat | Open (#90, decision 3) |
+| 10 Nov 2026 | #90 | Where to test GPU scaling: open core-model reference runs as a release asset, or a sweep on native Linux? | none given | Open (#90, decision 4). Since asked: the local nightly also solves the open reference runs (James, 13 Nov 2026), and the MPS files of the open models are release assets in their own repositories (12 Nov 2026); the choice for a scaling test is still James's. |
+| 10 Nov 2026 | #90 | Wednesday's full cuOpt suite: set `CUOPT_FIXTURES=all` and `CUOPT_GPU_SHARES=100`? | yes | Open (#90, decision 2); a GitHub setting only James can make. Checked 14 Nov 2026: the repository has no Actions variable set, so the nightly runs demo12_off at 25, 50 and 100%. |
+| 14 Nov 2026 | chat (issue #97) | After #101 (the early part of #97: the solution of a solve written for downstream tools): may more of #97 start before M1.5 closes, beyond the levels and marginals approved on 12 Nov 2026? Rule-level (milestone order). | no; the rest waits for M1.6 in its order | Open; added to the list at the review of 14 Nov 2026. |
+| 14 Nov 2026 | chat | Remove the unused git worktree `TIMESjl-m14` on the workstation? M1.4 has been developed in the main working copy; the worktree is 213 commits behind `main` and has no commits of its own. | yes | Open; added to the list at the review of 14 Nov 2026. Nothing is removed without James's word. |
+| 14 Nov 2026 | chat | The commit trailer Claude Code supplies no longer names the model (`Co-Authored-By: Claude`), while the README points readers to that line to see which model wrote each commit. Keep the trailer as supplied and reword the README, or write the model's name in each commit message? | keep the trailer as supplied; reword the README | Open; added to the list at the review of 14 Nov 2026. Commits keep the supplied line meanwhile (`CLAUDE.md`). |
 | 14 Nov 2026 | chat | Workstation batch: count jobs by threads (up to 8 jobs within 36 threads, since most checks use one core) instead of "at most 4 CPU-heavy runs"? Rule-level (the run limits in `CLAUDE.md`). | yes | Open; the batch keeps to 4 runs (3 while development runs use the fourth slot). |
-| 14 Nov 2026 | #109 | Is the M1.3 gate passed? Rule-level (a milestone gate). The evidence for each criterion is in docs/m13-plan.md, "Gate close-out, 14 Nov 2026". | yes | James, 14 Nov 2026: not passed yet; every remaining refused feature is translated first (unit commitment, then the others in the order of the 16:30 check-in). Open; asked again when they are translated and tested. |
-| 14 Nov 2026 | chat | After the M1.3 gate: translate the refused features and the stepped (myopic) solve on v4.9.7 first, then move the baseline to v4.9.8? Rule-level (`CLAUDE.md` Baseline moves it when the gate closes). | features first, then v4.9.8 | Answered 14 Nov 2026: features first. The GAMS references may be rerun with v4.9.8 into a separate folder once all remaining features are translated and tested; the baseline moves when the M1.3 gate closes (`CLAUDE.md`). |
-| 14 Nov 2026 | chat | Start the stepped solve of myopic runs (TIMESTEP; M1.5, run options) before the M1.3 and M1.4 gates close? Rule-level (milestone order). James, 14 Nov 2026: "make the changes required to solve the myopic runs also today if possible"; an explicit yes to the early start is still asked. | yes, after the M1.3 gate PR | Answered 14 Nov 2026: yes, the myopic run tests may start before the M1.3 and M1.4 gates close. |
-| 14 Nov 2026 | #117 | Is the M1.4 gate passed? Rule-level (a milestone gate); it waits for the M1.3 gate (#109). The evidence for each criterion is in docs/m14-plan.md, "Gate close-out, 14 Nov 2026". | yes, once the M1.3 gate is passed and the batch has rerun the chain from DD files on the merged stack | Open; needs James's explicit yes. |
-| 14 Nov 2026 | #117, #118, #119 | M1.4 gate, "CI runs the chain from DD files on the crafted cases": #118 and #119 add the one run for 24 crafted cases (DD files to the model, against GAMS's matrix and objective). One point is left: demo12_uc stops at unit commitment (eqlducs.vda, not translated). Does the criterion count as met with it, or must unit commitment be translated first? | met with it: unit commitment is one of the refused families (translated by priority, one PR each), and the test fails on the day it is translated until the case joins the run | Answered 14 Nov 2026: not met yet; the unit commitment is translated first, and demo12_uc joins the run. The dispatching half is M1.3 change 36 (#120). |
-| 14 Nov 2026 | #120 | The discrete unit commitment (`$SET DUC YES`: binary variables and indicator constraints, a MIP; eqlducs.vda L128-175): leave it refused and note it as a TODO for a later release, so that the M1.3 gate can close without it? Rule-level (the gate's scope). | yes | Open; needs James's explicit yes. |
+| 14 Nov 2026 | chat (issue #100) | cuOpt lane: switch its check to PDLP with crossover, and report the barrier-with-crossover behaviour of issue #100 to the cuOpt project with the open demo12 case? | yes to both; reviewed with the cuOpt results on 8 Dec 2026 | Open; added to the list at the review of 14 Nov 2026. A report to another project is James's to approve. |
+| 14 Nov 2026 | chat (issue #17) | The DD reader as a separate package (issue #17): decide after the M1.4 gate? | keep it in this repository until Phase 1 ends, and answer on the issue then | Open; added to the list at the review of 14 Nov 2026. |
+| 14 Nov 2026 | #109 | Is the M1.3 gate passed? Rule-level (a milestone gate). The evidence for each criterion is in docs/m13-plan.md, "Gate close-out, 14 Nov 2026". | yes | James, 14 Nov 2026: not passed yet (#109, decision 1); every remaining refused feature is translated first (linear dispatching is #120; unit commitment next, then the others in the order of the 16:30 check-in). Stays here: asked again when they are translated and tested. |
+| 14 Nov 2026 | #117 | Is the M1.4 gate passed? Rule-level (a milestone gate); it waits for the M1.3 gate (#109). The evidence for each criterion is in docs/m14-plan.md, "Gate close-out, 14 Nov 2026". | yes, once the M1.3 gate is passed and the batch has rerun the chain from DD files on the merged stack | Open (#117, decision 1); needs James's explicit yes. Its CI criterion is not met until the unit commitment is translated (#118, decision 2). |
+| 14 Nov 2026 | #120 | The discrete unit commitment (`$SET DUC YES`: binary variables and indicator constraints, a MIP; eqlducs.vda L128-175): leave it refused and note it as a TODO for a later release, so that the M1.3 gate can close without it? Rule-level (the gate's scope). | yes | Open (#120, decision 5); needs James's explicit yes. |
+
+Reviewed on 14 Nov 2026 against pull requests #1 to #120 (108 merged, six open: #114, #115, #117 to #120). Four questions that James had answered left this list for the log of their pull requests: the demo12 trade case (#68, #104); refused features before v4.9.8 (#109, decision 3); the stepped solve before the gates (#108, decision 3); the M1.4 CI criterion with demo12_uc refused (#118, decision 2). Five questions asked in the chat and never listed were added (issues #97, #100 and #17, the commit trailer, the unused worktree). Every row of the log that is still "open" is either on this list or is a built-in default of an open pull request, which its merge decides.
 
 ## Decisions in the chat (not in a PR list)
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 14 Nov 2026 | Review the Open decisions list against every pull request and move the resolved ones into the log of their pull request. | this log (Open decisions, and #68, #104, #108, #109, #118, #119) |
 | 14 Nov 2026 | The M1.3 gate is not passed yet: keep going until every remaining refused feature is translated, and report back the same day. Rule-level (a milestone gate); James's answer to #109. | Open decisions; `docs/m13-plan.md`, change 36 |
 | 14 Nov 2026 | The refused features are translated in the order given at the 16:30 check-in (unit commitment, the stepped solve, MACRO, the extensions, then the remaining equation families). A feature with no model to verify it is flagged and listed; a demo12 variant is made where one can be, otherwise the feature is noted as a TODO for a later release. | `docs/m13-plan.md` as each lands; this log |
-| 14 Nov 2026 | The unit commitment is translated before the M1.4 gate's CI criterion ("CI runs the chain from DD files on the crafted cases") counts as met. | Open decisions; #120 and the change after it |
-| 14 Nov 2026 | v4.9.8: the GAMS reference batch may be started into a separate folder after all remaining features are translated and tested (the nightly runs and probes move to v4.9.8 with it). Rule-level; explicit yes. | this log; the batch script on James's machine |
-| 14 Nov 2026 | The myopic (stepped) run tests may start before the M1.3 and M1.4 gates close. Rule-level (milestone order); explicit yes. | this log; the stepped-solve PR |
+| 14 Nov 2026 | The unit commitment is translated before the M1.4 gate's CI criterion ("CI runs the chain from DD files on the crafted cases") counts as met. | #118, decision 2; #120 and the change after it |
+| 14 Nov 2026 | v4.9.8: the GAMS reference batch may be started into a separate folder after all remaining features are translated and tested (the nightly runs and probes move to v4.9.8 with it). Rule-level; explicit yes. | #109, decision 3; the batch script on James's machine |
+| 14 Nov 2026 | The myopic (stepped) run tests may start before the M1.3 and M1.4 gates close. Rule-level (milestone order); explicit yes. | #108, decision 3; the stepped-solve PR |
 | 14 Nov 2026 | M1.3 gate, preprocessing timed against GAMS: the 13 Nov timings (3.4 to 6.3 times GAMS on the five core models) are close enough to pass the gate. | `docs/timings.md` (the M1.3 gate PR); this log |
 | 14 Nov 2026 | The M1.3 gate PR is reviewed the same morning; the HiGHS solve of TIMES-NZ joins the batch's DD-file stage. | the M1.3 gate PR; batch script on James's machine |
 | 14 Nov 2026 | The features TIMES.jl still refuses: push on them now, one PR each, each with an open crafted demo12 case and a GAMS reference. | this log; `docs/m13-plan.md` as each lands |
@@ -113,20 +117,21 @@ answer yet.
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
 | 1 | Keep the eight new fixtures: a run file and an input dump for demo12_red17b, demo12_ips, demo12_ucrt and demo12_objinv (CC BY 4.0, about 4.4 MB together), so that 24 crafted cases go from their DD files to the model in CI? | Recommended: yes. Built in. | open |
+| 2 | With these four, 24 of the 25 crafted cases of the time run from their DD files in CI; demo12_uc is the one left (#118, decision 2). | James, 14 Nov 2026: the criterion is not met until the unit commitment is translated. | answered by James, 14 Nov 2026 (#118, decision 2) |
 
 ### #118 M1.4 (9): CI runs every crafted case from its DD files to the model (open)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
 | 1 | Add the one run to CI: 20 crafted cases from their DD files to the model, against GAMS's matrix and objective, with no GAMS state (about a minute and a half more test time on the workstation)? Decision 2 of #117. | Recommended: yes. Built in. | open |
-| 2 | Does the gate's CI criterion count as met while demo12_uc stops at unit commitment (eqlducs.vda, not translated) and four older crafted cases (demo12_red17b, demo12_ips, demo12_ucrt, demo12_objinv) have no run file or input fixture in the repository? | Recommended: yes; the four cases get their fixtures in a small PR, and unit commitment is translated by priority with the other refused families. | answered by James, 14 Nov 2026: not met until the unit commitment is translated (Open decisions). The four cases are added in #119. |
+| 2 | Does the gate's CI criterion count as met while demo12_uc stops at unit commitment (eqlducs.vda, not translated) and four older crafted cases (demo12_red17b, demo12_ips, demo12_ucrt, demo12_objinv) have no run file or input fixture in the repository? | Recommended: yes; the four cases get their fixtures in a small PR, and unit commitment is translated by priority with the other refused families. | answered by James, 14 Nov 2026: not met until the unit commitment is translated, and demo12_uc joins the run; the dispatching half is #120, the unit commitment the change after it. Moved from Open decisions, 14 Nov 2026. The four cases are added in #119. |
 
 ### #117 M1.4 (8) and gate close-out: warnings as GAMS counts them, TIMES's GDX filter, a key given twice (open)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
 | 1 | Is the M1.4 gate passed? Every criterion of docs/m14-plan.md has its evidence in "Gate close-out, 14 Nov 2026". Rule-level (a milestone gate); it waits for the M1.3 gate (#109). | Recommended: yes, once the M1.3 gate is passed and the batch has rerun the chain from DD files on the merged stack. | open; needs James's explicit yes, a merge does not answer it (Open decisions) |
-| 2 | "CI runs the chain from DD files on the crafted cases": CI does it in pieces that meet at GAMS's dumps; only demo12 goes from DD files to the model in one run. Accept this, or add the one run for every crafted case? | Recommended: add the one run, as the next PR: each crafted case from its DD files to the model, against GAMS's matrix and objective, with the fixtures CI already has. | open; the one run is built in #118 (merging #118 accepts it) |
+| 2 | "CI runs the chain from DD files on the crafted cases": CI does it in pieces that meet at GAMS's dumps; only demo12 goes from DD files to the model in one run. Accept this, or add the one run for every crafted case? | Recommended: add the one run, as the next PR: each crafted case from its DD files to the model, against GAMS's matrix and objective, with the fixtures CI already has. | open; the one run is built in #118 (merging #118 accepts it); whether the criterion is met with demo12_uc refused: #118, decision 2 (James, 14 Nov 2026: not yet) |
 | 3 | The reader counts compile warnings as GAMS does, one for each label outside its domain set: 88 on TIMES-NZ, not 84. | Built in. | open |
 | 4 | The three cases where GAMS keeps a record outside its domain set (no DATAGDX YES; a one-dimensional set or parameter; a label that joins the set later) stop the run with a message; they are translated when a model needs them. No suite model has one. | Built in. | open |
 | 5 | A key given twice in one data statement stops the run, as GAMS's compile error 172; before, the later record won. No suite model has one. | Built in. | open |
@@ -168,7 +173,7 @@ answer yet.
 | --- | --- | --- | --- |
 | 1 | Keep the new crafted case demo12_bndc (demo12 + bndc.dd, CC BY 4.0; a public fixture, a variant fixture and a DD-file compile case, about 7 MB)? | Recommended: yes. Built in. | accepted by merge, 14 Nov 2026 |
 | 2 | The refusal of COM_BNDNET and COM_BNDPRD records above the commodity's tracked timeslice level is lifted: the six equations are translated and checked on demo12_bndc. | Built in. | accepted by merge, 14 Nov 2026 |
-| 3 | The refused equation families are translated before the M1.3 gate is declared passed and before the move to v4.9.8 (James, 14 Nov: "lets push on these last features today"); next the other bound equations, EQ(l)_FLOBND, EQ(l)_FLOFR, EQ(l)_IREBND and EQ(l)_XBND, one PR each; the remaining refused families (`untranslated_families`) after them, by what the suite models need. | Following James's instruction. | accepted by merge, 14 Nov 2026; the order against v4.9.8 was answered by James the same day (Open decisions) |
+| 3 | The refused equation families are translated before the M1.3 gate is declared passed and before the move to v4.9.8 (James, 14 Nov: "lets push on these last features today"); next the other bound equations, EQ(l)_FLOBND, EQ(l)_FLOFR, EQ(l)_IREBND and EQ(l)_XBND, one PR each; the remaining refused families (`untranslated_families`) after them, by what the suite models need. | Following James's instruction. | accepted by merge, 14 Nov 2026; the order against v4.9.8 was answered by James the same day (#109, decision 3) |
 
 ### #110 M1.3 (30): stepped runs before solve.stp, coef_alt.lin L81 and eqobsalv.mod L23-25; harness 0.3.3 (merged 2026-11-14)
 
@@ -177,7 +182,7 @@ answer yet.
 | 1 | Harness 0.3.3: a new checkpoint `equ/` (after eqmain.mod, maindrv.mod L79-80), written for stepped runs only; other references do not change and need no rerun. | Recommended: yes. Built in. | accepted by merge, 14 Nov 2026 |
 | 2 | The pre-solve dump of a stepped run holds the state after the loop of solve.stp, so the chain compares it less the 27 symbols that loop assigns (each traced to its GAMS line); all 27 are compared at `equ/`, before the loop. Not logged as a known difference: GAMS and TIMES.jl agree on every symbol at the state both hold. | Recommended: yes. Built in. | accepted by merge, 14 Nov 2026 |
 | 3 | Keep two more fixtures of demo12_step (`ppm`, 2.2 MB; `equ`, 2.6 MB; CC BY 4.0)? | Recommended: yes. Built in. | accepted by merge, 14 Nov 2026 |
-| 4 | The stepped solve (solve.stp, M1.5) before the M1.3 and M1.4 gates close: asked in #108 and on the Open decisions list. This change stops where it starts. | Recommended: yes, after the M1.3 gate. | answered by James, 14 Nov 2026: yes (Open decisions) |
+| 4 | The stepped solve (solve.stp, M1.5) before the M1.3 and M1.4 gates close: asked in #108 and on the Open decisions list. This change stops where it starts. | Recommended: yes, after the M1.3 gate. | answered by James, 14 Nov 2026: yes (#108, decision 3) |
 
 ### #109 M1.3 gate close-out: the evidence for each criterion, 13 Nov timings (merged 2026-11-14)
 
@@ -185,7 +190,7 @@ answer yet.
 | --- | --- | --- | --- |
 | 1 | Is the M1.3 gate passed? Every criterion of docs/m13-plan.md "Gate" has its evidence in "Gate close-out, 14 Nov 2026". Rule-level (a milestone gate). | Recommended: yes. | answered by James, 14 Nov 2026: not passed yet; the remaining refused features are translated first (Open decisions) |
 | 2 | Preprocessing timed against GAMS: 3.4 to 6.3 times GAMS (13 Nov) passes the gate. | Yes (James, 14 Nov 2026). | answered in the chat before the PR |
-| 3 | After the gate: refused features and the stepped solve on v4.9.7 first, then the move to v4.9.8? Rule-level (`CLAUDE.md` Baseline). | Recommended: features first, then v4.9.8. | answered by James, 14 Nov 2026: features first; the v4.9.8 reference batch after they are translated and tested (Open decisions) |
+| 3 | After the gate: refused features and the stepped solve on v4.9.7 first, then the move to v4.9.8? Rule-level (`CLAUDE.md` Baseline). | Recommended: features first, then v4.9.8. | answered by James, 14 Nov 2026: features first; the v4.9.8 reference batch after they are translated and tested. Moved from Open decisions, 14 Nov 2026 (also under Decisions in the chat) |
 | 4 | Two stale rows leave the list of untranslated paths in docs/gams-julia-map.md (`bnd_flo.mod` L34-39 under REDUCE, translated in change 17b; POWERFLO, translated in changes 27a-27b-2), and the QA-log open item of docs/m13-plan.md is closed. | Built in. | accepted by merge, 14 Nov 2026 |
 
 ### #108 M1.4 (7): initmty.mod L442-444, the controls of restart and stepped runs, crafted case demo12_step (merged 2026-11-14)
@@ -194,7 +199,7 @@ answer yet.
 | --- | --- | --- | --- |
 | 1 | Keep the new crafted case demo12_step (demo12 with TIMESTEP 20; CC BY 4.0; an input fixture of about 1 MB, no matrix or solution fixture yet)? | Recommended: yes; it is the open case for the stepped solve too. | accepted by merge, 14 Nov 2026 |
 | 2 | The DD reader no longer stops on a run file that sets SPOINT, TIMESTEP or FIXBOH: the three checks of L442-444 are translated. | Built in. | accepted by merge, 14 Nov 2026 |
-| 3 | Start the stepped solve (solve.stp, M1.5) before the M1.3 and M1.4 gates close? Rule-level (milestone order). | Recommended: yes, after the M1.3 gate PR. | answered by James, 14 Nov 2026: yes (Open decisions) |
+| 3 | Start the stepped solve (solve.stp, M1.5) before the M1.3 and M1.4 gates close? Rule-level (milestone order). | Recommended: yes, after the M1.3 gate PR. | answered by James, 14 Nov 2026: yes, the myopic run tests may start before the M1.3 and M1.4 gates close. Moved from Open decisions, 14 Nov 2026 (also under Decisions in the chat) |
 
 ### #107 M1.3 (29): coef_obj.mod L31-32, the control switch ANNCOST LEV, crafted cases demo12_lev and demo12_levstd (merged 2026-11-14)
 
@@ -224,6 +229,7 @@ answer yet.
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
 | 1 | Keep the new crafted case demo12_mrkx (CC BY 4.0, a public fixture)? | Kept. | accepted by merge, 13 Nov 2026 |
+| 2 | From #68 (asked 8 Nov 2026): a demo12 variant with trade between regions, to check the export term of EQ(l)_FLOMRK: now, or before the M1.3 gate? | Before the gate: this case. | answered by James, 12 and 13 Nov 2026 (chat); accepted by merge, 13 Nov 2026 |
 
 ### #103 M1.3 (27b-2): powerflo.vda EQ_GR_GENALL, EQ_GR_DEMALL and the IREAUX terms (merged 2026-11-13)
 
@@ -436,7 +442,7 @@ No decisions: a parity fix inside 27a-2 (#93).
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | A demo12 variant with trade to check the EXP term: now, or before the gate? | Keep the test case and get it working soon (James, 12 Nov 2026), before the M1.3 gate (13 Nov 2026): crafted case demo12_mrkx. | chat |
+| 1 | A demo12 variant with trade to check the EXP term: now, or before the gate? | Keep the test case and get it working soon (James, 12 Nov 2026), before the M1.3 gate (13 Nov 2026): crafted case demo12_mrkx. | answered by James in the chat, 12 Nov 2026; the case came in #104 (merged 13 Nov 2026). Moved from Open decisions, 14 Nov 2026 |
 
 ### #67 M1.3 (22): uc_*.mod, the user-constraint attribute factors (merged 2026-11-09)
 
