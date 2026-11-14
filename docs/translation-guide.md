@@ -705,3 +705,11 @@ those checks, their figures and their crafted cases are not published
   of a restart or stepped (myopic) run compiles. New crafted case demo12_step
   (TIMESTEP 20): DD files to `ppm/` PASS in both variants; an input fixture
   in CI. The stepped solve (solve.stp) is M1.5.
+- 14 Nov 2026: M1.3 gate close-out (docs/m13-plan.md, "Gate close-out"):
+  with changes 0-29 the chain from the input dump PASS at every checkpoint
+  to presolve on the five core models, both variants, with the QA log;
+  JRC-EU-TIMES-cli_ll PASS to ppm in both variants; OTUS9r layer 3 by
+  cross-evaluation PASS; preprocessing 3.4x GAMS on demo12 and 5.4x to 6.3x
+  on the large core models (13 Nov, docs/timings.md), accepted for the gate
+  by James on 14 Nov. The gate is passed when James says so (#109).
+  Refused features are translated after it, one PR each.

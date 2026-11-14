@@ -36,6 +36,7 @@ answer yet.
 | 10 Nov 2026 | #90 | Where to test GPU scaling: open core-model reference runs as a release asset, or a sweep on native Linux? | none given | Open |
 | 10 Nov 2026 | #90 | Wednesday's full cuOpt suite: set `CUOPT_FIXTURES=all` and `CUOPT_GPU_SHARES=100`? | yes | Open; a GitHub setting only James can make. |
 | 14 Nov 2026 | chat | Workstation batch: count jobs by threads (up to 8 jobs within 36 threads, since most checks use one core) instead of "at most 4 CPU-heavy runs"? Rule-level (the run limits in `CLAUDE.md`). | yes | Open; the batch keeps to 4 runs (3 while development runs use the fourth slot). |
+| 14 Nov 2026 | #109 | Is the M1.3 gate passed? Rule-level (a milestone gate). The evidence for each criterion is in docs/m13-plan.md, "Gate close-out, 14 Nov 2026". | yes | Open; needs James's explicit yes. |
 | 14 Nov 2026 | chat | After the M1.3 gate: translate the refused features and the stepped (myopic) solve on v4.9.7 first, then move the baseline to v4.9.8? Rule-level (`CLAUDE.md` Baseline moves it when the gate closes). | features first, then v4.9.8 | Open |
 | 14 Nov 2026 | chat | Start the stepped solve of myopic runs (TIMESTEP; M1.5, run options) before the M1.3 and M1.4 gates close? Rule-level (milestone order). James, 14 Nov 2026: "make the changes required to solve the myopic runs also today if possible"; an explicit yes to the early start is still asked. | yes, after the M1.3 gate PR | Open; the DD reader's part (initmty.mod L440-447, M1.4 change 7) is in #108. |
 
@@ -87,6 +88,15 @@ answer yet.
 | 11 Nov 2026 | Keep this decision log, with its rule. | `docs/decisions.md` |
 
 ## Log by pull request
+
+### #109 M1.3 gate close-out: the evidence for each criterion, 13 Nov timings (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Is the M1.3 gate passed? Every criterion of docs/m13-plan.md "Gate" has its evidence in "Gate close-out, 14 Nov 2026". Rule-level (a milestone gate). | Recommended: yes. | open; needs James's explicit yes, a merge does not answer it (Open decisions) |
+| 2 | Preprocessing timed against GAMS: 3.4 to 6.3 times GAMS (13 Nov) passes the gate. | Yes (James, 14 Nov 2026). | answered in the chat before the PR |
+| 3 | After the gate: refused features and the stepped solve on v4.9.7 first, then the move to v4.9.8? Rule-level (`CLAUDE.md` Baseline). | Recommended: features first, then v4.9.8. | open; not built in (Open decisions) |
+| 4 | Two stale rows leave the list of untranslated paths in docs/gams-julia-map.md (`bnd_flo.mod` L34-39 under REDUCE, translated in change 17b; POWERFLO, translated in changes 27a-27b-2), and the QA-log open item of docs/m13-plan.md is closed. | Built in. | open |
 
 ### #108 M1.4 (7): initmty.mod L442-444, the controls of restart and stepped runs, crafted case demo12_step (open)
 

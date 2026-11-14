@@ -11,9 +11,38 @@ From 29 Oct 2026 local runs on James's workstation keep to the run limits in
 Timings made before then used each solver's own setting (GAMS default: one
 solver thread) and are not directly comparable with later ones.
 
+## M1.3 preprocessing, 13 Nov 2026, same machine (James's workstation)
+
+The figures the M1.3 gate closes on, taken after the last translation change
+of the M1.3 plan (27b-2, #103). Same script and method as the 5 Nov section
+below (`scripts/m13_timing.jl`, warm, one thread, against the GAMS profile of
+each model's CPLEX reference solve; GAMS 54.6.1, Julia 1.13.2).
+
+| Model (reduce_off) | init_ext | ppmain | ppm_ext | Total, TIMES.jl warm | Total, GAMS | Ratio |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| TIMES_Demo-demo12 | 0.014 | 0.181 | 0.016 | 0.21 s | 0.062 s | 3.4 |
+| TIMES-NZ-steady-v308 | 0.034 | 7.149 | 0.568 | 7.8 s | 1.39 s | 5.6 |
+| OTCGEN-gc_ref | 0.251 | 48.90 | 8.230 | 57.4 s | 9.11 s | 6.3 |
+| OTNYC-s1_nyc_ref | 0.422 | 17.66 | 1.911 | 20.0 s | 3.69 s | 5.4 |
+| OTUS9r-reference | 2.683 | 105.2 | 9.434 | 117.3 s | 20.8 s | 5.6 |
+
+TIMES.jl seconds per part (warm). The GAMS column is the same profile as on
+5 Nov; the TIMES.jl totals are 8% to 16% higher. Two things differ from
+5 Nov and the run does not separate them: the code now writes the QA log and
+makes its checks (change 25b), and the workstation batch was running beside
+the timing run (within the run limits). The slowest steps are the same as on
+5 Nov: pp_prelv (OTUS9r 24.1 s, OTCGEN 9.8 s), ppmain_flofs (OTCGEN 14.9 s),
+ppmain_reduce, ppmain_life and ppm_ext_actef; on TIMES-NZ ppmain_tsattr
+(3.3 s).
+
+Gate decision (James, 14 Nov 2026): 3.4 to 6.3 times GAMS is close enough to
+pass the M1.3 gate. The gate asks for preprocessing to be timed against
+GAMS; the 5x target is for the whole of model generation at M1.7, and no
+performance work has been done on preprocessing.
+
 ## M1.3 preprocessing, 5 Nov 2026, same machine (James's workstation)
 
-The M1.3 gate figures. `scripts/m13_timing.jl`: the preprocessing chain from
+The M1.3 gate figures of 5 Nov (changes 0-18b). `scripts/m13_timing.jl`: the preprocessing chain from
 the input dump (TIMES.jl's state carried across the checkpoints, the
 carrying not timed), first pass with compilation, then warm, against the GAMS
 profile of the same lines in each model's CPLEX reference solve

@@ -173,7 +173,6 @@ not. Each is translated when a test model first needs it.
 | `eqobjvar.mod` L36-39, unit-commitment costs | `RP_UPS`, `RP_UPT` or `RP_UPR` non-empty | unit commitment |
 | `cal_caps.mod` in `eqobjvar.mod` L98-100, capacity-related flow costs | `RPC_CAPFLO` or `NCAP_COM` non-empty | models with capacity-related flows |
 | `eqobjvar.mod` L105-107, blending costs | `BLE_OPR` non-empty | models with refinery blending |
-| `bnd_flo.mod` L34-39, flow bounds moved to activities | `reduce=true` (REDUCE YES) | `as_run` references |
 | `bnd_elas.mod` | run switch TIMESED or MICRO = YES | models with elastic demand |
 | `eqstgtss.mod` L56-73, L88-93, storage flexibility (EQ_STSLEV, VAR_UDP/VAR_STS terms) | an `RP_STL` entry other than 'N' (`%STSFLX%` = YES, `coef_ext.vda` L32) | — |
 | `eqstgtss.mod` L80-81, inter-period charging in EQ_STSBAL | an EQ_STSBAL row at ANNUAL of a `PRC_STGIPS` process | — |
@@ -184,4 +183,4 @@ not. Each is translated when a test model first needs it.
 | `uc_flo.mod` L35-49, capacity-related flows in user constraints (`cal_caps.mod`) | `UC_CAPFLO` non-empty | — |
 | `pp_actef.vda` L78-80, partial-load efficiency in EQE_ACTEFF | `RP_PL` non-empty | unit commitment |
 | `eqcaflac.vda` L48, `VAR_STS(...,'UP')` in EQL_CAPFLO | an `RP_STL` entry of type UP (`%STSFLX%` = YES) for a storage process with an availability on ACT | — |
-| `dynslite.vda` BOUNDS, `bnd_ire.vda`, `mod_vars.dsc` L18-19, `eqdamage.mod` L141-156, `pp_micro.mod` L88-91, `powerflo.vda`, `spoint.mod` L83-85, `%R_T%` variants | `NORTS`, `PREMILE`, `NCAP_SEMI`, `DAM_COST`, `RD_NLP`, `COM_CSTBAL`, `REG_FIXT` non-empty; switch POWERFLO, SPOINT, LPOINT, RPOINT, FIXBOH or STEPPED | as listed |
+| `dynslite.vda` BOUNDS, `bnd_ire.vda`, `mod_vars.dsc` L18-19, `eqdamage.mod` L141-156, `pp_micro.mod` L88-91, `powerflo.vda`, `spoint.mod` L83-85, `%R_T%` variants | `NORTS`, `PREMILE`, `NCAP_SEMI`, `DAM_COST`, `RD_NLP`, `COM_CSTBAL`, `REG_FIXT` non-empty; switch SPOINT, LPOINT, RPOINT (other than NO), FIXBOH or STEPPED | as listed; restart and stepped (myopic) runs are run options, M1.5 |
