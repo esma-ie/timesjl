@@ -128,6 +128,7 @@ GAMS 54.6.1):
 | 27a-2 | powerflo.vda main block, the allocation of generation and sectoral demand to the grid nodes (GR_ENDFR, GR_GENFR, GR_GENMAP, GR_GENLEV data; JRC-EU-TIMES has them): L40-47 (the add-on nodes and their IRE lines) and L109-162 (GR_GENLEV rounded, GR_PRCMAP, GR_ALLMAP, GR_ALGMAP, GR_DEMMAP, GR_ENDC, the sectoral fractions turned into GR_DEMFR and normalised, GR_GENMAP and GR_GENFR normalised, GR_ADO, GR_GNALL). Still refused: GR_PTDF data (the PTDF formulation, L59-64, L172-180) and GR_DEMFR given as data (L107, L131); the equations that use the allocation (EQ_GR_GENALL, EQ_GR_DEMALL, IREAUX terms) are 27b-2 (10 Nov 2026) | 40-47, 109-162 | prelv to coef: crafted case demo12_pfa, both variants (CI: variant fixture); JRC-EU-TIMES-cli_ll locally (verdicts only) |
 | 27b-2 | powerflo.vda POWFLO, the rows that use the node allocation: EQ_GR_GENALL (L290-313) and EQ_GR_DEMALL (L314-340), and the IREAUX terms (%IREAUXBAL%, L221, L363-370) that cal_ire.mod L30 adds to EQ_COMBAL's consumption (eqcombal.mod L84, label IREAUXIN, times COM_IE) and EQ_PEAK's net imports (eqpeak.mod L31, IREAUXOUT-, negated); the other cal_ire calls jump to the end of the file (L461-462). The model-stage refusal of node-allocation data is lifted; GR_DEMFR as input data stays refused in the main block. New crafted case demo12_pfd (a second grid node in REG1), since demo12 has one node per region, so GR_DEMFR is emptied and no EQ_GR_DEMALL row exists (13 Nov 2026) | 290-340, 363-370 | layers 2-3: demo12_pfa and demo12_pfd, both variants (CI: demo12_pfd public fixture, demo12_pfa and demo12_pfd variant fixtures); the M1.3 chain to presolve on both |
 | 27c | powerflo.vda RPTB (cost_ann.rpt L175): the reporting block, translated with M1.6 and listed here so the file is tracked | 437-462 | M1.6 |
+| 28 | eqashar.vda with pp_lvlfc.mod (coef_ext.vda L79): RPCG_ASHAR and the levelling of FLO_ASHAR, refused until now; EQ(l)_ASHAR's exchange branch and storage terms, refused since M1.1 (James, 14 Nov 2026: the refused features are translated now, one change each, each with a crafted demo12 case) | 16-33; 51, 56-65, 75-76 | every checkpoint and layers 2-3 on the crafted case demo12_ashar, both variants (CI: test_ashar.jl) |
 
 ## Parity (per change)
 
@@ -1349,6 +1350,45 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
   demo12_cumc is a public fixture, a variant fixture (input -> ppm), a DD-file compile case and
   the case of test/unit/test_bnd_cum.jl (ppm -> pre-solve on every symbol, each branch, and the
   model from that state against GAMS's matrix).
+
+### Change 28, 14 Nov 2026: eqashar.vda L16-33 and the exchange and storage branches of EQ(l)_ASHAR
+
+- FLO_ASHAR is an internal parameter (init_ext.vda L43-44): a model gives FLO_SHAR, and GAMS
+  moves a record to FLO_ASHAR when its commodity is not in the group or not a flow of the
+  process (prep_ext.vda L78), or when the process is an exchange or storage process
+  (pp_prelv.vda L96). TIMES.jl made those moves already and then stopped: `coef_ext!` refused
+  any model with FLO_ASHAR records (eqashar.vda L16-33 was not translated), and `eq_ashar!`
+  refused the rows of exchange and storage processes.
+- Now `eqashar_prep!` (src/ext/vda/eqashar.jl, called by `coef_ext!` at coef_ext.vda L79)
+  translates L16-33: the EPS FLO_SHAR record at year '0' of each group (L17); a commodity
+  against itself (L21-23: RPCG_ASHAR -1, the share moved to the commodity's type, the diagonal
+  deleted); RP_PGFLO for standard processes without an activity variable (L24); RPCG_ASHAR at
+  the timeslices of the flow variable (L25), of a storage process (L26) and of the commodity's
+  level when it is not a flow of the process (L28-30); and the levelling of FLO_ASHAR to the
+  RPS_S2 timeslices with pp_lvlfc.mod (L33), with the scratch it leaves (CG_GRP, UNCD7,
+  TS_ARRAY, Z).
+- `eq_ashar!` now has the exchange branch (L56-65: an ANNUAL share of an exchange process
+  against the flows of the reference group in every region, or against all its imports or
+  exports with the groups IMP and EXP, or against its activity) and the storage terms (L51: the
+  activity times EXP(-|STG_LOSS|/2); L75-76: VAR_SOUT over PRC_ACTFLO). The three refusals are
+  gone (`coef_ext_unported`, `eq_ashar!`, and the two notes of `generate!`).
+- New crafted case demo12_ashar (demo12 + ashar.dd): shares of a commodity against a commodity
+  and against a user group; against the activity with seasonal values on DAYNITE, SEASON and
+  ANNUAL processes (levelled down, inherited, left, aggregated) and on an RP_PGFLO process;
+  on exchange processes against the activity, against the reference group IMP in both regions
+  and against the commodity itself; a commodity that is not a flow of the process; the output
+  of a storage process (ASTGELC, added) against its activity. GAMS 54.6.1 with CPLEX and HiGHS,
+  both variants optimal (8,807 and 3,321 rows; 64 ASHAR rows in each).
+- Not reached by the case: L24 (demo12's only process without an activity variable is an
+  exchange process) and a first index 'ACT' (L28-30, L73-74), which FLO_SHAR input cannot give
+  (its third index is a commodity). Both are translated as written.
+- Result: the step probe passes all 70 steps on demo12_ashar; the chain from the DD files
+  (`m13_gate.jl --from-dd --solve`) passes every checkpoint, the QA log, layer 2 and the HiGHS
+  objective against CPLEX in both variants (relative difference under 1e-14); the model from
+  GAMS's pre-solve dump passes layers 2 and 3 with CPLEX and HiGHS in both variants.
+  demo12_ashar is a public fixture, a variant fixture (input -> ppm), a DD-file compile case
+  and the case of test/unit/test_ashar.jl (ppm -> pre-solve on every symbol, each branch, and
+  the model from that state against GAMS's matrix).
 
 ## Open items
 

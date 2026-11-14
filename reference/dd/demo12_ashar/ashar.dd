@@ -1,0 +1,111 @@
+* TIMES.jl crafted case demo12_ashar (reference/crafted.toml, 14 Nov 2026): "advanced" flow
+* shares (FLO_ASHAR), so the preprocessing of eqashar.vda L16-33 (with pp_lvlfc.mod) and every
+* branch of EQ(l)_ASHAR that demo12 can reach have data to work on. Added to TIMES_Demo demo12
+* (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0).
+*
+* FLO_ASHAR is declared after the DD files are read (init_ext.vda L44), so a model cannot give
+* it directly: every record starts as FLO_SHAR, and GAMS moves it to FLO_ASHAR (prep_ext.vda
+* L78: the commodity is not in the group or not a flow of the process; pp_prelv.vda L96: the
+* process is an exchange or storage process):
+* - IDM1ETOT (ANNUAL): gas at most twice coal (UP); bio fixed at half of oil (FX). A commodity
+*   against a commodity.
+* - REFEOIL00 (ANNUAL): crude oil input at least half of the output group REFEOIL00_NRGO (LO).
+*   A commodity against a user group.
+* - ELCTNGAS01 (DAYNITE): gas input against the activity (ACT), given by season (S, W): the
+*   records are levelled down to the process's DAYNITE timeslices.
+* - ELCTNOIL01 (DAYNITE): oil input against the activity, an ANNUAL value and a W value: the
+*   summer timeslices inherit ANNUAL, the winter ones W.
+* - ELCTNCOA01 (SEASON): coal input against the activity, ANNUAL only: not levelled.
+* - RSHNGAS1 (ANNUAL): gas input against the activity, by season: aggregated to ANNUAL.
+* - CAPNELC1 (ANNUAL, with a DAYNITE input and so in RP_PGFLO): electricity against the activity.
+* - TU_GAS_REG2_REG1_01 (exchange, ANNUAL): REG1's gas import against the activity.
+* - IMPGAS1 (exchange, ANNUAL): REG1's import at most 80% and REG2's at least 10% of all the
+*   imports through the process (reference group IMP, added to COM_GRP here).
+* - TU_GAS_REG2_REG1_01 in REG2: gas against itself (the diagonal, with the commodity a flow
+*   of the process): L21-23 turn it into a share in the NRG flows through the process.
+* - RSHNGAS1: ELC, which is not a flow of the process, against the gas input and against
+*   itself (L28-30, and L22-23 with a commodity outside RPC). No equation follows.
+* - ASTGELC, a DAYNITE storage process of ELC added here: its output against the activity
+*   (pp_prelv.vda L96; L26).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET COM_GRP
+/
+IMP
+ASTGELC_NRGO
+/
+
+SET PRC
+/
+ASTGELC 'Electricity storage'
+/
+
+SET COM_GMAP
+/
+REG1.ASTGELC_NRGO.ELC
+/
+
+SET PRC_MAP
+/
+REG1.STG.ASTGELC
+/
+
+SET PRC_TSL
+/
+REG1.ASTGELC.DAYNITE
+/
+
+SET PRC_ACTUNT
+/
+REG1.ASTGELC.ASTGELC_NRGO.PJ
+/
+
+SET TOP
+/
+REG1.ASTGELC.ELC.IN
+REG1.ASTGELC.ELC.OUT
+/
+
+PARAMETER
+STG_EFF ' '/
+REG1.2005.ASTGELC 0.9
+/
+
+PARAMETER
+FLO_SHAR ' '/
+REG1.2030.IDM1ETOT.INDGAS.INDCOA.ANNUAL.UP 2
+REG1.2050.IDM1ETOT.INDGAS.INDCOA.ANNUAL.UP 2
+REG1.2030.IDM1ETOT.INDBIO.INDOIL.ANNUAL.FX 0.5
+REG1.2050.IDM1ETOT.INDBIO.INDOIL.ANNUAL.FX 0.5
+REG1.2010.REFEOIL00.OIL.REFEOIL00_NRGO.ANNUAL.LO 0.5
+REG1.2050.REFEOIL00.OIL.REFEOIL00_NRGO.ANNUAL.LO 0.5
+REG1.2010.ELCTNGAS01.ELCGAS.ACT.S.UP 4
+REG1.2010.ELCTNGAS01.ELCGAS.ACT.W.UP 5
+REG1.2050.ELCTNGAS01.ELCGAS.ACT.S.UP 4
+REG1.2050.ELCTNGAS01.ELCGAS.ACT.W.UP 5
+REG1.2010.ELCTNOIL01.ELCOIL.ACT.ANNUAL.UP 5
+REG1.2010.ELCTNOIL01.ELCOIL.ACT.W.UP 4
+REG1.2050.ELCTNOIL01.ELCOIL.ACT.ANNUAL.UP 5
+REG1.2050.ELCTNOIL01.ELCOIL.ACT.W.UP 4
+REG1.2010.ELCTNCOA01.ELCCOA.ACT.ANNUAL.UP 4
+REG1.2050.ELCTNCOA01.ELCCOA.ACT.ANNUAL.UP 4
+REG1.2010.RSHNGAS1.RSDGAS.ACT.S.UP 3
+REG1.2010.RSHNGAS1.RSDGAS.ACT.W.UP 2
+REG1.2050.RSHNGAS1.RSDGAS.ACT.S.UP 3
+REG1.2050.RSHNGAS1.RSDGAS.ACT.W.UP 2
+REG1.2010.CAPNELC1.COMELC.ACT.ANNUAL.UP 5
+REG1.2050.CAPNELC1.COMELC.ACT.ANNUAL.UP 5
+REG1.2010.TU_GAS_REG2_REG1_01.GAS.ACT.ANNUAL.UP 1.5
+REG1.2050.TU_GAS_REG2_REG1_01.GAS.ACT.ANNUAL.UP 1.5
+REG1.2010.IMPGAS1.GAS.IMP.ANNUAL.UP 0.8
+REG1.2050.IMPGAS1.GAS.IMP.ANNUAL.UP 0.8
+REG2.2010.IMPGAS1.GAS.IMP.ANNUAL.LO 0.1
+REG2.2050.IMPGAS1.GAS.IMP.ANNUAL.LO 0.1
+REG2.2010.TU_GAS_REG2_REG1_01.GAS.GAS.ANNUAL.UP 1.5
+REG2.2050.TU_GAS_REG2_REG1_01.GAS.GAS.ANNUAL.UP 1.5
+REG1.2030.RSHNGAS1.ELC.RSDGAS.ANNUAL.UP 1
+REG1.2030.RSHNGAS1.ELC.ELC.ANNUAL.UP 1
+REG1.2010.ASTGELC.ELC.ACT.ANNUAL.UP 2
+REG1.2050.ASTGELC.ELC.ACT.ANNUAL.UP 2
+/

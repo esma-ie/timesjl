@@ -157,6 +157,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "Cumulative bounds: bnd_cum.mod L12-40 on demo12_cumc (M1.3)" begin
         include("unit/test_bnd_cum.jl")
     end
+    @testset "Flow shares against other groups: eqashar.vda on demo12_ashar (M1.3)" begin
+        include("unit/test_ashar.jl")
+    end
     @testset "demo12 variants: advanced features (docs/demo12-variants.md)" begin
         include("unit/test_variants.jl")
     end

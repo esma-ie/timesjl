@@ -306,3 +306,23 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_cumc/demo12_cumc.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_cumc"]
+
+# TIMES_Demo demo12 + demo12_ashar/ashar.dd (14 Nov 2026): "advanced" flow shares. FLO_SHAR
+# records of a commodity against another commodity, a user group or the activity, with ANNUAL,
+# seasonal and mixed timeslices on ANNUAL, SEASON and DAYNITE processes and on two exchange
+# processes (one against the reference group IMP); a commodity against itself on an exchange
+# process; a commodity that is not a flow of the process; the output of a storage process
+# against its activity. They reach eqashar.vda L16-33 with pp_lvlfc.mod (RPCG_ASHAR, the
+# levelling of FLO_ASHAR) and EQ(l)_ASHAR with its exchange branch (L56-65) and storage terms
+# (L51, L75-76) (M1.3).
+[[model]]
+name = "TIMES_Demo-demo12_ashar"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_ashar/demo12_ashar.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_ashar"]
