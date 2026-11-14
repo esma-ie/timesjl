@@ -105,19 +105,38 @@ end
 # and DD files (the pinned TIMES_Demo and TIMES sources, test_ddsource.jl) and written as a dump;
 # TIMES.jl's state then goes on alone through every segment (no checkpoint dump is read into it) to
 # the model, which is compared with GAMS's matrix and objective (scripts/m13_gate.jl --from-dd).
+# M1.4 change 9: the same for every crafted case with a run fixture (reference/crafted.toml; its DD
+# files are TIMES_Demo's and its own, reference/dd/<case>), in the variant of its fixtures (as run).
 using TIMES: compile_run, write_dump, times_demo_dir, qa_warnings!
 using TIMES.Reference: load_dump, compare_dumps
 
-@testset "M1.4: DD files -> input -> pre-solve -> model, TIMES_Demo demo12, no GAMS state" begin
-    fx = only(filter(f -> f["prefix"] == "demo12_off", TOML.parsefile(joinpath(FIXTURES, "public_fixtures.toml"))["fixture"]))
-    g = compile_run(joinpath(FIXTURES, "demo12_off_run", "tjl_presolve.run");
-                    dirs=[times_demo_dir(), joinpath(@__DIR__, "..", "..", "reference", "gams")],
-                    globals=Dict("RUN_NAME" => "TIMES_Demo-demo12"))
-    dir = write_dump(g, mktempdir(); source="demo12 reduce_off, compiled from its DD files")
-    r = compare_dumps(load_dump(dir), load_dump(joinpath(FIXTURES, "demo12_off_input")))
+"The DD folders of demo12 or of a crafted case (reference/crafted.toml `idirs`), then reference/gams."
+function chain_dirs(model)
+    ref = joinpath(@__DIR__, "..", "..", "reference")
+    model == "TIMES_Demo-demo12" && return [times_demo_dir(), joinpath(ref, "gams")]
+    e = only(filter(m -> m["name"] == model, TOML.parsefile(joinpath(ref, "crafted.toml"))["model"]))
+    dirs = map(e["idirs"]) do d
+        startswith(d, "{times_demo}/model") ? times_demo_dir() :
+        startswith(d, "{crafted}") ? normpath(joinpath(ref, "dd", d[length("{crafted}/")+1:end])) : error("root of $d")
+    end
+    return [dirs; joinpath(ref, "gams")]
+end
+
+"""
+The fixture entry `fx` (prefix, model, reduce, switches) from its run file and DD files to the model,
+on TIMES.jl's state alone: the compile against `<prefix>_input` (every symbol and the label order),
+the state after the coef -> pre-solve step against `<prefix>_presolve` (every set and parameter),
+the QA log against `<prefix>_qa_check.log` (`qalog`), and, with `matrix`, the model against GAMS's
+matrix (`<prefix>_matrix`, layer 2) and the HiGHS optimum against GAMS's objective (layer 3).
+"""
+function dd_chain(fx; qalog=false, matrix=true)
+    p, fix = fx["prefix"], s -> joinpath(FIXTURES, fx["prefix"] * s)
+    g = compile_run(joinpath(fix("_run"), "tjl_presolve.run"); dirs=chain_dirs(fx["model"]), globals=Dict("RUN_NAME" => fx["model"]))
+    dir = write_dump(g, mktempdir(); source="$p, compiled from its DD files")
+    r = compare_dumps(load_dump(dir), load_dump(fix("_input")))
     @test length(r.symbols) > 800 && all(ispass, r.symbols) && isempty(r.only_left) && isempty(r.only_right)
-    @test load_dump(dir).uels == load_dump(joinpath(FIXTURES, "demo12_off_input")).uels
-    tm = TimesModel(dir; switches=fx["switches"])
+    @test load_dump(dir).uels == load_dump(fix("_input")).uels
+    tm = TimesModel(dir; switches=fx["switches"], reduce=get(fx, "reduce", false))
     qa_warnings!(tm, g.warnings)
     names = chain_symbols(tm.data)
     for (a, b, steps) in M13_CHAIN
@@ -125,22 +144,48 @@ using TIMES.Reference: load_dump, compare_dumps
     end
     coef_cpt!(tm); coef_nio!(tm); coef_ptr!(tm); coef_obj!(tm); coef_alt!(tm); coef_shp!(tm); coef_ext!(tm)
     foreach(f -> f(tm), M13_COEF_PRESOLVE)
-    ref = DumpData(joinpath(FIXTURES, "demo12_off_presolve"))
+    ref = DumpData(fix("_presolve"))
     r = layer1(tm, ref, filter(n -> haskey(ref.dump.symbols, n) && n != "TJL_SOLVEINFO", names))
-    foreach(d -> ispass(d) || println("DD files -> presolve: ", d, " ", d.examples), r)
+    foreach(d -> ispass(d) || println(p, ", DD files -> presolve: ", d, " ", d.examples), r)
     @test length(r) > 800 && all(ispass, r)
-    qok, note = qa_compare(qa_text(tm), read(joinpath(FIXTURES, "demo12_off_qa_check.log"), String); complete=true)
-    qok || println("QA log: ", note)
-    @test qok
+    if qalog
+        qok, note = qa_compare(qa_text(tm), read(fix("_qa_check.log"), String); complete=true)
+        qok || println(p, ", QA log: ", note)
+        @test qok
+    end
+    matrix || return
     generate!(tm)
-    cmp = compare_lp(canonical_from_jump(tm.model), canonical_from_dump(joinpath(FIXTURES, "demo12_off_matrix", "matrix"),
-                                                                        joinpath(FIXTURES, "demo12_off_matrix", "dictmap")))
+    cmp = compare_lp(canonical_from_jump(tm.model), canonical_from_dump(joinpath(fix("_matrix"), "matrix"),
+                                                                        joinpath(fix("_matrix"), "dictmap")))
     ispass(cmp) || foreach(println, cmp.examples)
     @test ispass(cmp)
+    @test JuMP.num_constraints(tm.model; count_variable_in_set_constraints=false) == fx["rows"]
     JuMP.set_optimizer(tm.model, HiGHS.Optimizer); JuMP.set_silent(tm.model)
     JuMP.optimize!(tm.model)
     @test JuMP.termination_status(tm.model) == JuMP.OPTIMAL
-    for (_, gobj) in JSON.parsefile(joinpath(FIXTURES, "demo12_off_solution.json"))["objval"]
+    for (_, gobj) in JSON.parsefile(fix("_solution.json"))["objval"]
         @test isapprox(JuMP.objective_value(tm.model), gobj; rtol=1e-6)
+    end
+end
+
+const PUBLIC_FX = TOML.parsefile(joinpath(FIXTURES, "public_fixtures.toml"))["fixture"]
+
+@testset "M1.4: DD files -> input -> pre-solve -> model, TIMES_Demo demo12, no GAMS state" begin
+    dd_chain(only(filter(f -> f["prefix"] == "demo12_off", PUBLIC_FX)); qalog=true)
+end
+
+# Every public fixture of a crafted case that has its run file (<prefix>_run): 20 cases, each a whole
+# model. demo12_uc (unit commitment) has no matrix fixture: its compile is checked, and the chain
+# stops in coef_ext! with the refusal of eqlducs.vda, which is not translated.
+const CRAFTED_FX = filter(f -> f["prefix"] != "demo12_off" && isdir(joinpath(FIXTURES, f["prefix"] * "_run")), PUBLIC_FX)
+
+@testset "M1.4: DD files -> model, crafted cases, no GAMS state" begin
+    @test length(CRAFTED_FX) == 20
+    @testset "$(fx["prefix"])" for fx in CRAFTED_FX
+        dd_chain(fx)
+    end
+    @testset "demo12_uc (compiled, then refused: unit commitment)" begin
+        uc = only(filter(v -> v["prefix"] == "demo12_uc", TOML.parsefile(joinpath(FIXTURES, "variant_fixtures.toml"))["variant"]))
+        @test_throws "not yet translated: eqlducs.vda L12-41" dd_chain(uc; matrix=false)
     end
 end
