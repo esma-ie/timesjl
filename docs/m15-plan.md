@@ -144,7 +144,7 @@ file gives the step's objective.
 | # | Change | GAMS | Parity check |
 | --- | --- | --- | --- |
 | 1 | The per-step reference: harness 0.3.4 | none (the hooks at maindrv.mod L50 and solve.mod L44) | sizes of each step in the CONVERT run equal the solve run's; HiGHS on each step's MPS file; a reference that is not stepped unchanged |
-| 2 | The partition and the preparation of a step: `stp_init!`, `stp_step_prep!`, `stp_next!` (working names) | solve.stp L18-26, L43-107, L111-196, L299-314; clearsol.stp; coef_alt.lin L134-158; eqobsalv.mod L26-85 | layer 1 per step: every set and parameter of `steps/<k>/final` at 1e-9 (less the harness's own TJL symbols), fed with GAMS's levels of step k-1 |
+| 2 | Done, 14 Nov 2026 ("Change 2 as built", below). The partition and the preparation of a step: `stp_init!`, `stp_step_prep!`, `stp_next!` and the point store `StpPoint`, in `src/model/solve_stp.jl` | solve.stp L9-26, L43-57, L69-107, L111-196, L217, L222-227, L288-289, L295-319; clearsol.stp L8-10; coef_alt.lin L27, L31-63, L134-136, L160 (the block L137-157, LINFLO only, refused until change 5); eqobsalv.mod L19-85; bnd_ucw.mod L13-21; bnd_cum.mod L12-20, L27-38; the data statements of bndmain.mod with its second argument 1 | layer 1 per step: every set and parameter of `steps/<k>/final` at 1e-9 (less the harness's own TJL symbols and Z), fed with GAMS's levels and marginals of step k-1. demo12_step, both variants: 957 symbols in each of the three steps, none differs |
 | 3 | The equations over SUBT and the bounds of a step | maindrv.mod L38-41 and every macro use above; solve.stp L115 (V), L195-282; bndmain.mod with its second argument; bnd_ucw.mod; bnd_cum.mod | layer 2 per step: `steps/<k>/matrix` at 1e-9 (rows, columns, order, coefficients, right-hand sides, bounds), fed with GAMS's levels of step k-1; every model that is not stepped: LP identical |
 | 4 | The driver `solve_stepped!` (the loop, the solve, the levels kept between steps as SOLVEOPT=MERGE does, L325-330); the two refusals removed | solve.stp L109, L285-295, L303-321, L325-330; solve.mod L12-44 | layer 3 per step and at the end, 1e-6: TIMES.jl with HiGHS, each step on its own levels, against GAMS/CPLEX and GAMS/HiGHS; a public fixture of the steps in CI; `scripts/m13_gate.jl` runs the stepped case to the end |
 | 5 | A second crafted case for branches demo12_step does not reach (below) | the same lines | layers 1 to 3 per step |
@@ -161,6 +161,78 @@ optimum with the same objective, the step's objective is still compared at
 1e-6, and each side's optimum is cross-evaluated in the other's model, as
 layer 3 does for every run.
 
+## Change 2 as built (14 Nov 2026)
+
+`src/model/solve_stp.jl` (GAMS lines of solve.stp unless a file is named):
+
+| Function | GAMS | What |
+| --- | --- | --- |
+| `stp_init!` | L9-26, L43-57; clearsol.stp L8-10; L69-107 | the control checks; the first partition (YR_VL, G_OVERLAP, YR_V1, SUBT, BACKWARD, FORWARD, RT_PP, NO_RT, RTC_NET, RTC_PRD); RVT; fixed bounds copied to lower and upper (CAP_BND, the user constraints' right-hand sides, PRC_DYNUC); UC_RN, R_UC, RTP_VARP, RTP_CAPYR; STP_UCT, STP_DIV |
+| `stp_step_prep!` | L111-196, L217, L222-227, L288-289 | one step up to its SOLVE: BACKWARD, NO_RT, RT_PP, the vintages, MIYR_VL and the end of the horizon; `coef_alt!(tm; stp=true)`; OBJ_LIFE; `eqobsalv_step!`; RVPRL; the user constraints' period sets cut to the step; UC_BND and the right-hand sides, cumulative bounds and CAP_BND it moves; `bnd_ucw_data!`; UC_RTSUC; REG_CUMCST; NO_RVP; `bnd_cum_data!` for a horizon that ends at MIYR_VL; PAR_CUMFLOM and PAR_UCR |
+| `stp_next!` | L295-319 | after the SOLVE: PRESOL 0; the marginals restored; the next SUBT and YR_V1; the vintages and the user constraints' period sets restored; `bnd_data!(tm; cum=false)`, bndmain.mod with its second argument 1 |
+| `StpPoint`, `stp_level`, `stp_marginal`, `stp_load_point!` | the `.L` and `.M` these lines read | the levels and marginals statements between two steps read (VAR_NCAP, VAR_CAP, the six slack variables of the user constraints, VAR_CUMFLO, VAR_CUMCOM), kept apart from the JuMP model, which is built anew in each step. The run starts with every level zero. Change 4 merges each step's solution into the store, as SOLVEOPT=MERGE does (L286); the layer 1 check loads GAMS's point of the step |
+
+Changed outside that file, for a stepped run only: `coef_alt!(tm; stp=true)`
+(src/coef/coef_alt.jl), `eqobsalv_step!` (src/model/eqobjfix_prep.jl; the
+statements of eqobsalv.mod L26-82 now test that a vintage is in MODLYEAR,
+which every vintage is outside a step), `bnd_cum_data!`, `bnd_ucw_data!` and
+`bnd_data!(tm; cum=false)` (src/model/qack_prep.jl; the same statements as
+before, callable apart), and `var_uc`, YES in a stepped run (initmty.mod
+L446-447). No generated LP changes: model generation still refuses a stepped
+run until changes 3 and 4.
+
+Run controls, as GAMS leaves them. maindrv.mod L23 includes setglobs.gms
+after the data is read, and its L11 removes REG_FIXT unless FIXBOH is set;
+so without FIXBOH, L46 is not compiled (MY_FYEAR stays 0) and every statement
+on REG_FIXT does nothing. `stp_init!` empties REG_FIXT and refuses FIXBOH,
+STAGES, SPINES, SENSIS, CLI (and UC_CLI data) and TM_HSX with the usual
+message.
+
+How it was checked. In GAMS's order, from the `ppm` dump with TIMES.jl's own
+state up to solve.stp: `stp_init!`; then for each step `stp_step_prep!`,
+`pp_clean!` (solve.mod L12 runs inside the step), every set and parameter
+against `steps/<k>/final` at 1e-9, GAMS's levels and marginals of that step
+loaded, `stp_next!`.
+
+- demo12_step, REDUCE off and as run: 957 symbols in each of the three steps,
+  none differs. The steps are 2005-2020, 2020-2030 and 2050, with MIYR_VL
+  2025, 2040 and 2052; after the third, SUBT is empty and the loop ends.
+- Not compared: Z (err_stat.mod L56-65 sets it after the SOLVE) and the
+  harness's own TJL symbols.
+- After the loop the state equals the `presolve` dump on 832 of its 833 sets
+  and parameters. PAR_CUMFLOM differs (9 records against none) and should:
+  that dump's run makes no solve, so its marginals are all zero, while the
+  check loads the solved points.
+- CI: `test/unit/test_solve_stp.jl` (44 tests) on three step fixtures,
+  `test/fixtures/demo12_step_step<k>` (about 1 MB in all, CC BY 4.0). A step
+  fixture holds the sets and parameters that differ from the `equ` fixture,
+  the variables the point store reads, and the list of the symbols equal to
+  the `equ` fixture's, which the test compares with that fixture; so every
+  set and parameter of each step is compared. They are made by
+  `scripts/make_step_fixture.jl`.
+
+Translated as GAMS writes them, but not reached by demo12_step, so **not
+checked against GAMS** (the second crafted case of change 5 is to reach
+them):
+
+| Branch | Lines of solve.stp |
+| --- | --- |
+| G_OVERLAP given by the user (a self-check only: with 5, the second step starts at 2030) | 44, 305 |
+| STP_DIV (ALTOBJ > 1) | 104-107 |
+| CAP_BND copied, relaxed and bounded again | 69, 96, 190-191, 319 |
+| user constraints summed over periods or over regions, and the dynamic ones (UC_T_SUM, UC_R_SUM, UC_T_SUCC, UC_DYNBND) | 132-151, 157, 176-179 |
+| the UC_BND rows of UC_RHS, UC_RHSR, UC_RHST and UC_RHSTS (demo12_step has UC_RHSRT and UC_RHSRTS) | 155-175 |
+| PRC_DYNUC | 76, 183-185 |
+| REG_CUMCST | 196 |
+| RVPRL (no retirement data) | 128 |
+| COM_CUM in the bnd_cum.mod call of each step | 222-227 |
+| COR_SALVD and SALV_DEC records a step does not assign keep the step before's value (eqobsalv.mod STP) | 127 |
+
+Not translated, refused or flagged: the LINFLO block of coef_alt.lin STP
+(L137-157; refused, change 5); the start from a given solution (L61-66);
+the REG_FIXT statements (L186-189, L223, L315-317; FIXBOH refused); CM_MAXC
+(L149; CLI refused).
+
 ## What demo12_step reaches, and what it does not
 
 Reached (records in the dump of step 2): user constraints by region and
@@ -174,7 +246,7 @@ Not reached, translated as GAMS has them and to be flagged in each PR:
 
 | Branch | Lines of solve.stp | In a second crafted case? |
 | --- | --- | --- |
-| G_OVERLAP given by the user | 45 | yes |
+| G_OVERLAP given by the user | 44 | yes |
 | OBJ ALT or LIN (LINFLO): STP_DIV, coef_alt.lin STP | 104-107, 124 | yes |
 | CAP_BND | 69, 96, 190-191, 218-219, 279 | yes |
 | a cumulative user constraint (UC_T_SUM) | 132-137 | yes |
@@ -195,7 +267,7 @@ Not reached, translated as GAMS has them and to be flagged in each PR:
   this plan); a run with them stops with the usual message.
 - **STAGES, SPINES and SENSIS** with a stepped run: solve.stp L11-12 aborts
   or takes other branches; refused with the stochastic extension.
-- **CLI** (CM_MAXC, L147) and **TM_HSX** (the tolerances of L154): refused
+- **CLI** (CM_MAXC, L149) and **TM_HSX** (the tolerances of L154): refused
   with their extensions.
 - A start from a given solution (L61-66, `VAR_UC.L('SOLVE_STATUS')`): needs
   a restart point; translated for the case without one (no levels).

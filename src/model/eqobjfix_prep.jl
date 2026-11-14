@@ -414,7 +414,12 @@ then, 0 otherwise. `OPTION a <= b` matches from the left (G52).
 
 In a stepped (myopic) run (`\$IF SET TIMESTEP`) L23 clears OBJ_SUMS, OBJ_SUMS3,
 SALV_INV and OBJSCC and L24-25 jump to the equation: L26-82 run inside each
-step instead (solve.stp L127), which is part of the stepped solve.
+step instead (solve.stp L127, `eqobsalv_step!`).
+
+V is an alias of MODLYEAR (setglobs.gms L147). It controls L31, L41 and
+L73-77, so a vintage a step has taken out of MODLYEAR (solve.stp L115) gets
+no salvage data there; outside a step every vintage of these statements is
+in MODLYEAR.
 
 GAMS: eqobsalv.mod L11-82, v4.9.7.
 """
@@ -430,6 +435,31 @@ function eqobsalv_prep!(tm::TimesModel)
         gput!(tm, "SALV_DEC", Dict{NTuple{4,String},Float64}())
         return tm
     end
+    return _eqobsalv_values!(tm)
+end
+
+"""
+    eqobsalv_step!(tm) -> tm
+
+The salvage data of one step of a stepped run: solve.stp L127 includes
+`eqobsalv.mod STP EXIT`, so L23 clears OBJ_SUMS, OBJ_SUMS3, SALV_INV and
+OBJSCC, L26-82 run on the step's MIYR_VL and MODLYEAR (the statements are in
+`eqobsalv_prep!`'s docstring) and L85 leaves before the equation. COR_SALVD,
+OBJ_CRFD and SALV_DEC are not cleared between the steps: a record the step
+does not assign keeps the value of the step before.
+
+GAMS: eqobsalv.mod L19-85 (solve.stp L127), v4.9.7.
+"""
+function eqobsalv_step!(tm::TimesModel)
+    uppercase(gswitch(tm, "ETL", "")) == "YES" && throw(UnportedError("eqobsalv.mod L65-67: %ETL% YES"))
+    # L23: $IF SET TIMESTEP OPTION CLEAR=OBJ_SUMS,CLEAR=OBJ_SUMS3,CLEAR=SALV_INV,CLEAR=OBJSCC;
+    gput!(tm, "OBJ_SUMS", Set{NTuple{3,String}}()); gput!(tm, "OBJ_SUMS3", Set{NTuple{3,String}}())
+    gput!(tm, "SALV_INV", Dict{NTuple{4,String},Float64}()); gput!(tm, "OBJSCC", Dict{NTuple{4,String},Float64}())
+    return _eqobsalv_values!(tm; stp=true)
+end
+
+# eqobsalv.mod L26-82. `stp`: the call of a step (COR_SALVD and SALV_DEC start from the stored values).
+function _eqobsalv_values!(tm::TimesModel; stp::Bool=false)
     d = tm.data
     yax = YearAxis(tm)
     yv(y) = yax.yearval[y]
@@ -437,6 +467,7 @@ function eqobsalv_prep!(tm::TimesModel)
     P(name, n) = gparam_opt(d, name, n)
     sc(name) = gscalar(tm, name)
     K, T = S("EACHYEAR", 1), S("MILESTONYR", 1)
+    V = S("MODLYEAR", 1)                                                        # ALIAS(MODLYEAR,V), setglobs.gms L147
     nz(x::GNum) = x.v != 0 || x.eps
     ct = ctst(tm)
     miyr_vl = sc("MIYR_VL")
@@ -449,7 +480,7 @@ function eqobsalv_prep!(tm::TimesModel)
     isp_of = indexby(invspred, (1, 2))                                          # (k_eoh, jot) -> INVSPRED
     obj_sumsi = Set{NTuple{4,String}}()
     for (r, v, p, a, ke, jot) in obj_sumii                                      # L31-32
-        ((ke,) in k_eoh && (!pft_t || (v,) in T)) || continue
+        ((ke,) in k_eoh && (v,) in V && (!pft_t || (v,) in T)) || continue
         for (_, _, kk, _) in get(isp_of, (ke, jot), NTuple{4,String}[])
             ((kk,) in K && yv(kk) + tl((r, v, p)) - 1 > miyr_vl) && push!(obj_sumsi, (r, v, p, kk))
         end
@@ -466,7 +497,7 @@ function eqobsalv_prep!(tm::TimesModel)
     end
     ydom = S("Y", 1)
     for (r, v, p, kk, y) in S("OBJ_SUMIVS", 5)                                  # L41-42
-        ((kk,) in K && (y,) in ydom && yv(kk) + tl((r, v, p)) - 1 > miyr_vl) || continue
+        ((v,) in V && (kk,) in K && (y,) in ydom && yv(kk) + tl((r, v, p)) - 1 > miyr_vl) || continue
         push!(obj_sums3, (r, v, p)); push!(obj_sumsi, (r, v, p, kk))
     end
     gput!(tm, "OBJ_SUMS", obj_sums); gput!(tm, "OBJ_SUMS3", obj_sums3)
@@ -554,11 +585,11 @@ function eqobsalv_prep!(tm::TimesModel)
     # L73-77: COR_SALVD, OBJ_CRFD
     ob_dcc = P("OB_DCC", 4)
     drate, rfr, delif = P("NCAP_DRATE", 3), P("OBJ_RFR", 3), P("NCAP_DELIF", 3)
-    cor_salvd = Dict{NTuple{4,String},Float64}()
+    cor_salvd = stp ? gvalues(tm, "COR_SALVD", 4) : Dict{NTuple{4,String},Float64}()
     obj_crfd = gvalues(tm, "OBJ_CRFD", 4)
     curs = [k[1] for k in S("CUR", 1).keys]
     for (r, v, p) in rtp, cur in curs
-        nz(gv(ob_dcc, (r, p, cur, v))) || continue
+        ((v,) in V && nz(gv(ob_dcc, (r, p, cur, v)))) || continue
         dr, rf, de = gv(drate, (r, v, p)), gv(rfr, (r, v, cur)), gv(delif, (r, v, p))
         x = dr.v > 0 ? ((one - one / (one + dr)) * (one - one / gpow(one + rf, de))) /
                        ((one - one / (one + rf)) * (one - one / gpow(one + dr, de))) : GZERO
@@ -572,9 +603,9 @@ function eqobsalv_prep!(tm::TimesModel)
     # L81-82: SALV_DEC
     obj_diviii = P("OBJ_DIVIII", 3)
     sumiii_of = indexby(S("OBJ_SUMIII", 6), (1, 2, 3))
-    salv_dec = Dict{NTuple{4,String},Float64}()
+    salv_dec = stp ? gvalues(tm, "SALV_DEC", 4) : Dict{NTuple{4,String},Float64}()
     for ((r, v, p, cur), _) in cor_salvd
-        (r, v, p) in obj_sums3 || continue
+        ((r, v, p) in obj_sums3 && (v,) in V) || continue
         s = GZERO
         for (_, _, _, ll, kk, y) in get(sumiii_of, (r, v, p), NTuple{6,String}[])
             si = gv(salv_inv, (r, v, p, ll))

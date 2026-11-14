@@ -108,6 +108,7 @@ include("prep/ppmain_blend.jl")
 include("prep/ppmain_reduce.jl")
 include("ext/vda/ppm_ext.jl")
 include("model/generate.jl")
+include("model/solve_stp.jl")     # M1.5: the stepped (myopic) solve, solve.stp
 include("model/solution.jl")      # #97: the solution as a TIMES.jl dump (M1.6, started early)
 
 end # module TIMES

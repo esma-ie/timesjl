@@ -166,6 +166,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "Stepped runs before solve.stp: coef_alt.lin L81, eqobsalv.mod L23-25 on demo12_step (M1.3)" begin
         include("unit/test_stepped.jl")
     end
+    @testset "The stepped solve: the partition and the preparation of each step, solve.stp on demo12_step (M1.5)" begin
+        include("unit/test_solve_stp.jl")
+    end
     @testset "Commodity bounds above the tracked level: eqbndcom.mod on demo12_bndc (M1.3)" begin
         include("unit/test_eqbndcom.jl")
     end

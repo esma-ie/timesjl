@@ -23,9 +23,14 @@
 # - L160: PASTSUM and YK1 cleared.
 #
 # L81 (`$IF SET TIMESTEP $GOTO DONE`): a stepped (myopic) run skips L83-86 here;
-# solve.stp L124 calls the STP label (L134-158) inside each step, which is part
-# of the stepped solve (M1.5) and refused at model generation. ALTOBJ is read
-# from the state (initmty.mod L420-432, changed by ppmain.mod L146).
+# solve.stp L124 calls the file again inside each step (`coef_alt.lin STP`,
+# only under a non-empty %CTST%): L27 clears PERDINV, TPULSE and TPULSEYR,
+# L31-58 run again on the step's Y_EOH, L63 jumps to the STP label (L134-158),
+# which changes the divisors under LINFLO only (L136), and L160 clears PASTSUM
+# and YK1. `coef_alt!(tm; stp=true)` is that call; its LINFLO block (L137-157)
+# is refused until the stepped solve's second crafted case (docs/m15-plan.md).
+# ALTOBJ is read from the state (initmty.mod L420-432, changed by ppmain.mod
+# L146).
 
 """
     linflo(tm), linacc(tm)
@@ -57,7 +62,7 @@ function glog(x::GNum)
 end
 
 """
-    coef_alt!(tm) -> tm
+    coef_alt!(tm; stp=false) -> tm
 
 coef_alt.lin on the GAMS state in `tm`, as coefmain.mod L26 calls it:
 PERDINV, TPULSEYR, TPULSE, OBJ_LINT (and OBJ_ALTV, FPD, OBJ_PVT, COEF_PVT
@@ -66,9 +71,16 @@ when the switches ask); then, unless `%CTST%` is empty, R_DF, RB, COEF_CPT
 OBLONG and outside a stepped run (L80-81), RTP_CAPVL. PASTSUM and YK1 are
 left cleared.
 
-GAMS: coef_alt.lin L11-87, L159-161 (coefmain.mod L26), v4.9.7.
+With `stp` it is the call of a step of a stepped run (solve.stp L124,
+`coef_alt.lin STP`): PERDINV, TPULSE and TPULSEYR are cleared (L27) and built
+again with OBJ_LINT (and OBJ_ALTV) on the step's Y_EOH (L31-58); L63 then
+jumps to the STP label, which without LINFLO (L136) only clears PASTSUM and
+YK1 (L160). With LINFLO the divisors' block (L137-157) is not translated yet.
+
+GAMS: coef_alt.lin L11-87, L159-161 (coefmain.mod L26); L27, L31-63, L134-136
+and L160 (solve.stp L124), v4.9.7.
 """
-function coef_alt!(tm)
+function coef_alt!(tm; stp::Bool=false)
     ax = YearAxis(tm)
     yv(y) = ax.yearval[y]
     S1(n) = gset(tm, n)
@@ -170,6 +182,16 @@ function coef_alt!(tm)
     end
     gput!(tm, "OBJ_LINT", obj_lint)
 
+    if stp
+        # solve.stp L124 includes the file only under a non-empty %CTST%; L63: $IFI %1==STP $GOTO STP
+        ctst(tm) == "" && throw(ArgumentError("coef_alt.lin STP is called only under a non-empty %CTST% (solve.stp L124)"))
+        # L136: $IF NOT %LINFLO%==1 $GOTO DONE
+        lf && throw(UnportedError("coef_alt.lin L137-157: the divisors of a stepped run under LINFLO (OBJ ALT or LIN)"))
+        # L160: OPTION CLEAR=PASTSUM,CLEAR=YK1
+        gput!(tm, "PASTSUM", Dict{NTuple{3,String},Float64}())
+        gput!(tm, "YK1", Set{NTuple{2,String}}())
+        return tm
+    end
     # L59: with %CTST% empty the include ends here
     ctst(tm) == "" && return tm
 
