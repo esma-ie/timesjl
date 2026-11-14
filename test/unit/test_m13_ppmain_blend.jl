@@ -1,14 +1,15 @@
-# M1.3 (16): ppmain.mod L1228-1333 (v4.9.7): the blending block, without
-# blending data (refused with it). Layer 1 on TIMES_Demo demo12 reduce_off
-# from the prelv checkpoint, compared at the ppm checkpoint on what these
-# lines settle (scripts/m13_probe.jl does the same on the core reference
-# runs), and on a crafted state against GAMS running ppmain.mod L616-1333
-# itself, every symbol written compared at L1333 (scripts/m13_replay.jl does
-# the same on the core models' own states).
+# M1.3 (16): ppmain.mod L1228-1333 (v4.9.7): the blending block. Layer 1 on
+# TIMES_Demo demo12 reduce_off (no blending data) from the prelv checkpoint,
+# compared at the ppm checkpoint on what these lines settle
+# (scripts/m13_probe.jl does the same on the core reference runs), and on a
+# crafted state against GAMS running ppmain.mod L616-1333 itself, every
+# symbol written compared at L1333 (scripts/m13_replay.jl does the same on
+# the core models' own states). With blending data: the crafted case
+# demo12_blnd (test/unit/test_eqblnd.jl, test/unit/test_variants.jl).
 
-using TIMES: TimesModel, DumpData, UnportedError, layer1, pp_qafs!, ppmain_dflt!, ppmain_tsattr!, ppmain_flo!, ppmain_flofs!,
+using TIMES: TimesModel, DumpData, layer1, pp_qafs!, ppmain_dflt!, ppmain_tsattr!, ppmain_flo!, ppmain_flofs!,
              ppmain_ire!, ppmain_bnd!, ppmain_cum!, ppmain_stg!, ppmain_uc!, ppmain_ucmap!, ppmain_blend!, ppmain_blend_symbols,
-             gparam, gput!
+             gparam, gset, gput!
 using TIMES.Reference: ispass
 import TOML
 
@@ -23,10 +24,17 @@ const PPMAIN_TO_BLEND = (pp_qafs!, ppmain_dflt!, ppmain_tsattr!, ppmain_flo!, pp
     r = layer1(tm, DumpData(joinpath(FIXTURES, "demo12_off_ppm")), names)
     foreach(d -> ispass(d) || println(d, " ", d.examples), r)
     @test length(names) == 13 && all(ispass, r)
-    # blending data is refused
+    # L1246: a BL_TYPE gives BLE_SPE for any commodity; L1254-1257: only a blend (BLE) gets
+    # periods and a default unit
     tb = TimesModel(joinpath(FIXTURES, "demo12_off_prelv"); switches=fx["switches"])
+    push!(tb.data.dump.uels, "OCT"); tb.data.uelorder["oct"] = length(tb.data.dump.uels)      # a new label
     gput!(tb, "BL_TYPE", Dict{NTuple{3,String},Float64}(("REG1", "GSL", "OCT") => 1.0))
-    @test_throws UnportedError ppmain_blend!(tb)
+    ppmain_blend!(tb)
+    @test gset(tb, "BLE_SPE").members == Set([("REG1", "GSL", "OCT")])
+    @test isempty(gset(tb, "BLE_TP").members) && isempty(gparam(tb, "BL_UNIT").values)
+    gput!(tb, "BLE", Set([("GSL",)]))
+    ppmain_blend!(tb)
+    @test length(gset(tb, "BLE_TP").members) == 6 && gparam(tb, "BL_UNIT").values == Dict(("REG1", "GSL", "OCT") => 1.0)
 end
 
 isdefined(@__MODULE__, :PPMAIN_DFLT_OUTPUTS) || include("ppmain_dflt_case.jl")

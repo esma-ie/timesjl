@@ -96,8 +96,10 @@ addconst!(expr::JuMP.AffExpr, c::GNum) = (JuMP.add_to_expression!(expr, c.v); ex
 """
     gconstraint!(tm, name, key, eqtype, lhs, rhs) -> Union{ConstraintRef,Nothing}
 
-Create and register one row `lhs =eqtype= rhs`, `eqtype` being GAMS's E, L
-or G. Like GAMS, generate no row when no variable is left with a nonzero
+Create and register one row `lhs =eqtype= rhs`, `eqtype` being GAMS's E, L,
+G or N. An N row is a free row (GAMS's =N=, "no relationship": it is in the
+matrix with bounds -INF and +INF; eqblnd.mod with BL_TYPE 4), written as
+`lhs - rhs in [-Inf, Inf]`. Like GAMS, generate no row when no variable is left with a nonzero
 coefficient, once terms of the same variable are combined (none were added,
 every coefficient was an exact zero, or they cancel, as in `x =E= x`), unless
 an EPS coefficient was added, which keeps the row (docs/discrepancies.md G5):
@@ -111,8 +113,8 @@ function gconstraint!(tm, name::AbstractString, key::NTuple{N,String}, eqtype::A
     delete!(eps, lhs); delete!(eps, rhs)
     if !has_eps && _all_cancel(lhs, rhs)
         a, b = lhs.constant, rhs.constant
-        ok = eqtype == "E" ? a == b : eqtype == "L" ? a <= b : eqtype == "G" ? a >= b :
-             throw(ArgumentError("equation type must be E, L or G, got $eqtype"))
+        ok = eqtype == "E" ? a == b : eqtype == "L" ? a <= b : eqtype == "G" ? a >= b : eqtype == "N" ? true :
+             throw(ArgumentError("equation type must be E, L, G or N, got $eqtype"))
         ok || throw(ArgumentError("$(colname(uppercase(name), key)) has no variables and is infeasible ($a =$(eqtype)= $b)"))
         return nothing
     end
@@ -122,8 +124,10 @@ function gconstraint!(tm, name::AbstractString, key::NTuple{N,String}, eqtype::A
         JuMP.@constraint(tm.model, lhs <= rhs)
     elseif eqtype == "G"
         JuMP.@constraint(tm.model, lhs >= rhs)
+    elseif eqtype == "N"
+        JuMP.@constraint(tm.model, lhs - rhs in JuMP.MOI.Interval(-Inf, Inf))
     else
-        throw(ArgumentError("equation type must be E, L or G, got $eqtype"))
+        throw(ArgumentError("equation type must be E, L, G or N, got $eqtype"))
     end
     return addeq!(tm.eqs, name, key, con)
 end

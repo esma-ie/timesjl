@@ -29,7 +29,6 @@
 #
 # Not translated yet; data that needs them raises UnportedError:
 # - capacity-related flows, cal_cap.mod L72 (NCAP_COM, RPC_CAPFLO);
-# - blending, L78 (BLE_OPR);
 # - elastic demand, L85 under %TIMESED% (COM_ELAST); VAR_DEM, L82 (RD_NLP);
 # - the IER extraction-condensing CHP adjustment, L49 (%PEAKCHP%);
 # - %IREAUXBAL% in cal_ire.mod L30 other than from powerflo.vda DECL (its IREAUX
@@ -43,7 +42,6 @@ function peak_unported(tm::TimesModel)
     nonempty_par(name, N) = !isempty(gparam_opt(d, name, N))
     (nonempty_par("NCAP_COM", 5) || nonempty_set("RPC_CAPFLO", 4)) &&
         throw(UnportedError("eqpeak.mod L72 capacity-related flows, cal_cap.mod (NCAP_COM / RPC_CAPFLO)"))
-    nonempty_set("BLE_OPR", 3) && throw(UnportedError("eqpeak.mod L78 blending (BLE_OPR)"))
     nonempty_par("COM_ELAST", 5) && throw(UnportedError("eqpeak.mod L85 elastic demand under %TIMESED% (COM_ELAST)"))
     nonempty_par("RD_NLP", 2) && throw(UnportedError("eqpeak.mod L82 non-linear demand VAR_DEM (RD_NLP)"))
     haskey(tm.switches, "PEAKCHP") && throw(UnportedError("eqpeak.mod L49 %PEAKCHP% (IER extension, prep_ext.ier L21)"))
@@ -71,7 +69,9 @@ Generate every EQ_PEAK row from `tm.data`. Returns the number of rows.
       SUM((COM_GMAP(R,CG2,C),COM_TS(R,C,S))\$RS_FR(R,SL,S),
         RS_FR(R,SL,S) * (1+MAX(SUM(COM(CG2),COM_PKFLX(R,T,COM,SL)),COM_PKFLX(R,T,C,S))) *
         ( [cal_fflo IN, *FLO_PKCOI(R,T,P,C,TS)] + [cal_ire EXP IN IE, *FLO_PKCOI(R,T,P,C,TS)] +
-          [cal_cap IN] + [cal_stgn IN OUT, STG_EFF*(NCAP_PKCNT**RPC_PKF)*, \$RPC_PKF(R,P,C)] + [blending] +
+          [cal_cap IN] + [cal_stgn IN OUT, STG_EFF*(NCAP_PKCNT**RPC_PKF)*, \$RPC_PKF(R,P,C)] +
+          SUM(BLE_OPR(R,BLE,OPR)\$(BLE_INP(R,BLE,C)*BLE_TP(R,T,BLE)),
+              G_YRFR(R,S)*(1+RTCS_FR(R,T,C,S,'ANNUAL'))*BL_INP(R,BLE,C)*PEAKDA_BL(R,BLE,T)*VAR_BLND(R,T,BLE,OPR)) +
           ((COM_PROJ(R,T,C)\$(NOT RD_NLP(R,C)) + SUM(RD_AGG(R,COM), RD_SHAR(R,T,COM,C)*VAR_COMPRD(R,T,COM,'ANNUAL')))
            * COM_FR(R,T,C,S))\$DEM(R,C) + 0));
 
@@ -113,6 +113,13 @@ function eq_peak!(tm::TimesModel)
     stg_eff = gparam(tm, "STG_EFF")
     nstts, prc_map = gset(tm, "PRC_NSTTS"), gset(tm, "PRC_MAP")
     one = GNum(1.0)
+    # blending (L78)
+    ble, opr = gset_opt(tm.data, "BLE", 1), gset_opt(tm.data, "OPR", 1)
+    ble_tp = gset_opt(tm.data, "BLE_TP", 3)
+    ble_opr_of_rb = indexby(gset_opt(tm.data, "BLE_OPR", 3), (1, 2))   # (r,ble) -> BLE_OPR(r,ble,opr)
+    ble_inp_of_rc = indexby(gset_opt(tm.data, "BLE_INP", 3), (1, 3))   # (r,c) -> BLE_INP(r,ble,c)
+    bl_inp, peakda_bl = gparam_opt(tm.data, "BL_INP", 3), gparam_opt(tm.data, "PEAKDA_BL", 3)
+    rtcs_fr = gparam(tm, "RTCS_FR")
 
     # Precomputed incidence maps.
     gmap_of_rcg = indexby(gset(tm, "COM_GMAP"), (1, 2))   # (r,cg) -> COM_GMAP(r,cg,c)
@@ -190,6 +197,15 @@ function eq_peak!(tm::TimesModel)
                       f3=(p, v) -> one,
                       f4=(p, v) -> gv(stg_eff, (r, v, p)) * gpow(gv(ncap_pkcnt, (r, v, p, s)), gv(rpc_pkf, (r, p, c))),
                       f6=(p, v) -> gif(one, haskey(rpc_pkf, (r, p, c))))
+            # Blending inputs (L78).
+            for (_, b, _) in get(ble_inp_of_rc, (r, c), no3)
+                ((b,) in ble && (r, t, b) in ble_tp) || continue
+                k = gv(g_yrfr, (r, s)) * (1 + gv(rtcs_fr, (r, t, c, s, "ANNUAL"))) * gv(bl_inp, (r, b, c)) * gv(peakda_bl, (r, b, t))
+                for (_, _, o) in get(ble_opr_of_rb, (r, b), no3)
+                    (o,) in opr || continue
+                    addterm!(rhs, flx * k, tm, "VAR_BLND", r, t, b, o)
+                end
+            end
             # Demand projection (L82).
             if (r, c) in dem
                 cfr = gv(com_fr, (r, t, c, s))

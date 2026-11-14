@@ -31,11 +31,14 @@
 # (L77, L81 without a temporary attribute, L31-32 within one loop pass), and
 # EPS counts as data in `$` and `$=` (docs/discrepancies.md G51).
 #
-# Refused (`curex_unported`): blending costs BL_VAROMC and BL_DELIVC (L59-60,
-# called without a year index, so `%MX%` is the empty global of setglobs.gms
-# L356 and L374 and the full rate applies; blending is refused anyway) and the
-# ETL and stochastic attributes TL_CT_COST, S_DAM_COST and S_COM_TAX (L66,
-# L68-69) when they have data.
+# The blending costs BL_VAROMC and BL_DELIVC (L59-60) have no year index: the
+# call passes %4 = '' and %5 = 'COM' / 'C,COM', so L77 and L78 are skipped,
+# `%MX%` is the empty global of setglobs.gms L356 and L374 and the full rate
+# applies to every record (L81); no temporary attribute, so L82 removes the
+# records outside RDCUR (translated with eqblnd.mod).
+#
+# Refused (`curex_unported`): the ETL and stochastic attributes TL_CT_COST,
+# S_DAM_COST and S_COM_TAX (L66, L68-69) when they have data.
 
 "Whether preppm.mod L28 includes curex.gms: G_CUREX or R_CUREX has data (`\$IF DEFINED`, G35)."
 curex_runs(tm) = hasdata(tm, "G_CUREX", 2) || hasdata(tm, "R_CUREX", 3)
@@ -55,12 +58,13 @@ const CUREX_ATTRS = [
     ("ACT_CSTUP", 5, 5, false), ("ACT_CSTSD", 6, 6, false), ("ACT_CSTRMP", 5, 5, false), ("ACT_CSTPL", 4, 4, true),
     ("DAM_COST", 4, 4, true)]
 
+"The cost attributes of curex.gms L59-60, called without a year index (%4 = ''): name, dimension, position of CUR."
+const CUREX_ATTRS_NOYEAR = [("BL_VAROMC", 3, 3), ("BL_DELIVC", 4, 4)]
+
 "The curex.gms paths this model would take that are not translated."
 function curex_unported(tm)
     out = String[]
     curex_runs(tm) || return out
-    (hasdata(tm, "BL_VAROMC", 3) || hasdata(tm, "BL_DELIVC", 4)) &&
-        push!(out, "curex.gms L59-60 (blending costs BL_VAROMC/BL_DELIVC)")
     for (n, N, l) in (("TL_CT_COST", 4, "L66"), ("S_DAM_COST", 6, "L68"), ("S_COM_TAX", 8, "L69"))
         hasdata(tm, n, N) && push!(out, "curex.gms $l ($n: ETL or stochastic costs)")
     end
@@ -77,7 +81,7 @@ attributes nothing later in the segment changes.
 """
 curex_symbols(tm) = curex_runs(tm) ?
     ["R_CUREX", "RDCUR", "CURMAP", "RXX", "COM_BPRICE", "COM_CSTNET", "COM_TAXNET", "COM_SUBNET", "COM_CSTPRD", "COM_TAXPRD",
-     "COM_SUBPRD", "REG_CUMCST", "ACT_CSTPL"] : String[]
+     "COM_SUBPRD", "REG_CUMCST", "ACT_CSTPL", "BL_VAROMC", "BL_DELIVC"] : String[]
 
 """
     curex!(tm) -> tm
@@ -162,19 +166,32 @@ function curex!(tm)
         curex_subr!(vals, Val(N), ci, temp, regs, targets, rcx, rdcur, yearval)
         gput!(tm, name, vals)
     end
+    # L59-60: $BATINCLUDE curex BL_VAROMC BL_VAROMC R '' 'COM' and BL_DELIVC BL_DELIVC R '' 'C,COM'
+    for (name, N, ci) in CUREX_ATTRS_NOYEAR
+        hasdata(tm, name, N) || continue
+        vals = gvalues(tm, name, N)
+        curex_subr!(vals, Val(N), ci, false, regs, targets, rcx, rdcur, yearval; year=false)
+        gput!(tm, name, vals)
+    end
     return tm
 end
 
 """
-    curex_subr!(vals, Val(N), ci, temp, regs, targets, rcx, rdcur, yearval) -> vals
+    curex_subr!(vals, Val(N), ci, temp, regs, targets, rcx, rdcur, yearval; year=true) -> vals
 
 curex.gms L75-82 on one attribute's records `vals` (EPS as 0.0), CUR at
 position `ci`, the year at position 2: the L77 filter, then the conversion
 of L80-81 with a temporary attribute (`temp`) or L81-82 without.
+
+`year=false` is a call without a year index (%4 = '', L59-60): L77 and L78
+are skipped (`\$IF %4==LL`), so there is no filter and the rate is
+`POWER(R_CUREX(R,CURR,CUR),1)` for every record.
 """
-function curex_subr!(vals::Dict{NTuple{N,String},Float64}, ::Val{N}, ci, temp, regs, targets, rcx, rdcur, yearval) where {N}
+function curex_subr!(vals::Dict{NTuple{N,String},Float64}, ::Val{N}, ci, temp, regs, targets, rcx, rdcur, yearval;
+                     year::Bool=true) where {N}
     # L77: %1(R,LL%5,CUR%7)$((%1(R,'0'%5,CUR%7)<-12)$%1(R,'0'%5,CUR%7)) = 0, from the values before it (G51)
-    gone = Set(Base.setindex(k, "0", 2) for (k, x) in vals if k[2] == "0" && k[1] in regs && x < -12)
+    gone = year ? Set(Base.setindex(k, "0", 2) for (k, x) in vals if k[2] == "0" && k[1] in regs && x < -12) :
+           Set{NTuple{N,String}}()
     isempty(gone) || filter!(((k, _),) -> !(k[1] in regs && Base.setindex(k, "0", 2) in gone), vals)
     # L81: SUM(CURMAP(R,CUR,CURR)$%2(R,LL%5%6,CURR%7), %2(R,LL%5%6,CURR%7)*POWER(R_CUREX(R,CURR,CUR),1$YEARVAL(LL)))
     sums = Dict{NTuple{N,String},GNum}()
@@ -183,7 +200,7 @@ function curex_subr!(vals::Dict{NTuple{N,String},Float64}, ::Val{N}, ci, temp, r
         k[1] in regs || continue
         x = vals[k] == 0 ? GEPS : GNum(vals[k])
         for c in get(targets, (k[1], k[ci]), String[])
-            f = yearval[k[2]] != 0 ? gpower(gv(rcx, (k[1], k[ci], c)), 1) : GNum(1.0)
+            f = (!year || yearval[k[2]] != 0) ? gpower(gv(rcx, (k[1], k[ci], c)), 1) : GNum(1.0)
             nk = Base.setindex(k, c, ci)
             sums[nk] = get(sums, nk, GZERO) + x * f
         end

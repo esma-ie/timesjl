@@ -84,10 +84,22 @@ end
     @test isempty(coef_obj_unported(mk(Dict("ANNCOST" => "lev"))))      # translated: M1.3 change 29
     @test occursin("VALIDATE", only(coef_obj_unported(mk(Dict("VALIDATE" => "YES")))))
     @test occursin("TIMESED", only(coef_obj_unported(mk(Dict("MICRO" => "YES")))))
+    # blending is translated (M1.3, with eqblnd.mod). L93-94: OBJ_BLNDV in every year of Y_EOH, in the
+    # currencies of RDCUR, for the streams of a blend: BL_VAROMC plus BL_INP * BL_DELIVC of each input
     tm = mk(Dict{String,String}())
-    gput!(tm, "BLE_OPR", Set([("REG1", "ELC", "ELC")]))
-    @test occursin("blending", only(coef_obj_unported(tm)))
-    @test_throws UnportedError coef_obj!(tm)
+    add_uels!(tm, "GSL", "NAP", "KER", "GAS")
+    gput!(tm, "BLE", Set([("GSL",)])); gput!(tm, "OPR", Set([("NAP",)]))
+    gput!(tm, "BLE_OPR", Set([("REG1", "GSL", "NAP"), ("REG1", "KER", "NAP")]))
+    gput!(tm, "BL_VAROMC", Dict(("REG1", "GSL", "MEuro05") => 0.05, ("REG1", "KER", "MEuro05") => 9.0))
+    gput!(tm, "BL_INP", Dict(("REG1", "GSL", "ELC") => 0.02))
+    gput!(tm, "BL_DELIVC", Dict(("REG1", "GSL", "ELC", "MEuro05") => 1.5, ("REG1", "GSL", "GAS", "MEuro05") => 7.0))
+    @test isempty(coef_obj_unported(tm))
+    coef_obj!(tm)
+    let b = gparam(tm, "OBJ_BLNDV")
+        @test all(k -> k[1] == "REG1" && k[3] == "GSL" && k[4] == "NAP" && k[5] == "MEuro05", keys(b.values))
+        @test all(x -> x ≈ 0.05 + 0.02 * 1.5, values(b.values))
+        @test Set(k[2] for k in keys(b.values)) == Set(k[1] for k in gset(tm, "Y_EOH").keys)
+    end
     tm = mk(Dict{String,String}())
     add_uels!(tm, "TJLX")
     cost = gvalues(tm, "NCAP_COST", 4); cost[("REG1", "2010", "CSHNOIL1", "TJLX")] = 1.0; gput!(tm, "NCAP_COST", cost)

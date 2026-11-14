@@ -18,11 +18,13 @@
 # Not translated yet; data that needs them raises UnportedError:
 # - capacity-related flows, cal_cap.mod (NCAP_COM, RPC_CAPFLO), which also
 #   carries early retirement (VAR_SCAP/VAR_RCAP);
-# - blending, L30-35 and L75-80 (BLE_OPR, BLE_ENV, BLE_TP);
 # - elastic demand, L67 and L101 under %TIMESED% (COM_ELAST);
 # - non-linear demand VAR_DEM, L110 (RD_NLP);
 # - cal_ire.mod L30 when %IREAUXBAL% is set other than by powerflo.vda DECL (whose
 #   IREAUX terms, L84, are `ireaux!`: M1.3 change 27b-2).
+# Blending (L30-35 production, L75-80 consumption; `combal_blend_out!`,
+# `combal_blend_in!`) reads the sets and parameters of ppmain.mod L1228-1333
+# (ppmain_blend.jl).
 # The sets these equations read (RCS_COMBAL, RTPCS_VARF, RTP_VNTBYR, ...)
 # come from the pre-solve dump: pp_qack.mod changes them after eqmain.
 
@@ -35,8 +37,6 @@ function combal_unported(tm::TimesModel)
     nonempty_par(name, N) = !isempty(gparam_opt(d, name, N))
     (nonempty_par("NCAP_COM", 5) || nonempty_set("RPC_CAPFLO", 4)) &&
         throw(UnportedError("cal_cap.mod capacity-related flows in EQ_COMBAL (NCAP_COM / RPC_CAPFLO)"))
-    (nonempty_set("BLE_OPR", 3) || nonempty_set("BLE_ENV", 4) || nonempty_set("BLE_TP", 3)) &&
-        throw(UnportedError("eqcombal.mod L30-35/L75-80 blending (BLE_OPR / BLE_ENV / BLE_TP)"))
     nonempty_par("COM_ELAST", 5) &&
         throw(UnportedError("eqcombal.mod L67/L101 elastic demand under %TIMESED% (COM_ELAST)"))
     nonempty_par("RD_NLP", 2) && throw(UnportedError("eqcombal.mod L110 non-linear demand VAR_DEM (RD_NLP)"))
@@ -83,7 +83,19 @@ function combal_context(tm::TimesModel)
          top = gset(tm, "TOP"),
          rpc_stgn = gset(tm, "RPC_STGN"),
          rpcs_var_of_rpc = indexby(gset(tm, "RPCS_VAR"), (1, 2, 3)),    # (r,p,c) -> RPCS_VAR(r,p,c,ts)
-         stg_eff = gparam(tm, "STG_EFF"))
+         stg_eff = gparam(tm, "STG_EFF"),
+         # blending (eqcombal.mod L30-35, L75-80)
+         ble = gset_opt(tm.data, "BLE", 1),
+         opr = gset_opt(tm.data, "OPR", 1),
+         ble_opr = gset_opt(tm.data, "BLE_OPR", 3),
+         ble_opr_of_rb = indexby(gset_opt(tm.data, "BLE_OPR", 3), (1, 2)),   # (r,ble) -> BLE_OPR(r,ble,opr)
+         ble_env_of_rc = indexby(gset_opt(tm.data, "BLE_ENV", 4), (1, 2)),   # (r,c) -> BLE_ENV(r,c,ble,opr)
+         ble_tp_of_rt = indexby(gset_opt(tm.data, "BLE_TP", 3), (1, 2)),     # (r,t) -> BLE_TP(r,t,ble)
+         ble_tp = gset_opt(tm.data, "BLE_TP", 3),
+         ble_inp_of_rc = indexby(gset_opt(tm.data, "BLE_INP", 3), (1, 3)),   # (r,c) -> BLE_INP(r,ble,c)
+         ble_bal = gparam_opt(tm.data, "BLE_BAL", 4),
+         env_bl = gparam_opt(tm.data, "ENV_BL", 5),
+         bl_inp = gparam_opt(tm.data, "BL_INP", 3))
     end
 end
 
@@ -338,13 +350,79 @@ function combal_aggregation!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum,
 end
 
 """
+    combal_blend_out!(expr, tm, mult, r, t, c, s) -> expr
+
+Blending on the production side of the balance row (r,t,c,s): the blend `c`
+made by its blending streams, and the emissions `c` of blending operations.
+
+    SUM(BLE_OPR(R,C,OPR),
+        RS_FR(R,S,'ANNUAL')*(1+RTCS_FR(R,T,C,S,'ANNUAL')) * BLE_BAL(R,T,C,OPR) * VAR_BLND(R,T,C,OPR)) +
+    SUM(BLE_ENV(R,C,BLE,OPR), RS_FR(R,S,'ANNUAL') * ENV_BL(R,C,BLE,OPR,T) * VAR_BLND(R,T,BLE,OPR)) +
+
+Neither sum has BLE_TP: a blend made before its start year (BL_START) has
+BLE_BAL 0 and adds no term (G5), its emissions are still counted. OPR and
+BLE control the sums, so only members of those sets count.
+
+GAMS: eqcombal.mod L30-35, v4.9.7.
+"""
+function combal_blend_out!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum,
+                           r::String, t::String, c::String, s::String)
+    x = combal_context(tm)
+    for (_, _, o) in get(x.ble_opr_of_rb, (r, c), NTuple{3,String}[])                    # L30-32
+        (o,) in x.opr || continue
+        k = gv(x.rs_fr, (r, s, "ANNUAL")) * (1 + gv(x.rtcs_fr, (r, t, c, s, "ANNUAL"))) * gv(x.ble_bal, (r, t, c, o))
+        addterm!(expr, mult * k, tm, "VAR_BLND", r, t, c, o)
+    end
+    for (_, _, b, o) in get(x.ble_env_of_rc, (r, c), NTuple{4,String}[])                 # L34-35
+        ((b,) in x.ble && (o,) in x.opr) || continue
+        k = gv(x.rs_fr, (r, s, "ANNUAL")) * gv(x.env_bl, (r, c, b, o, t))
+        addterm!(expr, mult * k, tm, "VAR_BLND", r, t, b, o)
+    end
+    return expr
+end
+
+"""
+    combal_blend_in!(expr, tm, mult, r, t, c, s) -> expr
+
+Blending on the consumption side of the balance row (r,t,c,s): `c` used as
+a blending stream, and `c` as another input of blending (BL_INP per unit of
+blend).
+
+    SUM(BLE_TP(R,T,BLE)\$BLE_OPR(R,BLE,C),
+        RS_FR(R,S,'ANNUAL')*(1+RTCS_FR(R,T,C,S,'ANNUAL')) * VAR_BLND(R,T,BLE,C)) +
+    SUM(BLE_OPR(R,BLE,OPR)\$(BLE_INP(R,BLE,C) * BLE_TP(R,T,BLE)),
+        RS_FR(R,S,'ANNUAL')*(1+RTCS_FR(R,T,C,S,'ANNUAL')) * BL_INP(R,BLE,C) * VAR_BLND(R,T,BLE,OPR)) +
+
+GAMS: eqcombal.mod L75-80, v4.9.7.
+"""
+function combal_blend_in!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum,
+                          r::String, t::String, c::String, s::String)
+    x = combal_context(tm)
+    isempty(x.ble_tp) && return expr
+    fr = gv(x.rs_fr, (r, s, "ANNUAL")) * (1 + gv(x.rtcs_fr, (r, t, c, s, "ANNUAL")))
+    for (_, _, b) in get(x.ble_tp_of_rt, (r, t), NTuple{3,String}[])                     # L76-77
+        ((b,) in x.ble && (r, b, c) in x.ble_opr) || continue
+        addterm!(expr, mult * fr, tm, "VAR_BLND", r, t, b, c)
+    end
+    for (_, b, _) in get(x.ble_inp_of_rc, (r, c), NTuple{3,String}[])                    # L78-80
+        (r, t, b) in x.ble_tp || continue
+        k = fr * gv(x.bl_inp, (r, b, c))
+        for (_, _, o) in get(x.ble_opr_of_rb, (r, b), NTuple{3,String}[])
+            ((b,) in x.ble && (o,) in x.opr) || continue
+            addterm!(expr, mult * k, tm, "VAR_BLND", r, t, b, o)
+        end
+    end
+    return expr
+end
+
+"""
     eq_combal!(tm::TimesModel) -> Int
 
 Generate every EQG_COMBAL, EQE_COMBAL and EQE_COMPRD row (eqmain.mod
 L98-106) from `tm.data`. Returns the number of rows generated.
 
 GAMS: eqcombal.mod L19-113, v4.9.7, with cal_fflo.mod L15-33,
-cal_ire.mod L16-41 and cal_stgn.mod L17-22.
+cal_ire.mod L16-41 and cal_stgn.mod L17-22; blending L30-35 and L75-80.
 """
 function eq_combal!(tm::TimesModel)
     combal_unported(tm)
@@ -362,9 +440,9 @@ One include of eqcombal.mod: %2 = `eqtype`, %3 = `lim`, %4 = `kind`
 (BAL or PRD; PRD adds the condition `* RHS_COMPRD(R,T,C,S)`).
 
     EQ%2_COM%4(R,T,C,S)\$(RCS_COM%4(R,T,C,S,'%3') %5) ..
-      ( ([cal_fflo OUT] + [cal_ire IMP OUT IE] + [cal_stgn OUT IN] + [aggregation]) * COM_IE(R,T,C,S)
+      ( ([cal_fflo OUT] + [blending L30-35] + [cal_ire IMP OUT IE] + [cal_stgn OUT IN] + [aggregation]) * COM_IE(R,T,C,S)
       )\$(NOT RHS_COMPRD(R,T,C,S)) + VAR_COMPRD(R,T,C,S)\$RHS_COMPRD(R,T,C,S)   [BAL; PRD: no \$/VAR_COMPRD]
-      - ([cal_fflo IN] + [cal_ire EXP IN IE] + [cal_stgn IN OUT])                   [BAL only]
+      - ([cal_fflo IN] + [blending L75-80] + [cal_ire EXP IN IE] + [cal_stgn IN OUT])  [BAL only]
       =%2=
       PRD: VAR_COMPRD(R,T,C,S)\$RHS_COMPRD(R,T,C,S)
       BAL: [VAR_COMNET(R,T,C,S)\$RHS_COMBAL(R,T,C,S) +   (FX only)]
@@ -405,6 +483,7 @@ function eq_combal!(tm::TimesModel, eqtype::String, lim::String, kind::String)
         else
             ie = gv(x.com_ie, (r, t, c, s))
             cal_fflo!(lhs, tm, ie, "OUT", r, t, c, s)
+            combal_blend_out!(lhs, tm, ie, r, t, c, s)                                    # L30-35
             cal_ire!(lhs, tm, ie, "IMP", "OUT", r, t, c, s)
             cal_stgn!(lhs, tm, ie, "OUT", r, t, c, s;                                     # L42
                       cond=(p, ts) -> !((r, p, ts) in nstts), f3=(p, v) -> gv(x.stg_eff, (r, v, p)),
@@ -414,6 +493,7 @@ function eq_combal!(tm::TimesModel, eqtype::String, lim::String, kind::String)
         # Consumption (L69-93), BAL only.
         if kind == "BAL"
             cal_fflo!(lhs, tm, GNum(-1.0), "IN", r, t, c, s)
+            combal_blend_in!(lhs, tm, GNum(-1.0), r, t, c, s)                             # L75-80
             cal_ire!(lhs, tm, GNum(-1.0), "EXP", "IN", r, t, c, s)
             ireaux!(lhs, tm, -gv(x.com_ie, (r, t, c, s)), r, t, c, s)                    # L84: cal_ire.mod L30, IREAUXIN
             cal_stgn!(lhs, tm, GNum(-1.0), "IN", r, t, c, s;                              # L87

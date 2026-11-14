@@ -18,8 +18,10 @@
 # reports only (cost_ann.rpt L16, L26, L90; rpt_obj.rpt L127).
 #
 # Not translated (UnportedError): VALIDATE (L114,
-# L137, L191-201), elastic demand shapes under TIMESED/MICRO (L184-189) and
-# blending (L93-94, BLE_OPR) - no reference run has any of them. `$IF
+# L137, L191-201) and elastic demand shapes under TIMESED/MICRO (L184-189) -
+# no reference run has either. Blending (L93-94): OBJ_BLNDV, the cost of a
+# unit of a stream OPR blended into BLE, the same in every year of Y_EOH:
+# BL_VAROMC plus the delivery cost BL_DELIVC of each other input BL_INP. `$IF
 # DEFINED R_CUREX` (L99) holds exactly when R_CUREX has data at this stage:
 # curex.gms runs whenever R_CUREX is defined (preppm.mod L27-28) and sets
 # R_CUREX(RDCUR(R,CUR),CUR) = 1 (curex.gms L26), and nothing else assigns it.
@@ -39,7 +41,6 @@ function coef_obj_unported(tm)
     sw("VALIDATE") == "YES" && push!(out, "coef_obj.mod L114, L137, L191-201 (VALIDATE YES)")
     (sw("TIMESED") == "YES" || sw("MICRO") == "YES") &&
         push!(out, "coef_obj.mod L184-189 (elastic demand shapes, TIMESED/MICRO)")
-    isempty(gset_opt(tm.data, "BLE_OPR", 3)) || push!(out, "coef_obj.mod L93-94 (blending: BLE_OPR has data)")
     return out
 end
 
@@ -523,6 +524,32 @@ function coef_obj!(tm)
         end
         filter!(kv -> !haskey(prc_ymax, (kv[1][1], kv[1][3])), ispct)
         gput!(tm, "NCAP_ISPCT", ispct)
+    end
+
+    # L93-94: OBJ_BLNDV(R,Y_EOH,BLE,OPR,CUR)$(RDCUR(R,CUR)$BLE_OPR(R,BLE,OPR)) = BL_VAROMC(R,BLE,CUR) +
+    #   SUM(COM$BL_DELIVC(R,BLE,COM,CUR), BL_INP(R,BLE,COM) * BL_DELIVC(R,BLE,COM,CUR))
+    ble_opr = gset_opt(tm.data, "BLE_OPR", 3)
+    if !isempty(ble_opr)
+        ble, opr = mem("BLE"), mem("OPR")
+        bl_varomc, bl_inp = gparam_opt(tm.data, "BL_VAROMC", 3), gparam_opt(tm.data, "BL_INP", 3)
+        bl_delivc = gparam_opt(tm.data, "BL_DELIVC", 4)
+        delivc_of = indexby(bl_delivc, (1, 2, 4))                      # (r,ble,cur) -> BL_DELIVC(r,ble,com,cur)
+        curs_of = Dict{String,Vector{String}}()                        # r -> CUR of RDCUR(r,cur)
+        foreach(((r, c),) -> push!(get!(curs_of, r, String[]), c), rdcur.keys)
+        blndv = gvalues(tm, "OBJ_BLNDV", 5)
+        for (r, b, o) in ble_opr.keys
+            (b in ble && o in opr) || continue
+            for cur in get(curs_of, r, String[])
+                x = gv(bl_varomc, (r, b, cur))
+                for k in get(delivc_of, (r, b, cur), NTuple{4,String}[])
+                    x += gv(bl_inp, (r, b, k[3])) * gv(bl_delivc, k)
+                end
+                for y in y_eoh
+                    gassign!(blndv, (r, y, b, o, cur), x)
+                end
+            end
+        end
+        gput!(tm, "OBJ_BLNDV", blndv)
     end
 
     # L102-107: each process's first and last relevant year

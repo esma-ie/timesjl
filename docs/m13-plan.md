@@ -33,7 +33,9 @@ the later stages read.
 Refused (UnportedError), as in M1.1 and M1.2: TIMES-MICRO / TIMESED
 (`pp_micro.mod`), MACRO (`ppmain.tm`), stochastics (`prep_ext.stc`,
 `recurrin.stc`), the ETL, CLI, ABS, ECB and MLF extensions, `INTEXT_ONLY` and
-`DATAGDX`, and blending (ppmain.mod L1230-1336) unless a suite model needs it.
+`DATAGDX`, and blending (ppmain.mod L1230-1336) unless a suite model needs it
+(blending is translated since change 37, 14 Nov 2026, on the crafted case
+demo12_blnd).
 
 ## Checkpoints (harness 0.3.0)
 
@@ -92,7 +94,7 @@ GAMS 54.6.1):
 | 14 | ppmain.mod: storage | 1061-1101 | ppm |
 | 15a | ppmain.mod with prepxtra.mod UCINT: the user-constraint defaults (years, regions, timeslices, dynamic and cumulative UCs) | 1101-1179; 61-77 | ppm |
 | 15b | ppmain.mod with pp_lvlus.mod: the UC group maps, VAR_CAP and VAR_COMxxx for UCs, UC attributes levelled, RCS_COMBAL/RCS_COMPRD | 1181-1226; 1-40 | ppm |
-| 16 | ppmain.mod: blending (refused unless needed; any non-blending statements in the block translated) | 1228-1333 | ppm |
+| 16 | ppmain.mod: blending (refused unless needed; any non-blending statements in the block translated; the whole block in change 37) | 1228-1333 | ppm |
 | 17a | ppmain.mod end with pp_reduce.red (dynslite.vda refused, as in 8b) | 1336-1357; 1-188 | ppm (reduce_off and as_run) |
 | 17b | cal_red.red: flows substituted by activities on the equation side | 1-59 | layer 2 (as_run) |
 | 17c | crafted case TIMES_Demo-demo12_red17b for the 17b paths demo12 does not reach (cal_red.red L37-38 with an RPC_ACT source; bnd_flo.mod L37-39) (James, 5 Nov 2026) | — | layers 2-3 (both variants) |
@@ -137,6 +139,7 @@ GAMS 54.6.1):
 | 34 | EQ(l)_IREBND, refused since M1.1: limits on the trade of a commodity between a region and one partner region (IRE_BND): imports from an internal region as the partner's exports, imports from and exports to an external region as the region's own flows (the marketplace branch, L46-51, stays refused with RPC_MARKET) | eqirebnd.mod 18-69; eqmain.mod 152-154 | layers 1 to 3 on the crafted case demo12_irebnd, both variants, from the DD files (CI: test_eqirebnd.jl, the public and variant fixtures) |
 | 35 | EQ(l)_XBND, refused since M1.1: limits on the total exchange of a commodity of a region (IRE_XBND), whatever the partner: for an internal region its own flows in the direction, for an external region the flows of the internal regions in the other direction through IRE_TSCVT | eqxbnd.mod 17-56; eqmain.mod 241-243 | layers 1 to 3 on the crafted case demo12_xbnd, both variants, from the DD files (CI: test_eqxbnd.jl, the public and variant fixtures) |
 | 36 | Dispatching in the linear formulation, refused since M1.1 (James, 14 Nov 2026: the gate is not passed until the remaining refused features are translated; unit commitment first): the preparation and the equations EQ_CAPLOAD, EQ_ACTRAMP, EQ(l)_ACTUPS, EQL_ACTUPC, EQ_ACTPL and EQ_ACTRMPC with the variables VAR_UPS and VAR_UDP; their terms in EQ_OBJVAR, EQE_ACTEFF, EQ(l)_CAPACT, EQ(l)_CAFLAC and EQL_CAPFLO; eqlducs.vda for a model without start-up types. The unit commitment by start-up type (eqlducs.vda L12-124, the case demo12_uc) is the next change | eqactups.vda 9-117; eqobjvar.mod 36-37, 39; pp_actef.vda 78-80; equ_ext.vda 75; eqlducs.vda 15, 38-39 | layers 1 to 3 on the crafted case demo12_disp, both variants, from the DD files (CI: test_eqactups.jl, the public and variant fixtures) |
+| 37 | EQ(l)_BLND, refused since M1.1: refinery blending. The quality of a blend (BLE) made of blending streams (OPR) held against its specifications (SPE), at most, at least, equal or free; with the blending preparation, the terms of the blending variable in the balance, the peak equation and the objective, and the blending costs in the currency conversion | eqblnd.mod 67-71; eqmain.mod 249-252; ppmain.mod 1246-1333; coef_obj.mod 93-94; eqobjvar.mod 105-107; eqcombal.mod 30-35, 75-80; eqpeak.mod 78; curex.gms 59-60 | layers 1 to 3 on the crafted case demo12_blnd, both variants, from the DD files (CI: test_eqblnd.jl, the public and variant fixtures) |
 
 ## Parity (per change)
 
@@ -577,7 +580,8 @@ Not part of the gate, for the record:
   or parameter TIMES.jl has computed even when the dump does not declare
   it (CURMAP on demo12, which curex.gms declares only when it runs).
   Refused, with data: the blending costs (L59-60) and the ETL and
-  stochastic costs (L66, L68-69).
+  stochastic costs (L66, L68-69). (The blending costs are translated
+  since change 37.)
 - (7 Nov 2026, probe) JRC-EU-TIMES-cli_ll in the nightly runs of 5 and
   6 Nov: the chain stopped, as it should, at the curex.gms refusal
   (preppm.mod L27-28), but `m13_probe.jl` showed FAIL on the steps of the
@@ -1201,7 +1205,8 @@ Not part of the gate, for the record:
   block writes: PASS on the five core models, reduce_off and as_run, and on
   demo12 in CI. The replay check now runs ppmain.mod L616-1333 and compares
   198 symbols at L1333: PASS on the five core models, both variants. A
-  crafted demo12 state ("blend") keeps a given REFUNIT (CI).
+  crafted demo12 state ("blend") keeps a given REFUNIT (CI). Change 37
+  (14 Nov 2026) translates the whole block; the refusal is gone.
 - (17a) ppmain.mod L1336-1357 with pp_reduce.red is the probe step
   ppmain_reduce: RVP and RTP_VARA, then pp_reduce.red in its three modes
   (%REDUCE% NO stops after L11; any other value, unset included, after L56;
@@ -1915,6 +1920,108 @@ Not part of the gate, for the record:
 - Still refused by their data, on the list of the remaining features: EQL_STGCCL
   (eqactups.vda L121-125, STG_MAXCYC) and the ONLINE attribute of user constraints
   (uc_cap.mod L36-42).
+
+### Change 37, 14 Nov 2026: EQ(l)_BLND (eqblnd.mod L67-71)
+
+- Refinery blending, refused since M1.1 (change 16 translated only the REFUNIT default). A
+  blend BLE is made of blending streams OPR; VAR_BLND(R,T,BLE,OPR) is the amount of a stream
+  that goes into a blend. eqblnd.mod L67-71 (L1-63 are comments), included four times from
+  eqmain.mod L249-252 (L with BL_TYPE 1, G with 2, E with 3, N with 4):
+  `SUM(OPR$BLE_OPR, (BL_COM - BL_SPEC) * RU_CVT * VAR_BLND) =l= 0` for each specification SPE
+  of the blend in each period of BLE_TP. Declared eqdeclr.mod L182-185; in the model,
+  mod_equa.mod L201-204.
+- The row's last index is ALLSOW: `%SWX%` is `,'1'` in a run that is not stochastic
+  (setglobs.gms L363-365), so a row is EQL_BLND(REG1,2010,TRAGSL,SUL,1).
+- Type 4 is `=N=`, GAMS's "no relationship": the row is in the matrix as a free row (bounds
+  -INF and +INF). `gconstraint!` takes "N" for it. Any other BL_TYPE gives no row.
+- The preparation, ppmain.mod L1246-1333 (`ppmain_blend!`, rewritten; the refusal
+  `ppmain_blend_unported` is gone):
+  - BLE_SPE from BL_TYPE, for any commodity (L1246); BLE_TP, the periods of a blend at or
+    after the BL_START of one of its specifications, so the earliest start counts for all
+    of them and a blend without a BL_START has every period (L1254-1256); BL_UNIT defaults to
+    1 (L1257); BLE_SPEOPR and BLE_OPR from BL_COM (L1264, L1288-1290); BLE_ENV from ENV_BL
+    (L1291-1293); PEAKDA_BL defaults to 1 for a blend with an input that is a peak commodity
+    (L1296).
+  - BLE_BAL(R,T,BLE,OPR), the blend made by a unit of the stream (L1301-1306): 1 when the
+    blend is itself a stream, else 1, CONVERT(OPR,'WCV') or CONVERT(OPR,'VCV') for REFUNIT 1,
+    2 or 3.
+  - RU_CVT(R,BLE,SPE,OPR), from the refinery unit to the unit of the specification, by
+    REFUNIT and BL_UNIT (L1310-1332; the table is in the header of src/prep/ppmain_blend.jl).
+    `(1/CONVERT)$(...)` is evaluated only where the condition holds (G14); a CONVERT of zero
+    there is a division by zero, an error in GAMS and here.
+  - BLE_INP is only declared by TIMES (L1240; the statements that filled it are comments,
+    L1267-1272), so it has the members the model's data gives it. BLE_SPEINP (L1273) and
+    RU_FEQ (L1310-1333) are computed and used by no equation.
+- The blending variable in the other equations:
+  - eqcombal.mod L30-32: the blend is produced, BLE_BAL * VAR_BLND; L33-35: emissions,
+    ENV_BL * VAR_BLND. Neither sum has BLE_TP: an emission is counted before the blend's
+    first period too, and BLE_BAL (given only for BLE_TP) leaves no production term there.
+  - eqcombal.mod L75-77: the stream is consumed, with the coefficient 1 (no BLE_BAL: under
+    REFUNIT 2 or 3 the product side carries CONVERT and the stream side does not);
+    L78-80: an input of the blend (BLE_INP) is consumed, BL_INP * VAR_BLND of every stream.
+  - eqpeak.mod L78: the same input in the peak equation, times PEAKDA_BL.
+  - coef_obj.mod L93-94: OBJ_BLNDV(R,Y,BLE,OPR,CUR) = BL_VAROMC + SUM(BLE_INP, BL_INP *
+    BL_DELIVC), in every year of Y_EOH; eqobjvar.mod L105-107: its discounted sum times
+    VAR_BLND. Neither has BLE_TP, so every stream of a blend has a column in every period
+    (54 = 9 BLE_OPR x 6 periods on the case), with a cost and nothing else before the blend
+    starts.
+  - curex.gms L59-60: BL_VAROMC and BL_DELIVC are converted without a year index (%4 = ''),
+    so L77 and L78 are skipped, the full rate applies to every record (L81) and the records
+    outside RDCUR are removed (L82). `curex_subr!` takes `year=false` for it.
+- `eq_blnd!` (src/model/eqblnd.jl), called in `generate!` after `eq_xbnd!`, in the order of
+  eqmain.mod L249-252. The refusals are removed in `untranslated_families`,
+  `coef_obj_unported`, `curex_unported`, `objective_unported` and `ppmain_blend!`.
+- The differences from Part II (§6.3.12, §5.2, §6.3.20, §6.3.33) are D33 to D35 in
+  docs/discrepancies.md: a fourth type and BLE_TP; the unit of VAR_BLND and where BLE_BAL
+  acts; the terms of VAR_BLND that Part II does not show.
+- New crafted case demo12_blnd (demo12 + blnd.dd): blends TRAGSL (both regions) and GSL
+  (REG2, where it is also a stream of TRAGSL); streams GSL, NAP, BIO, LPG with CONVERT (DENS,
+  WCV, VCV); specifications OCT, SUL, RVP, DEN. REG1 (REFUNIT 1 by default): OCT type 2 from
+  2010, SUL type 1 in unit 2 from 2015, RVP type 3 in unit 3 from 2015, DEN type 4 from 2020.
+  REG2 (REFUNIT 2): TRAGSL with OCT type 2, SUL type 1 in unit 3 and DEN type 5 (no row), no
+  start year; GSL with OCT type 2 in unit 2 from 2020. A stream that meets a specification
+  exactly (no term), a stream without a quality for a specification, a BL_TYPE of a commodity
+  that is not a blend (KER). BLE_INP: electricity into TRAGSL of REG1 (BL_INP 0.02, BL_DELIVC
+  1.5, PEAKDA_BL 0.8 in 2020). BL_VAROMC 0.05 (REG1 TRAGSL) and 0.02 (REG2 GSL). ENV_BL on
+  TRACO2, one record in 2005, before the blend starts.
+- GAMS 54.6.1: both variants optimal, objective 23,903,588.3699 (demo12: 23,960,685.7370);
+  35 rows in each variant (11 L, 14 G, 5 E, 5 N) and 54 VAR_BLND columns.
+- Result: the step probe passes all 70 steps (35 in each variant). The chain from the DD
+  files: DD files -> input PASS (824 sets and parameters, 1,713 labels, no compile warning),
+  every checkpoint to the pre-solve dump PASS (823 symbols), both QA logs identical, the model
+  against GAMS's matrix PASS (reduce_off 8,730 rows, 9,723 columns, 31,770 nonzeros; as run
+  3,268, 4,539 and 18,754), HiGHS against GAMS/CPLEX PASS (relative difference 6.7e-15 and
+  2.0e-15). CI: test/unit/test_eqblnd.jl (the data, layer 2, the 35 rows, the terms of the
+  blending variable in the other equations, the conversion of the costs), the public fixture
+  (layers 2 and 3), the variant fixture (input -> ppm on every symbol; the whole model), the
+  DD-file compile case and the chain from DD files (26 cases now).
+- Translated as GAMS has it, reached by no case in the repository (flagged):
+  - REFUNIT 3 (ppmain.mod L1301-1316: BLE_BAL and RU_CVT from CONVERT(OPR,'VCV')) and the
+    blending costs given in a currency other than the region's (curex.gms L59-60). Both were
+    checked against GAMS once, on a scratch case that is not in the repository (demo12_blndx:
+    demo12_blnd with REFUNIT 3 for REG1, the currencies of demo12_curex (MUSD, MGBP, MJPY) and
+    BL_VAROMC and BL_DELIVC records in them): GAMS 54.6.1 optimal on both variants, objective
+    23,927,761.4463; the chain from the DD files PASS on both (829 sets and parameters at the
+    input, 828 symbols at each checkpoint, both QA logs identical; reduce_off 8,730 rows,
+    9,723 columns, 31,804 nonzeros; as run 3,268, 4,539 and 18,772; HiGHS against GAMS/CPLEX
+    7.0e-15 and 7.5e-15). GAMS's ppm dump shows the paths were reached: BL_VAROMC of REG1
+    TRAGSL is 0.1589 in MEuro05 (0.05 + 0.1 x 0.9 + 3 x 0.0063, the MGBP record dropped), of
+    REG2 GSL 0.0545 and of REG2 TRAGSL 0.032; BL_DELIVC 1.95 and 0.345; under REFUNIT 3 RU_CVT
+    is VCV for a unit 1 specification, DENS for unit 2 and 1 for unit 3, and BLE_BAL is VCV.
+    Whether demo12_blndx joins the repository as a second case is an open decision (#121,
+    decision 5). In CI the conversion of the costs is tested on made-up records only
+    (test_eqblnd.jl).
+  - A CONVERT of zero or EPS under `(1/CONVERT)$(...)`: GAMS stops with a division error, so
+    there is no reference to compare; TIMES.jl raises an error too.
+- Not translated, with the features they belong to: the stochastic variants of the equations
+  (STAGES, refused); the blending costs in the reports (eqobjvar.rpt L103-104, L174-175;
+  rptmain.rpt L176-182 are comments; M1.6); the IER market equation (eqmrkcom.ier L33-66; its
+  L66 has `+` where eqcombal.mod L79 has `*`); the stochastic and stepped files (clearsol.stc
+  L18, pextlevs.stc L25, recurrin.stc L135, rptmain.stc L39, solve.stp L232-233 and L281) and
+  spoint.mod L34.
+- A note on scripts/m13_gate.jl: without `--from-dd`, `--solve` builds the model without
+  `reduce=true`, so the as-run matrix check fails there for any model. Only the path from the
+  DD files sets it (L121-122). Not changed here.
 
 ## Open items
 
