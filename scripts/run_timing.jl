@@ -12,8 +12,9 @@
 #   raw/tjl_solve_<solver>.log     the elapsed stamp at the start of execution (only the number)
 #   raw/tjl_solve_<solver>.lst     the Include File Summary (which listing lines are which file)
 #   raw/tjl_solve_<solver>_profile.txt   seconds per statement (profile=1)
-# TIMES.jl, one entry per (model, variant) of a workstation batch (scripts/m13_gate.jl --dd,
-# log dd-<model>.log in <batch log dir>): the seconds the gate prints for each step. With --all
+# TIMES.jl, one entry per (model, variant) of a workstation batch (scripts/m13_gate.jl --from-dd,
+# log dd-<model>.log in <batch log dir>): the seconds the gate prints for each step, and the wall
+# time of the whole run (its line "whole run <s> s"; a batch older than that timer has none). With --all
 # or --local, a model without such a log is looked for in the batch's *chain*.log files (the gate
 # from GAMS's dump of the input: no reading of DD files, and it may end at an untranslated path).
 #
@@ -27,9 +28,12 @@
 #   generate  GAMS: resgen. TIMES.jl: generate! (the JuMP model).
 #   solve     GAMS: etsolver. TIMES.jl: JuMP.optimize! with HiGHS.
 #   reports   GAMS: the statements after the solve. TIMES.jl: not translated yet (M1.6).
-# GAMS's wall_s also holds the harness's dumps (profile records of type Unload, reported as
-# harness.dumps) and GAMS's start and exit; TIMES.jl's steps read the harness's dump of the
-# input (harness.write is the time to write it), and its comparisons with GAMS are not timed.
+# wall is the whole run, and other is what of it is in no part. GAMS: wall_s, which also holds the
+# harness's dumps (profile records of type Unload, reported as harness.dumps) and GAMS's start and
+# exit. TIMES.jl: the gate's wall timer around the run of one variant; its steps read the harness's
+# dump of the input (harness.write is the time to write it), and other is its comparisons with GAMS,
+# the reading of GAMS's dumps for them and, in the first run of a Julia process (cold), the loading
+# and compilation of TIMES.jl.
 #
 # Only models with redistribute = "public" in reference/suite.toml are read, unless --all (every
 # model) or --local (only the others); both are for a local board, and --embed then refuses.
@@ -149,6 +153,8 @@ function julia_entries(log, model, meta, logname)
             d["solve"], d["status"] = num(r"after ([\d.]+) s"), "time limit"
         elseif (s = match(r"^the chain ends before (\w+)", rest)) !== nothing
             d["ends"] = String(s[1])                   # an untranslated path: nothing after it is run
+        elseif (s = match(r"^whole run ([\d.]+) s", rest)) !== nothing
+            d["wall"] = parse(Float64, s[1])           # the gate's wall timer around this variant
         elseif occursin("FAIL", rest)
             d["failed"] = true
         end
@@ -157,16 +163,21 @@ function julia_entries(log, model, meta, logname)
         d = seen[v]
         (haskey(d, "read") || haskey(d, "ppm")) || continue
         stages(ks) = all(k -> haskey(d, k), ks) ? sum(d[k] for k in ks) : nothing
+        parts = (read=r3(get(d, "read", nothing)), prep=r3(stages(("init", "prep", "prelv", "ppm"))),
+                 coef=r3(stages(("coef", "presolve"))), generate=r3(get(d, "generate", nothing)),
+                 solve=r3(get(d, "solve", nothing)), reports=nothing)
+        wall = get(d, "wall", nothing)
         out[v] = (language="TIMES.jl", solver="HIGHS",
                   status=get(d, "failed", false) ? "stopped" : haskey(d, "ends") ? "ends before $(d["ends"])" :
                          get(d, "status", "not run"), cold=(model, v) == first_run,
                   decimals=1,                           # the gate prints seconds with one decimal
                   date=first(get(meta, "date", ""), 10), version="Julia $(get(meta, "julia", "?"))",
                   commit="TIMES.jl $(get(meta, "commit", "?"))", threads=get(meta, "threads", nothing),
-                  parts=(read=r3(get(d, "read", nothing)), prep=r3(stages(("init", "prep", "prelv", "ppm"))),
-                         coef=r3(stages(("coef", "presolve"))), generate=r3(get(d, "generate", nothing)),
-                         solve=r3(get(d, "solve", nothing)), reports=nothing),
-                  wall=nothing, other=nothing, harness=(write=r3(get(d, "write", nothing)),),
+                  parts=parts,
+                  # other: the whole run less the parts that were timed (never below zero: the parts
+                  # are printed with one decimal each)
+                  wall=r3(wall), other=wall === nothing ? nothing : r3(max(wall - sum(x for x in parts if x !== nothing; init=0.0), 0.0)),
+                  harness=(write=r3(get(d, "write", nothing)),),
                   rows=int(get(d, "rows", nothing)), cols=int(get(d, "cols", nothing)), source=[logname])
     end
     return out

@@ -6,7 +6,9 @@
 .DESCRIPTION
     1. Checks git, Python 3.11+, GAMS and its version, and that each solver in
        -Solvers solves a one-row LP under your licence (CPLEX must; HiGHS is
-       dropped with a warning if it cannot).
+       dropped with a warning if it cannot). A model that lists its own
+       `solvers` in reference/suite.toml is run with those, whatever -Solvers
+       says (.PARAMETER Solvers).
     2. Clones every model repository into <Workspace>\timesjl-sources and checks
        out the commit pinned in reference/suite.toml. Your own clones elsewhere
        are never touched.
@@ -56,6 +58,15 @@
     No solve, but CONVERT generates the model, so it needs the licensed GAMS.
     -Resume skips references whose CONVERT run is there and made with -GamsMajor.
     With -Checkpoints as well, both runs (--only presolve,convert). No gate, no zips.
+
+.PARAMETER Solvers
+    The GAMS solvers of the solve runs, comma-separated, the reference solver
+    first (default CPLEX,HIGHS). They are the solvers of every model that has
+    no `solvers` line in reference/suite.toml. A model with one is run with
+    its own list, with or without -Solvers (script 0.1.20; James, 14 Nov 2026:
+    OTCGEN and OTNYC with CPLEX and HiGHS, OTUS9r with CPLEX only), and -Resume
+    reruns it in full when a solve run of that list is missing. -Checkpoints
+    and -Matrix make no solve run, so they are not affected.
 
 .PARAMETER Python
     Use only this interpreter for the venv (path to python.exe).
@@ -107,7 +118,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
-$ScriptVersion = '0.1.19'
+$ScriptVersion = '0.1.20'
 if ($Checkpoints -or $Matrix) { $SkipGate = $true; $SkipPack = $true }
 
 $OnWindows = ($PSVersionTable.PSEdition -eq 'Desktop') -or $IsWindows
@@ -276,11 +287,30 @@ solve tiny using lp minimizing z;
 abort$(tiny.solvestat <> 1 or tiny.modelstat <> 1) 'tiny LP did not solve to optimality';
 '@
 $GamsVersion = $null
-$okSolvers = @()
-foreach ($s in ($Solvers -split ',' | ForEach-Object { $_.Trim().ToUpper() } | Where-Object { $_ })) {
+# The solvers a [[model]] block of reference/suite.toml lists for itself (`solvers = ["CPLEX", "HIGHS"]`,
+# script 0.1.20), upper case, in its order; none when the block has no such line.
+function Get-SuiteSolvers([string]$block) {
+    if ($block -match '(?m)^\s*solvers\s*=\s*\[([^\]]*)\]') {
+        return @($Matches[1] -split ',' | ForEach-Object { $_.Trim().Trim('"').ToUpper() } | Where-Object { $_ })
+    }
+    return @()
+}
+# -Solvers first, then any other solver a model of the suite lists: each is tried once
+$wantSolvers = @($Solvers -split ',' | ForEach-Object { $_.Trim().ToUpper() } | Where-Object { $_ })
+$trySolvers = @($wantSolvers)
+foreach ($b in ((Get-Content -Raw $Suite) -split '\[\[model\]\]' | Select-Object -Skip 1)) {
+    foreach ($s in (Get-SuiteSolvers $b)) { if ($trySolvers -notcontains $s) { $trySolvers += $s } }
+}
+$passedSolvers = @()   # every solver that passed
+$okSolvers = @()       # those of -Solvers: the solvers of a model with no list of its own
+foreach ($s in $trySolvers) {
     $r = Get-NativeOutput $Gams @('tiny.gms', "lp=$s", 'lo=3', "o=tiny_$s.lst") $pre
     if ($r.Text -match 'TJLVER=(\d+\.\d+\.\d+)') { $GamsVersion = $Matches[1] }
-    if ($r.Code -eq 0) { $okSolvers += $s; Write-Host "Solver: $s OK" }
+    if ($r.Code -eq 0) {
+        $passedSolvers += $s
+        if ($wantSolvers -contains $s) { $okSolvers += $s }
+        Write-Host "Solver: $s OK"
+    }
     elseif ($s -eq 'CPLEX') { Fail "CPLEX could not solve a one-row LP (GAMS return code $($r.Code)); see $pre\tiny_CPLEX.lst. Check the GAMS licence." }
     else { Write-Host "WARNING: $s could not solve a one-row LP (return code $($r.Code)); continuing without it." -ForegroundColor Yellow }
 }
@@ -446,11 +476,13 @@ function Test-RunGams($m) {
     return ($seen -gt 0)
 }
 
-function Test-RunOK([string]$dir) {
+# $need: the solvers the model lists for itself in the suite (none for the others); each must have its solve run.
+function Test-RunOK([string]$dir, [string[]]$need = @()) {
     $mf = Join-Path $dir 'manifest.json'
     if (-not (Test-Path $mf)) { return $false }
     $m = Get-Content -Raw $mf | ConvertFrom-Json
     foreach ($d in $RequiredDumps) { if ($null -eq (Get-Prop $m.dumps $d)) { return $false } }
+    foreach ($s in $need) { if ($null -eq (Get-Prop $m.runs "solve_$($s.ToLower())")) { return $false } }
     if (-not (Test-RunGams $m)) { return $false }
     foreach ($p in $m.dumps.PSObject.Properties) { if ($null -eq $p.Value) { return $false } }
     foreach ($p in $m.runs.PSObject.Properties) { if ($p.Value.returncode -ne 0) { return $false } }
@@ -504,8 +536,15 @@ foreach ($model in $Models) {
         Write-Host "skipped: its source folder ($($needs -join ', ')) is not in $SrcRoot" -ForegroundColor Yellow
         continue
     }
+    # the model's own solvers (suite.toml `solvers`), less any that failed the preflight; else those of -Solvers
+    $need = @(Get-SuiteSolvers "$block" | Where-Object { $passedSolvers -contains $_ })
+    $modelSolvers = $okSolvers
+    if ($need.Count -gt 0) { $modelSolvers = $need }
+    if (($modelSolvers -join ',') -ne ($okSolvers -join ',') -and -not ($Checkpoints -or $Matrix)) {
+        Write-Host "solvers of this model (reference/suite.toml): $($modelSolvers -join ',')"
+    }
     $mrBase = @((Join-Path (Join-Path (Join-Path $Repo 'reference') 'python') 'make_reference.py'),
-                '--suite', $Suite, '--out', $Out, '--solvers', ($okSolvers -join ','), '--gams', $Gams,
+                '--suite', $Suite, '--out', $Out, '--solvers', ($modelSolvers -join ','), '--gams', $Gams,
                 '--model', $model, '--threads', $Threads, '--max-parallel', $MaxParallel) + $RootArgs
     if ($Checkpoints -or $Matrix) {
         # one make_reference call per variant, each with the runs that variant still owes
@@ -520,7 +559,7 @@ foreach ($model in $Models) {
         }
         if ($did -eq 0) { Write-Host 'already done (-Resume)' }
     } else {
-        $todo = @($Variants | Where-Object { -not ($Resume -and (Test-RunOK (Join-Path (Join-Path $Out $model) $_))) })
+        $todo = @($Variants | Where-Object { -not ($Resume -and (Test-RunOK (Join-Path (Join-Path $Out $model) $_) $need)) })
         if ($todo.Count -gt 0) {
             $mrArgs = $mrBase
             foreach ($v in $todo) { $mrArgs += @('--variant', $v) }
@@ -542,7 +581,7 @@ foreach ($model in $Models) {
             if ($Checkpoints -or $Matrix) {
                 # a -Checkpoints / -Matrix pass is OK when the runs it makes are there
                 $ok = ((-not $Checkpoints) -or (Test-Checkpoints $dir)) -and ((-not $Matrix) -or (Test-Matrix $dir))
-            } else { $ok = Test-RunOK $dir }
+            } else { $ok = Test-RunOK $dir $need }
             if ($ok) { $row.status = 'OK' } else { $row.status = 'CHECK' }
             $c = Get-Prop $m.runs 'solve_cplex'; $h = Get-Prop $m.runs 'solve_highs'; $cv = Get-Prop $m.runs 'convert'
             $ci = Get-Prop $c 'solveinfo'; $hi = Get-Prop $h 'solveinfo'
@@ -588,7 +627,7 @@ foreach ($model in $Models) {
 Write-Step ("Done in {0:N0} min. Summary: {1}" -f ((Get-Date) - $started).TotalMinutes, $SummaryCsv)
 $Summary | Format-Table model, variant, status, gate, rows, cols, obj_cplex, rel_diff, wall_cplex_s -AutoSize |
     Out-String -Width 200 | Write-Host
-Write-Host "Script $ScriptVersion, GAMS $GamsVersion, solvers $($okSolvers -join ','), threads $Threads, at most $MaxParallel runs at a time, sources in $SrcRoot"
+Write-Host "Script $ScriptVersion, GAMS $GamsVersion, solvers $($okSolvers -join ',') (a model's own list in reference/suite.toml comes first), threads $Threads, at most $MaxParallel runs at a time, sources in $SrcRoot"
 Write-Host "Send back: $SummaryCsv and the zips in $Packed (start with the M1.1 models)."
 $bad = @($Summary | Where-Object { $_.status -ne 'OK' -or $_.gate -eq 'FAIL' })
 if ($bad.Count -gt 0) { exit 1 } else { exit 0 }

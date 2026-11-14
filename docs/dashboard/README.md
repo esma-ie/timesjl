@@ -109,8 +109,17 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
     cut at the files of the Include File Summary. Only numbers are read; no
     line of a listing or log is copied.
   - TIMES.jl, one entry per model and variant of a workstation batch
-    (`scripts/m13_gate.jl --dd`): the seconds the gate prints for each step
-    in the batch's `dd-<model>.log`.
+    (`scripts/m13_gate.jl --from-dd`): the seconds the gate prints for each
+    step in the batch's `dd-<model>.log`, and the wall time of the whole run
+    (its line `whole run <seconds> s`; James, 14 Nov 2026).
+  - Whole run (slide 12): wall time, for both languages. GAMS: the wall time
+    of the GAMS job, which also holds the harness's dumps. TIMES.jl: the
+    gate's wall timer around the run of one variant, from the end of the run
+    before it to its own end. It also holds what is in no part: the checks
+    against GAMS at every step, the reading of GAMS's dumps for them and the
+    writing and reading of the harness's copy of the input. In the first run
+    of a process it also holds the loading and compilation of TIMES.jl. A
+    batch made before the timer has no whole-run time for TIMES.jl.
   - Parts: read (GAMS: start-up, compilation and the statements before
     preprocessing; TIMES.jl: reading the DD files), preprocessing (GAMS
     `init_ext` to the end of `ppm_ext`; TIMES.jl input to ppm), coefficients
@@ -120,21 +129,35 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
     The header of `scripts/run_timing.jl` has the detail.
   - A part that was never timed is `null` in the block and reads "not
     measured" on the slide (hover gives the reason); nothing is estimated.
-    Today: TIMES.jl's reports (not translated, M1.6), TIMES.jl's whole run,
-    and any TIMES.jl run with CPLEX. "not run" marks the OTUS9r solves, which
-    are checked by cross-evaluation instead of a HiGHS solve.
+    Today: TIMES.jl's reports (not translated, M1.6), TIMES.jl's whole run
+    in a batch made before the gate's wall timer, and any TIMES.jl run with
+    CPLEX (Phase 2). "not run" marks the OTUS9r solves, which are checked by
+    cross-evaluation instead of a HiGHS solve.
+  - GAMS with HiGHS: demo12 and TIMES-NZ steady have the run today. OTCGEN
+    and OTNYC get it at the next reference run (`solvers` in
+    `reference/suite.toml`; James, 14 Nov 2026), the batch that moves the
+    baseline to v4.9.8; their points then appear on slide 11 at the next
+    refresh. OTUS9r is left out for now.
   - The first run of each TIMES.jl process also compiles TIMES.jl; it is
     marked `cold` and drawn faint on slide 11. Slide 12 shows the as-run
     variant, which is never the first.
-  - Refresh after a new batch (the reference directory, then the batch's log
-    folder and its parity report for the commit and date):
+  - Refresh after each nightly batch, before the 9:00 check-in (James,
+    14 Nov 2026): a step of the morning's dashboard update, in the same pull
+    request as the other blocks of the page. From the repository's folder,
+    with `<stamp>` the newest finished pass in `timesjl-reference/_probes`
+    (the folder `nightly-parts-<stamp>` and the parity report
+    `dashboard-public-solve-<stamp>.json` carry the same stamp; the report
+    gives the commit and date):
 
         julia --project=test scripts/run_timing.jl ../timesjl-reference ../timesjl-reference/_probes/nightly-parts-<stamp> --meta ../timesjl-reference/_probes/dashboard-public-solve-<stamp>.json --embed
 
-    Only models with `redistribute = "public"` are read, and `--embed`
-    refuses anything else. `--all` and `--local` (with `--out <file>`) read
-    the other models for a board that stays on the workstation. The output
-    holds no path, host name or log line.
+    It prints the table of slide 12 and rewrites the `run-timing` block of
+    `docs/dashboard/index.html`; nothing else in the page changes. Only
+    models with `redistribute = "public"` are read, and `--embed` refuses
+    anything else. `--all` and `--local` (with `--out <file>`) read the other
+    models for a board that stays on the workstation; the batch refreshes
+    that board itself at the end of each pass. The output holds no path, host
+    name or log line.
 
 - Local runs (TIM, on James's machine) are reported the same way from a
   reference directory and loaded into the open page with its "Load results
@@ -166,13 +189,37 @@ file (`later_overwrites`). Objective slide: CPLEX and HiGHS references on a
 log axis against the 1e-6 gate. Timing slide: the GAMS profile of the
 coefficient stage against TIMES.jl, warm, with the Phase 1 5x target.
 
-Run-time slides (11 and 12): the language is the colour and the shape (GAMS
-a blue circle, TIMES.jl a green square), the solver is the fill (CPLEX
-filled, HiGHS a ring). A faint square is a first run that also compiles
-TIMES.jl; an arrow up marks a solve stopped at its time limit without an
-optimum (it took at least that long); a thin line joins the runs of one LP.
-The two colours pass the colour-vision checks of the `dataviz` palette
-validator on both surfaces (the green is one step darker on dark slides);
-the legend and slide 12's table carry the same information without colour.
-On slide 12 the shading of a cell is the part's share of the run's measured
-time.
+Languages and solvers (James, 14 Nov 2026): the colour is the language and
+the shape is the solver, wherever a slide draws them.
+
+- GAMS is orange, `#e06000`. TIMES.jl is green, `#00c463`: the Green of the
+  ESMA brand book (Pantone 2420 C), the page's `--green`, on light and dark
+  slides. The brand book has no orange; `#e06000` is the orange that the
+  `dataviz` palette validator passes beside that green. Slides 10, 11 and 12
+  use the two colours.
+- CPLEX is a circle; HiGHS is an isosceles triangle pointing up. Slides 9,
+  11 and 12 use the two shapes. Every mark is filled.
+- Slide 9 (objective) keeps its own colours, the CPLEX blue and the HiGHS
+  dark green (white on dark slides): its marks are TIMES.jl's difference from a GAMS solve, so they
+  belong to neither language. Its fail red is close to the orange (colour
+  difference 6.5, under the validator's floor of 15), and the two never
+  share a slide.
+- Slides 11 and 12: a faint mark is a first run that also compiles TIMES.jl;
+  an arrow up marks a solve stopped at its time limit without an optimum (it
+  took at least that long); a thin line joins the runs of one LP. On slide
+  11's left panel each language has the mark of the run its time comes from
+  (GAMS its CPLEX run, TIMES.jl its HiGHS run). On slide 12 the shading of a
+  cell is the part's share of the run's measured time.
+- Validator results for the pair (`validate_palette.py`, every pair):
+  - Light slides (white): colour-vision separation passes (worst 8.5,
+    target 8), normal vision passes (30.4, floor 15). The green's contrast
+    with white is 2.31:1, under 3:1, which the validator allows only with
+    labels or a table: the legends and slide 12's table carry the same
+    information without colour.
+  - Dark slides (Dark green `#004539`): colour-vision separation 8.5 and
+    normal vision pass; contrast passes (orange 3.06:1, green 4.75:1). The
+    validator's lightness band fails for the green (0.718, limit 0.67): the
+    band is set for a near-black surface, and the brand green is lighter.
+    The darker `#00ae55` passes the band, but its separation from the orange
+    under colour-vision deficiency falls to 6.2, under the target. The brand
+    green is kept.
