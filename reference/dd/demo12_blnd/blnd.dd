@@ -1,0 +1,154 @@
+* TIMES.jl crafted case demo12_blnd (reference/crafted.toml, 14 Nov 2026): refinery blending,
+* the equations EQ(l)_BLND (eqblnd.mod L67-71) with their preparation (ppmain.mod L1228-1333),
+* the blending terms of the commodity balance (eqcombal.mod L30-35, L75-80), of the peak
+* equation (eqpeak.mod L78) and of the objective (coef_obj.mod L93-94, eqobjvar.mod L105-107).
+* Added to TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0). No suite model has
+* blending data.
+* The blends (BLE), their streams (OPR) and their specifications (SPE):
+* - TRAGSL (transport motor spirit, made in demo12 from GSL by FTE-TRAGSL) is blended in REG1
+*   and REG2 from GSL, NAP, BIO and LPG. GSL is itself a blend in REG2 (from NAP and LPG), so
+*   it is in BLE and in OPR (ppmain.mod L1303).
+* - REG1 has no REFUNIT (default 1, energy: L1251, L1326-1331); REG2 has REFUNIT 2 (weight:
+*   L1304-1305, L1318-1324).
+* - The specifications of TRAGSL in REG1: OCT (type 2, =G=, unit by default 1), SUL (type 1,
+*   =L=, unit 2), RVP (type 3, =E=, unit 3), DEN (type 4, non-binding, unit 1). BL_START is
+*   2010, 2015, 2015 and 2020, so the blend exists from 2010 (L1254-1256) and every
+*   specification has a row from 2010. LPG has a quality for OCT only; GSL meets RVP exactly
+*   (a coefficient of zero); BIO has no quality for RVP.
+* - REG2: TRAGSL with OCT (=G=) and SUL (=L=, unit 3), and DEN with the type 5, which has no
+*   equation but makes BIO a stream of the blend; GSL with OCT (=G=, unit 2) from 2020.
+* - BL_TYPE of KER, which is not in BLE: in BLE_SPE only (L1246).
+* - Costs: BL_VAROMC, and BL_DELIVC on the input BL_INP (electricity per unit of blend).
+* - BLE_INP (the inputs of a blend) is only declared by TIMES (ppmain.mod L1240; the lines that
+*   filled it are comments). It is declared and filled here, under the run's $ONMULTI, so that
+*   the terms on it are reached: the input in the balance (eqcombal.mod L78-80), in the peak
+*   equation (eqpeak.mod L78) with PEAKDA_BL (given for 2020; default 1, ppmain.mod L1296).
+* - ENV_BL: TRACO2 from blending, in 2005 (before the blend starts), 2020 and 2030 (no
+*   interpolation).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET BLE /
+TRAGSL
+GSL
+/
+SET OPR /
+GSL
+NAP
+BIO
+LPG
+/
+SET SPE /
+OCT
+SUL
+RVP
+DEN
+/
+SET BLE_INP(R,COM,COM) /
+REG1.TRAGSL.ELC
+/
+PARAMETER
+REFUNIT ' '/
+REG2 2
+/
+PARAMETER
+CONVERT ' '/
+GSL.DENS 0.75
+GSL.WCV 1.02
+GSL.VCV 0.76
+NAP.DENS 0.70
+NAP.WCV 0.98
+NAP.VCV 0.72
+BIO.DENS 0.79
+BIO.WCV 0.62
+BIO.VCV 0.50
+LPG.DENS 0.54
+LPG.WCV 1.07
+LPG.VCV 0.57
+/
+PARAMETER
+BL_TYPE ' '/
+REG1.TRAGSL.OCT 2
+REG1.TRAGSL.SUL 1
+REG1.TRAGSL.RVP 3
+REG1.TRAGSL.DEN 4
+REG2.TRAGSL.OCT 2
+REG2.TRAGSL.SUL 1
+REG2.TRAGSL.DEN 5
+REG2.GSL.OCT 2
+REG1.KER.OCT 2
+/
+PARAMETER
+BL_START ' '/
+REG1.TRAGSL.OCT 2010
+REG1.TRAGSL.SUL 2015
+REG1.TRAGSL.RVP 2015
+REG1.TRAGSL.DEN 2020
+REG2.GSL.OCT 2020
+/
+PARAMETER
+BL_UNIT ' '/
+REG1.TRAGSL.SUL 2
+REG1.TRAGSL.RVP 3
+REG1.TRAGSL.DEN 1
+REG2.TRAGSL.SUL 3
+REG2.GSL.OCT 2
+/
+PARAMETER
+BL_SPEC ' '/
+REG1.TRAGSL.OCT 91
+REG1.TRAGSL.SUL 40
+REG1.TRAGSL.RVP 60
+REG1.TRAGSL.DEN 0.76
+REG2.TRAGSL.OCT 93
+REG2.TRAGSL.SUL 50
+REG2.GSL.OCT 88
+/
+PARAMETER
+BL_COM ' '/
+REG1.TRAGSL.GSL.OCT 95
+REG1.TRAGSL.NAP.OCT 70
+REG1.TRAGSL.BIO.OCT 110
+REG1.TRAGSL.LPG.OCT 100
+REG1.TRAGSL.GSL.SUL 30
+REG1.TRAGSL.NAP.SUL 80
+REG1.TRAGSL.BIO.SUL 1
+REG1.TRAGSL.GSL.RVP 60
+REG1.TRAGSL.NAP.RVP 80
+REG1.TRAGSL.LPG.RVP 20
+REG1.TRAGSL.GSL.DEN 0.75
+REG1.TRAGSL.NAP.DEN 0.70
+REG1.TRAGSL.BIO.DEN 0.79
+REG2.TRAGSL.GSL.OCT 95
+REG2.TRAGSL.NAP.OCT 70
+REG2.TRAGSL.GSL.SUL 30
+REG2.TRAGSL.NAP.SUL 80
+REG2.TRAGSL.BIO.DEN 0.79
+REG2.GSL.NAP.OCT 70
+REG2.GSL.LPG.OCT 100
+/
+PARAMETER
+BL_INP ' '/
+REG1.TRAGSL.ELC 0.02
+/
+PARAMETER
+BL_VAROMC ' '/
+REG1.TRAGSL.MEuro05 0.05
+REG2.GSL.MEuro05 0.02
+/
+PARAMETER
+BL_DELIVC ' '/
+REG1.TRAGSL.ELC.MEuro05 1.5
+/
+PARAMETER
+ENV_BL ' '/
+REG1.TRACO2.TRAGSL.GSL.2005 0.5
+REG1.TRACO2.TRAGSL.GSL.2020 0.5
+REG1.TRACO2.TRAGSL.NAP.2020 0.4
+REG1.TRACO2.TRAGSL.NAP.2030 0.3
+REG2.TRACO2.GSL.LPG.2030 0.2
+/
+PARAMETER
+PEAKDA_BL ' '/
+REG1.TRAGSL.2020 0.8
+/

@@ -47,7 +47,7 @@
 # Not translated yet; data or switches that need them raise UnportedError:
 # MACRO (eqobj.tm), OBJANN (eqobjann.tm), ETL, elastic demand (RCJ: eqobjels.mod and EQ_OBJ L89-90), damage
 # costs (DAM_COST: eqdamage.mod changes OBV and SUM_OBJ), the start-up and shut-down costs of unit
-# commitment (RP_UPT: eqobjvar.mod L38), capacity-related flow costs (cal_caps.mod: RPC_CAPFLO/NCAP_COM), blending (BLE_OPR),
+# commitment (RP_UPT: eqobjvar.mod L38), capacity-related flow costs (cal_caps.mod: RPC_CAPFLO/NCAP_COM),
 # VALIDATE, STAGES.
 
 """
@@ -83,7 +83,6 @@ function objective_unported(tm::TimesModel)
         throw(UnportedError("unit-commitment costs in EQ_OBJVAR (eqobjvar.mod L38, RP_UPT)"))
     (isempty(gset_opt(d, "RPC_CAPFLO", 4)) && isempty(gparam_opt(d, "NCAP_COM", 5))) ||
         throw(UnportedError("capacity-related flow costs in EQ_OBJVAR (cal_caps.mod, eqobjvar.mod L98-100)"))
-    isempty(gset_opt(d, "BLE_OPR", 3)) || throw(UnportedError("blending costs in EQ_OBJVAR (eqobjvar.mod L105-107)"))
     return nothing
 end
 
@@ -408,8 +407,13 @@ end
           SUM((RTP_VINTYR(R,V,T,P),RPCS_VAR(R,P,C,S)),
               SUM(TS_ANN(S,TS), SUM(%TPULSE% * (VAR_SIN(R,V,T,P,C,S)*OBJ_FCOST(R,Y_EOH,P,C,TS,CUR) +
                                                VAR_SOUT(R,V,T,P,C,S)*STG_EFF(R,V,P)*OBJ_FDELV(R,Y_EOH,P,C,TS,CUR)))))) +
-      [cal_caps L98-100] + [blending L105-107]
+      [cal_caps L98-100] +
+      SUM((BLE_OPR(R,BLE,OPR),TT(T)), SUM(%TPULSE% * OBJ_BLNDV(R,Y_EOH,BLE,OPR,CUR)) * VAR_BLND(R,T,BLE,OPR))
       =E= SUM(OBV,SUM_OBJ('OBJVAR',OBV)*VAR_OBJ(R,OBV,CUR));
+
+The blending costs (L105-107) are on every stream of BLE_OPR in every period
+TT (an alias of T), also before the blend's first year under specification
+(no BLE_TP): OBJ_BLNDV is coef_obj.mod L93-94.
 
 %MX% is `*(1+RTP_FFCS(R,V,P,C,C))` when RTP_FFCS is DEFINED (L83), ''
 otherwise (setglobs.gms L356). COSTYPE is an alias of UC_COST
@@ -455,6 +459,10 @@ function eq_objvar!(tm::TimesModel)
     group_of = indexby(gset_opt(dd, "TS_GROUP", 3), (1, 2))             # (r,tsl) -> TS_GROUP(r,tsl,s)
     act_cstup, act_cstrmp = gparam_opt(dd, "ACT_CSTUP", 5), gparam_opt(dd, "ACT_CSTRMP", 5)
     obj_pvt, rs_stgprd = gparam_opt(dd, "OBJ_PVT", 3), gparam_opt(dd, "RS_STGPRD", 2)
+    # blending costs (L105-107)
+    ble_opr_of_r = indexby(gset_opt(tm.data, "BLE_OPR", 3), (1,))      # (r,) -> BLE_OPR(r,ble,opr)
+    obj_blndv = gparam_opt(tm.data, "OBJ_BLNDV", 5)
+    ble, opr = gset_opt(tm.data, "BLE", 1), gset_opt(tm.data, "OPR", 1)
 
     weighted(r, t, cur, f) = (w = GZERO; for (y, wy) in tpulse(tm, r, t, cur); w = w + wy * f(y); end; w)
     vintages(r, t, p) = (k[2] for k in get(vint_of_rtp, (r, t, p), NO4) if (k[2],) in x.v)
@@ -557,6 +565,13 @@ function eq_objvar!(tm::TimesModel)
                     addterm!(lhs, ksin, tm, "VAR_SIN", r, v, t, p, c, s)
                     addterm!(lhs, ksout, tm, "VAR_SOUT", r, v, t, p, c, s)
                 end
+            end
+        end
+        # Commodity blending costs (L105-107).
+        for (_, b, o) in get(ble_opr_of_r, (r,), NTuple{3,String}[])
+            ((b,) in ble && (o,) in opr) || continue
+            for (t,) in x.t
+                addterm!(lhs, weighted(r, t, cur, y -> gv(obj_blndv, (r, y, b, o, cur))), tm, "VAR_BLND", r, t, b, o)
             end
         end
         gconstraint!(tm, "EQ_OBJVAR", (r, cur), "E", lhs, obj_component_rhs(tm, x, r, cur, "OBJVAR")) === nothing || (n += 1)

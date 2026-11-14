@@ -480,3 +480,20 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_disp/demo12_disp.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_disp"]
+
+# TIMES_Demo demo12 + demo12_blnd/blnd.dd (14 Nov 2026): refinery blending, the equations
+# EQ(l)_BLND (eqblnd.mod L67-71) with the preparation of ppmain.mod L1228-1333 and the blending
+# terms of the commodity balance, the peak equation and the objective: two blends, one of them
+# also a stream, four streams, specifications of the types L, G, E and N in the units 1 to 3,
+# REFUNIT 1 and 2, a start year, an input with a delivery cost, emissions (M1.3 change 37).
+[[model]]
+name = "TIMES_Demo-demo12_blnd"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_blnd/demo12_blnd.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_blnd"]

@@ -787,3 +787,14 @@ those checks, their figures and their crafted cases are not published
   in the chain from DD files). The unit commitment by start-up type
   (eqlducs.vda L12-124) is next. Not translated, for a later release:
   the discrete unit commitment (DUC = YES, a MIP).
+- 14 Nov 2026: M1.3 change 37: EQ(l)_BLND (eqblnd.mod L67-71, eqmain.mod
+  L249-252): refinery blending, refused since M1.1. With it the blending
+  preparation (ppmain.mod L1246-1333), the blending variable's terms in
+  EQ(l)_COMBAL (eqcombal.mod L30-35, L75-80), EQ_PEAK (eqpeak.mod L78) and
+  EQ_OBJVAR (coef_obj.mod L93-94, eqobjvar.mod L105-107), and the blending
+  costs in curex.gms L59-60. New crafted case demo12_blnd: layers 1 to 3
+  PASS in both variants from the DD files; 35 rows and 54 VAR_BLND columns
+  in each (26 crafted cases in the chain from DD files). Type 4 (=N=) is a
+  free row (`gconstraint!` with "N"). REFUNIT 3 and the costs in another
+  currency are translated and reached by no case in the repository
+  (docs/m13-plan.md, change 37).

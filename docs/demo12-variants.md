@@ -47,6 +47,14 @@ Later, outside Phase 1's core and VDA scope: lumpy investments and early
 retirement (DSC); logit market sharing (ECB), MACRO-MSA and MLF, stochastics,
 ETL, the Climate Module, damage costs; the Weymouth gas grid (nonlinear).
 
+Crafted cases outside this list: features older than the ones above, refused
+until a case was made for them (James, 14 Nov 2026: every remaining refused
+feature is translated before the M1.3 gate).
+
+- `TIMES_Demo-demo12_blnd` (14 Nov 2026, M1.3 change 37): refinery blending,
+  `eqblnd.mod`, `ppmain.mod` L1228-1333. No User Note; made from the GAMS
+  source and Part II §6.3.12. Translated, layers 2-3 PASS.
+
 ## Variant 2: dispatching and unit commitment (5 Nov 2026)
 
 `reference/dd/demo12_uc/uc.dd`, on the gas plant ELCTEGAS00 (DAYNITE):

@@ -43,6 +43,8 @@ answer yet.
 | 14 Nov 2026 | #109 | Is the M1.3 gate passed? Rule-level (a milestone gate). The evidence for each criterion is in docs/m13-plan.md, "Gate close-out, 14 Nov 2026". | yes | James, 14 Nov 2026: not passed yet (#109, decision 1); every remaining refused feature is translated first (linear dispatching is #120; unit commitment next, then the others in the order of the 16:30 check-in). Stays here: asked again when they are translated and tested. |
 | 14 Nov 2026 | #117 | Is the M1.4 gate passed? Rule-level (a milestone gate); it waits for the M1.3 gate (#109). The evidence for each criterion is in docs/m14-plan.md, "Gate close-out, 14 Nov 2026". | yes, once the M1.3 gate is passed and the batch has rerun the chain from DD files on the merged stack | Open (#117, decision 1); needs James's explicit yes. Its CI criterion is not met until the unit commitment is translated (#118, decision 2). |
 | 14 Nov 2026 | #120 | The discrete unit commitment (`$SET DUC YES`: binary variables and indicator constraints, a MIP; eqlducs.vda L128-175): leave it refused and note it as a TODO for a later release, so that the M1.3 gate can close without it? Rule-level (the gate's scope). | yes | Open (#120, decision 5); needs James's explicit yes. |
+| 14 Nov 2026 | #121 | Blending data was refused by #42 (5 Nov 2026: "Refused; no blending test model"). #121 lifts the refusal and adds the crafted case demo12_blnd as its test model. Confirm that #42 is reversed? Rule-level (a logged decision reversed; test data). | yes; it follows James's instruction of 14 Nov 2026 that every remaining refused feature is translated | Open (#121, decision 2); needs James's explicit yes, a merge does not answer it. |
+| 14 Nov 2026 | #121 | REFUNIT 3 (ppmain.mod L1301-1316) and the blending costs in another currency (curex.gms L59-60) were checked against GAMS only on a scratch case that is not in the repository (demo12_blndx). Add it as a second crafted case (about 7.5 MB of fixtures), or leave the check as a note in docs/m13-plan.md? | leave it as a note | Open (#121, decision 5); nothing is built in beyond the note. |
 
 Reviewed on 14 Nov 2026 against pull requests #1 to #120 (108 merged, six open: #114, #115, #117 to #120). Four questions that James had answered left this list for the log of their pull requests: the demo12 trade case (#68, #104); refused features before v4.9.8 (#109, decision 3); the stepped solve before the gates (#108, decision 3); the M1.4 CI criterion with demo12_uc refused (#118, decision 2). Five questions asked in the chat and never listed were added (issues #97, #100 and #17, the commit trailer, the unused worktree). Every row of the log that is still "open" is either on this list or is a built-in default of an open pull request, which its merge decides.
 
@@ -100,6 +102,18 @@ Reviewed on 14 Nov 2026 against pull requests #1 to #120 (108 merged, six open: 
 | 11 Nov 2026 | Keep this decision log, with its rule. | `docs/decisions.md` |
 
 ## Log by pull request
+
+### #121 M1.3 (37): EQ(l)_BLND, eqblnd.mod L67-71, crafted case demo12_blnd (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the new crafted case demo12_blnd (demo12 + blnd.dd, CC BY 4.0; a public fixture, a variant fixture and a DD-file compile case, about 7.5 MB)? | Recommended: yes. Built in. | open |
+| 2 | The refusal of blending data is lifted everywhere: the four equations, the blending preparation (ppmain.mod L1246-1333), the blending terms of the commodity balance, the peak equation and the objective, and the blending costs in the currency conversion (curex.gms L59-60). This reverses #42 (5 Nov 2026: "Refused; no blending test model"), following James's instruction of 14 Nov 2026 that every remaining refused feature is translated. Rule-level (a logged decision reversed; test data). | Recommended: yes. Built in. | open; needs James's explicit yes, a merge does not answer it (Open decisions) |
+| 3 | A type 4 specification (=N=) is a free row in GAMS's matrix (bounds -INF, +INF). `gconstraint!` takes a new type "N" and writes it as `lhs - rhs in [-Inf, Inf]`, so the row count and order match GAMS. Shared code, but no existing row changes. | Built in. | open |
+| 4 | TIMES only declares BLE_INP (the statements that filled it are comments, ppmain.mod L1267-1272), so BL_INP, BL_DELIVC and PEAKDA_BL act only when the model's own data fills BLE_INP. The case declares and fills it in blnd.dd under the run's `$ONMULTI`. Keep that in the case? | Recommended: yes (it is the only way to reach eqcombal.mod L78-80 and eqpeak.mod L78). Built in. | open |
+| 5 | Two paths are translated and were checked against GAMS, but only on a scratch case that is not in the repository (demo12_blndx: demo12_blnd + REFUNIT 3 for REG1 + three more currencies with blending costs in them): the REFUNIT 3 branch of ppmain.mod L1301-1316 and curex.gms L59-60. Add it as a second crafted case (about 7.5 MB more), or leave the check as a note in docs/m13-plan.md? | Recommended: leave it as a note (flagged and listed, as for the branches of #120). No default built in beyond that: the branch holds only demo12_blnd. | open (Open decisions) |
+| 6 | Not part of this change, with the features they belong to: the blending costs in the reports (eqobjvar.rpt L103-104 and L174-175, M1.6), the IER market equation (eqmrkcom.ier L33-66), the stochastic and stepped files (clearsol.stc L18, pextlevs.stc L25, recurrin.stc L135, rptmain.stc L39, solve.stp L232-233 and L281), spoint.mod L34. | Built in. | open |
+| 7 | Three differences between the GAMS code and Part II on blending are logged as D33 to D35 in docs/discrepancies.md (a fourth type and the start year; the unit of VAR_BLND and where BLE_BAL acts; the terms Part II does not show). The code is followed. | Logged; not reported to ETSAP. | open |
 
 ### #120 M1.3 (36): eqactups.vda L9-117, dispatching in the linear formulation, crafted case demo12_disp (open)
 
@@ -600,7 +614,7 @@ No decisions: a parity fix inside 27a-2 (#93).
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Refuse blending data and translate only the REFUNIT default, or add a blending test model? | Refused; no blending test model. | accepted by merge, 5 Nov 2026 |
+| 1 | Refuse blending data and translate only the REFUNIT default, or add a blending test model? | Refused; no blending test model. | accepted by merge, 5 Nov 2026; #121 (open) lifts the refusal with the crafted case demo12_blnd, which needs James's yes (Open decisions) |
 
 ### #40 M1.3 (15a): ppmain.mod L1101-1179, user-constraint defaults (merged 2026-11-05)
 

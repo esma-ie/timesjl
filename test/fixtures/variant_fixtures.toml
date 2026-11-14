@@ -333,3 +333,22 @@ variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
+
+# Crafted case demo12_blnd (14 Nov 2026): refinery blending (eqblnd.mod L67-71, ppmain.mod
+# L1228-1333): two blends (TRAGSL in both regions, GSL in REG2, where it is also a stream of
+# TRAGSL), four streams, specifications of the types 1 to 4 (=L=, =G=, =E= and the free =N=)
+# and a type 5 without an equation, given in the units 1 to 3 under REFUNIT 1 (REG1, the
+# default) and 2 (REG2), start years (BL_START), a stream that meets a specification exactly
+# (a zero coefficient), a BL_TYPE of a commodity that is not a blend, an input of the blend
+# (BLE_INP, BL_INP) with a delivery cost and a peak share (PEAKDA_BL), a variable cost
+# (BL_VAROMC) and emissions (ENV_BL), one of them before the blend starts.
+# Preprocessing from the input dump to ppm on every symbol, the 35 rows and the blending
+# variable's terms in the other equations (test/unit/test_eqblnd.jl), and the whole model. The
+# presolve dump is shared with test/fixtures/public_fixtures.toml.
+[[variant]]
+prefix   = "demo12_blnd"
+model    = "TIMES_Demo-demo12_blnd"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []
