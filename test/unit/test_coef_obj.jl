@@ -81,7 +81,7 @@ end
 
 @testset "coef_obj refuses untranslated paths" begin
     mk(sw) = TimesModel(PPM_DEMO12; switches=merge(COEF_OBJ_CASE_SWITCHES, sw))
-    @test occursin("ANNCOST", only(coef_obj_unported(mk(Dict("ANNCOST" => "lev")))))
+    @test isempty(coef_obj_unported(mk(Dict("ANNCOST" => "lev"))))      # translated: M1.3 change 29
     @test occursin("VALIDATE", only(coef_obj_unported(mk(Dict("VALIDATE" => "YES")))))
     @test occursin("TIMESED", only(coef_obj_unported(mk(Dict("MICRO" => "YES")))))
     tm = mk(Dict{String,String}())

@@ -345,3 +345,29 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 3321
 cols = 4557
 nonzeros = 18661
+
+# Crafted case TIMES_Demo-demo12_lev (reference/crafted.toml: demo12 with the control switch ANNCOST LEV; OBJ MOD, so %CTST% is '**0' and MINYR stays MIYR_V1), 14 Nov 2026 (GAMS 54.6.1 +
+# CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): coef_obj.mod L31-32, the whole
+# model. The presolve dump is shared with test/fixtures/variant_fixtures.toml. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_lev"
+model    = "TIMES_Demo-demo12_lev"
+variant  = "as_run"
+reduce   = true
+switches = { ANNCOST = "LEV", BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3233
+cols = 4485
+nonzeros = 18375
+
+# Crafted case TIMES_Demo-demo12_levstd (reference/crafted.toml: demo12 with OBJ AUTO and ANNCOST LEV; %CTST% is empty, so MINYR is restored), 14 Nov 2026 (GAMS 54.6.1 +
+# CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): coef_obj.mod L31-32, the whole
+# model. The presolve dump is shared with test/fixtures/variant_fixtures.toml. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_levstd"
+model    = "TIMES_Demo-demo12_levstd"
+variant  = "as_run"
+reduce   = true
+switches = { ANNCOST = "LEV", BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "AUTO", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3213
+cols = 4469
+nonzeros = 18057
