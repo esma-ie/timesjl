@@ -807,3 +807,13 @@ those checks, their figures and their crafted cases are not published
   capacity is shared between simulated vintages; the translation follows
   GAMS as it runs (discrepancies.md G60, D36; an open decision of #122).
   The branches no case reaches are listed in docs/m13-plan.md, change 38.
+- 14 Nov 2026: M1.3 change 39: EQ_BNDCST and VAR_CUMCST (eqbndcst.mod L42-77
+  and L81-213, eqmain.mod L192, bnd_cum.mod L44-48): bounds on the costs of
+  a region by cost type, in one period (REG_BNDCST) or over a range of
+  years (REG_CUMCST), refused since change 25-3. New crafted case
+  demo12_bndcst: layers 1 to 3 PASS in both variants from the DD files (79
+  rows, 79 columns; 28 crafted cases in the chain from DD files). The
+  refusals in `eqmain_prep!`, `generate!` and the bounds are removed. Not
+  reached by a case: OBJ LIN / VARCOST LIN, and CST_ANNC for user
+  constraints (uc_ncap.mod L39 stays refused; docs/m13-plan.md, change 39).
+  Three differences from Part II §6.3.13: discrepancies.md D37 to D39.

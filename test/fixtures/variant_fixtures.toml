@@ -370,3 +370,22 @@ variant  = "as_run"
 reduce   = true
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
+
+# Crafted case demo12_bndcst (14 Nov 2026): REG_BNDCST and REG_CUMCST records, bounds on the costs
+# of a region by cost type in a single period and over a range of years (eqbndcst.mod L42-77 and
+# L81-213, bnd_cum.mod L44-48): investment costs with decommissioning, investment taxes and
+# subsidies, fixed costs, taxes and subsidies with shapes and multipliers, taxes and subsidies on
+# commodities and on flows (exchange processes and an auxiliary flow included), and the aggregates
+# INVTAXSUB, INVALL, FOMALL, FIX, FIXALL, ALLTAX, ALLSUB and ALLTAXSUB; interpolation option 5, a
+# lower bound alone, a fixed value, UP with the value EPS, ranges that start before the horizon,
+# end after it or lie inside one period.
+# Preprocessing from the input dump to ppm on every symbol, the coef -> pre-solve step and the 79
+# rows (test/unit/test_eqbndcst.jl), and the whole model. The presolve dump is shared with
+# test/fixtures/public_fixtures.toml.
+[[variant]]
+prefix   = "demo12_bndcst"
+model    = "TIMES_Demo-demo12_bndcst"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []

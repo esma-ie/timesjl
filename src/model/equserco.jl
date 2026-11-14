@@ -143,7 +143,7 @@ end
 """
 UC_ATTR attributes refused (UC_NAME, initsys.mod L120-129): ANNUL and the
 names UC_MAPCOST maps to it (INVCOST, INVTAX, INVSUB), which read CST_ANNC
-of eqbndcst.mod (uc_ncap.mod L39; eqbndcst.mod is not translated), and
+of eqbndcst.mod (uc_ncap.mod L39; the term is not translated), and
 ONLINE (uc_cap.mod L36-42, the VDA RS family's VAR_UPS terms). Every other
 name is translated: GROWTH and PERDISC; the UC_DYNT types N, CUMSUM, CUM+
 and SYNC, which pick UC_TMAP entries in the RHS direction (equserco.mod L83;

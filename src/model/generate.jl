@@ -62,7 +62,6 @@ function untranslated_families(tm::TimesModel)
     # --- eqmain.mod families ---------------------------------------------------
     # Families whose domain needs a parameter or set that is empty in a model without them.
     for (fam, gams, sym, N, kind) in (
-            ("EQ_BNDCST", "eqbndcst.mod L81", "REG_CUMCST", 6, :p),
             ("EQ_OBJELS / EQL_COMCES", "eqobjels.mod, mod_equa.mod L30/L80", "RCJ", 4, :s),
             ("EQ_DAMAGE / EQ_OBJDAM", "eqdamage.mod, mod_equa.mod L209-210", "DAM_COST", 4, :p),
             # VDA (always loaded, initmty.mod L458) and DSC extensions
@@ -109,7 +108,7 @@ then generate the translated equation families, apply the bounds and set
 
 GAMS: eqmain.mod L34 (objective), L41 (EQ_ACTFLO), L47-49 (EQ(l)_ACTBND), L54-59 (EQ(l)_BNDNET, EQ(l)_BNDPRD), L64-66 (EQ_CAPACT), L67 (EQ(l)_CAPVAC, coef_csv.mod L75-77), L92
 (EQ_CUMFLO), L98-106 (EQ_COMBAL, EQE_COMPRD), L146 (EQ_IRE), L152-154 (EQ(l)_IREBND), L159 (EQ_PEAK), L164
-(EQ_PTRANS), L169 (EQ_STGIPS), L170 (EQ_STGAUX), L175 (EQ_STGTSS, EQ_STSBAL), L180-185 (EQ(l)_STGIN/STGOUT), L229 (EQE_UCT/UCRT/UCTS/UCRTS, the dynamic EQE_UCSU/UCRSU/UCRSUS/UCSUS and EQE_UCRS), L241-243 (EQ(l)_XBND); equ_ext.vda L85 (EQE_ACTEFF);
+(EQ_PTRANS), L169 (EQ_STGIPS), L170 (EQ_STGAUX), L175 (EQ_STGTSS, EQ_STSBAL), L180-185 (EQ(l)_STGIN/STGOUT), L192 (EQ_BNDCST), L229 (EQE_UCT/UCRT/UCTS/UCRTS, the dynamic EQE_UCSU/UCRSU/UCRSUS/UCSUS and EQE_UCRS), L241-243 (EQ(l)_XBND); equ_ext.vda L85 (EQE_ACTEFF);
 equ_ext.vda L88-89 (EQ(l)_CAFLAC, EQL_CAPFLO); equ_ext.vda L90 (EQ_CAPLOAD, EQ_ACTRAMP, EQ(l)_ACTUPS, EQL_ACTUPC, EQ_ACTPL, EQ_ACTRMPC, EQ_SLSIFT);
 equ_ext.vda L94-96 (EQ(l)_ASHAR); equ_ext.vda L105-106 (EQN/EQE_UCRTP, EQN_UCRTC); bndmain.mod; solve.mod L37, v4.9.7.
 """
@@ -139,6 +138,7 @@ function generate!(tm::TimesModel)
     n += eq_stgaux!(tm)              # L170
     n += eq_stgtss!(tm)              # L175
     n += eq_stgflo!(tm)              # L180-185
+    n += eq_bndcst!(tm)              # L192
     n += eq_uc!(tm)                  # L229
     n += eq_xbnd!(tm)                # L241-243
     n += eq_blnd!(tm)                # L249-252
