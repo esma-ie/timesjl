@@ -14,6 +14,7 @@ For each model and variant, under `<out>/<model>/<variant>/`:
 | `coef/` | Every symbol after coefficient calculation (after `coef_ext`) | Layer 1, M1.2 |
 | `presolve/` | Every symbol just before the SOLVE statement: a third run with `SOLVE_NOW=NO`, so `solve.mod` L22 skips the solve and `maindrv.mod` L114 the reports. The state equations are generated from, after `eqmain`, `bndmain`, `pp_qack` and `pp_clean` | Input data for M1.1; layer 1 for sets the equation files compute (e.g. `AFS`) |
 | `input/`, `init/`, `prep/`, `prelv/` | M1.3 checkpoints (harness 0.3.0), written by the pre-solve run: every symbol before `$BATINCLUDE maindrv.mod` (the state preprocessing starts from: DD files read, switches set), after the extensions' `init_ext` (`maindrv.mod` L55), at their `prep_ext` (`preppm.mod` L217) and at their `pp_prelv` (`ppmain.mod` L615). With `ppm/` they split preprocessing into four segments (`scripts/m13_inventory.jl`) | Input data and layer 1 for M1.3 (`docs/m13-plan.md`); `input/` is also what the M1.4 DD reader must reproduce |
+| `equ/` | Stepped (myopic) runs only (TIMESTEP or FIXBOH; harness 0.3.3), written by the pre-solve run: every symbol after `eqmain.mod` and the extensions' `equ_ext` (`maindrv.mod` L79-80), before the MODEL statement, `bndmain` and `pp_qack`. In a stepped run `presolve/` is not a pre-solve state: with `SOLVE_NOW=NO` the run still goes through the loop of `solve.stp` (`maindrv.mod` L111-113), every step without a solve, so `presolve/` holds the state after the last step | Layer 1 for the preparation of a stepped run (M1.3 change 30); the state the stepped solve starts from (M1.5) |
 | `final/` | Every symbol at the end of the run (`gdx=`), including levels and marginals | Layers 3–4 |
 | `matrix/`, `matrix_dictmap/` | CONVERT `DumpGDX` and `DictMap` of the scalar model | Layer 2 |
 | `raw/` | CONVERT dictionary and MPS file (`tjl_model.mps.gz`: CPLEX MPS, gzipped), listings, logs, GAMS profile, each run's patched run file (`tjl_<run>.run`, harness 0.2.2+), the pre-solve run's QA log (`tjl_presolve_qa_check.log`, harness 0.3.2+; `reference/python/keep_qa_log.py` copies it into earlier references from the work folder) | Debugging, timings, switches for `scripts/m11_probe.jl`; the QA log for `scripts/m13_gate.jl` (M1.3 change 25b) |
@@ -44,6 +45,8 @@ follows the standard extensions' file at that stage (`init_ext.vda`,
 patch puts `execute_unload 'tjl_input.gdx'` just before `$BATINCLUDE
 maindrv.mod`. All four dump only when GAMS is started with
 `--TJL_CHECKPOINTS=1`, which the harness passes to the pre-solve run alone.
+A stepped run has a fifth, [`gams/equ_ext.tjlref`](gams/equ_ext.tjlref)
+(`maindrv.mod` L80), which dumps only when `%STEPPED%` is set as well.
 
 `execute_unload` with no symbol list writes every symbol the compiled program
 declares, so even the input dump holds symbols TIMES declares later in its

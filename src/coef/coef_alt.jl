@@ -22,7 +22,9 @@
 #   it; L81: a stepped solve (TIMESTEP) ends it; L83-86: RTP_CAPVL otherwise.
 # - L160: PASTSUM and YK1 cleared.
 #
-# Refused: `$IF SET TIMESTEP` (L81; stepped solves are M1.5). ALTOBJ is read
+# L81 (`$IF SET TIMESTEP $GOTO DONE`): a stepped (myopic) run skips L83-86 here;
+# solve.stp L124 calls the STP label (L134-158) inside each step, which is part
+# of the stepped solve (M1.5) and refused at model generation. ALTOBJ is read
 # from the state (initmty.mod L420-432, changed by ppmain.mod L146).
 
 """
@@ -39,12 +41,14 @@ function linacc(tm)
     return obj == "LIN" || (oblong && obj == "ALT")
 end
 
-"The coef_alt.lin paths this model would take that are not translated; empty when coef_alt! can run."
-function coef_alt_unported(tm)
-    out = String[]
-    gswitch(tm, "TIMESTEP", "") == "" || push!(out, "coef_alt.lin L81 (TIMESTEP set: stepped solve, M1.5)")
-    return out
-end
+"""
+    stepped(tm) -> Bool
+
+`\$IF SET TIMESTEP`: a stepped (myopic) run, for which `%STEPPED%` is `+`
+(initmty.mod L446, maindrv.mod L38). A TIMESTEP that is set is a member of AGE
+(initmty.mod L443), so never empty.
+"""
+stepped(tm) = gswitch(tm, "TIMESTEP", "") != ""
 
 "GAMS `LOG(x)`: a non-positive argument is an execution error."
 function glog(x::GNum)
@@ -59,13 +63,12 @@ coef_alt.lin on the GAMS state in `tm`, as coefmain.mod L26 calls it:
 PERDINV, TPULSEYR, TPULSE, OBJ_LINT (and OBJ_ALTV, FPD, OBJ_PVT, COEF_PVT
 when the switches ask); then, unless `%CTST%` is empty, R_DF, RB, COEF_CPT
 (replacing coef_cpt.mod's, which computed none in that case) and, without
-OBLONG, RTP_CAPVL. PASTSUM and YK1 are left cleared.
+OBLONG and outside a stepped run (L80-81), RTP_CAPVL. PASTSUM and YK1 are
+left cleared.
 
 GAMS: coef_alt.lin L11-87, L159-161 (coefmain.mod L26), v4.9.7.
 """
 function coef_alt!(tm)
-    u = coef_alt_unported(tm)
-    isempty(u) || throw(UnportedError(join(u, "; ")))
     ax = YearAxis(tm)
     yv(y) = ax.yearval[y]
     S1(n) = gset(tm, n)
@@ -266,8 +269,9 @@ function coef_alt!(tm)
     gput!(tm, "FIL2", fil2)
     gput!(tm, "MY_ARRAY", my_array)
     gput!(tm, "COEF_CPT", coef_cpt)
-    # L80-86: without OBLONG, the trapezoidal-period capacity value
-    if !oblong
+    # L80-86: without OBLONG and outside a stepped run (L81: `$IF SET TIMESTEP $GOTO DONE`), the
+    # trapezoidal-period capacity value
+    if !oblong && !stepped(tm)
         rtp_capvl = gvalues(tm, "RTP_CAPVL", 3)
         filter!(kv -> !(kv[1][2] in Set(t_list) && haskey(iled_vals, kv[1])), pastsum)     # L83 (T in MILESTONYR)
         miyr_vl = gscalar(tm, "MIYR_VL")

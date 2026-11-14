@@ -6,8 +6,7 @@
 # and INT_DEFAULT('PASTI') with past lead times (L69 recomputes a past lead
 # time from the discount factor: 3 becomes 3.159 at 5%).
 
-using TIMES: TimesModel, DumpData, coef_alt!, coef_alt_unported, later_overwrites, layer1, linflo, linacc, gparam, gset,
-             UnportedError
+using TIMES: TimesModel, DumpData, coef_alt!, stepped, later_overwrites, layer1, linflo, linacc, gparam, gset
 using TIMES.Reference: ispass
 
 isdefined(@__MODULE__, :PPM_DEMO12) || (const PPM_DEMO12 = joinpath(FIXTURES, "demo12_off_ppm"))
@@ -21,8 +20,8 @@ include("coef_alt_case.jl")
     @test linflo(mk(Dict("OBJ" => "ALT"))) && !linacc(mk(Dict("OBJ" => "ALT")))
     @test linflo(mk(Dict("OBJ" => "LIN"))) && linacc(mk(Dict("OBJ" => "LIN")))
     @test !linflo(mk(Dict("OBJ" => "ALT", "OBLONG" => "YES"))) && linacc(mk(Dict("OBJ" => "ALT", "OBLONG" => "YES")))
-    @test occursin("TIMESTEP", only(coef_alt_unported(mk(Dict("TIMESTEP" => "2020")))))
-    @test_throws UnportedError coef_alt!(mk(Dict("TIMESTEP" => "2020")))
+    # L81 ($IF SET TIMESTEP): a stepped run; its coefficient stage is checked in test_stepped.jl
+    @test stepped(mk(Dict("TIMESTEP" => "20"))) && !stepped(mk(Dict("OBJ" => "ALT")))
 end
 
 @testset "coef_alt layer 1, TIMES_Demo demo12 (OBJ MOD)" begin

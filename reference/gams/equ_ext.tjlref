@@ -1,0 +1,12 @@
+*==============================================================================*
+* TIMES.jl reference harness hook (not part of TIMES).
+* Included by main_ext.mod for stage equ_ext when 'TJLREF' is passed to
+* initmty.mod, i.e. right after eqmain and the standard extensions' equ_ext
+* (maindrv.mod L79-80, v4.9.7), before the MODEL statement, bndmain and pp_qack.
+* A checkpoint for stepped (myopic) runs only (%STEPPED% set, initmty.mod
+* L445-446), in runs the harness starts with --TJL_CHECKPOINTS=1 (the pre-solve
+* run): there the end-of-run dump is the state after the loop of solve.stp has
+* gone through every step (without solving), not the state the first step
+* starts from, so this dump holds what the equation preparation left.
+*==============================================================================*
+$IF SET TJL_CHECKPOINTS $IF SET STEPPED execute_unload 'tjl_equ.gdx';

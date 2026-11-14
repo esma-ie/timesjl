@@ -5,7 +5,9 @@
 #   input dump or that TIMES.jl wrote (the constant tables GAMS declares after the
 #   input checkpoint, e.g. ADESC and SYSUC, TIMES.jl never computes);
 # - model generation refuses exactly the equation families the variant lists, so a
-#   feature not yet translated can never give a model without its rows.
+#   feature not yet translated can never give a model without its rows. The state is the
+#   pre-solve dump, or the dump the variant names (`state`; equ for a stepped run, whose
+#   pre-solve dump is the state after the loop of solve.stp).
 
 using TIMES: TimesModel, DumpData, layer1, untranslated_families, generate!, UnportedError,
              init_ext!, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, prep_ext!, preppm_shape!,
@@ -42,7 +44,7 @@ for vx in VARIANTS
             @test length(r) > 800 && all(ispass, r)        # 821 on demo12_uc, as the M1.3 gate compares
         end
         @testset "refuses exactly the untranslated families" begin
-            tm = TimesModel(fx("presolve"); reduce=get(vx, "reduce", false), switches=vx["switches"])
+            tm = TimesModel(fx(get(vx, "state", "presolve")); reduce=get(vx, "reduce", false), switches=vx["switches"])
             fams = unique(x.family for x in untranslated_families(tm))
             @test Set(fams) == Set(vx["untranslated"])
             isempty(vx["untranslated"]) || @test_throws UnportedError generate!(tm)

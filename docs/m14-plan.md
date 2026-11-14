@@ -226,9 +226,11 @@ GAMS's objective. Fixed: an alias is now its target as TIMES.jl holds it (`gset`
   PASS. The chain ends before the coefficient stage with "not translated: coef_alt.lin L81
   (TIMESTEP set: stepped solve, M1.5)".
 - **What is left for stepped runs** (not in this change): coef_alt.lin L81 and its STP call,
-  eqobsalv.mod L22-24 (the salvage preparation moves into the steps), maindrv.mod L37-41 and L111
-  and solve.stp (the loop over steps, with the earlier periods fixed to their levels), and the
-  STEPPED, FIXBOH and SPOINT branches of bndmain.mod. They are run options, M1.5.
+  eqobsalv.mod L23-25 (the salvage preparation moves into the steps), maindrv.mod L38-41 and
+  L109-113 and solve.stp (the loop over steps, with the earlier periods fixed to their levels),
+  and the STEPPED, FIXBOH and SPOINT branches of bndmain.mod. They are run options, M1.5.
+  (coef_alt.lin L81 and eqobsalv.mod L23-25 followed the same day as M1.3 change 30,
+  docs/m13-plan.md.)
 - **CI.** `test/unit/test_ddsource.jl`: demo12_step from its DD files against its input fixture
   (`demo12_step_run`, `demo12_step_input`), STEPPED and VAR_UC as GAMS sets them, and demo12 with
   the controls given from outside: valid values pass, invalid ones stop with GAMS's abort text.

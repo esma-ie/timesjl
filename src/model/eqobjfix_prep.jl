@@ -412,10 +412,24 @@ eqobsalv.mod L11-82, the salvage controls and values:
 non-empty %CTST% (coef_alt.lin L91); `0%CTST%` is 0**0 = 1 or 0**EPS = 1
 then, 0 otherwise. `OPTION a <= b` matches from the left (G52).
 
+In a stepped (myopic) run (`\$IF SET TIMESTEP`) L23 clears OBJ_SUMS, OBJ_SUMS3,
+SALV_INV and OBJSCC and L24-25 jump to the equation: L26-82 run inside each
+step instead (solve.stp L127), which is part of the stepped solve.
+
 GAMS: eqobsalv.mod L11-82, v4.9.7.
 """
 function eqobsalv_prep!(tm::TimesModel)
     uppercase(gswitch(tm, "ETL", "")) == "YES" && throw(UnportedError("eqobsalv.mod L65-67: %ETL% YES"))
+    if stepped(tm)
+        # L23: $IF SET TIMESTEP OPTION CLEAR=OBJ_SUMS,CLEAR=OBJ_SUMS3,CLEAR=SALV_INV,CLEAR=OBJSCC;
+        # L24-25: %STEPPED% is '+' and %1 is mod, so $GOTO EQUA: L26-82 are skipped. The symbols declared at
+        # L13-17 stay empty; solve.stp L127 runs L26-82 inside each step (`eqobsalv.mod STP EXIT`).
+        gput!(tm, "OBJ_SUMS", Set{NTuple{3,String}}()); gput!(tm, "OBJ_SUMS3", Set{NTuple{3,String}}())
+        gput!(tm, "SALV_INV", Dict{NTuple{4,String},Float64}()); gput!(tm, "OBJSCC", Dict{NTuple{4,String},Float64}())
+        gput!(tm, "OBJ_SALI", Set{NTuple{8,String}}()); gput!(tm, "OBJ_DCEOH", Dict{NTuple{2,String},Float64}())
+        gput!(tm, "SALV_DEC", Dict{NTuple{4,String},Float64}())
+        return tm
+    end
     d = tm.data
     yax = YearAxis(tm)
     yv(y) = yax.yearval[y]
