@@ -114,7 +114,7 @@ GAMS 54.6.1):
 | 25-1 | mod_vars.mod L94 (prepret.dsc DECL, its data statements L44-81), eqobj.mod L14-39 (with prepret.dsc EQOBJ L119-131) and eqobjinv.mod L18-274 (with coef_alt.lin INV, L89-118): the investment cases, spreads, corrections and divisors (8 Nov 2026; the step in parts) | 14-39; 18-274 | the probe's coef -> presolve segment: core models, demo12 cases; crafted case demo12_objinv (CI) |
 | 25-2 | eqobjfix.mod, eqobjvar.mod, eqobsalv.mod (with coef_alt.lin FIX and prepret.dsc OBJFIX/OBSALV): their data statements (9 Nov 2026) | 19-175; 11-82 | coef -> presolve: core models, demo12 cases (CI) |
 | 25-3 | eqmain.mod L41-262 (RVPT, RTP_OFF, the UC maps and the other data statements between the equation includes), equ_ext (eqactups.vda L1-35 and the other VDA preparations), mod_equa.mod, mod_ext (9 Nov 2026) | | coef -> presolve: residual inventory on the core models and demo12 cases |
-| 25-4 | bndmain.mod data statements, pp_qack.mod (less the QA log, 25b) and pp_clean.mod (solve.mod L1, the memory clean-up), and the step's scratch; the coef -> pre-solve step joins the M1.3 chain and the CI chain runs end to end (9 Nov 2026) | | presolve, every symbol: core models, demo12 cases (CI: test_m13_coef_presolve.jl, test_m13_chain.jl end to end) |
+| 25-4 | bndmain.mod data statements, pp_qack.mod (less the QA log, 25b) and pp_clean.mod (solve.mod L1, the memory clean-up), and the step's scratch; the coef -> pre-solve step joins the M1.3 chain and the CI chain runs end to end (9 Nov 2026). Follow-up, 14 Nov 2026: bnd_cum.mod L12-20 and L27-38 on FLO_CUM, COM_CUM and RC_CUMCOM in full (FX, N, negative and after-horizon records, the -INF default of L38), on the crafted case demo12_cumc | bnd_cum.mod 12-40 | presolve, every symbol: core models, demo12 cases (CI: test_m13_coef_presolve.jl, test_m13_chain.jl end to end; test_bnd_cum.jl on demo12_cumc) |
 | 25-5 | The coefficient stage's scratch (follow-up to 25-4, its open gate item): filparam.gms (coef_obj.mod L41) and fillcost.gms (L120-151) leave F, Z, MY_F, DFUNC, LAST_VAL, FIRST_VAL and MY_FYEAR as their last tuple does, taken in GAMS order and carried from call to call; coef_ext.vda L23 leaves Z. scripts/m13_gate.jl chains the coefficient stage and the coef -> pre-solve step (9 Nov 2026) | coef_obj.mod 41, 120-151; coef_ext.vda 23 | coef: every set and parameter (CI: test_m13_chain.jl); the gate from the input dump to presolve |
 | 25b | pp_qaput.mod: the QA log (QA_CHECK.LOG) and its scalars PUTOUT, PUTGRP and ERRLEV, at every pp_qaput call translated so far, and the ERRLEV abort of pp_qack.mod L376-386 (ERRLEV 33: the run goes on with an alert; above 33: stop). TIMES.jl checks errors as GAMS does until JuMP-side checks are added in Phase 2 (James, 6 Nov 2026). The harness does not keep QA_CHECK.LOG yet (harness change, then a GAMS rerun) | 1-16; 376-386 | log text and scalars at init, prep, prelv, ppm; crafted demo12 states for the WARNING, ERROR and FATAL paths (CI) |
 | 25b-1 | The QA log's machinery (`src/prep/qalog.jl`: QLOG, pp_qaput.mod, GAMS's PUT rules, G53) and every pp_qaput call and PUTGRP reset of preprocessing: ppmain.mod (L35 compile warnings, G54; L213-230, L273-276, L338-340, L465-471, L524-542, L573-585, L723-728, L765, L848, L878-885, L989, the PUTCLOSE of L1356), timslice.mod L67-104, pp_qafs.mod, pp_lvlbr.mod, pp_lvlbd.mod, pp_lvlif.mod, pp_chp.mod, pp_prelv.vda L81-85, ppm_ext.vda L86-94. The harness keeps QA_CHECK.LOG (0.3.2; `keep_qa_log.py` for earlier references, no GAMS rerun) (9 Nov 2026) | | PUTOUT, PUTGRP, ERRLEV at init, prep, prelv, ppm; the log at ppm, where GAMS's goes on with pp_qack.mod's groups (gate; CI on demo12) |
@@ -1316,6 +1316,39 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
   (eqflomrk.mod L83-88). GAMS 54.6.1 makes 8 rows (4
   EQG on EXPELC1, 4 EQL on the link); TIMES.jl's model passes layers 2 and 3 in both variants
   (8,703 and 3,241 rows) with no code change.
+
+### Change 25-4 follow-up, 14 Nov 2026: bnd_cum.mod L12-20 and L27-38
+
+- bnd_cum.mod changes FLO_CUM, COM_CUM and RC_CUMCOM before it sets the bounds of VAR_CUMFLO
+  and VAR_CUMCOM, and the pre-solve dump holds the changed data. `bnd_data!` did not write these
+  changes back; it refused FX, N and negative records and left the rest as read. Two statements
+  act without any such record: L38 gives a
+  range with no lower bound a lower bound of -INF when an annual COM_BNDNET or COM_BNDPRD lower
+  bound of the commodity is negative (a range that a UC_CUMCOM user constraint creates has no
+  bound at all), and L31 takes a range that starts after the last milestone year out of
+  RC_CUMCOM, which `eq_cumcom!` reads. On the chain route such a model lacked COM_CUM records
+  at presolve and kept an EQ_CUMNET/EQ_CUMPRD row GAMS does not make.
+- Now `bnd_data!` applies L12-20 (`bnd_cum_flo`) and L27-38 (`bnd_cum_com`) and stores
+  FLO_CUM, COM_CUM and RC_CUMCOM; the refusal is gone. `bnd_cum!` (bndmain.jl) takes the bounds
+  from the tables as stored (L23-24, L39-40) instead of applying the statements again: with an
+  N record a second pass is not idempotent. L13 and L27 copy the N value of the range to
+  %EOTIME% over the lead kept under 'EOH' (FLO_CUM) or '0' (COM_CUM), and after the first pass
+  that value is the factor MIN(0,ABS(MULTI(JJ,MIYR_L))-1), no longer a lead. GAMS's pre-solve
+  dump holds the tables after one pass, so the model built from it was affected in the same way.
+- New crafted case demo12_cumc (demo12 + cumc.dd): UC_CUMCOM constraints on REG1's and REG2's
+  cumulative net TOTCO2, REG1's with a negative annual lower bound (L38: -INF; REG2: none);
+  COM_CUMPRD FX (L30); a COM_CUMNET range 2060-2070 (L31: EPS bounds, out of RC_CUMCOM);
+  COM_CUMNET and FLO_CUM to EOH with N = 2 and MULTI('2','2050') = 0.8 (L13-14, L19-20, L27-28,
+  L34-35: the factor -0.2, so the bounds are scaled by 0.8); FLO_CUM FX (L16) and a negative
+  LO (L12: ignored). GAMS 54.6.1 with CPLEX and HiGHS, both variants optimal (8,721 and 3,259
+  rows).
+- Result: the step probe passes all 70 steps on demo12_cumc; the chain from the DD files
+  (`m13_gate.jl --from-dd --solve`) passes every checkpoint, the QA log, layer 2 and the HiGHS
+  objective against CPLEX in both variants (relative difference under 1e-14); the model from
+  GAMS's pre-solve dump passes layers 2 and 3 with CPLEX and HiGHS in both variants.
+  demo12_cumc is a public fixture, a variant fixture (input -> ppm), a DD-file compile case and
+  the case of test/unit/test_bnd_cum.jl (ppm -> pre-solve on every symbol, each branch, and the
+  model from that state against GAMS's matrix).
 
 ## Open items
 

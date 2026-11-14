@@ -35,11 +35,20 @@ answer yet.
 | 10 Nov 2026 | #90 | Which other outcomes turn the cuOpt nightly red? | proposed in the chat | Open |
 | 10 Nov 2026 | #90 | Where to test GPU scaling: open core-model reference runs as a release asset, or a sweep on native Linux? | none given | Open |
 | 10 Nov 2026 | #90 | Wednesday's full cuOpt suite: set `CUOPT_FIXTURES=all` and `CUOPT_GPU_SHARES=100`? | yes | Open; a GitHub setting only James can make. |
+| 14 Nov 2026 | chat | Workstation batch: count jobs by threads (up to 8 jobs within 36 threads, since most checks use one core) instead of "at most 4 CPU-heavy runs"? Rule-level (the run limits in `CLAUDE.md`). | yes | Open; the batch keeps to 4 runs (3 while development runs use the fourth slot). |
+| 14 Nov 2026 | chat | After the M1.3 gate: translate the refused features and the stepped (myopic) solve on v4.9.7 first, then move the baseline to v4.9.8? Rule-level (`CLAUDE.md` Baseline moves it when the gate closes). | features first, then v4.9.8 | Open |
+| 14 Nov 2026 | chat | Start the stepped solve of myopic runs (TIMESTEP; M1.5, run options) before the M1.3 and M1.4 gates close? Rule-level (milestone order). James, 14 Nov 2026: "make the changes required to solve the myopic runs also today if possible"; an explicit yes to the early start is still asked. | yes, after the M1.3 gate PR | Open; the DD reader's part (initmty.mod L441-447, M1.4) goes ahead. |
 
 ## Decisions in the chat (not in a PR list)
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 14 Nov 2026 | M1.3 gate, preprocessing timed against GAMS: the 13 Nov timings (3.4 to 6.3 times GAMS on the five core models) are close enough to pass the gate. | `docs/timings.md` (the M1.3 gate PR); this log |
+| 14 Nov 2026 | The M1.3 gate PR is reviewed the same morning; the HiGHS solve of TIMES-NZ joins the batch's DD-file stage. | the M1.3 gate PR; batch script on James's machine |
+| 14 Nov 2026 | The features TIMES.jl still refuses: push on them now, one PR each, each with an open crafted demo12 case and a GAMS reference. | this log; `docs/m13-plan.md` as each lands |
+| 14 Nov 2026 | Failures seen only on local runs are fixed without waiting: each defect is reproduced with an open crafted case first, and only that case enters the repository. | this log |
+| 14 Nov 2026 | Workstation batch: the rewrite as a job queue is a go; checks run as rolling passes from 18:00 to 09:00, and continuously while work remains, instead of one nightly at 23:05; "solve once" (the parity report reuses the DD stage's solves) and "one chain" (the DD chain replaces the input-dump chain once the gates close) are agreed. | batch script on James's machine; a PR for `scripts/parity_report.jl` to follow |
+| 13 Nov 2026 | cuOpt local nightly: OTUS9r is dropped from its reference runs for now (OTNYC and OTCGEN stay). | `~/.config/timesjl/cuopt-nightly.conf` in WSL2 (REF_MODELS); this log |
 | 13 Nov 2026 | #90: the cuOpt nightly also solves the open reference runs OTNYC, OTCGEN and OTUS9r (reduce_off), besides the CI fixtures; a test run the same morning, then the local board updated. Rule-level for the cuOpt lane (informational; still never a merge gate); explicit yes. | `~/.config/timesjl/cuopt-nightly.conf` in WSL2 (REF_MODELS); this log |
 | 13 Nov 2026 | M1.3 order: 27b-2 (the grid allocation rows), then the #68 trade case, then the gate PRs for M1.3 and M1.4 ("ok, go" to each). | this log; #103, the #68 PR |
 | 12 Nov 2026 | #68: keep the demo12 trade test case and get it working soon (before the M1.3 gate). | crafted case demo12_mrkx (the #68 PR) |
@@ -79,7 +88,45 @@ answer yet.
 
 ## Log by pull request
 
-### #96 Decision log: docs/decisions.md, backfilled from #21-#95; the rule in CLAUDE.md (open)
+### #105 M1.3 (25-4 follow-up): bnd_cum.mod L12-38 in full, crafted case demo12_cumc (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the new crafted case demo12_cumc (CC BY 4.0, a public fixture)? | Recommended: yes. | open |
+| 2 | The refusal of FLO_CUM/COM_CUM records with FX, N or negative values is lifted: the statements are translated and checked on demo12_cumc. | Built in. | open |
+
+### #104 M1.3 (23, #68): crafted case demo12_mrkx, the export term of EQ(l)_FLOMRK (merged 2026-11-13)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the new crafted case demo12_mrkx (CC BY 4.0, a public fixture)? | Kept. | accepted by merge, 13 Nov 2026 |
+
+### #103 M1.3 (27b-2): powerflo.vda EQ_GR_GENALL, EQ_GR_DEMALL and the IREAUX terms (merged 2026-11-13)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the new crafted case demo12_pfd (a second grid node in REG1; CC BY 4.0, a public fixture)? | Kept. | accepted by merge, 13 Nov 2026 |
+| 2 | The "aggregate for withdrawals" branch of EQ_GR_DEMALL (L336-338) is translated but never reached (GR_DEMFR input data is still refused): refuse it instead? | Left translated; checked when that data is translated. | accepted by merge, 13 Nov 2026 |
+
+### #102 Dashboard 12 Nov: cuOpt slide, key dates, chain 14/14, probe 490/490 (merged 2026-11-12)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | cuOpt results on the public board? | No: on the local board until 23 Nov 2026 (the slide is kept in commit 920b00b). | James, 12 Nov 2026 |
+| 2 | The chain slide shows the open scenarios only? | Yes. | James, 12 Nov 2026 |
+
+### #101 M1.6 (#97, early): write_solution, the solution as a TIMES.jl dump (merged 2026-11-12)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Merge the early start of #97, so `run_dd.jl --solve` writes the solution for downstream tools? | Merged; the early start itself was approved on 12 Nov 2026. | James, 12 Nov 2026 (chat); accepted by merge, 12 Nov 2026 |
+| 2 | A zero marginal is written as 0, not as GAMS's EPS (outputs are not a parity layer until M1.6 proper). | As built. | accepted by merge, 12 Nov 2026 |
+
+### #99 M1.3 (27a-2 fix): powerflo.vda L80-81 keeps EPS in the grid merge (merged 2026-11-12)
+
+No decisions: a parity fix inside 27a-2 (#93).
+
+### #96 Decision log: docs/decisions.md, backfilled from #21-#95; the rule in CLAUDE.md (merged 2026-11-13)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |

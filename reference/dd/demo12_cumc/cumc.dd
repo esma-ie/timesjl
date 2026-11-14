@@ -1,0 +1,76 @@
+* TIMES.jl crafted case demo12_cumc (reference/crafted.toml, 14 Nov 2026): cumulative bounds,
+* so the statements of bnd_cum.mod L12-38 that change FLO_CUM, COM_CUM and RC_CUMCOM before the
+* bounds of VAR_CUMFLO and VAR_CUMCOM are set have data to work on. Added to TIMES_Demo demo12
+* (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0):
+* - CB_REG1: a user constraint on REG1's cumulative net TOTCO2 over 2010-2030 (UC_CUMCOM), a
+*   range with no COM_CUM bound of its own. REG1's TOTCO2 has a negative annual lower bound in
+*   2050 (COM_BNDNET), so bnd_cum.mod L38 gives the range a lower bound of -INF.
+* - CB_REG2: the same on REG2's TOTCO2 over 2020-2050. No annual lower bound is negative
+*   there, so L38 assigns nothing and VAR_CUMCOM keeps its lower bound of 0.
+* - COM_CUMPRD FX on REG2's cumulative ELCCO2 over 2010-2050: L30 turns the FX bound into LO
+*   and UP.
+* - COM_CUMNET UP on REG1's TOTCO2 over 2060-2070, a range that starts after the last
+*   milestone year: L31 gives it EPS bounds and takes it out of RC_CUMCOM.
+* - COM_CUMNET UP and N on REG2's TOTCO2 from 2010 to the end of the horizon (EOH): the N
+*   record names row 2 of the MULTI table, and L27-28 and L34-35 turn its value at the last
+*   year of the horizon (0.8) into the factor on the bound.
+* - FLO_CUM on REG2's supply: FX on oil from MINOIL2 over 2005-2030 (L16: LO and UP); a
+*   negative LO on gas from MINGAS2 over 2005-2050 (L12: ignored); UP and N on gas from
+*   MINGAS2 from 2010 to EOH (L13-14 and L19-20, the same MULTI row).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET UC_N
+/
+CB_REG1 'Carbon budget REG1 2010-2030'
+CB_REG2 'Carbon budget REG2 2020-2050'
+/
+
+SET UC_R_EACH
+/
+REG1.CB_REG1
+REG2.CB_REG2
+/
+
+PARAMETER
+UC_CUMCOM ' '/
+CB_REG1.REG1.NET.TOTCO2.2010.2030 1
+CB_REG2.REG2.NET.TOTCO2.2020.2050 1
+/
+
+PARAMETER
+UC_RHSR ' '/
+REG1.CB_REG1.UP 47000000
+REG2.CB_REG2.UP 90000000
+/
+
+PARAMETER
+COM_BNDNET ' '/
+REG1.2050.TOTCO2.ANNUAL.LO -1
+/
+
+PARAMETER
+COM_CUMPRD ' '/
+REG2.2010.2050.ELCCO2.FX 18500000
+/
+
+PARAMETER
+COM_CUMNET ' '/
+REG1.2060.2070.TOTCO2.UP 1
+REG2.2010.EOH.TOTCO2.UP 200000000
+REG2.2010.EOH.TOTCO2.N 2
+/
+
+PARAMETER
+FLO_CUM ' '/
+REG2.MINOIL2.OIL.2005.2030.FX 9500
+REG2.MINGAS2.GAS.2005.2050.LO -5
+REG2.MINGAS2.GAS.2010.EOH.UP 30000
+REG2.MINGAS2.GAS.2010.EOH.N 2
+/
+
+PARAMETER
+MULTI ' '/
+2.2005 1
+2.2050 0.8
+/

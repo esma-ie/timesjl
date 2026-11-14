@@ -4,7 +4,7 @@
 # bndmain.mod sets bounds (`bndmain.jl`, which reads the data as this step leaves it) and changes a
 # few parameters on the way: NCAP_BND and CAP_BND (L44-45, L51), UC_TS_SUM (L73), and in its
 # includes FLO_BND and TRACKPC (bnd_flo.mod L16-24), the storage bounds (bnd_stg.mod L17-27),
-# FLO_CUM and COM_CUM (bnd_cum.mod L12-27). pp_qack.mod completes the generation control sets
+# FLO_CUM, COM_CUM and RC_CUMCOM (bnd_cum.mod L12-20, L27-38). pp_qack.mod completes the generation control sets
 # (L45-60: RPC_CONLY, RTPCS_VARF, RCS_COMBAL, RPG_RED, RTP, RTP_VNTBYR, COEF_VNT, RVP_KMAP) and PRC_CG
 # (L150, L164) and runs the quality checks; their scratch sets are cleared again, but TS_ARRAY,
 # PRC_YMAX, UNCD7 and Z keep what the checks leave. solve.mod L1 includes pp_clean.mod, which zeroes
@@ -20,7 +20,7 @@
 The sets and parameters `bnd_data!`, `pp_qack_data!` and `pp_clean!` settle.
 """
 qack_prep_symbols(tm) = ["NCAP_BND", "CAP_BND", "UC_TS_SUM", "UC_RHS", "UC_RHSR", "UC_RHST", "UC_RHSRT", "UC_RHSTS",
-                         "UC_RHSRTS", "CNT", "FLO_BND", "FLO_CUM", "COM_CUM", "RPC_CONLY", "RTPCS_VARF",
+                         "UC_RHSRTS", "CNT", "FLO_BND", "FLO_CUM", "COM_CUM", "RC_CUMCOM", "RPC_CONLY", "RTPCS_VARF",
                          "RCS_COMBAL", "RPG_RED", "UC_GMAP_U", "RTP", "RTP_VNTBYR", "COEF_VNT", "RVP_KMAP", "TRACKPC",
                          "TRACKP", "RP_XRED", "TS_ARRAY", "TRACKC", "PRC_CG", "PRC_YMAX", "RXX", "FSCK", "CG_GRP",
                          "RP_CCG", "RP_GRP", "RVP", "UNCD7", "FLO_SUM", "FLO_FUNC", "NCAP_AF", "NCAP_AFA", "NCAP_AFS",
@@ -42,13 +42,15 @@ The data statements of bndmain.mod and its includes (the bounds themselves are `
     NCAP_BND(RTP_OFF,'UP') = EPS;                                                                    (bndmain.mod L44)
     NCAP_BND(RTP(R,T,P),'LO')\$(NCAP_BND(RTP,'UP')\$NCAP_BND(RTP,'LO')) = SMIN(BDNEQ,NCAP_BND(RTP,BDNEQ));   (L45)
     CAP_BND(RTP(RTP_VARP),'LO')\$CAP_BND(RTP,'UP') = SMIN(BDNEQ,CAP_BND(RTP,BDNEQ));                (L51)
-    [bnd_cum.mod L12-27 on FLO_CUM, COM_CUM]
+    [bnd_cum.mod L12-20 on FLO_CUM, L27-38 on COM_CUM and RC_CUMCOM: `bnd_cum_flo`, `bnd_cum_com`]
     UC_TS_SUM(R,UC_N(OBV),S) = NO;                                                                   (L73)
 
-%DFLBL% is '0' (initmty.mod L367). The FLO_CUM/COM_CUM lines change nothing without cumulative
-data with options; they are translated where a suite model has them and refused otherwise.
+%DFLBL% is '0' (initmty.mod L367). The bnd_cum.mod statements are applied here and only here:
+with an 'N' record a second pass would not leave the data as it is (bndmain.jl takes the bounds
+from the stored tables).
 
-GAMS: bndmain.mod L15-79, bnd_flo.mod L16-24, bnd_stg.mod L17-27, bnd_cum.mod L12-27, v4.9.7.
+GAMS: bndmain.mod L15-79, bnd_flo.mod L16-24, bnd_stg.mod L17-27, bnd_cum.mod L12-20 and L27-38,
+v4.9.7.
 """
 function bnd_data!(tm::TimesModel)
     d = tm.data
@@ -109,10 +111,14 @@ function bnd_data!(tm::TimesModel)
         gassign!(cap_bnd, (r, t, p, "LO"), gmin(gv(cap_bnd, (r, t, p, "LO")), gv(cap_bnd, (r, t, p, "UP"))))
     end
     gput!(tm, "CAP_BND", cap_bnd)
-    # bnd_cum.mod L12-27: refused where it would change data (negative bounds, FX, the 'N' options)
-    fc = P("FLO_CUM", 6)
-    (any(((k, x),) -> k[6] in ("FX", "N") || x < 0, fc.values) || any(k -> k[6] == "N", P("COM_CUM", 6).keys)) &&
-        throw(UnportedError("bnd_cum.mod L12-27: FLO_CUM / COM_CUM with FX, 'N' or negative values"))
+    # bnd_cum.mod L12-20 and L27-38: FLO_CUM, COM_CUM and RC_CUMCOM as the statements before the bounds leave
+    # them (`bnd_cum_flo`, `bnd_cum_com`, bndmain.jl); `bnd_cum!` then reads the bounds from them as stored
+    stored(tab) = (vals = Dict{keytype(tab),Float64}(); foreach(((k, x),) -> gassign!(vals, k, x), tab); vals)
+    Reference.has_symbol(d.dump, "FLO_CUM") && gput!(tm, "FLO_CUM", stored(bnd_cum_flo(tm)))
+    if Reference.has_symbol(d.dump, "COM_CUM")
+        ctab, rc_cumcom = bnd_cum_com(tm)
+        gput!(tm, "COM_CUM", stored(ctab)); gput!(tm, "RC_CUMCOM", rc_cumcom)
+    end
     # bnd_ucw.mod L13 (VAR_UC YES): CNT=0; bnd_ucv.mod L35, each UC right-hand side:
     # %5(...,'UP')$((NOT %5(...,'UP'))$%5(...,'N')) = INF
     if var_uc(tm)

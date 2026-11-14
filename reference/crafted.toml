@@ -288,3 +288,21 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_mrkx/demo12_mrkx.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_mrkx"]
+
+# TIMES_Demo demo12 + demo12_cumc/cumc.dd (14 Nov 2026): cumulative bounds. Two user constraints
+# on cumulative net TOTCO2 (UC_CUMCOM), one with a negative annual COM_BNDNET lower bound; an FX
+# COM_CUMPRD bound; a COM_CUMNET range after the last milestone year; COM_CUMNET and FLO_CUM up
+# to EOH with an N record (a MULTI row); an FX and a negative FLO_CUM. They reach the statements
+# of bnd_cum.mod L12-20 and L27-38 that change FLO_CUM, COM_CUM and RC_CUMCOM before the bounds
+# are set (M1.3 change 25-4).
+[[model]]
+name = "TIMES_Demo-demo12_cumc"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_cumc/demo12_cumc.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_cumc"]
