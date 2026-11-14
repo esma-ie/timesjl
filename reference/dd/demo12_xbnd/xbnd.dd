@@ -1,0 +1,102 @@
+* TIMES.jl crafted case demo12_xbnd (reference/crafted.toml, 14 Nov 2026): limits on the total
+* exchange of a commodity of a region (IRE_XBND), the equations EQ(l)_XBND (eqxbnd.mod L17-56).
+* Added to TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0). The regions: REG1
+* and REG2 (internal), IMPEXP and MINRNW (external). REG1 and REG2 trade electricity both ways
+* (TB_ELC_REG1_REG2_01, at DAYNITE) and gas from REG2 to REG1 (TU_GAS_REG2_REG1_01, at ANNUAL).
+* The timeslices: ANNUAL; the seasons S and W; SD, SN (in S) and WD, WN (in W). A record reads
+* IRE_XBND(region, year, commodity, timeslice, IMP or EXP, LO/FX/UP).
+* New data beside the bounds:
+* - IMPELC2, a second electricity import of REG1 from IMPEXP that runs at SEASON, so that a bound
+*   at a DAYNITE timeslice is finer than one of its flows (eqxbnd.mod L30: RS_FR).
+* - IRE_TSCVT of REG1's season W to a timeslice W of the external region IMPEXP, 0.9: a bound of
+*   an external region takes the flows of the internal regions through IRE_TSCVT (L42, L48);
+*   by default an external region has the timeslice ANNUAL only (ppmain.mod L967-978).
+* The bounds of an internal region (L23-32: all exchange processes of the region with the
+* commodity in that direction, whatever the partner):
+* - REG1 ELC, IMP, ANNUAL, UP 500 in 2020: every electricity import of REG1 over the year.
+* - REG1 ELC, IMP, WD, LO 30 in 2020: the flows at WD in full, the flow of the season W and the
+*   flow at ANNUAL with the share of WD; it forces imports.
+* - REG1 ELC, EXP, season S, UP 100 in 2030: a bound above the flows' level.
+* - REG2 GAS, EXP, ANNUAL, LO 10 in 2020: the export to IMPEXP and the gas link to REG1.
+* - REG2 ELC, EXP, ANNUAL, FX 40 in 2020: an equality.
+* - REG1 GAS, IMP, WD, UP 5000 in 2030: finer than the commodity's level (GAS is tracked at
+*   ANNUAL): the equation has no condition on the commodity's timeslices and the bound is not
+*   added up; the flows at ANNUAL count with the share of WD.
+* - REG1 COA, EXP, ANNUAL, UP 600 in 2020 with interpolation and forward extrapolation
+*   (option 5): rows in 2020, 2030 and 2050.
+* - REG2 ELC, IMP, SN, FX with the value EPS in 2020: a row with the right-hand side zero.
+* - REG2 ELC, IMP, WN, LO with the value EPS and WD, UP INF, in 2030: no row (eqmain.mod L241
+*   and L243).
+* - REG1 TOTCO2, IMP, ANNUAL, UP 5 in 2020: no exchange process has the commodity: no row.
+* The bounds of an external region (L39-51: the flows of the internal regions in the other
+* direction, through the processes linked to the external region):
+* - IMPEXP GAS, IMP, ANNUAL, LO 3 in 2020: the gas exports of REG1 and REG2 to IMPEXP.
+* - IMPEXP ELC, EXP, ANNUAL, UP 300 in 2020: the electricity imports of REG1 and REG2 from
+*   IMPEXP.
+* - MINRNW COA, EXP, ANNUAL, UP 9000 in 2020 with option 5: the coal mining of both regions,
+*   in 2020, 2030 and 2050.
+* - IMPEXP COA, IMP, ANNUAL, FX with the value EPS in 2030: a row with the right-hand side zero.
+* - IMPEXP ELC, EXP, W, UP 150 in 2030: REG1's imports from IMPEXP in the season W, times the
+*   IRE_TSCVT of 0.9 (REG2 has no IRE_TSCVT to W of IMPEXP and is not in the row).
+* - IMPEXP ELC, EXP, WD, UP 50 in 2020: no IRE_TSCVT to WD of IMPEXP: a row without a variable.
+* - MINRNW ELC, EXP, ANNUAL, UP 50 in 2020: MINRNW has no electricity link: no row.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET PRC /
+IMPELC2
+/
+SET PRC_MAP /
+REG1.IRE.IMPELC2
+/
+SET PRC_TSL /
+REG1.IMPELC2.SEASON
+/
+SET PRC_ACTUNT /
+REG1.IMPELC2.ELC.PJ
+/
+SET TOP /
+REG1.IMPELC2.ELC.OUT
+/
+SET TOP_IRE /
+IMPEXP.ELC.REG1.ELC.IMPELC2
+/
+SET PRC_DESC /
+REG1.IMPELC2 'Import of Electricity Step 2 (by season)'
+/
+PARAMETER
+ACT_BND ' '/
+REG1.0.IMPELC2.ANNUAL.UP 5
+REG1.2005.IMPELC2.ANNUAL.UP 200
+/
+PARAMETER
+IRE_PRICE ' '/
+REG1.2005.IMPELC2.ELC.ANNUAL.REG1.IMP.MEURO05 5.3
+/
+PARAMETER
+IRE_TSCVT ' '/
+REG1.W.IMPEXP.W 0.9
+/
+PARAMETER
+IRE_XBND ' '/
+REG1.2020.ELC.ANNUAL.IMP.UP 500
+REG1.2020.ELC.WD.IMP.LO 30
+REG1.2030.ELC.S.EXP.UP 100
+REG2.2020.GAS.ANNUAL.EXP.LO 10
+REG2.2020.ELC.ANNUAL.EXP.FX 40
+REG1.2030.GAS.WD.IMP.UP 5000
+REG1.0.COA.ANNUAL.EXP.UP 5
+REG1.2020.COA.ANNUAL.EXP.UP 600
+REG2.2020.ELC.SN.IMP.FX EPS
+REG2.2030.ELC.WN.IMP.LO EPS
+REG2.2030.ELC.WD.IMP.UP INF
+REG1.2020.TOTCO2.ANNUAL.IMP.UP 5
+IMPEXP.2020.GAS.ANNUAL.IMP.LO 3
+IMPEXP.2020.ELC.ANNUAL.EXP.UP 300
+MINRNW.0.COA.ANNUAL.EXP.UP 5
+MINRNW.2020.COA.ANNUAL.EXP.UP 9000
+IMPEXP.2030.COA.ANNUAL.IMP.FX EPS
+IMPEXP.2030.ELC.W.EXP.UP 150
+IMPEXP.2020.ELC.WD.EXP.UP 50
+MINRNW.2020.ELC.ANNUAL.EXP.UP 50
+/

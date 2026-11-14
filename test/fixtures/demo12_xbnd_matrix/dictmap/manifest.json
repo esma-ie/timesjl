@@ -1,0 +1,632 @@
+{
+ "format": "timesjl-dump",
+ "format_version": 1,
+ "source": "..\\timesjl-reference\\_work\\TIMES_Demo-demo12_xbnd\\as_run\\convert\\tjl_dictmap.gdx",
+ "uels": "uels.arrow",
+ "symbols": [
+  {
+   "name": "i",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "*"
+   ],
+   "description": "Equation names",
+   "records": 3256,
+   "file": "i.arrow"
+  },
+  {
+   "name": "j",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "*"
+   ],
+   "description": "Variable names",
+   "records": 4497,
+   "file": "j.arrow"
+  },
+  {
+   "name": "EQ_OBJ_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "*"
+   ],
+   "description": "Map for equation EQ_OBJ",
+   "records": 1,
+   "file": "EQ_OBJ_EM.arrow"
+  },
+  {
+   "name": "EQ_OBJFIX_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_OBJFIX",
+   "records": 2,
+   "file": "EQ_OBJFIX_EM.arrow"
+  },
+  {
+   "name": "EQ_OBJINV_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_OBJINV",
+   "records": 2,
+   "file": "EQ_OBJINV_EM.arrow"
+  },
+  {
+   "name": "EQ_OBJSALV_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_OBJSALV",
+   "records": 2,
+   "file": "EQ_OBJSALV_EM.arrow"
+  },
+  {
+   "name": "EQ_OBJVAR_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_OBJVAR",
+   "records": 2,
+   "file": "EQ_OBJVAR_EM.arrow"
+  },
+  {
+   "name": "EQ_ACTFLO_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_ACTFLO",
+   "records": 24,
+   "file": "EQ_ACTFLO_EM.arrow"
+  },
+  {
+   "name": "EQL_ACTBND_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQL_ACTBND",
+   "records": 30,
+   "file": "EQL_ACTBND_EM.arrow"
+  },
+  {
+   "name": "EQL_CAPACT_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQL_CAPACT",
+   "records": 1232,
+   "file": "EQL_CAPACT_EM.arrow"
+  },
+  {
+   "name": "EQG_COMBAL_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQG_COMBAL",
+   "records": 876,
+   "file": "EQG_COMBAL_EM.arrow"
+  },
+  {
+   "name": "EQE_COMBAL_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQE_COMBAL",
+   "records": 120,
+   "file": "EQE_COMBAL_EM.arrow"
+  },
+  {
+   "name": "EQE_COMPRD_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQE_COMPRD",
+   "records": 48,
+   "file": "EQE_COMPRD_EM.arrow"
+  },
+  {
+   "name": "EQE_CPT_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQE_CPT",
+   "records": 18,
+   "file": "EQE_CPT_EM.arrow"
+  },
+  {
+   "name": "EQG_INSHR_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQG_INSHR",
+   "records": 322,
+   "file": "EQG_INSHR_EM.arrow"
+  },
+  {
+   "name": "EQE_INSHR_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQE_INSHR",
+   "records": 238,
+   "file": "EQE_INSHR_EM.arrow"
+  },
+  {
+   "name": "EQ_IRE_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_IRE",
+   "records": 54,
+   "file": "EQ_IRE_EM.arrow"
+  },
+  {
+   "name": "EQG_XBND_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQG_XBND",
+   "records": 3,
+   "file": "EQG_XBND_EM.arrow"
+  },
+  {
+   "name": "EQE_XBND_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQE_XBND",
+   "records": 3,
+   "file": "EQE_XBND_EM.arrow"
+  },
+  {
+   "name": "EQL_XBND_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQL_XBND",
+   "records": 11,
+   "file": "EQL_XBND_EM.arrow"
+  },
+  {
+   "name": "EQG_OUTSHR_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQG_OUTSHR",
+   "records": 70,
+   "file": "EQG_OUTSHR_EM.arrow"
+  },
+  {
+   "name": "EQE_OUTSHR_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQE_OUTSHR",
+   "records": 12,
+   "file": "EQE_OUTSHR_EM.arrow"
+  },
+  {
+   "name": "EQ_PEAK_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_PEAK",
+   "records": 24,
+   "file": "EQ_PEAK_EM.arrow"
+  },
+  {
+   "name": "EQ_CUMFLO_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_CUMFLO",
+   "records": 16,
+   "file": "EQ_CUMFLO_EM.arrow"
+  },
+  {
+   "name": "EQE_UCRT_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQE_UCRT",
+   "records": 8,
+   "file": "EQE_UCRT_EM.arrow"
+  },
+  {
+   "name": "EQE_UCRTS_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQE_UCRTS",
+   "records": 6,
+   "file": "EQE_UCRTS_EM.arrow"
+  },
+  {
+   "name": "EQE_ACTEFF_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQE_ACTEFF",
+   "records": 132,
+   "file": "EQE_ACTEFF_EM.arrow"
+  },
+  {
+   "name": "VAR_ACT_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_ACT",
+   "records": 2256,
+   "file": "VAR_ACT_VM.arrow"
+  },
+  {
+   "name": "VAR_CAP_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_CAP",
+   "records": 18,
+   "file": "VAR_CAP_VM.arrow"
+  },
+  {
+   "name": "VAR_FLO_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_FLO",
+   "records": 732,
+   "file": "VAR_FLO_VM.arrow"
+  },
+  {
+   "name": "VAR_IRE_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_IRE",
+   "records": 840,
+   "file": "VAR_IRE_VM.arrow"
+  },
+  {
+   "name": "VAR_NCAP_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_NCAP",
+   "records": 444,
+   "file": "VAR_NCAP_VM.arrow"
+  },
+  {
+   "name": "VAR_COMNET_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_COMNET",
+   "records": 120,
+   "file": "VAR_COMNET_VM.arrow"
+  },
+  {
+   "name": "VAR_COMPRD_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_COMPRD",
+   "records": 48,
+   "file": "VAR_COMPRD_VM.arrow"
+  },
+  {
+   "name": "VAR_CUMFLO_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_CUMFLO",
+   "records": 16,
+   "file": "VAR_CUMFLO_VM.arrow"
+  },
+  {
+   "name": "VAR_OBJ_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_OBJ",
+   "records": 8,
+   "file": "VAR_OBJ_VM.arrow"
+  },
+  {
+   "name": "OBJz_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "*"
+   ],
+   "description": "Map for variable OBJz",
+   "records": 1,
+   "file": "OBJz_VM.arrow"
+  },
+  {
+   "name": "VAR_UCRT_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_UCRT",
+   "records": 8,
+   "file": "VAR_UCRT_VM.arrow"
+  },
+  {
+   "name": "VAR_UCRTS_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_UCRTS",
+   "records": 6,
+   "file": "VAR_UCRTS_VM.arrow"
+  }
+ ]
+}
