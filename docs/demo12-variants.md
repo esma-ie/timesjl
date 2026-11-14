@@ -34,7 +34,7 @@ MACRO, stochastics, ETL, climate and damage after M1.7.
 
 | # | Variant | Case | First release (Version.log) | GAMS | Status |
 | --- | --- | --- | --- | --- | --- |
-| 2 | Dispatching and unit commitment | `TIMES_Demo-demo12_uc` | 3.7.0, Aug 2014 (ramping, `eqactups.vda`); 3.9.0, Oct 2015 (linear dispatch); 3.9.7, Jul 2016 (unit commitment by start-up type, `eqlducs.vda`), announced 4.0.0 | `eqactups.vda`, `eqlducs.vda` | made (5 Nov 2026) |
+| 2 | Dispatching and unit commitment | `TIMES_Demo-demo12_uc` | 3.7.0, Aug 2014 (ramping, `eqactups.vda`); 3.9.0, Oct 2015 (linear dispatch); 3.9.7, Jul 2016 (unit commitment by start-up type, `eqlducs.vda`), announced 4.0.0 | `eqactups.vda`, `eqlducs.vda` | made (5 Nov 2026); the linear dispatching is translated, layers 1-3 PASS on the crafted case demo12_disp (M1.3 change 36, 14 Nov 2026); the unit commitment by start-up type follows on demo12_uc |
 | 5 | Retrofits and lifetime extensions | `TIMES_Demo-demo12_refit` | 4.1.2, Mar 2017 (`PRC_REFIT`); 4.1.6, 4.6.4, 4.6.7-8, 4.7.1 | User Note `TIMES-Refits-Note.pdf`; `prepret.dsc`, `ppmain.mod` L484-487 | made (5 Nov 2026); translated, layers 2-3 PASS (M1.3 change 20b, 6 Nov 2026) |
 | 1 | Load shifting | `TIMES_Demo-demo12_ls`, `TIMES_Demo-demo12_lst` | 4.3.0, Jan 2019 (`STG_SIFT`); 4.3.6 (asymmetric) | User Note `TIMES-Load-Shifting.pdf`; `eqactups.vda` | made (8 Nov 2026); translated, layers 2-3 PASS (M1.3 change 24) |
 | 4 | Dynamic time slices | | 4.3.2, Mar 2019 (varying cycles); 4.4.1, Feb 2020 (time-slice trees, `dynslite.vda`) | User Note `User_Note-TIMES-Dynamic-timeslices.docx` | |
@@ -71,6 +71,19 @@ eq_sudtime and 16 eq_sudpll rows. TIMES.jl: the M1.3 chain from the input
 dump PASS at every checkpoint on both variants (821 symbols); model
 generation refuses the eight untranslated groups (all 14 families). CI
 fixture `demo12_uc` (as_run).
+
+14 Nov 2026 (M1.3 change 36): the linear dispatching (`eqactups.vda`
+L9-117) is translated and checked on its own crafted case,
+`TIMES_Demo-demo12_disp` (`reference/dd/demo12_disp/disp.dd`): the REG1
+records above, and on the vintaged gas plant ELCTNGAS01 in REG2 a minimum
+stable load, a ramp-up limit, start-up costs at SEASON, a partial-load cost
+(`ACT_CSTPL`) with `ACT_LOSPL` UP and a cycle limit. GAMS 54.6.1, both
+variants: 434 rows of the seven families, 226 VAR_UPS and 40 VAR_UDP
+columns, the same objective as demo12_uc. TIMES.jl: layers 1 to 3 PASS from
+the DD files on both variants. demo12_uc still stops at the unit commitment
+by start-up type (`eqlducs.vda` L12-124, two groups, seven families), the
+next change. The discrete unit commitment (`$SET DUC YES`) is a TODO for a
+later release.
 
 ## Variant 5: retrofits and lifetime extensions (5 Nov 2026)
 

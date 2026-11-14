@@ -14,9 +14,10 @@
 #   *(1+RTP_FFCX(R,V,T,P,CG,'ACT')$PRC_VINT(R,P)) [*(1+RTP_FFCS(R,V,P,CG,'ACT')) when RTP_FFCS is DEFINED].
 # V = MODLYEAR, T = MILESTONYR.
 #
-# Not translated: the partial-load term L78-80 (RP_PL, VAR_UPS; unit
-# commitment) raises UnportedError. The RPG_PACE branch (L72-76, ACT_EFF on
-# primary-group commodities) is translated but not yet parity-checked.
+# The partial-load term L78-80 (RP_PL(R,P,'FX'), VAR_UPS; dispatching,
+# eqactups.jl) is checked on the crafted case demo12_disp. The RPG_PACE
+# branch (L72-76, ACT_EFF on primary-group commodities) is translated but
+# not yet parity-checked.
 
 """
     eq_acteff!(tm::TimesModel) -> Int
@@ -35,15 +36,15 @@ Generate every EQE_ACTEFF row. Returns the number of rows.
       SUM(PRC_TS(R,P,TS)\$RS_FR(R,S,TS), RS_FR(R,S,TS) *
           SUM(RPC_PG(R,P,C), (VAR_ACT(R,V,T,P,TS)\$RP_PGACT(R,P) + (VAR_FLO(R,V,T,P,C,TS)/PRC_ACTFLO(R,V,P,C))\$(NOT RP_PGACT(R,P))) /
               (1+(ACT_EFF(R,V,P,C,TS)-1)\$ACT_EFF(R,V,P,C,TS)) * (1+RTCS_FR(R,T,C,S,TS))))\$RPG_PACE(R,P,CG)
-      [+ partial loads, refused];
+      SUM(RP_PL(R,P,L('FX')),ACT_LOSPL(R,V,P,L) *
+        SUM(PRC_TS(R,P,TS)\$RS_FR(R,S,TS),VAR_UPS(R,V,T,P,TS,L)*RS_FR(R,S,TS)));
 
 GAMS: pp_actef.vda L50-80, v4.9.7.
 """
 function eq_acteff!(tm::TimesModel)
     rpg_ace = gset_opt(tm.data, "RPG_ACE", 4)
     isempty(rpg_ace) && return 0
-    isempty(gset_opt(tm.data, "RP_PL", 3)) ||
-        throw(UnportedError("pp_actef.vda L78-80 partial-load term (RP_PL, VAR_UPS)"))
+    rp_pl, act_lospl = gset_opt(tm.data, "RP_PL", 3), gparam_opt(tm.data, "ACT_LOSPL", 4)
     modlyear, milestonyr = gset(tm, "MODLYEAR"), gset(tm, "MILESTONYR")
     rpc_ace_of_rp = indexby(gset(tm, "RPC_ACE"), (1, 2))           # (r,p) -> RPC_ACE(r,p,c)
     com_gmap = gset(tm, "COM_GMAP")
@@ -110,6 +111,14 @@ function eq_acteff!(tm::TimesModel)
                 else
                     addterm!(rhs, w * (GNum(1.0) / gv(prc_actflo, (r, v, p, c))), tm, "VAR_FLO", r, v, t, p, c, ts)
                 end
+            end
+        end
+        # Partial loads, L78-80.
+        if (r, p, "FX") in rp_pl
+            lp = gv(act_lospl, (r, v, p, "FX"))
+            for (_, _, ts) in get(ts_of_rp, (r, p), no3)
+                haskey(rs_fr, (r, s, ts)) || continue
+                addterm!(rhs, lp * gv(rs_fr, (r, s, ts)), tm, "VAR_UPS", r, v, t, p, ts, "FX")
             end
         end
         gconstraint!(tm, "EQE_ACTEFF", (r, v, t, p, cg, io, s), "E", lhs, rhs) === nothing || (n += 1)

@@ -29,8 +29,12 @@
 # - L60, L71-76: singleton ACT_EFF groups (RPG_1ACE) become COEF_PTRAN
 #   records, their ACT_EFF is zeroed, RPCC_FFUNC gains the group pairs;
 #   RPCG_PTRAN cleared unless SENSIS; work sets cleared.
-# - L78-80: eqlducs.vda and eqashar.vda are included; with no
-#   unit-commitment data eqlducs.vda does nothing. eqashar.vda L16-33 is
+# - L78-80: eqlducs.vda and eqashar.vda are included. Of eqlducs.vda
+#   L12-41, with no start-up or shut-down data (ACT_CSTSD, ACT_SDTIME,
+#   ACT_LOSSD), only L15 and L38-39 act: RP_UPT and TRACKP are emptied,
+#   DP_LOSD marks the RTP of processes with partial-load losses given both
+#   ways (RP_PL 'N' and 'FX'), and their ACT_LOSPL 'FX' defaults to .01
+#   where it is zero. eqashar.vda L16-33 is
 #   `eqashar_prep!` (src/ext/vda/eqashar.jl): RPCG_ASHAR, the levelling of
 #   FLO_ASHAR, UNCD7. powerflo.vda CSTBAL is included only when COM_CSTBAL
 #   has data (`$IF DEFINED`, G35).
@@ -39,8 +43,44 @@
 #
 # Refused: WAVER YES (fillwave.gms); the ETL, CLI, ABS and MACRO extensions;
 # reduced flows (RPC_FFUNC or RPCG_PTRAN not empty: L62-69, which coef_ptr
-# also refuses through KEEP_FLOF); unit-commitment data (eqlducs.vda
-# L12-41); COM_CSTBAL (powerflo.vda L372-396).
+# also refuses through KEEP_FLOF); start-up and shut-down data of unit
+# commitment (eqlducs.vda L12-41 with ACT_CSTSD, ACT_SDTIME or ACT_LOSSD);
+# COM_CSTBAL (powerflo.vda L372-396).
+
+"""
+    eqlducs_prep!(tm) -> tm
+
+eqlducs.vda L12-41 (included by coef_ext.vda L78; %OBMAC% is YES) for a model with no start-up or
+shut-down data: ACT_CSTSD, ACT_SDTIME and ACT_LOSSD empty, which `coef_ext_unported` checks. Then
+RP_UPT, TRACKP and RP_DP are empty, and of L15-41 these act:
+
+    OPTION RP_UPT<ACT_CSTSD, TRACKP<RP_UPT;                                                    (L15)
+    OPTION CLEAR=TRACKP,DP_LOSD<ACT_LOSSD; DP_LOSD(RTP(R,V,P))\$RP_PL(R,P,'N')\$=RP_PL(R,P,'FX');   (L38)
+    ACT_LOSPL(DP_LOSD(RTP(R,V,P)),'FX')\$(ACT_LOSPL(RTP,'FX')=0) = .01**(1\$RP_PL(R,P,'N'));       (L39)
+
+Every DP_LOSD member has RP_PL(R,P,'N'), so the exponent is 1; `.01**1` is GAMS's real power
+(0.010000000000000004, `gpow`). The other statements need RP_DP, RP_DPL, RP_UPT, ACT_SDTIME or
+ACT_LOSSD and do nothing here (ACT_MAXNON alone is read only under RP_DP).
+
+GAMS: eqlducs.vda L12-41, v4.9.7.
+"""
+function eqlducs_prep!(tm)
+    d = tm.data
+    gput!(tm, "RP_UPT", Set{NTuple{4,String}}()); gput!(tm, "TRACKP", Set{NTuple{2,String}}())    # L15, L38
+    rp_pl = gset_opt(d, "RP_PL", 3)
+    dp_losd = Set{NTuple{3,String}}()                                                            # L38
+    for (r, v, p) in gset_opt(d, "RTP", 3).keys
+        ((r, p, "N") in rp_pl && (r, p, "FX") in rp_pl) && push!(dp_losd, (r, v, p))
+    end
+    gput!(tm, "DP_LOSD", dp_losd)
+    isempty(dp_losd) && return tm
+    lospl = gvalues(tm, "ACT_LOSPL", 4)                                                          # L39
+    for (r, v, p) in dp_losd
+        gv(lospl, (r, v, p, "FX")).v == 0 && gassign!(lospl, (r, v, p, "FX"), gpow(GNum(0.01), GNum(1.0)))
+    end
+    gput!(tm, "ACT_LOSPL", lospl)
+    return tm
+end
 
 "The coef_ext.vda paths this model would take that are not translated; empty when coef_ext! can run."
 function coef_ext_unported(tm)
@@ -51,9 +91,10 @@ function coef_ext_unported(tm)
         yes(n) && push!(out, "coef_ext.$(lowercase(n)) ($n YES)")
     end
     gswitch(tm, "MACRO", "") == "" || push!(out, "coef_ext.msa/mlf (MACRO set)")
-    for (s, n, kind) in (("ACT_CSTSD", 6, :param), ("ACT_SDTIME", 5, :param), ("ACT_MAXNON", 4, :param),
-                         ("ACT_LOSSD", 5, :param), ("ACT_LOSPL", 4, :param), ("ACT_MINLD", 3, :param),
-                         ("RP_PL", 3, :set), ("RP_DP", 2, :set), ("RP_UPT", 4, :set))
+    # eqlducs.vda L12-41: every statement but L15 and L38-39 needs RP_DP, RP_UPT, ACT_SDTIME or ACT_LOSSD,
+    # which come from these (RP_UPT < ACT_CSTSD, RP_DP from RP_UPT; ACT_MAXNON alone does nothing)
+    for (s, n, kind) in (("ACT_CSTSD", 6, :param), ("ACT_SDTIME", 5, :param), ("ACT_LOSSD", 5, :param),
+                         ("RP_DP", 2, :set), ("RP_UPT", 4, :set))
         empty = kind == :set ? isempty(gset_opt(tm.data, s, n)) : isempty(gparam_opt(tm.data, s, n))
         empty || push!(out, "eqlducs.vda L12-41 (unit commitment: $s has data)")
     end
@@ -389,8 +430,9 @@ function coef_ext!(tm)
     for (n, N) in (("TRACKPC", 3), ("RP_GRP", 3), ("CG_GRP", 4), ("RP_DCGG", 6), ("RTP_CAPYR", 4), ("RP_CGC", 4))
         gput!(tm, n, Set{NTuple{N,String}}())
     end
-    # L78: eqlducs.vda (no unit-commitment data: nothing); L79: eqashar.vda L16-33;
-    # L80: powerflo.vda CSTBAL is not included (COM_CSTBAL has no data)
+    # L78: eqlducs.vda L12-41 without start-up or shut-down data (coef_ext_unported): L15 and L38-39 act
+    eqlducs_prep!(tm)
+    # L79: eqashar.vda L16-33; L80: powerflo.vda CSTBAL is not included (COM_CSTBAL has no data)
     eqashar_prep!(tm)
 
     # L81: COEF_PVT(R,T)$(NOT COEF_PVT(R,T)) = FPD(T); L82: VDA_DISC(R,T) $= COEF_PVT(R,T)

@@ -50,6 +50,9 @@ function untranslated_families(tm::TimesModel)
         foreach(w -> note!("(variant POWERFLO)", "powerflo.vda", w), powerflo_model_unported(tm))
         isempty(P("GR_XBND", 2)) || note!("EQ_GR_XBND", "powerflo.vda L336-358", "GR_XBND has data")
     end
+    # the discrete unit commitment (a MIP): eqlducs.vda L128-175, and the DP_UNS term of EQ_ACTPL
+    # (eqactups.vda L106-109)
+    yes("DUC") && note!("(discrete unit commitment)", "eqlducs.vda L128-175, eqactups.vda L106-109", "switch DUC = YES")
     uppercase(gswitch(tm, "MACRO", "NO")) in ("YES", "CSA", "MSA", "MLF") &&
         note!("(MACRO)", "eqmacro.tm, mod_ext.msa/mlf", "switch MACRO = $(gswitch(tm, "MACRO", ""))")
     for (sym, ext) in (("BS_RVT", "ABS"), ("CM_PREDEF", "CLI"), ("TEG", "ETL"), ("ECT_CHP", "IER"), ("NITER", "MSA/MLF"))
@@ -65,12 +68,7 @@ function untranslated_families(tm::TimesModel)
             ("EQ_OBJELS / EQL_COMCES", "eqobjels.mod, mod_equa.mod L30/L80", "RCJ", 4, :s),
             ("EQ_DAMAGE / EQ_OBJDAM", "eqdamage.mod, mod_equa.mod L209-210", "DAM_COST", 4, :p),
             # VDA (always loaded, initmty.mod L458) and DSC extensions
-            ("EQ_CAPLOAD", "eqactups.vda L39", "AFUPS", 4, :s),
-            ("EQ_ACTRAMP", "eqactups.vda L50", "RP_UPL", 3, :s),
-            ("EQ(l)_ACTUPS", "eqactups.vda L65-76", "RP_UPS", 4, :s),
-            ("EQL_ACTUPC", "eqactups.vda L86", "RP_UPC", 4, :s),
-            ("EQ_ACTPL", "eqactups.vda L99", "RP_PL", 3, :s),
-            ("EQ_ACTRMPC", "eqactups.vda L113", "RP_UPR", 3, :s),
+            # the dispatching equations of eqactups.vda L39-117 are translated (eq_actups!)
             ("EQL_STGCCL", "eqactups.vda L121", "STG_MAXCYC", 3, :p),
             ("eq_sdlogic/eq_sudupt/eq_sdslant", "eqlducs.vda L67-81", "RP_DPL", 3, :s),
             ("eq_sdminon/eq_sudload/eq_sudtime/eq_sudpll", "eqlducs.vda L94-118", "RP_DP", 2, :s),
@@ -114,7 +112,8 @@ then generate the translated equation families, apply the bounds and set
 GAMS: eqmain.mod L34 (objective), L41 (EQ_ACTFLO), L47-49 (EQ(l)_ACTBND), L54-59 (EQ(l)_BNDNET, EQ(l)_BNDPRD), L64-66 (EQ_CAPACT), L92
 (EQ_CUMFLO), L98-106 (EQ_COMBAL, EQE_COMPRD), L146 (EQ_IRE), L152-154 (EQ(l)_IREBND), L159 (EQ_PEAK), L164
 (EQ_PTRANS), L169 (EQ_STGIPS), L170 (EQ_STGAUX), L175 (EQ_STGTSS, EQ_STSBAL), L180-185 (EQ(l)_STGIN/STGOUT), L229 (EQE_UCT/UCRT/UCTS/UCRTS, the dynamic EQE_UCSU/UCRSU/UCRSUS/UCSUS and EQE_UCRS), L241-243 (EQ(l)_XBND); equ_ext.vda L85 (EQE_ACTEFF);
-equ_ext.vda L88-89 (EQ(l)_CAFLAC, EQL_CAPFLO); equ_ext.vda L94-96 (EQ(l)_ASHAR); equ_ext.vda L105-106 (EQN/EQE_UCRTP, EQN_UCRTC); bndmain.mod; solve.mod L37, v4.9.7.
+equ_ext.vda L88-89 (EQ(l)_CAFLAC, EQL_CAPFLO); equ_ext.vda L90 (EQ_CAPLOAD, EQ_ACTRAMP, EQ(l)_ACTUPS, EQL_ACTUPC, EQ_ACTPL, EQ_ACTRMPC, EQ_SLSIFT);
+equ_ext.vda L94-96 (EQ(l)_ASHAR); equ_ext.vda L105-106 (EQN/EQE_UCRTP, EQN_UCRTC); bndmain.mod; solve.mod L37, v4.9.7.
 """
 function generate!(tm::TimesModel)
     u = untranslated_families(tm)
@@ -145,7 +144,8 @@ function generate!(tm::TimesModel)
     n += eq_xbnd!(tm)                # L241-243
     n += eq_acteff!(tm)              # VDA: equ_ext.vda L85 (pp_actef.vda L56)
     n += eq_caflac!(tm)              # VDA: equ_ext.vda L88-89
-    n += eq_slsift!(tm)              # VDA: equ_ext.vda L90 (eqactups.vda L131)
+    n += eq_actups!(tm)              # VDA: equ_ext.vda L90 (eqactups.vda L39-117)
+    n += eq_slsift!(tm)              #   eqactups.vda L131
     n += eq_ashar!(tm)               # VDA: equ_ext.vda L94-96
     n += eq_ucrtp!(tm)               # VDA: equ_ext.vda L105-106
     n += eq_gr_powflo!(tm)           # VDA: equ_ext.vda L101 (powerflo.vda POWFLO, M1.3 change 27b)

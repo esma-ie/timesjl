@@ -774,3 +774,16 @@ those checks, their figures and their crafted cases are not published
 - 14 Nov 2026: M1.4 (9b): a run file and an input fixture for
   demo12_red17b, demo12_ips, demo12_ucrt and demo12_objinv, so 24 crafted
   cases go from their DD files to the model in CI.
+- 14 Nov 2026: James: the M1.3 gate is not passed until every remaining
+  refused feature is translated, unit commitment first; a feature with no
+  model to verify it is flagged and listed, with a demo12 variant where
+  one can be made, otherwise a TODO for a later release.
+- 14 Nov 2026: M1.3 change 36: dispatching in the linear formulation
+  (eqactups.vda L9-117): the preparation and EQ_CAPLOAD, EQ_ACTRAMP,
+  EQ(l)_ACTUPS, EQL_ACTUPC, EQ_ACTPL and EQ_ACTRMPC with VAR_UPS and
+  VAR_UDP; their terms in EQ_OBJVAR (eqobjvar.mod L36-37, L39), EQE_ACTEFF
+  (pp_actef.vda L78-80) and EQ(l)_CAPACT. New crafted case demo12_disp:
+  layers 1 to 3 PASS in both variants from the DD files (25 crafted cases
+  in the chain from DD files). The unit commitment by start-up type
+  (eqlducs.vda L12-124) is next. Not translated, for a later release:
+  the discrete unit commitment (DUC = YES, a MIP).

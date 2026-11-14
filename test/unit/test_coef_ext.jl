@@ -101,7 +101,10 @@ end
     @test isempty(coef_ext_unported(tm))                 # reduced flows (L62-69) are translated
     tm = coef_ext_start(PPM_DEMO12, "resid")
     gput!(tm, "ACT_MINLD", Dict(("REG1", "2010", "ELCTNGAS01") => 0.4))
-    @test occursin("eqlducs.vda", only(coef_ext_unported(tm)))
+    @test isempty(coef_ext_unported(tm))                 # dispatching without start-up types (eqactups.vda) is translated
+    tm = coef_ext_start(PPM_DEMO12, "resid")
+    gput!(tm, "ACT_CSTSD", Dict(("REG1", "2010", "ELCTNGAS01", "HOT", "UP", "MEURO05") => 0.02))
+    @test occursin("eqlducs.vda", only(coef_ext_unported(tm)))   # the start-up types of eqlducs.vda are not
     @test_throws UnportedError coef_ext!(tm)
     tm = TimesModel(PPM_DEMO12; switches=merge(COEF_EXT_CASE_SWITCHES, Dict("WAVER" => "YES")))
     @test occursin("fillwave", only(coef_ext_unported(tm)))

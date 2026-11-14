@@ -34,12 +34,13 @@
 # equation definitions are generated later, at SOLVE, from AFS as it stands
 # then. Between the two, other files may remove AFS entries:
 #   coef_csv.mod L74 (when PRC_SIMV is DEFINED; eqmain.mod L67),
-#   eqactups.vda L11 (VDA unit commitment: RP_UPL(R,P,'FX')),
 #   equ_ext.vda L79 (VDA: NCAP_AFCS(R,T,P,'ACT',S)),
+#   eqactups.vda L11 (VDA dispatching: the entries that go to AFUPS, for
+#     processes with RP_UPL(R,P,'FX'); they get EQ_CAPLOAD rows instead),
 #   equ_ext.abs L24 (ABS extension, out of Phase 1 scope).
-# equ_ext.vda L79 is translated (afs_solve); the others are not, so their
-# trigger data stops generation with an UnportedError instead of generating
-# rows GAMS would not. AFS cannot be checked against a dump directly
+# equ_ext.vda L79 and eqactups.vda L11 are translated (afs_solve); the others
+# are not, so their trigger data stops generation with an UnportedError
+# instead of generating rows GAMS would not. AFS cannot be checked against a dump directly
 # (solsetv.v3 L203 clears it after the solve); the generated rows check it.
 #
 # Storage (L28, L50 for RP_STG processes): the storage level VAR_ACT of the
@@ -103,8 +104,6 @@ function capact_unported_afs_changes(tm::TimesModel)
     d = tm.data
     isempty(gset_opt(d, "PRC_SIMV", 2)) ||
         throw(UnportedError("coef_csv.mod L74 removes AFS entries for PRC_SIMV processes (eqmain.mod L67)"))
-    any(k -> k[3] == "FX", gset_opt(d, "RP_UPL", 3)) &&
-        throw(UnportedError("eqactups.vda L11 removes AFS entries of processes with RP_UPL(R,P,'FX')"))
     return nothing
 end
 
@@ -112,11 +111,16 @@ end
     afs_solve(tm) -> GamsSet{5}
 
 AFS as it stands when the SOLVE generates the EQ(l)_CAPACT and EQ(l)_CAFLAC
-rows: [`afs_capact`](@ref) (eqcapact.mod L18-20) after the VDA statement
+rows: [`afs_capact`](@ref) (eqcapact.mod L18-20) after the VDA statements
 
     AFS(RTP(R,T,P),S,BDUPX)\$NCAP_AFCS(RTP,'ACT',S) = NO;
+    AFUPS(R,T,P,S)\$(...) \$= AFS(R,T,P,S,'UP')\$RP_UPL(R,P,'FX'); AFS(AFUPS,BD)=NO;
 
-of equ_ext.vda L79, v4.9.7 (BDUPX = {UP, FX}, setglobs.gms L155). Note that
+of equ_ext.vda L79 and eqactups.vda L11, v4.9.7 (BDUPX = {UP, FX},
+setglobs.gms L155; L11: `afups_from_afs`, eqactups.jl). AFS is rebuilt here
+from the COEF_AF of the pre-solve state, which holds the entries
+eqactups.vda L14 adds; each of those is in AFUPS, so L11 on the rebuilt set
+removes the same entries. Note that
 the period T stands in NCAP_AFCS's vintage position. NCAP_AFCS exists only
 with VDA (initmty.vda L26). RTP is read from the pre-solve dump: the only
 later change to it, pp_qack.mod L54 `RTP(NO_RVP) = NO`, removes nothing
@@ -129,10 +133,16 @@ function afs_solve(tm::TimesModel)
         afs = afs_capact(tm)
         afcs = gparam_opt(tm.data, "NCAP_AFCS", 5)
         act = Set((r, v, p, s) for (r, v, p, cg, s) in afcs.keys if uppercase(cg) == "ACT")
-        isempty(act) && return afs
-        rtp = gset(tm, "RTP")
-        keys = [k for k in afs.keys
-                if !(k[5] in ("UP", "FX") && (k[1], k[2], k[3]) in rtp && (k[1], k[2], k[3], k[4]) in act)]
+        keys = afs.keys
+        if !isempty(act)
+            rtp = gset(tm, "RTP")
+            keys = [k for k in keys
+                    if !(k[5] in ("UP", "FX") && (k[1], k[2], k[3]) in rtp && (k[1], k[2], k[3], k[4]) in act)]
+        end
+        # eqactups.vda L11: the entries that go to AFUPS leave AFS
+        afups = afups_from_afs(keys, tm.data)
+        isempty(afups) || (keys = [k for k in keys if !((k[1], k[2], k[3], k[4]) in afups)])
+        keys === afs.keys && return afs
         return GamsSet{5}("AFS", keys, Set(keys))
     end::GamsSet{5}
 end
