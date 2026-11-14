@@ -233,3 +233,17 @@ reduce   = true
 state    = "equ"
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", TIMESTEP = "20", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = ["(stepped run)"]
+
+# Crafted case demo12_bndc (14 Nov 2026): COM_BNDNET and COM_BNDPRD of ELC (tracked at DAYNITE) at
+# ANNUAL and at a season, LO, UP and FX (one FX with the value EPS), which GAMS writes as the
+# equations EQ(l)_BNDNET and EQ(l)_BNDPRD (eqbndcom.mod L16-24); one bound at the commodity's own
+# level and two records that give no row. Preprocessing from the input dump to ppm on every
+# symbol, the six rows (test/unit/test_eqbndcom.jl), and the whole model. The presolve dump is
+# shared with test/fixtures/public_fixtures.toml.
+[[variant]]
+prefix   = "demo12_bndc"
+model    = "TIMES_Demo-demo12_bndc"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []

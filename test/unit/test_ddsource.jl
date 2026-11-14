@@ -51,7 +51,7 @@ function check_dd_case(model, runfix, inputfix)
         else
             v, sp = r.values["value"], r.special["value"]
             all(i -> (vs[i][2] === :eps) == (sp[i] == SV_EPS) &&
-                     (vs[i][2] === :eps || abs(vs[i][1] - v[i]) <= 1e-9 * max(1, abs(v[i]))), eachindex(vs)) ||
+                     (vs[i][2] === :eps || vs[i][1] == v[i] || abs(vs[i][1] - v[i]) <= 1e-9 * max(1, abs(v[i]))), eachindex(vs)) ||
                 push!(bad, "$k: values")
         end
     end
@@ -70,7 +70,7 @@ end
 # reference run is not on the reference machine.
 @testset "variant $p" for p in ("demo12_uc", "demo12_refit", "demo12_refit_afc", "demo12_curex", "demo12_ucdyn",
                                 "demo12_ucattr", "demo12_flomrk", "demo12_mrkx", "demo12_cumc", "demo12_ashar",
-                                "demo12_lev", "demo12_levstd",
+                                "demo12_lev", "demo12_levstd", "demo12_bndc",
                                 "demo12_ls", "demo12_lst", "demo12_pf", "demo12_pfd", "demo12_qa")
     check_dd_case("TIMES_Demo-" * p, p * "_run", p * "_input")
 end

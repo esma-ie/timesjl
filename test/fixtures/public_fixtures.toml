@@ -371,3 +371,18 @@ switches = { ANNCOST = "LEV", BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DS
 rows = 3213
 cols = 4469
 nonzeros = 18057
+
+# Crafted case TIMES_Demo-demo12_bndc (reference/crafted.toml: demo12 + bndc.dd), 14 Nov 2026 (GAMS
+# 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): bounds on the net
+# amount and the production of a commodity above the timeslice level it is tracked at, the
+# equations EQ(l)_BNDNET and EQ(l)_BNDPRD (eqbndcom.mod L16-24), the whole model. The presolve dump
+# is shared with test/fixtures/variant_fixtures.toml. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_bndc"
+model    = "TIMES_Demo-demo12_bndc"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3239
+cols = 4485
+nonzeros = 18395

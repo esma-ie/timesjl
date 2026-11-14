@@ -89,6 +89,14 @@ answer yet.
 
 ## Log by pull request
 
+### #111 M1.3 (31): EQ(l)_BNDNET and EQ(l)_BNDPRD, eqbndcom.mod L16-24, crafted case demo12_bndc (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the new crafted case demo12_bndc (demo12 + bndc.dd, CC BY 4.0; a public fixture, a variant fixture and a DD-file compile case, about 7 MB)? | Recommended: yes. Built in. | open |
+| 2 | The refusal of COM_BNDNET and COM_BNDPRD records above the commodity's tracked timeslice level is lifted: the six equations are translated and checked on demo12_bndc. | Built in. | open |
+| 3 | The refused equation families are translated before the M1.3 gate is declared passed and before the move to v4.9.8 (James, 14 Nov: "lets push on these last features today"); next the other bound equations, EQ(l)_FLOBND, EQ(l)_FLOFR, EQ(l)_IREBND and EQ(l)_XBND, one PR each; the remaining refused families (`untranslated_families`) after them, by what the suite models need. | Following James's instruction. | open; the order against v4.9.8 stays on the Open decisions list |
+
 ### #110 M1.3 (30): stepped runs before solve.stp, coef_alt.lin L81 and eqobsalv.mod L23-25; harness 0.3.3 (open)
 
 | # | Question | Decided | How |

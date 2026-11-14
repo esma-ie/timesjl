@@ -721,3 +721,9 @@ those checks, their figures and their crafted cases are not published
   the pre-solve dump less the 27 symbols that loop assigns, both variants,
   from the input dump and from the DD files. Model generation refuses the
   run: the stepped solve (solve.stp) is M1.5.
+- 14 Nov 2026: M1.3 change 31: EQ(l)_BNDNET and EQ(l)_BNDPRD (eqbndcom.mod
+  L16-24, eqmain.mod L54-59), the first of the equation families refused
+  since M1.1: commodity bounds above the tracked timeslice level, as rows.
+  New crafted case demo12_bndc: layers 1 to 3 PASS in both variants from the
+  DD files. The other bound equations still refused follow one by one:
+  EQ(l)_FLOBND, EQ(l)_FLOFR, EQ(l)_IREBND, EQ(l)_XBND.

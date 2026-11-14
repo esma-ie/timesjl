@@ -11,8 +11,8 @@
 # equation's domain, so a family left out here would silently drop rows. For
 # each untranslated family in the MODEL statement, `untranslated_families`
 # tests a condition that holds whenever that family has at least one row:
-# the family's own domain where it is short (EQ(l)_BNDNET/PRD,
-# EQ(l)_FLOBND, EQ(l)_IREBND, EQ(l)_XBND), otherwise the
+# the family's own domain where it is short (EQ(l)_FLOBND, EQ(l)_IREBND,
+# EQ(l)_XBND), otherwise the
 # non-emptiness of a set or parameter every member of the domain requires
 # (conservative: it may refuse data for which GAMS would generate no row).
 # Untranslated extensions are recognised by a switch or by a symbol only
@@ -61,19 +61,6 @@ function untranslated_families(tm::TimesModel)
     end
 
     # --- eqmain.mod families ---------------------------------------------------
-    # EQ(l)_BNDNET / EQ(l)_BNDPRD (eqbndcom.mod L16; eqmain.mod L54-59)
-    rtc, rcs_comts, com_ts = gset(tm, "RTC"), gset(tm, "RCS_COMTS"), gset(tm, "COM_TS")
-    for kind in ("NET", "PRD")
-        p = gparam(tm, "COM_BND" * kind)
-        for (r, t, c, s, bd) in p.keys
-            v = p.values[(r, t, c, s, bd)]
-            ok = bd == "FX" || (bd == "LO" && v != 0) || (bd == "UP" && v != Inf)
-            if ok && inT(t) && (r, t, c) in rtc && (r, c, s) in rcs_comts && !((r, c, s) in com_ts)
-                note!("EQ(l)_BND$kind", "eqbndcom.mod L16", "COM_BND$kind$((r, t, c, s, bd))")
-                break
-            end
-        end
-    end
     # EQ(l)_FLOBND (eqflobnd.mod L15-21; eqmain.mod L111-113)
     let flo_bnd = gparam(tm, "FLO_BND"), varf_of = indexby(gset(tm, "RTPCS_VARF"), (1, 2, 3)), rtp_vara = gset(tm, "RTP_VARA"),
         ts_map = gset(tm, "TS_MAP"), gmap = gset(tm, "COM_GMAP"), below = gset(tm, "RS_BELOW"),
@@ -134,6 +121,7 @@ function untranslated_families(tm::TimesModel)
     end
     # EQ(l)_IREBND (eqirebnd.mod L18) and EQ(l)_XBND (eqxbnd.mod L17)
     ire_rc = Set((k[1], k[3], k[4]) for k in gset(tm, "RPC_IRE"))      # (R,C,IE) with some RPC_IRE(R,P,C,IE)
+    rcs_comts = gset(tm, "RCS_COMTS")
     lim_ok(bd, v) = bd == "FX" || (bd == "LO" && v != 0) || (bd == "UP" && v != Inf)
     let ire_bnd = gparam(tm, "IRE_BND")
         for (k, v) in ire_bnd.values
@@ -161,7 +149,7 @@ Build the whole model: refuse if [`untranslated_families`](@ref) finds any,
 then generate the translated equation families, apply the bounds and set
 `MINIMIZING objZ`. Returns the number of rows.
 
-GAMS: eqmain.mod L34 (objective), L41 (EQ_ACTFLO), L47-49 (EQ(l)_ACTBND), L64-66 (EQ_CAPACT), L92
+GAMS: eqmain.mod L34 (objective), L41 (EQ_ACTFLO), L47-49 (EQ(l)_ACTBND), L54-59 (EQ(l)_BNDNET, EQ(l)_BNDPRD), L64-66 (EQ_CAPACT), L92
 (EQ_CUMFLO), L98-106 (EQ_COMBAL, EQE_COMPRD), L146 (EQ_IRE), L159 (EQ_PEAK), L164
 (EQ_PTRANS), L169 (EQ_STGIPS), L170 (EQ_STGAUX), L175 (EQ_STGTSS, EQ_STSBAL), L180-185 (EQ(l)_STGIN/STGOUT), L229 (EQE_UCT/UCRT/UCTS/UCRTS, the dynamic EQE_UCSU/UCRSU/UCRSUS/UCSUS and EQE_UCRS); equ_ext.vda L85 (EQE_ACTEFF);
 equ_ext.vda L88-89 (EQ(l)_CAFLAC, EQL_CAPFLO); equ_ext.vda L94-96 (EQ(l)_ASHAR); equ_ext.vda L105-106 (EQN/EQE_UCRTP, EQN_UCRTC); bndmain.mod; solve.mod L37, v4.9.7.
@@ -173,6 +161,7 @@ function generate!(tm::TimesModel)
     n = eq_obj!(tm)                  # eqmain.mod L34
     n += eq_actflo!(tm)              # L41
     n += eq_actbnd!(tm)              # L47-49
+    n += eq_bndcom!(tm)              # L54-59
     n += eq_capact!(tm)              # L64-66
     n += eq_cpt!(tm)                 # L77-79
     n += eq_cumcom!(tm)              # L89-90
