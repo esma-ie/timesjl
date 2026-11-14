@@ -39,6 +39,8 @@ answer yet.
 | 14 Nov 2026 | #109 | Is the M1.3 gate passed? Rule-level (a milestone gate). The evidence for each criterion is in docs/m13-plan.md, "Gate close-out, 14 Nov 2026". | yes | Open; needs James's explicit yes. |
 | 14 Nov 2026 | chat | After the M1.3 gate: translate the refused features and the stepped (myopic) solve on v4.9.7 first, then move the baseline to v4.9.8? Rule-level (`CLAUDE.md` Baseline moves it when the gate closes). | features first, then v4.9.8 | Open |
 | 14 Nov 2026 | chat | Start the stepped solve of myopic runs (TIMESTEP; M1.5, run options) before the M1.3 and M1.4 gates close? Rule-level (milestone order). James, 14 Nov 2026: "make the changes required to solve the myopic runs also today if possible"; an explicit yes to the early start is still asked. | yes, after the M1.3 gate PR | Open; the DD reader's part (initmty.mod L440-447, M1.4 change 7) is in #108. |
+| 14 Nov 2026 | #117 | Is the M1.4 gate passed? Rule-level (a milestone gate); it waits for the M1.3 gate (#109). The evidence for each criterion is in docs/m14-plan.md, "Gate close-out, 14 Nov 2026". | yes, once the M1.3 gate is passed and the batch has rerun the chain from DD files on the merged stack | Open; needs James's explicit yes. |
+| 14 Nov 2026 | #117 | M1.4 gate, "CI runs the chain from DD files on the crafted cases": CI does it in pieces that meet at GAMS's dumps (DD files to the input fixture; the input fixture to ppm; GAMS's pre-solve dump to the model); only demo12 goes from DD files to the model in one run. Accept this as meeting the criterion, or add the one run for every crafted case? | add the one run, as the next PR: each crafted case from its DD files to the model, against GAMS's matrix and objective, with the fixtures CI already has (a few seconds for each case once Julia is warm) | Open |
 
 ## Decisions in the chat (not in a PR list)
 
@@ -88,6 +90,16 @@ answer yet.
 | 11 Nov 2026 | Keep this decision log, with its rule. | `docs/decisions.md` |
 
 ## Log by pull request
+
+### #117 M1.4 (8) and gate close-out: warnings as GAMS counts them, TIMES's GDX filter, a key given twice (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Is the M1.4 gate passed? Every criterion of docs/m14-plan.md has its evidence in "Gate close-out, 14 Nov 2026". Rule-level (a milestone gate); it waits for the M1.3 gate (#109). | Recommended: yes, once the M1.3 gate is passed and the batch has rerun the chain from DD files on the merged stack. | open; needs James's explicit yes, a merge does not answer it (Open decisions) |
+| 2 | "CI runs the chain from DD files on the crafted cases": CI does it in pieces that meet at GAMS's dumps; only demo12 goes from DD files to the model in one run. Accept this, or add the one run for every crafted case? | Recommended: add the one run, as the next PR: each crafted case from its DD files to the model, against GAMS's matrix and objective, with the fixtures CI already has. | open; not built in either way (Open decisions) |
+| 3 | The reader counts compile warnings as GAMS does, one for each label outside its domain set: 88 on TIMES-NZ, not 84. | Built in. | open |
+| 4 | The three cases where GAMS keeps a record outside its domain set (no DATAGDX YES; a one-dimensional set or parameter; a label that joins the set later) stop the run with a message; they are translated when a model needs them. No suite model has one. | Built in. | open |
+| 5 | A key given twice in one data statement stops the run, as GAMS's compile error 172; before, the later record won. No suite model has one. | Built in. | open |
 
 ### #115 M1.3 (35): EQ(l)_XBND, eqxbnd.mod L17-56, crafted case demo12_xbnd (open)
 

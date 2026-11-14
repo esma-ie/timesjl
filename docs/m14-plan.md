@@ -107,6 +107,8 @@ runs the chain from DD files on demo12 and the crafted cases.
   compiles (389) equals the input dump (keys, record order, values, EPS, set text), and every label
   is in the dump's order (G55). demo12 compiles in 0.5 s, OTUS9r in 7 s. TIMES-NZ's 84 domain
   violations are dropped with 84 warnings, as in GAMS (G56; open question 1 below, answered).
+  (Corrected 14 Nov 2026, change 8: GAMS counts 88 warnings for the 84 records, and keeps some
+  kinds of record outside a domain, which the reader refuses.)
 - **Scope: GAMS compiles the whole program before running any of it.** So the input dump holds
   every symbol of TIMES (1,023 for demo12, 602 of them declared after maindrv.mod), and the
   compile-time data of the later files: 30 symbols with records, 4 more members of UC_NUMBER,
@@ -132,6 +134,8 @@ runs the chain from DD files on demo12 and the crafted cases.
 | 5 | scale, wiring, `m13_gate.jl --from-dd` | done (10 Nov): `write_dump`; the chain, the matrix and the HiGHS solve from DD files with no GAMS state; CI on demo12; nightly on the open models |
 | 7 | the controls of restart and stepped (myopic) runs, initmty.mod L442-444 | done (14 Nov): a run file with SPOINT, TIMESTEP or FIXBOH compiles; crafted case demo12_step (TIMESTEP 20) from its DD files to `ppm/` in both variants; CI compiles it. The stepped solve (solve.stp) is M1.5 |
 | 6 | the M1.4 gate's remaining items: the demo12 variants in CI, TIM and JRC-EU-TIMES (local), the licence level, a runner for any run file | done (10 Nov): `scripts/m14_models.jl` reads the DD folders from `reference/suite.toml` and `reference/crafted.toml` (`--local` for TIM and JRC-EU-TIMES); CI compiles demo12 and 11 variants from their DD files; `licencelevel` (K3); `scripts/run_dd.jl` and `run_dd.cmd` |
+| 8 | compile warnings as GAMS counts them; TIMES's GDX filter of records outside their domain sets (setglobs.gms L13-24, gdxfilter.gms L4-19); a key given twice in one data statement | done (14 Nov): 88 warnings on TIMES-NZ as GAMS; the three cases where GAMS keeps such a record stop the run; a key given twice stops as GAMS error 172 (G56, G59) |
+| gate | the evidence for each criterion | "Gate close-out, 14 Nov 2026" below; the gate waits for the M1.3 gate and for James's yes |
 
 ### Change 2b, 9 Nov 2026 (late evening)
 
@@ -235,9 +239,108 @@ GAMS's objective. Fixed: an alias is now its target as TIMES.jl holds it (`gset`
   (`demo12_step_run`, `demo12_step_input`), STEPPED and VAR_UC as GAMS sets them, and demo12 with
   the controls given from outside: valid values pass, invalid ones stop with GAMS's abort text.
 
+### Change 8, 14 Nov 2026: warnings as GAMS counts them, TIMES's GDX filter, a key given twice
+
+- **88 against 84 (open question 1).** GAMS's listing of TIMES-NZ ends with 88 warnings; the reader
+  dropped 84 records and counted 84. All of them name one label, a commodity that is not in COM, in
+  records of a five-dimensional set in base.dd. GAMS gives one warning for each label outside its
+  domain set (`$170`), and 4 of the 84 records have the label in two positions: 80 + 2 x 4 = 88.
+  The reader now counts as GAMS does and prints 88. The count itself changes nothing: TIMES only
+  tests whether there are warnings (`$IF WARNINGS`, setglobs.gms L22 and ppmain.mod L35, G54).
+- **What GAMS does with such a record** (G56, corrected). Under `$ONWARNING` GAMS keeps it in
+  memory. TIMES removes it before its own code runs: setglobs.gms L13-24 (the first file
+  maindrv.mod includes, L23), when DATAGDX is YES and the compile has warnings, unloads the data to
+  a GDX file and calls gdxfilter.gms MAIN, which loads it again under `$onFiltered` (L12-16).
+  Checked on GAMS 54.6.1 with demo12 plus a DD file of such records, displayed before maindrv.mod:
+  - a record of a symbol with two or more dimensions is removed;
+  - a record of a one-dimensional set or parameter stays, because gdxfilter.gms L11 deletes the
+    load lines of one-dimensional symbols. TIMES's code then uses it: a member of REG outside
+    ALL_REG is one more region for every later statement, and later records naming it get no
+    warning;
+  - a record whose label joins the domain set later in the data stays: the filter checks against
+    the sets as they stand when it runs;
+  - without `$SET DATAGDX YES` there is no filter, and every such record stays.
+  GAMS's dumps do not show this: an `execute_unload` of all symbols writes no record outside its
+  domain, kept or not. So the input dump cannot check these cases; only the later checkpoints
+  would.
+- **Translation.** `gput!` drops the record where it is read, which equals the filter for symbols
+  of two or more dimensions, and notes it. `gdomain_filter!`, called where maindrv.mod starts
+  (the place of setglobs.gms), stops the run with "not yet translated" in the three cases where
+  GAMS keeps a record: no `DATAGDX YES`; a one-dimensional set or parameter; a label that is in
+  the domain set by the end of the data. No suite model has one: only TIMES-NZ has records outside
+  a domain, all of a five-dimensional set, with DATAGDX YES. Keeping the records as GAMS does
+  would mean carrying them through the reader and the dump format; it is left until a model
+  needs it.
+- **A key given twice in one data statement (open question 4).** GAMS stops with compile error
+  172, "Element is redefined", with or without `$ONMULTI` (G59). The reader let the later record
+  win; it now stops with the file and line. Without `$ONEPS` a zero is not a record, so a zero
+  beside a value of the same key is no error and the value stays; a zero in a later statement
+  still removes the earlier value. No suite model has such a key.
+- **Result.** `scripts/m14_probe.jl`, both variants: TIMES-NZ steady and shift compile with 88
+  warnings, as GAMS's listing, and all 824 sets and parameters and 3,633 (3,713) labels equal the
+  input dump; demo12, OTCGEN, OTNYC and OTUS9r reference and tax1_wo_mou are unchanged (no
+  warning, every set and parameter identical). `test/unit/test_ddcompile.jl`: 70 tests, among
+  them each of the cases above.
+
+### Gate close-out, 14 Nov 2026
+
+The gate: change 5 passes on every core-tier run, both variants, and CI runs the chain from DD
+files on demo12 and the crafted cases. Each criterion with its evidence follows. Every reference
+was made with GAMS 54.6.1; the runs are on James's workstation, within the run limits. The gate
+waits for the M1.3 gate (#109) and is passed when James says so (a rule-level decision).
+
+The core-model evidence is the workstation batch of 14 Nov on `main` at `c04c8ab`:
+`scripts/m13_gate.jl --from-dd --solve` compiles each run's own run file and DD files with no
+GAMS, compares the result with GAMS's `input/` dump, runs the M1.3 chain on TIMES.jl's state
+alone to the pre-solve dump, generates the model and compares it with GAMS's matrix, and solves
+it with HiGHS. The changes since `c04c8ab` (#105 to #115 and change 8) add features that no core
+model uses, and change 8 changes only the warning count of TIMES-NZ; the first step was run again
+with this code (change 8, Result). The batch runs the whole chain again once they are merged.
+
+| Criterion | Evidence | Result |
+| --- | --- | --- |
+| DD files to `input/` at 1e-9, five open core models, reduce_off and as_run | Every set and parameter (824; 825 on OTUS9r) and every label in the dump's order: demo12 1,709 labels; TIMES-NZ-steady 3,633; OTCGEN 10,441; OTNYC 7,736; OTUS9r 10,203. Again with change 8 (`scripts/m14_probe.jl`). | PASS, 10 of 10 |
+| The M1.3 chain from DD files to the pre-solve dump, no GAMS state | Same runs: init, prep, prelv, ppm, coef and presolve, every set and parameter at each, with the QA log. | PASS, 10 of 10 |
+| TIM-bau | Checked locally (results stay on James's machine). | local |
+| CI runs the chain from DD files on demo12 | `test/unit/test_m13_chain.jl`, "M1.4: DD files -> input -> pre-solve -> model": compile, `write_dump`, the input fixture, the chain to presolve, the QA log, the model against GAMS's matrix and objective. | PASS |
+| CI runs the chain from DD files on the crafted cases | In pieces, each starting from a GAMS dump of the case, not in one run. `test/unit/test_ddsource.jl` compiles demo12, 22 crafted cases and demo12_step from their DD files and compares each with its input fixture (symbols, every set and parameter, labels, warning count). `test/unit/test_variants.jl` runs 24 crafted cases from the input fixture to `ppm/` on TIMES.jl's own state. `test/unit/test_public_parity.jl` generates the model of each public fixture from GAMS's pre-solve dump (layers 2 and 3), and runs the coefficient stage from GAMS's `ppm/` dump where the fixture has one. Only demo12 goes from DD files to the model in one run in CI. On the workstation the crafted cases of #105 to #115 did so in their own PRs (`m13_gate.jl --from-dd --solve`, both variants); demo12_xbnd and demo12_pf again with this code (all PASS, a few seconds for each run once Julia is warm). Proposed: the one run for every crafted case in CI, as the next PR. | in pieces (decision for James) |
+
+Beyond the gate, from the same batch (James, 10 Nov 2026: the matrix and the solution join the
+chain from DD files):
+
+| Run | Rows, columns, nonzeros (reduce_off; as_run) | Layer 2 against GAMS's matrix | HiGHS against GAMS/CPLEX (reduce_off; as_run) |
+| --- | --- | --- | --- |
+| TIMES_Demo-demo12 | 8,695, 9,669, 31,391; 3,233, 4,485, 18,375 | PASS, both | 4.2e-15; 3.7e-15 |
+| TIMES-NZ-steady-v308 | 1,408,361, 1,299,224, 5,026,918; 622,043, 523,095, 3,375,383 | PASS, both | 3.8e-11; 2.0e-10 |
+| OTCGEN-gc_ref | 1,257,132, 1,507,223, 6,732,783; 512,182, 765,953, 5,200,869 | PASS, both | 8.1e-16; 1.7e-15 |
+| OTNYC-s1_nyc_ref | 504,698, 858,299, 2,531,196; 236,650, 557,258, 1,863,168 | PASS, both | 9.6e-16; 3.9e-16 |
+| OTUS9r-reference | 2,174,010, 2,776,359, 9,925,588; 1,028,923, 1,647,278, 7,163,965 | PASS, both | not solved with HiGHS (layer 3 on OTUS9r is one way, CLAUDE.md) |
+
+Not part of the gate, for the record:
+
+- Milestone tier, same batch. OTUS9r-tax1_wo_mou: DD files to the model, layer 2 PASS in both
+  variants (2,528,996 rows reduce_off, 1,199,533 as_run). TIMES-NZ-shift-v308: layer 2 PASS in
+  both variants (1,483,415 and 630,987 rows); HiGHS reaches GAMS/CPLEX's objective as_run
+  (4.1e-11) and stops at the script's 3,600 s time limit reduce_off, so that one run has no
+  objective to compare. The limit is to be raised for it.
+- `scripts/m14_probe.jl` (the compile against the input dump, with the include trace against
+  GAMS's listing): identical on all 50 runs of the open models in the batch: the seven open suite
+  runs and 18 crafted demo12 cases, both variants.
+- JRC-EU-TIMES (verdicts only): the compile equals the input dump on all nine scenarios. The
+  chain from DD files on JRC-EU-TIMES-cli_ll passes init, prep, prelv and ppm (850 symbols) on
+  `c04c8ab` and ends there at ANNCOST LEV, translated since (M1.3 change 29).
+- What stays open in the reader: the attributes of `$IF DEFINED` (#87, open question 3); the
+  labels used only by TIMES code (open question 5); the three cases of change 8 where GAMS keeps
+  a record outside its domain; DATAGDX loading, initmty.stc, initmty.tm and `$LOAD`/`$GDXIN` with
+  a file, all refused with a message. No suite model reaches one. The stepped solve of a run
+  with TIMESTEP (solve.stp) is M1.5.
+
 ## Open questions (flag, do not guess)
 
-1. **Domain violations.** (Answered 9 Nov 2026: dropped at compile time, G56.) suite.toml says DATAGDX "filters" 84 records in
+1. **Domain violations.** (Answered 14 Nov 2026, change 8 and G56: GAMS keeps the records and
+   TIMES's GDX filter removes them, as suite.toml says; 88 warnings for 84 records because GAMS
+   warns once for each label and 4 records have two. The 9 Nov answer, "dropped at compile time",
+   was right in effect for TIMES-NZ only.) suite.toml says DATAGDX "filters" 84 records in
    each TIMES-NZ case. G32 says GAMS drops them at compile time. Change 4 checks
    the TIMES-NZ `input/` dump. TIMES-NZ's 88 compile warnings against 84
    dropped records leave 4 unexplained.
@@ -252,7 +355,8 @@ GAMS's objective. Fixed: an alias is now its target as TIMES.jl holds it (`gset`
    (James, 10 Nov 2026). Answered for plain assignments on 10 Nov 2026: JRC-EU-TIMES reaches preppm.mod
    L27-28, where an assignment that never runs (`$NO`) makes R_CUREX defined; the reader now
    counts compiled assignments (`gassigned!`, G35). Attributes stay open (#87).
-4. **Duplicate keys inside one data statement:** GAMS's behaviour is not
+4. **Duplicate keys inside one data statement:** (Answered 14 Nov 2026, change 8 and G59: compile
+   error 172 in GAMS, with or without `$ONMULTI`; the reader stops in the same way.) GAMS's behaviour is not
    confirmed. The reader lets the later record win, as `$ONMULTI` merges do; every open suite model
    matches the input dumps, so none depends on it either way.
 5. **Labels used only by TIMES code** (`ITEM` with an empty `%FIXBOH%`, the
