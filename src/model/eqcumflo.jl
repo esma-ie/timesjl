@@ -42,8 +42,8 @@ and when %OBJ% is LIN (L21, L24):
   overlap: M(T)+LAGT(T) > YEARVAL(ALLYEAR) and M(T)-LEAD(T) < YEARVAL(LL);
   W(T) = SUM(TPULSEYR(T,YEAR)\$(ORD(YEAR) >= ORD(ALLYEAR) and ORD(YEAR) <= ORD(LL)), TPULSE(T,YEAR)).
 
-GAMS: eqcumflo.mod L14-45, v4.9.7. The LIN branch is translated but not
-yet parity-checked (no test model with OBJ LIN so far).
+GAMS: eqcumflo.mod L14-45, v4.9.7. The LIN branch is checked on the crafted
+case demo12_cumlin (layer 2; test/unit/test_cum_lin.jl).
 """
 function eq_cumflo!(tm::TimesModel)
     lin = uppercase(gswitch(tm, "OBJ", "")) == "LIN"

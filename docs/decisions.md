@@ -115,6 +115,13 @@ Reviewed on 14 Nov 2026 against pull requests #1 to #120 (108 merged, six open: 
 
 ## Log by pull request
 
+### #133 M1.5: the cumulative equations under OBJ LIN, checked on demo12_cumlin (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | CI checks only the cumulative rows of demo12_cumlin: GAMS's rows of EQ_CUMFLO, EQ_CUMNET and EQ_CUMPRD in a JSON file of 18 KB, compared with the rows TIMES.jl builds from the fixture of demo12_cumc with OBJ set to LIN. The whole case (layers 1 to 3) is checked on the workstation. The other way is a full set of fixtures (about 7 MB). | Recommended: the small file. Built in. | open |
+| 2 | No change to the translation: the OBJ LIN weights of M1.1 were right. The notes "not parity-checked" are removed. | Nothing to answer. | logged |
+
 ### #132 M1.5 (6): OBJ LIN and OBJ ALT in a stepped (myopic) run; layers 1 to 3 per step on demo12_steplin (open)
 
 | # | Question | Decided | How |
