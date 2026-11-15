@@ -975,3 +975,12 @@ those checks, their figures and their crafted cases are not published
   (discrepancies.md D44). In a stepped run the rows take the periods of the
   step (`eq_periods`); no stepped grid case checks that. The refusal in
   `generate!` is removed.
+- 15 Nov 2026: M1.3 change 42: the user-constraint attributes ANNUL,
+  INVCOST, INVTAX and INVSUB (uc_ncap.mod L39), refused since change 22
+  (James, 15 Nov 2026: yes to #123, decision 4). The term reads CST_ANNC
+  (eqbndcst.mod L49-77, translated in change 39) and is compiled in only
+  in the RHS direction of a dynamic constraint (equserco.mod L87: %3 TT,
+  %6 LL); ppmain.mod L1156 and L1161 make every such constraint one.
+  New crafted case demo12_ucann: layers 1 to 3 PASS in both variants
+  from the DD files (objective 24,088,144.66 with CPLEX and HiGHS).
+  ONLINE (uc_cap.mod L36-42) stays refused.

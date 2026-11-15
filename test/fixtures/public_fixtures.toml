@@ -551,3 +551,17 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 4150
 cols = 5402
 nonzeros = 22144
+
+# Crafted case TIMES_Demo-demo12_ucann (reference/crafted.toml: demo12 + ucann.dd), 15 Nov 2026 (GAMS
+# 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): user constraints with the
+# attributes INVCOST, INVTAX and INVSUB on new capacity (uc_ncap.mod L39, CST_ANNC of eqbndcst.mod
+# L49-77), the whole model. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_ucann"
+model    = "TIMES_Demo-demo12_ucann"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3257
+cols = 4509
+nonzeros = 18585

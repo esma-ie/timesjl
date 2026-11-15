@@ -49,7 +49,7 @@ let vx = only(v for v in TOML.parsefile(joinpath(FIXTURES, "variant_fixtures.tom
     @testset "attributes still refused" begin
         tm = mk()
         attr = Set(gset(tm, "UC_ATTR").keys)
-        push!(attr, ("REG1", "GRW_NUC", "RHS", "NCAP", "ANNUL"))      # CST_ANNC, eqbndcst.mod (change 22 leaves it)
+        push!(attr, ("REG1", "GRW_HYD", "RHS", "CAP", "ONLINE"))      # uc_cap.mod L36-42, the VDA VAR_UPS terms
         gput!(tm, "UC_ATTR", attr)
         @test_throws UnportedError eq_uc!(tm)
     end
