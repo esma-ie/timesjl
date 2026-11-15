@@ -477,6 +477,24 @@ kind = "run"
 run_file = "{crafted}/demo12_alt/demo12_alt.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_objinv", "{crafted}/demo12_alt"]
 
+# TIMES_Demo demo12 + demo12_cumc/cumc.dd with OBJ LIN (15 Nov 2026; M1.5, after change 6): the
+# cumulative bounds of demo12_cumc under the linearised objective. With OBJ LIN the periods are
+# weighted by TPULSE in EQ_CUMFLO (eqcumflo.mod L21, L24) and in EQ_CUMNET and EQ_CUMPRD
+# (eqcumcom.mod), not by the years of the period inside the range. Checked with
+# scripts/m13_gate.jl and scripts/m11_probe.jl on the workstation; in CI the cumulative rows only
+# (test/fixtures/demo12_cumlin_cumrows.json, test/unit/test_cum_lin.jl).
+[[model]]
+name = "TIMES_Demo-demo12_cumlin"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_cumlin/demo12_cumlin.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_cumc", "{crafted}/demo12_cumlin"]
+
 # TIMES_Demo demo12 + demo12_bndc/bndc.dd (14 Nov 2026): bounds on the net amount and the production
 # of a commodity above the timeslice level it is tracked at. COM_BNDPRD and COM_BNDNET of ELC
 # (tracked at DAYNITE) at ANNUAL and at a season, LO, UP and FX (one FX with the value EPS), which

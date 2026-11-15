@@ -694,10 +694,30 @@ OBLONG; `test_gnum.jl` has GAMS's values of `**` and POWER where Julia's
   L425 (VALIDATE) stay refused.
 - **Checked on the workstation only** (no fixture): demo12_steplino,
   demo12_stepalt1, demo12_lin, demo12_alt.
-- **Not checked yet under OBJ LIN**: the weights of EQ_CUMFLO, EQ_CUMNET
-  and EQ_CUMPRD (eqcumflo.mod L21, L24; the cases here have no cumulative
-  bound) and EQ_STGIPS (eqstgips.lin, still refused). A crafted case with
-  the cumulative bounds of demo12_cumc and OBJ LIN can settle the first.
+- **Not checked under OBJ LIN by these five cases**: the weights of
+  EQ_CUMFLO, EQ_CUMNET and EQ_CUMPRD (eqcumflo.mod L21, L24, L35;
+  eqcumcom.mod L20, L23; the cases have no cumulative bound) and EQ_STGIPS
+  (eqstgips.lin, still refused). The first is settled by the crafted case
+  demo12_cumlin (15 Nov 2026, below).
+
+**After change 6: the cumulative equations under OBJ LIN (15 Nov 2026).**
+demo12_cumlin is the run file of demo12_cumc with OBJ LIN. With OBJ LIN a
+period counts in a year range when M(T)+LAGT(T) is after its first year and
+M(T)-LEAD(T) before its last, and its weight is the sum of its TPULSE over
+the years of the range, where the standard objective counts the years of
+the period in the range. In GAMS's LPs of the two cases the cumulative rows
+have the same columns, and 46 of the 152 coefficients differ as run (50 of
+164 with REDUCE off): for the range 2010-2200 the periods 2020, 2030 and
+2050 weigh 7.5, 15 and 12.5 under OBJ LIN against 8, 15 and 12 years.
+Nothing was to correct: layers 1 to 3 pass on both variants, from GAMS's
+input dump and from the DD files (`scripts/m13_gate.jl`,
+`scripts/m11_probe.jl`; 8,721 rows with REDUCE off, 3,259 as run; objective
+24,241,216.775, equal to GAMS/CPLEX's and GAMS/HiGHS's). In CI,
+`test/unit/test_cum_lin.jl` builds the rows from the pre-solve fixture of
+demo12_cumc with the switch OBJ set to LIN and compares them with GAMS's
+rows of demo12_cumlin (`test/fixtures/demo12_cumlin_cumrows.json`, 18 KB,
+written by `scripts/make_rows_fixture.jl`). Not reached: the exchange
+branch of EQ_CUMFLO (L29-30; the same weight).
 
 ## What demo12_step reaches, and what it does not
 

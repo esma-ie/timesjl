@@ -59,8 +59,8 @@ end
 Generate every EQ_CUMNET and EQ_CUMPRD row (eqmain.mod L89-90). Returns the
 number of rows.
 
-GAMS: eqcumcom.mod L15-32, v4.9.7. The %OBJ% LIN weights are translated
-but not parity-checked (no test model with OBJ LIN so far).
+GAMS: eqcumcom.mod L15-32, v4.9.7. The %OBJ% LIN weights are checked on the
+crafted case demo12_cumlin (layer 2; test/unit/test_cum_lin.jl).
 """
 function eq_cumcom!(tm::TimesModel)
     rc_cumcom = gset(tm, "RC_CUMCOM")

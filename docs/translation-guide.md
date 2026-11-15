@@ -936,3 +936,13 @@ those checks, their figures and their crafted cases are not published
   L432), so no run with OBJ STD, ALT or LIN started from DD files; it does
   now. Not checked yet under OBJ LIN: the weights of EQ_CUMFLO, EQ_CUMNET
   and EQ_CUMPRD; EQ_STGIPS stays refused there.
+- 15 Nov 2026: the cumulative equations under OBJ LIN. The crafted case
+  demo12_cumlin (the run file of demo12_cumc with OBJ LIN) reaches the LIN
+  weights of EQ_CUMFLO (eqcumflo.mod L21, L24, L35) and of EQ_CUMNET and
+  EQ_CUMPRD (eqcumcom.mod L20, L23), translated in M1.1 and never checked
+  against GAMS: TPULSE summed over the years of the range in place of the
+  years of the period. Nothing was to correct; layers 1 to 3 pass on both
+  variants, from GAMS's input dump and from the DD files. CI:
+  test_cum_lin.jl compares the rows built from the fixture of demo12_cumc,
+  with OBJ set to LIN, with GAMS's rows of demo12_cumlin (a JSON file of
+  18 KB, `scripts/make_rows_fixture.jl`).
