@@ -43,7 +43,16 @@
 # against the LP GAMS solved (layer 2, 1e-9), and its objective against GAMS/CPLEX's, each optimum
 # evaluated in the other LP (layer 3, 1e-6). Then on TIMES.jl's own levels: each step's objective
 # against GAMS/CPLEX's and the last against GAMS/HiGHS's (1e-6).
+# compared less the symbols that loop assigns (STEPPED_LOOP_SYMBOLS). No model: the stepped solve
+# is M1.5.
+#
+# The wall timer (James, 14 Nov 2026; dashboard slide 12): run as a script, each (model, variant) ends
+# with a line "whole run <seconds> s": the wall time from the end of the run before it to its own end,
+# so with everything the run does, the comparisons with GAMS included. The first run's time starts
+# where this file starts, so it also holds the loading and compilation of TIMES.jl (not Julia's own
+# start, a fraction of a second). scripts/run_timing.jl reads the line.
 
+const GATE_T0 = time()
 include(joinpath(@__DIR__, "m13_probe.jl"))      # M13_STEPS, M13_SEGMENTS, run_switches, runfile_of, suite_switches
 include(joinpath(@__DIR__, "m14_models.jl"))     # REFGAMS, dd_model_dirs, take_local!
 import HiGHS, JuMP
@@ -385,12 +394,18 @@ if abspath(PROGRAM_FILE) == @__FILE__
     from_dd = i === nothing ? nothing : abspath(args[i+1])
     i === nothing || deleteat!(args, i:i+1)
     refdir, roots, models = parse_probe_args(args)
-    for model in models, variant in ("reduce_off", "as_run")
-        try
-            gate13(refdir, model; roots, variant, from_dd, solve)
-        catch e
-            e isa TIMES.UnportedError || rethrow()
-            println("== ", model, "/", variant, ": not translated: ", sprint(showerror, e))
+    let t0 = GATE_T0
+        for model in models, variant in ("reduce_off", "as_run")
+            try
+                gate13(refdir, model; roots, variant, from_dd, solve)
+            catch e
+                e isa TIMES.UnportedError || rethrow()
+                println("== ", model, "/", variant, ": not translated: ", sprint(showerror, e))
+            end
+            t1 = time()
+            println("== ", model, "/", variant, ": whole run ", round(t1 - t0; digits=1), " s (wall time, with the checks against GAMS",
+                    t0 == GATE_T0 ? " and the loading of TIMES.jl" : "", ")")
+            t0 = t1
         end
     end
 end

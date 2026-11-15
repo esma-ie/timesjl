@@ -21,15 +21,16 @@
   --pass:var(--green); --on-pass:var(--dark-green); --fail:#c8502a; --on-fail:#ffffff;
   --refused:var(--charcoal); --on-refused:#ffffff; --review:var(--dark-yellow);
   --cplex:var(--blue); --highs:var(--dark-green);
-  /* slides 11 and 12: the two languages (checked with the dataviz palette validator on both surfaces) */
-  --gams:var(--blue); --tjl:var(--green);
+  /* slides 10 to 12: the two languages. GAMS orange (the brand book has no orange; this one is the
+     orange the dataviz palette validator passes beside the green for colour-vision deficiencies on both
+     surfaces), TIMES.jl the brand's Green, the same on light and dark slides (James, 14 Nov 2026) */
+  --gams:#e06000; --tjl:var(--green);
   --sans:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   color-scheme:light;
 }
 :root[data-theme="dark"]{
   --surface:var(--dark-green); --tint:#0b5446; --ink:var(--white); --muted:var(--turquoise);
   --grid:rgba(255,255,255,.16); --edge:rgba(175,225,218,.45); --highs:var(--white);
-  --tjl:#00ae55;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -409,6 +410,9 @@ function cell(x,y,w,h,status,text,tipHtml,extra=''){
   return `<g data-tip="${esc(tipHtml||'')}">${box}${t}${extra}</g>`;
 }
 
+// the mark of a HiGHS run on every slide: an isosceles triangle pointing up, centred on (x, y); k shrinks it (a ring's stroke)
+const triUp = (x, y, k=0) => `M${x} ${y-10.5+k}L${x+8-k} ${y+9.5-k}H${x-8+k}Z`;
+
 // ---- 1: at a glance -----------------------------------------------------------------------------
 function renderGlance(){
   const runs=allRuns(), checks=allChecks(), m=reportMeta();
@@ -583,9 +587,9 @@ function renderObjective(){
       s+=`<text x="${x0}" y="${y+5}" font-size="15" fill="${css('--ink')}"><tspan font-weight="700">${shortModel(r.model).replace('-reference','').replace('-v308','')}</tspan> · ${variantName(r.variant)}</text>`;
       SOLVERS.forEach((sv,k)=>{const ck=checks.find(c=>c.run===r.id&&String(c.unit).toUpperCase()===sv); if(!ck||ck.rel_diff==null) return;
         const xx=x0+X(ck.rel_diff), ok=ck.status==='pass', col=k?css('--highs'):css('--cplex');
-        const mk=k?`<rect x="${xx-6}" y="${y-6}" width="12" height="12" transform="rotate(45 ${xx} ${y})" fill="${ok?col:css('--fail')}"/>`:`<circle cx="${xx}" cy="${y}" r="7" fill="${ok?col:css('--fail')}"/>`;
+        const mk=k?`<path d="${triUp(xx,y)}" fill="${ok?col:css('--fail')}"/>`:`<circle cx="${xx}" cy="${y}" r="7" fill="${ok?col:css('--fail')}"/>`;
         s+=`<g data-tip="${esc(`<b>${r.model}</b> · ${variantName(r.variant)}<br>against GAMS with ${sv}: ${ck.rel_diff.toExponential(2)}<br>GAMS ${fmt(ck.gams_objective,2)} · TIMES.jl ${fmt(ck.julia_objective,2)}`)}">${mk}</g>`;});});});
-  s+=`<g transform="translate(${PW+40},400)" font-size="15" fill="${css('--ink')}"><circle cx="8" cy="-5" r="7" fill="${css('--cplex')}"/><text x="24" y="0">TIMES.jl against GAMS with CPLEX</text><rect x="2" y="21" width="12" height="12" transform="rotate(45 8 27)" fill="${css('--highs')}"/><text x="24" y="32">TIMES.jl against GAMS with HiGHS</text><text x="0" y="66" fill="${css('--muted')}">Values below 1e−16 are drawn at 1e−16.</text></g>`;
+  s+=`<g transform="translate(${PW+40},400)" font-size="15" fill="${css('--ink')}"><circle cx="8" cy="-5" r="7" fill="${css('--cplex')}"/><text x="24" y="0">TIMES.jl against GAMS with CPLEX</text><path d="${triUp(8,27)}" fill="${css('--highs')}"/><text x="24" y="32">TIMES.jl against GAMS with HiGHS</text><text x="0" y="66" fill="${css('--muted')}">Values below 1e−16 are drawn at 1e−16.</text></g>`;
   s+='</svg>';
   const cf=checks.filter(c=>c.mine_in_gams_violation!=null), ok=cf.filter(c=>c.mine_in_gams_violation<1e-6&&(c.gams_in_mine_ok!=null?c.gams_in_mine_ok:c.gams_in_mine_violation<1e-6)).length;
   set('objective-sub',`|TIMES.jl − GAMS| / |GAMS| for each run and GAMS solver · ${checks.filter(c=>c.status==='pass').length} of ${checks.length} within the 1e-6 gate`);
@@ -601,11 +605,11 @@ function renderTiming(){
   for(const v of [0.01,0.1,1,10,100,1000]){s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="${css('--grid')}" stroke-width="1"/><text x="${L-10}" y="${y(v)+5}" font-size="15" text-anchor="end" fill="${css('--muted')}">${fmt(v,2)} s</text>`;}
   const n=TIMINGS.length, gw=(W-L-R)/n, bw=64;
   TIMINGS.forEach((t,i)=>{const x0=L+i*gw+gw/2;
-    [[t.gams,css('--cplex')],[t.julia,css('--pass')]].forEach(([v,c],k)=>{const x=x0+(k-0.5)*(bw+10); s+=`<rect x="${x-bw/2}" y="${y(v)}" width="${bw}" height="${H-B-y(v)}" fill="${c}"/><text x="${x}" y="${y(v)-8}" font-size="15" text-anchor="middle" fill="${css('--ink')}" class="num">${sec(v)} s</text>`;});
+    [[t.gams,css('--gams')],[t.julia,css('--tjl')]].forEach(([v,c],k)=>{const x=x0+(k-0.5)*(bw+10); s+=`<rect x="${x-bw/2}" y="${y(v)}" width="${bw}" height="${H-B-y(v)}" fill="${c}"/><text x="${x}" y="${y(v)-8}" font-size="15" text-anchor="middle" fill="${css('--ink')}" class="num">${sec(v)} s</text>`;});
     const tg=y(t.gams*5); s+=`<line x1="${x0-bw-14}" x2="${x0+bw+14}" y1="${tg}" y2="${tg}" stroke="${css('--dark-yellow')}" stroke-width="3" stroke-dasharray="7 4"/>`;
     s+=`<text x="${x0}" y="${H-B+26}" font-size="17" font-weight="700" text-anchor="middle" fill="${css('--ink')}">${t.short}</text><text x="${x0}" y="${H-B+48}" font-size="15" text-anchor="middle" fill="${css('--muted')}">${t.rows>=1e6?fmt(t.rows/1e6,1)+' M':fmt(t.rows)} rows · ${fmt(t.julia/t.gams)}× GAMS</text>`;});
   s+=`<line x1="${L}" x2="${W-R}" y1="${H-B}" y2="${H-B}" stroke="${css('--ink')}" stroke-width="1"/>`;
-  s+=`<g transform="translate(${L},486)" font-size="15" fill="${css('--ink')}"><rect x="0" y="-13" width="16" height="16" fill="${css('--cplex')}"/><text x="24" y="0">GAMS 54.6.1, its own profile</text><rect x="270" y="-13" width="16" height="16" fill="${css('--pass')}"/><text x="294" y="0">TIMES.jl, warm, one thread</text><line x1="540" x2="580" y1="-5" y2="-5" stroke="${css('--dark-yellow')}" stroke-width="3" stroke-dasharray="7 4"/><text x="590" y="0">Phase 1 target: within 5× GAMS (M1.7)</text></g>`;
+  s+=`<g transform="translate(${L},486)" font-size="15" fill="${css('--ink')}"><rect x="0" y="-13" width="16" height="16" fill="${css('--gams')}"/><text x="24" y="0">GAMS 54.6.1, its own profile</text><rect x="270" y="-13" width="16" height="16" fill="${css('--tjl')}"/><text x="294" y="0">TIMES.jl, warm, one thread</text><line x1="540" x2="580" y1="-5" y2="-5" stroke="${css('--dark-yellow')}" stroke-width="3" stroke-dasharray="7 4"/><text x="590" y="0">Phase 1 target: within 5× GAMS (M1.7)</text></g>`;
   s+='</svg>';
   set('timing-sub',"Seconds for the coefficient stage, same machine, log scale · making TIMES.jl fast is Phase 2 work (item P2-2)");
   set('timing-body',s);
@@ -622,12 +626,13 @@ const RT_PARTS = [
   ["solve","Solve","the solver's time as GAMS reports it (etsolver)","JuMP.optimize! with HiGHS"],
   ["reports","Reports","the statements after the solve (GAMS's profile)","TIMES.jl does not write reports yet (milestone M1.6)"],
 ];
-// one series per language and solver: colour and shape by language, filled or ring by solver
+// one series per language and solver: the colour is the language (GAMS orange, TIMES.jl green), the shape is
+// the solver (CPLEX a circle, HiGHS an isosceles triangle pointing up); James, 14 Nov 2026
 const RT_SERIES = [
   {language:"GAMS", solver:"CPLEX", label:"GAMS · CPLEX", color:"--gams", shape:"circle", filled:true},
-  {language:"GAMS", solver:"HIGHS", label:"GAMS · HiGHS", color:"--gams", shape:"circle", filled:false},
-  {language:"TIMES.jl", solver:"CPLEX", label:"TIMES.jl · CPLEX", color:"--tjl", shape:"square", filled:true},
-  {language:"TIMES.jl", solver:"HIGHS", label:"TIMES.jl · HiGHS", color:"--tjl", shape:"square", filled:false},
+  {language:"GAMS", solver:"HIGHS", label:"GAMS · HiGHS", color:"--gams", shape:"triangle", filled:true},
+  {language:"TIMES.jl", solver:"CPLEX", label:"TIMES.jl · CPLEX", color:"--tjl", shape:"circle", filled:true},
+  {language:"TIMES.jl", solver:"HIGHS", label:"TIMES.jl · HiGHS", color:"--tjl", shape:"triangle", filled:true},
 ];
 const rtSeries = e => RT_SERIES.find(s=>s.language===e.language&&s.solver===e.solver) || {label:`${e.language} · ${e.solver}`, color:"--charcoal", shape:"square", filled:true};
 const rtToLP = e => ["read","prep","coef","generate"].every(k=>e.parts[k]!=null) ? e.parts.read+e.parts.prep+e.parts.coef+e.parts.generate : null;
@@ -640,12 +645,12 @@ function rtMark(sr, x, y, o={}){
   const col=css(sr.color), sf=css('--surface'), filled=o.filled!=null?o.filled:sr.filled, k=filled||o.faint?0:1;
   const a=o.faint?`fill="${col}" fill-opacity=".28" stroke="${col}" stroke-width="1.5"`:filled?`fill="${col}" stroke="${sf}" stroke-width="2"`:`fill="${sf}" stroke="${col}" stroke-width="3"`;
   let m=sr.shape==='circle'?`<circle cx="${x}" cy="${y}" r="${7.5-k}" ${a}/>`
-       :sr.shape==='triangle'?`<path d="M${x} ${y-9+k}L${x+9-k} ${y+6.5-k}H${x-9+k}Z" ${a}/>`
+       :sr.shape==='triangle'?`<path d="${triUp(x,y,k)}" ${a}/>`
        :`<rect x="${x-6.5+k}" y="${y-6.5+k}" width="${13-2*k}" height="${13-2*k}" ${a}/>`;
   if(o.limit) m+=`<path d="M${x} ${y-11}v-13m-5 5.5l5 -5.5l5 5.5" fill="none" stroke="${col}" stroke-width="2.5"/>`;
   return m;
 }
-const rtIcon = (sr,o) => `<svg viewBox="-10 -10 20 20" style="display:inline-block;width:20px;height:20px;vertical-align:-5px;margin-right:6px">${rtMark(sr,0,0,o)}</svg>`;
+const rtIcon = (sr,o) => `<svg viewBox="-10 -10 20 20" style="display:inline-block;width:20px;height:20px;vertical-align:-5px;margin-right:6px;overflow:visible">${rtMark(sr,0,0,o)}</svg>`;
 
 function renderRunTime(){
   const A=[], B=[];
@@ -678,8 +683,10 @@ function renderRunTime(){
     return s;
   };
   const lang=l=>RT_SERIES.find(s=>s.language===l), usedB=RT_SERIES.filter(s=>B.some(p=>p.sr===s)), notRun=RT_SERIES.filter(s=>!B.some(p=>p.sr===s));
-  const legA=[[[(x,y)=>rtMark(lang('GAMS'),x,y,{filled:true}),'GAMS'],[(x,y)=>rtMark(lang('TIMES.jl'),x,y,{filled:true}),'TIMES.jl, warm']]];
-  if(A.some(p=>p.faint)) legA.push([[(x,y)=>rtMark(lang('TIMES.jl'),x,y,{faint:true}),'TIMES.jl, first run of its Julia process: it also compiles TIMES.jl']]);
+  // panel A: one mark per language, that of the run its time comes from (the first of the language)
+  const inA=l=>(A.find(p=>p.e.language===l)||{sr:lang(l)}).sr, sv=sr=>(sr.label.split(' · ')[1]||'')+' run';
+  const legA=[[[(x,y)=>rtMark(inA('GAMS'),x,y,{filled:true}),`GAMS (${sv(inA('GAMS'))})`],[(x,y)=>rtMark(inA('TIMES.jl'),x,y,{filled:true}),`TIMES.jl, warm (${sv(inA('TIMES.jl'))})`]]];
+  if(A.some(p=>p.faint)) legA.push([[(x,y)=>rtMark(inA('TIMES.jl'),x,y,{faint:true}),'TIMES.jl, first run of its Julia process: it also compiles TIMES.jl']]);
   legA.push([[null,'A line joins the runs of one model-scenario pair: the same LP.',true]]);
   const legB=[[]]; let lw=0;
   for(const sr of usedB){ const w=52+sr.label.length*7.6; if(lw+w>PW-8&&legB[legB.length-1].length){legB.push([]); lw=0;} legB[legB.length-1].push([(x,y)=>rtMark(sr,x,y),sr.label]); lw+=w; }
@@ -712,15 +719,17 @@ function renderRunParts(id='runparts', keep=r=>r.variant==='as_run', rows=e=>tru
       if(v==null) return `<td class="nm" data-tip="${esc(tipHead+label+': '+why(e,k))}">${none(e,k)}</td>`;
       const lim=k==='solve'&&e.status==='time limit';
       return `<td class="num" style="background:color-mix(in srgb,var(--ink) ${Math.round(v/tot*30)}%,transparent)" data-tip="${esc(tipHead+`${label}: ${rtSec(v,d)} s, ${fmt(v/tot*100)}% of the ${rtSec(tot,d)} s measured${lim?' · stopped at the time limit, no optimum':''}<br>${what[gi-2]}`)}">${lim?'↑ ':''}${rtSec(v,d)}</td>`;};
-    const whole=e.wall!=null?`<td class="num sum" data-tip="${esc(tipHead+`Wall time of the whole GAMS job: ${rtSec(e.wall)} s`+(e.other!=null?`<br>${rtSec(Math.max(e.other,0))} s of it are outside the parts: the harness's dumps (${rtSec(e.harness.dumps||0)} s), GAMS's start and exit`:''))}">${rtSec(e.wall)}</td>`
-      :`<td class="nm" data-tip="${esc(tipHead+'Whole run: the batch does not time the whole run of one variant (its checks against GAMS run in between)')}">not measured</td>`;
+    const wallTip=e.language==='GAMS'?`Wall time of the whole GAMS job: ${rtSec(e.wall||0)} s`+(e.other!=null?`<br>${rtSec(Math.max(e.other,0))} s of it are outside the parts: the harness's dumps (${rtSec(e.harness.dumps||0)} s), GAMS's start and exit`:'')
+      :`Wall time of this run in the batch: ${rtSec(e.wall||0,d)} s`+(e.other!=null?`<br>${rtSec(Math.max(e.other,0),d)} s of it are outside the parts: its checks against GAMS, and writing and reading the harness's copy of the input`+(e.cold?'; as the first run of its Julia process, also loading and compiling TIMES.jl':''):'');
+    const whole=e.wall!=null?`<td class="num sum" data-tip="${esc(tipHead+wallTip)}">${rtSec(e.wall,e.language==='GAMS'?2:d)}</td>`
+      :`<td class="nm" data-tip="${esc(tipHead+(e.language==='GAMS'?'Whole run: not timed in this run':'Whole run: this batch ran before scripts/m13_gate.jl timed each run'))}">not measured</td>`;
     body+=`<tr${i===0?' class="g"':''} style="height:${rh}px">${i===0?`<td class="m" rowspan="${es.length}" style="padding-top:${(rh-16)/2}px">${rtName(r.model)}</td>`:''}<td class="s" data-tip="${esc(tipHead+`${fmt(r.cols)} variables · ${fmt(r.rows)} rows<br>${dateShort(e.date)} · ${e.version} · ${e.commit} · ${e.threads||'?'} threads`)}">${rtIcon(sr)}${sr.label}</td>`
       +RT_PARTS.slice(0,4).map(part).join('')+(lp!=null?`<td class="num sum">${rtSec(lp,d)}</td>`:`<td class="nm" data-tip="${esc(tipHead+'To the LP: '+why(e,e.parts.coef==null?'coef':'generate'))}">${none(e,e.parts.coef==null?'coef':'generate')}</td>`)+RT_PARTS.slice(4).map(part).join('')+whole+`</tr>`;});
   const th=RT_PARTS.map(p=>p[1]);
   set(id+'-sub',`Seconds per part, ${runs.every(r=>r.variant==='as_run')?'as-run variant, ':''}one row per language and solver · shading: the part's share of the run's time`);
   set(id+'-body',`<table class="rt"><thead><tr><th style="width:176px">Model and scenario</th><th style="width:150px">Run</th>${[...th.slice(0,4),'To the LP',...th.slice(4),'Whole run'].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>
 <div class="legend" style="margin-top:12px;font-size:14px"><span><b>To the LP</b> = the four parts before it</span><span>↑ stopped at its time limit without an optimum</span><span><b>not measured</b>: never timed (hover for why)</span></div>`);
-  set(id+'-foot',`The runs of slide 11 · Whole run: GAMS's wall time, with the harness's dumps · TIMES.jl's parts also read the harness's copy of the input; its checks against GAMS are not timed · TIMES.jl with CPLEX was never run · scripts/run_timing.jl`);
+  set(id+'-foot',`The runs of slide 11 · Whole run: wall time; GAMS's holds the harness's dumps, TIMES.jl's its checks against GAMS · TIMES.jl's parts also read the harness's copy of the input · TIMES.jl with CPLEX was never run · scripts/run_timing.jl`);
 }
 
 // ---- page ---------------------------------------------------------------------------------------
