@@ -3,10 +3,12 @@
 A Julia/JuMP translation of the IEA-ETSAP TIMES model generator, validated
 against the GAMS code for numerical parity.
 
-> **Status: early experiment, pre-MVP (Phase 1, milestone M1.3; M1.0 to M1.2
-> passed).** Not ready for modelling use. TIMES.jl still builds models from data exported by GAMS
-> (it cannot read a TIMES model on its own until M1.4), it has no release, and
-> its interfaces will change. For analysis, use TIMES in GAMS.
+> **Status: early experiment, pre-MVP (Phase 1; M1.0 to M1.2 passed; M1.3,
+> M1.4 and M1.5 under way).** Not ready for modelling use. TIMES.jl can now
+> read a TIMES model from its own `.run` and DD files, preprocess it, build it
+> and solve it without GAMS, but several TIMES features are not translated
+> yet, it has no release, and its interfaces will change. For analysis, use
+> TIMES in GAMS. See [Progress](#progress).
 >
 > TIMES.jl is an independent project of ESMA Ltd. It is not an official
 > IEA-ETSAP product and is not endorsed by IEA-ETSAP or the TIMES maintainers.
@@ -69,19 +71,64 @@ CC BY 4.0, IEA-ETSAP) come the same way (`TIMES.times_demo_dir()`).
 equations and coefficients as GAMS, with GAMS names kept. Ported from the
 equations outwards:
 
-| Milestone | Scope |
-| --- | --- |
-| M1.0 | Repository, CI, GAMS reference harness, comparison tool |
-| M1.1 | Variables, core + VDA equations, bounds, objective, built from GAMS-dumped data |
-| M1.2 | Coefficients (`coefmain.mod`, `coef_*.mod`) |
-| M1.3 | Preprocessing (`ppmain.mod`, `pp_*.mod`, VDA prep, REDUCE) |
-| M1.4 | GAMS-free DD and `.run` reader |
-| M1.5 | Run options (OBJ variants, MID_YEAR, DSCAUTO, VAR_UC, FIXBOH, ...) |
-| M1.6 | Reporting and Veda `.vd` output |
-| M1.7 | Phase 1 release and baseline benchmarks |
+| Milestone | Scope | Status (15 Nov 2026) |
+| --- | --- | --- |
+| M1.0 | Repository, CI, GAMS reference harness, comparison tool | passed 18 Oct |
+| M1.1 | Variables, core + VDA equations, bounds, objective, built from GAMS-dumped data | passed 21 Oct |
+| M1.2 | Coefficients (`coefmain.mod`, `coef_*.mod`) | passed 31 Oct |
+| M1.3 | Preprocessing (`ppmain.mod`, `pp_*.mod`, VDA prep, REDUCE) | translated and matching GAMS on the open test models; the gate waits until the TIMES features still refused are translated |
+| M1.4 | GAMS-free DD and `.run` reader | built and matching GAMS; the gate follows M1.3's |
+| M1.5 | Run options (OBJ variants, MID_YEAR, DSCAUTO, VAR_UC, FIXBOH, ...) | started 14 Nov: stepped (myopic) runs in review |
+| M1.6 | Reporting and Veda `.vd` output | not started |
+| M1.7 | Phase 1 release and baseline benchmarks | not started |
 
 **Phase 2 — performance.** Faster preprocessing, generation and solver
 hand-off, each change held to parity with GAMS.
+
+## Progress
+
+As of 15 Nov 2026 (`main`):
+
+- **Runs without GAMS.** [`scripts/run_dd.jl`](scripts/run_dd.jl) takes a
+  model's `.run` file and DD files, compiles them as GAMS's compile phase
+  does, runs TIMES's preprocessing and coefficients, builds the model and,
+  with `--solve`, solves it with HiGHS.
+- **Open test models.** Seven runs of five open models (TIMES_Demo demo12;
+  TIMES-NZ steady and shift; OTCGEN; OTNYC; OTUS9r reference and tax1)
+  match GAMS, with REDUCE off and as run, in the workstation batch of
+  14 Nov 2026:
+  - every preprocessing step against GAMS's dump before and after it (490 of
+    490 steps);
+  - the whole chain from the raw input to the point where GAMS builds the
+    model (14 of 14 runs);
+  - the matrix and the objective (281 of 281 checks). The largest model is
+    OTUS9r: 2.2 million rows, 2.8 million columns and 9.9 million nonzeros
+    with REDUCE off.
+- **CI.** Every pull request checks 35 runs: demo12 and crafted variants of
+  it that add features demo12 itself does not use (992 checks, all pass).
+- **Features.** The core and VDA formulations are translated. Changes 28
+  to 40 of the M1.3 plan (merged 14 Nov) added features that had been
+  refused, each checked on a crafted demo12 case: trade and storage in
+  ASHAR, ANNCOST LEV, the data of stepped (myopic) runs, exchange bounds
+  (IREBND, XBND), commodity and flow bounds as equations (BNDNET, BNDPRD,
+  FLOBND, FLOFR), linear dispatching, unit commitment by start-up type,
+  refinery blending, simulated vintages (CAPVAC) and bounds on costs
+  (BNDCST).
+- **Not translated yet.** These features stop generation with an error
+  that names the GAMS file: MACRO; the extensions (stochastic, ETL,
+  climate, ABS, ECB, IER); elastic demand; damage costs; dynamic timeslices
+  (TS_OFF); PTDF and gas grids; market-based trade; discrete unit commitment
+  (a MIP); and a few smaller ones ([`docs/m13-plan.md`](docs/m13-plan.md)).
+- **Discrepancies.** 40 places where the GAMS code and the documentation
+  disagree are logged in [`docs/discrepancies.md`](docs/discrepancies.md).
+  Three known differences between TIMES.jl
+  and GAMS are listed in [`docs/known-differences.md`](docs/known-differences.md).
+- **Dashboard.** [`docs/dashboard/index.html`](docs/dashboard/index.html),
+  opened in a browser, shows these results in slides
+  ([`docs/dashboard/README.md`](docs/dashboard/README.md)).
+
+Speed is not a Phase 1 aim; timings are recorded and compared with GAMS for
+Phase 2.
 
 ## Validation
 
@@ -103,11 +150,19 @@ learn from closed or proprietary models.
 
 ```
 src/            TIMES module (one Julia file per GAMS file, same stems)
+  dd/           the reader of .run and DD files (M1.4)
+  prep/         preprocessing (M1.3)
+  coef/         coefficients (M1.2)
+  model/        variables, equations, bounds, objective (M1.1)
+  ext/          the VDA extension and others
   reference/    reading GAMS reference dumps (Arrow) and comparing them
-reference/      GAMS harness that produces reference dumps from test models
-scripts/        m10_gate.jl: checks one reference run (M1.0 gate)
-test/           unit tests and parity tests
-docs/           GAMS-to-Julia map, discrepancies, known differences
+reference/      GAMS harness that produces reference dumps from test models;
+                crafted demo12 cases in reference/dd/
+scripts/        gates and probes (m13_gate.jl, m13_probe.jl, ...), run_dd.jl,
+                parity_report.jl
+test/           unit tests and parity tests, fixtures from open models only
+docs/           plans, GAMS-to-Julia map, discrepancies, known differences,
+                decision log, dashboard
 ```
 
 ## Origins and acknowledgements
