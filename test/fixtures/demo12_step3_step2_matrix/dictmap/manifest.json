@@ -1,0 +1,1132 @@
+{
+ "format": "timesjl-dump",
+ "format_version": 1,
+ "source": "<TIMES_Demo-demo12_step3 as_run solve run, the dictionary of the LP of step 2 (CONVERT); GAMS 54.6.1>",
+ "uels": "uels.arrow",
+ "symbols": [
+  {
+   "name": "i",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "*"
+   ],
+   "description": "Equation names",
+   "records": 1415,
+   "file": "i.arrow"
+  },
+  {
+   "name": "j",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "*"
+   ],
+   "description": "Variable names",
+   "records": 2857,
+   "file": "j.arrow"
+  },
+  {
+   "name": "EQ_OBJ_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "*"
+   ],
+   "description": "Map for equation EQ_OBJ",
+   "records": 1,
+   "file": "EQ_OBJ_EM.arrow"
+  },
+  {
+   "name": "EQ_OBJFIX_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_OBJFIX",
+   "records": 2,
+   "file": "EQ_OBJFIX_EM.arrow"
+  },
+  {
+   "name": "EQ_OBJINV_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_OBJINV",
+   "records": 2,
+   "file": "EQ_OBJINV_EM.arrow"
+  },
+  {
+   "name": "EQ_OBJSALV_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_OBJSALV",
+   "records": 2,
+   "file": "EQ_OBJSALV_EM.arrow"
+  },
+  {
+   "name": "EQ_OBJVAR_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_OBJVAR",
+   "records": 2,
+   "file": "EQ_OBJVAR_EM.arrow"
+  },
+  {
+   "name": "EQ_ACTFLO_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_ACTFLO",
+   "records": 8,
+   "file": "EQ_ACTFLO_EM.arrow"
+  },
+  {
+   "name": "EQL_ACTBND_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQL_ACTBND",
+   "records": 8,
+   "file": "EQL_ACTBND_EM.arrow"
+  },
+  {
+   "name": "EQL_CAPACT_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQL_CAPACT",
+   "records": 457,
+   "file": "EQL_CAPACT_EM.arrow"
+  },
+  {
+   "name": "EQG_COMBAL_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQG_COMBAL",
+   "records": 292,
+   "file": "EQG_COMBAL_EM.arrow"
+  },
+  {
+   "name": "EQE_COMBAL_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQE_COMBAL",
+   "records": 40,
+   "file": "EQE_COMBAL_EM.arrow"
+  },
+  {
+   "name": "EQE_COMPRD_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQE_COMPRD",
+   "records": 32,
+   "file": "EQE_COMPRD_EM.arrow"
+  },
+  {
+   "name": "EQE_CPT_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQE_CPT",
+   "records": 36,
+   "file": "EQE_CPT_EM.arrow"
+  },
+  {
+   "name": "EQG_INSHR_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQG_INSHR",
+   "records": 124,
+   "file": "EQG_INSHR_EM.arrow"
+  },
+  {
+   "name": "EQE_INSHR_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQE_INSHR",
+   "records": 66,
+   "file": "EQE_INSHR_EM.arrow"
+  },
+  {
+   "name": "EQ_IRE_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_IRE",
+   "records": 18,
+   "file": "EQ_IRE_EM.arrow"
+  },
+  {
+   "name": "EQG_OUTSHR_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQG_OUTSHR",
+   "records": 28,
+   "file": "EQG_OUTSHR_EM.arrow"
+  },
+  {
+   "name": "EQ_PEAK_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_PEAK",
+   "records": 8,
+   "file": "EQ_PEAK_EM.arrow"
+  },
+  {
+   "name": "EQ_CUMFLO_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_CUMFLO",
+   "records": 16,
+   "file": "EQ_CUMFLO_EM.arrow"
+  },
+  {
+   "name": "EQ_STGIPS_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_STGIPS",
+   "records": 11,
+   "file": "EQ_STGIPS_EM.arrow"
+  },
+  {
+   "name": "EQ_STGAUX_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_STGAUX",
+   "records": 11,
+   "file": "EQ_STGAUX_EM.arrow"
+  },
+  {
+   "name": "EQE_UCRT_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQE_UCRT",
+   "records": 4,
+   "file": "EQE_UCRT_EM.arrow"
+  },
+  {
+   "name": "EQE_UCRTS_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQE_UCRTS",
+   "records": 4,
+   "file": "EQE_UCRTS_EM.arrow"
+  },
+  {
+   "name": "EQL_BLND_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQL_BLND",
+   "records": 4,
+   "file": "EQL_BLND_EM.arrow"
+  },
+  {
+   "name": "EQG_BLND_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQG_BLND",
+   "records": 6,
+   "file": "EQG_BLND_EM.arrow"
+  },
+  {
+   "name": "EQE_BLND_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQE_BLND",
+   "records": 2,
+   "file": "EQE_BLND_EM.arrow"
+  },
+  {
+   "name": "EQN_BLND_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQN_BLND",
+   "records": 2,
+   "file": "EQN_BLND_EM.arrow"
+  },
+  {
+   "name": "EQ_CUMRET_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_CUMRET",
+   "records": 17,
+   "file": "EQ_CUMRET_EM.arrow"
+  },
+  {
+   "name": "EQL_SCAP_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQL_SCAP",
+   "records": 7,
+   "file": "EQL_SCAP_EM.arrow"
+  },
+  {
+   "name": "EQL_REFIT_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQL_REFIT",
+   "records": 13,
+   "file": "EQL_REFIT_EM.arrow"
+  },
+  {
+   "name": "EQE_ACTEFF_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQE_ACTEFF",
+   "records": 52,
+   "file": "EQE_ACTEFF_EM.arrow"
+  },
+  {
+   "name": "EQ_CAPLOAD_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_CAPLOAD",
+   "records": 8,
+   "file": "EQ_CAPLOAD_EM.arrow"
+  },
+  {
+   "name": "EQ_ACTRAMP_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_ACTRAMP",
+   "records": 8,
+   "file": "EQ_ACTRAMP_EM.arrow"
+  },
+  {
+   "name": "EQE_ACTUPS_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQE_ACTUPS",
+   "records": 8,
+   "file": "EQE_ACTUPS_EM.arrow"
+  },
+  {
+   "name": "EQL_ACTUPS_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQL_ACTUPS",
+   "records": 4,
+   "file": "EQL_ACTUPS_EM.arrow"
+  },
+  {
+   "name": "EQL_ACTUPC_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQL_ACTUPC",
+   "records": 10,
+   "file": "EQL_ACTUPC_EM.arrow"
+  },
+  {
+   "name": "EQ_ACTPL_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_ACTPL",
+   "records": 8,
+   "file": "EQ_ACTPL_EM.arrow"
+  },
+  {
+   "name": "EQ_ACTRMPC_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_ACTRMPC",
+   "records": 4,
+   "file": "EQ_ACTRMPC_EM.arrow"
+  },
+  {
+   "name": "EQ_SLSIFT_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation EQ_SLSIFT",
+   "records": 40,
+   "file": "EQ_SLSIFT_EM.arrow"
+  },
+  {
+   "name": "eq_sdlogic_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 9,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation eq_sdlogic",
+   "records": 12,
+   "file": "eq_sdlogic_EM.arrow"
+  },
+  {
+   "name": "eq_sudupt_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 9,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation eq_sudupt",
+   "records": 12,
+   "file": "eq_sudupt_EM.arrow"
+  },
+  {
+   "name": "eq_sdslant_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation eq_sdslant",
+   "records": 6,
+   "file": "eq_sdslant_EM.arrow"
+  },
+  {
+   "name": "eq_sdminon_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation eq_sdminon",
+   "records": 4,
+   "file": "eq_sdminon_EM.arrow"
+  },
+  {
+   "name": "eq_sudload_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation eq_sudload",
+   "records": 4,
+   "file": "eq_sudload_EM.arrow"
+  },
+  {
+   "name": "eq_sudtime_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 9,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation eq_sudtime",
+   "records": 8,
+   "file": "eq_sudtime_EM.arrow"
+  },
+  {
+   "name": "eq_sudpll_EM",
+   "kind": "set",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for equation eq_sudpll",
+   "records": 4,
+   "file": "eq_sudpll_EM.arrow"
+  },
+  {
+   "name": "VAR_ACT_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_ACT",
+   "records": 1293,
+   "file": "VAR_ACT_VM.arrow"
+  },
+  {
+   "name": "VAR_CAP_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_CAP",
+   "records": 36,
+   "file": "VAR_CAP_VM.arrow"
+  },
+  {
+   "name": "VAR_FLO_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_FLO",
+   "records": 263,
+   "file": "VAR_FLO_VM.arrow"
+  },
+  {
+   "name": "VAR_IRE_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 8,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_IRE",
+   "records": 280,
+   "file": "VAR_IRE_VM.arrow"
+  },
+  {
+   "name": "VAR_NCAP_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_NCAP",
+   "records": 476,
+   "file": "VAR_NCAP_VM.arrow"
+  },
+  {
+   "name": "VAR_COMNET_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_COMNET",
+   "records": 40,
+   "file": "VAR_COMNET_VM.arrow"
+  },
+  {
+   "name": "VAR_COMPRD_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_COMPRD",
+   "records": 32,
+   "file": "VAR_COMPRD_VM.arrow"
+  },
+  {
+   "name": "VAR_CUMFLO_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 6,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_CUMFLO",
+   "records": 16,
+   "file": "VAR_CUMFLO_VM.arrow"
+  },
+  {
+   "name": "VAR_SIN_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_SIN",
+   "records": 60,
+   "file": "VAR_SIN_VM.arrow"
+  },
+  {
+   "name": "VAR_SOUT_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_SOUT",
+   "records": 76,
+   "file": "VAR_SOUT_VM.arrow"
+  },
+  {
+   "name": "VAR_BLND_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_BLND",
+   "records": 36,
+   "file": "VAR_BLND_VM.arrow"
+  },
+  {
+   "name": "VAR_RCAP_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_RCAP",
+   "records": 30,
+   "file": "VAR_RCAP_VM.arrow"
+  },
+  {
+   "name": "VAR_SCAP_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_SCAP",
+   "records": 30,
+   "file": "VAR_SCAP_VM.arrow"
+  },
+  {
+   "name": "VAR_UPS_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_UPS",
+   "records": 54,
+   "file": "VAR_UPS_VM.arrow"
+  },
+  {
+   "name": "VAR_UPT_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_UPT",
+   "records": 72,
+   "file": "VAR_UPT_VM.arrow"
+  },
+  {
+   "name": "VAR_UDP_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 7,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_UDP",
+   "records": 46,
+   "file": "VAR_UDP_VM.arrow"
+  },
+  {
+   "name": "VAR_OBJ_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_OBJ",
+   "records": 8,
+   "file": "VAR_OBJ_VM.arrow"
+  },
+  {
+   "name": "OBJz_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 1,
+   "domain": [
+    "*"
+   ],
+   "description": "Map for variable OBJz",
+   "records": 1,
+   "file": "OBJz_VM.arrow"
+  },
+  {
+   "name": "VAR_UCRT_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_UCRT",
+   "records": 4,
+   "file": "VAR_UCRT_VM.arrow"
+  },
+  {
+   "name": "VAR_UCRTS_VM",
+   "kind": "set",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "*",
+    "*",
+    "*",
+    "*",
+    "*"
+   ],
+   "description": "Map for variable VAR_UCRTS",
+   "records": 4,
+   "file": "VAR_UCRTS_VM.arrow"
+  }
+ ]
+}

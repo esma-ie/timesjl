@@ -946,3 +946,16 @@ those checks, their figures and their crafted cases are not published
   test_cum_lin.jl compares the rows built from the fixture of demo12_cumc,
   with OBJ set to LIN, with GAMS's rows of demo12_cumlin (a JSON file of
   18 KB, `scripts/make_rows_fixture.jl`).
+- 15 Nov 2026: M1.5 change 7, a third stepped case. demo12_step3 is demo12
+  with TIMESTEP 20 and the DD files of the unit commitment, blending,
+  inter-period store, load shifting and refit cases, with costs on the
+  storage flows. It reaches the statements of solve.stp that the first two
+  cases do not: RVPRL (L128) and the fixes of VAR_SIN, VAR_SOUT, VAR_UPS,
+  VAR_UPT, VAR_UDP, VAR_SCAP and VAR_BLND (L203-207, L220, L233, L281).
+  Nothing was to correct; layers 1 to 3 pass per step on both variants,
+  from GAMS's input dump and from the DD files. Each of those fixes,
+  switched off in TIMES.jl, makes layer 2 of steps 2 and 3 fail, so the
+  case does check them. GAMS's own LPs show that blending stays fixed at
+  zero after the first step (L281, never lifted): D43, followed as GAMS
+  has it. CI: test_solve_stp3.jl. Not checked: L271-272 (no LP shows
+  them), L177-181 and L186-189 with REG_FIXT or UC_CAP, EQE_UCRS.

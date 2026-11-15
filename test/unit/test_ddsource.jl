@@ -96,6 +96,11 @@ end
     @testset "demo12_steplin: OBJ LIN, TIMESTEP 20" begin
         check_dd_case("TIMES_Demo-demo12_steplin", "demo12_steplin_run", "demo12_steplin_input")
     end
+    # M1.5 change 7: a stepped run with the DD files of five other crafted cases (uc.dd, blnd.dd, ips.dd,
+    # refit.dd, ls.dd)
+    @testset "demo12_step3: TIMESTEP 20, dispatching, blending, storage, retirement" begin
+        check_dd_case("TIMES_Demo-demo12_step3", "demo12_step3_run", "demo12_step3_input")
+    end
     # initmty.mod L420-432: ALTOBJ is 1 by its declaration; the OBJ and OBLONG controls of the run file
     # set it (L421 STD: 0; L422 ALT: 2; L423 LIN: 3; L432 OBLONG with ALT: -2). The run file of
     # demo12_steplin with its OBJ line replaced. GAMS's values of LIN and ALT are in the input dumps of

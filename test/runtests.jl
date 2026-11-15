@@ -175,6 +175,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "The stepped solve with OBJ LIN: the divisors of each step, coef_alt.lin L137-157 on demo12_steplin; OBJ ALT stops where GAMS divides by zero (M1.5)" begin
         include("unit/test_solve_stplin.jl")
     end
+    @testset "The stepped solve on a third case: dispatching, unit commitment, blending, storage and retirement between the steps, solve.stp L128, L203-207, L220, L232-233, L281 on demo12_step3 (M1.5)" begin
+        include("unit/test_solve_stp3.jl")
+    end
     @testset "The cumulative equations under OBJ LIN: eqcumflo.mod L21, L24, L35 and eqcumcom.mod L20, L23 against GAMS's rows of demo12_cumlin (M1.5)" begin
         include("unit/test_cum_lin.jl")
     end

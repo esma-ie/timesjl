@@ -674,3 +674,25 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_ucv/demo12_ucv.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_ucv"]
+
+# TIMES_Demo demo12 as a stepped run with the variables that the first two stepped cases do not
+# have (15 Nov 2026; M1.5 change 7, docs/m15-plan.md): TIMESTEP 20 with the default overlap (three
+# steps, 2005-2020, 2020-2030, 2050) and the DD files of five other crafted cases: demo12_uc/uc.dd
+# (dispatching and unit commitment: VAR_UPS, VAR_UPT, VAR_UDP), demo12_blnd/blnd.dd (refinery
+# blending: VAR_BLND), demo12_ips/ips.dd (an inter-period store), demo12_refit/refit.dd (retirement
+# and refits: VAR_RCAP, VAR_SCAP) and demo12_ls/ls.dd (load shifting: VAR_SIN, VAR_SOUT at
+# DAYNITE). Its own step3.dd puts costs on the storage flows, so that those of the periods already
+# solved are in the objective row of the later steps. solve.stp L128, L203-207, L220, L232-233,
+# L281. The case shows in GAMS itself that blending stays fixed at zero from the second step on
+# (docs/discrepancies.md D43).
+[[model]]
+name = "TIMES_Demo-demo12_step3"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_step3/demo12_step3.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_uc", "{crafted}/demo12_blnd", "{crafted}/demo12_ips", "{crafted}/demo12_refit", "{crafted}/demo12_ls", "{crafted}/demo12_step3"]

@@ -1,0 +1,26 @@
+* TIMES.jl crafted case demo12_step3 (reference/crafted.toml, 15 Nov 2026): costs on the flows
+* of the two storage processes that the case takes from demo12_ips (STKOIL1, an inter-period
+* store of crude oil) and demo12_ls (LSCOMELC, load shifting of commercial electricity), added
+* to TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0). FLO_COST is charged on
+* the flow into a storage process and FLO_DELIV on the flow out of it (eqobjvar.mod L88-91), so
+* VAR_SIN and VAR_SOUT of every period up to the step's horizon are in the objective row of
+* each step of the stepped run, and the fixes of the periods already solved (solve.stp
+* L203-204) show in the LP of the later steps.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER
+FLO_COST ' '/
+REG1.2005.STKOIL1.OIL.ANNUAL.MEuro05 0.02
+REG2.2005.STKOIL1.OIL.ANNUAL.MEuro05 0.02
+REG1.2005.LSCOMELC.COMELC.ANNUAL.MEuro05 0.01
+REG2.2005.LSCOMELC.COMELC.ANNUAL.MEuro05 0.01
+/
+
+PARAMETER
+FLO_DELIV ' '/
+REG1.2005.STKOIL1.OIL.ANNUAL.MEuro05 0.01
+REG2.2005.STKOIL1.OIL.ANNUAL.MEuro05 0.01
+REG1.2005.LSCOMELC.COMELC.ANNUAL.MEuro05 0.01
+REG2.2005.LSCOMELC.COMELC.ANNUAL.MEuro05 0.01
+/

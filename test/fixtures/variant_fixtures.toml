@@ -272,6 +272,23 @@ state    = "equ"
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", TIMESTEP = "20", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
 
+# Crafted case demo12_step3 (15 Nov 2026; M1.5 change 7): demo12 as a stepped run with the variables the
+# first two stepped cases do not have: dispatching and unit commitment (uc.dd: VAR_UPS, VAR_UPT, VAR_UDP),
+# refinery blending (blnd.dd: VAR_BLND), an inter-period store (ips.dd), retirement and refits (refit.dd:
+# VAR_RCAP, VAR_SCAP) and load shifting (ls.dd: VAR_SIN, VAR_SOUT at DAYNITE), with costs on the storage
+# flows (step3.dd), so that those of the periods already solved are in the LP. Preprocessing from the input
+# dump to ppm on every symbol; the steps (test/unit/test_solve_stp3.jl): the ppm -> equ step, layers 1 and 2
+# of each step against demo12_step3_step<k> and demo12_step3_step<k>_matrix, and the run to its end with
+# HiGHS, layer 3 per step.
+[[variant]]
+prefix   = "demo12_step3"
+model    = "TIMES_Demo-demo12_step3"
+variant  = "as_run"
+reduce   = true
+state    = "equ"
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", TIMESTEP = "20", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []
+
 # Crafted case demo12_bndc (14 Nov 2026): COM_BNDNET and COM_BNDPRD of ELC (tracked at DAYNITE) at
 # ANNUAL and at a season, LO, UP and FX (one FX with the value EPS), which GAMS writes as the
 # equations EQ(l)_BNDNET and EQ(l)_BNDPRD (eqbndcom.mod L16-24); one bound at the commodity's own
