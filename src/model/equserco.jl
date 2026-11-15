@@ -64,9 +64,10 @@
 # read after those changes), LEAD, M, B, MIYR_1, RTP_CPTYR, COEF_CPT,
 # NCAP_PASTI.
 
-"VAR_UC as eqmain.mod L197 leaves it: the run's value, or YES if UC_TIME/UC_UCN has data."
+"VAR_UC as eqmain.mod L197 leaves it: the run's value, or YES if UC_TIME/UC_UCN has data; YES in a stepped run (initmty.mod L446-447)."
 function var_uc(tm::TimesModel)
     uppercase(gswitch(tm, "VAR_UC", "")) == "YES" && return true
+    stepped(tm) && return true                                                  # $IF SET STEPPED $SETGLOBAL VAR_UC YES
     return !isempty(gparam_opt(tm.data, "UC_TIME", 3)) || !isempty(gparam_opt(tm.data, "UC_UCN", 5))
 end
 

@@ -842,3 +842,20 @@ those checks, their figures and their crafted cases are not published
   the solve run's sizes, and HiGHS on each step's MPS file gives the step's
   objective. No Julia source changes; a stepped run is still refused at
   model generation until changes 2 to 4 of the plan.
+- 14 Nov 2026: M1.5 change 2, the partition and the preparation of each step
+  of a stepped run: solve.stp L9-26, L43-57, L69-107, L111-196, L217,
+  L222-227, L288-289 and L295-319, clearsol.stp L8-10, the STP calls of
+  coef_alt.lin and eqobsalv.mod, and the data statements of bnd_ucw.mod,
+  bnd_cum.mod and bndmain.mod (second argument 1) that run in each step
+  (`src/model/solve_stp.jl`: `stp_init!`, `stp_step_prep!`, `stp_next!`). The
+  levels and marginals GAMS reads between two steps are kept in a point
+  store (`StpPoint`). Layer 1 per step on demo12_step, both variants, in
+  GAMS's order and on GAMS's own point of the step before: 957 sets and
+  parameters in each of the three steps, none differs. CI: test_solve_stp.jl
+  on three step fixtures (what differs from the `equ` fixture, about 1 MB).
+  VAR_UC is YES in a stepped run (initmty.mod L446-447). Refused in a stepped
+  run: FIXBOH, STAGES, SPINES, SENSIS, CLI, TM_HSX, and the divisors of
+  coef_alt.lin STP under OBJ ALT or LIN (L137-157) until a crafted case
+  reaches them. Branches demo12_step does not reach are listed in
+  docs/m15-plan.md, "Change 2 as built". Model generation still refuses a
+  stepped run until changes 3 and 4.

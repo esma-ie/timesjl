@@ -27,7 +27,7 @@ qack_prep_symbols(tm) = ["NCAP_BND", "CAP_BND", "UC_TS_SUM", "UC_RHS", "UC_RHSR"
                          "NCAP_COST", "NCAP_FOM", "ACT_COST", "FLO_TAX", "FLO_SUB", "FLO_COST", "FLO_DELIV"]
 
 """
-    bnd_data!(tm) -> tm
+    bnd_data!(tm; cum=true) -> tm
 
 The data statements of bndmain.mod and its includes (the bounds themselves are `bndmain.jl`):
 
@@ -50,10 +50,14 @@ The data statements of bndmain.mod and its includes (the bounds themselves are `
 with an 'N' record a second pass would not leave the data as it is (bndmain.jl takes the bounds
 from the stored tables).
 
+`cum = false` is the call at the end of a step of a stepped run (solve.stp L319,
+`bndmain.mod mod 1`): with %2 = 1 the file skips bnd_cum.mod (L64) and the \$CLEAR of L15, and
+runs every other statement again (L51 on the CAP_BND the step has relaxed).
+
 GAMS: bndmain.mod L15-79, bnd_flo.mod L16-24, bnd_stg.mod L17-27, bnd_cum.mod L12-20 and L27-38,
-v4.9.7.
+bnd_ucw.mod L13-21, bnd_ucv.mod L35, v4.9.7.
 """
-function bnd_data!(tm::TimesModel)
+function bnd_data!(tm::TimesModel; cum::Bool=true)
     d = tm.data
     S(name, n) = gset_opt(d, name, n)
     P(name, n) = gparam_opt(d, name, n)
@@ -114,30 +118,67 @@ function bnd_data!(tm::TimesModel)
         gassign!(cap_bnd, (r, t, p, "LO"), gmin(gv(cap_bnd, (r, t, p, "LO")), gv(cap_bnd, (r, t, p, "UP"))))
     end
     gput!(tm, "CAP_BND", cap_bnd)
-    # bnd_cum.mod L12-20 and L27-38: FLO_CUM, COM_CUM and RC_CUMCOM as the statements before the bounds leave
-    # them (`bnd_cum_flo`, `bnd_cum_com`, bndmain.jl); `bnd_cum!` then reads the bounds from them as stored
+    # L64: $IF %2==0 $BATINCLUDE bnd_cum.%1 COM_VAR
+    cum && bnd_cum_data!(tm)
+    # L69: $IF %VAR_UC%==YES $BATINCLUDE bnd_ucw.%1 %SWT%
+    var_uc(tm) && bnd_ucw_data!(tm)
+    # L73: UC_TS_SUM(R,UC_N(OBV),S) = NO
+    obv = Set(k[1] for k in S("OBV", 1))
+    gput!(tm, "UC_TS_SUM", filter(k -> !(k[2] in obv), gmembers(tm, "UC_TS_SUM", 3)))
+    return tm
+end
+
+"""
+    bnd_cum_data!(tm) -> tm
+
+The data statements of bnd_cum.mod: FLO_CUM, COM_CUM and RC_CUMCOM as the statements before the
+bounds leave them (`bnd_cum_flo`, `bnd_cum_com`, bndmain.jl); `bnd_cum!` then reads the bounds
+from them as stored. bndmain.mod L64 includes the file once, before the first solve; in a stepped
+run solve.stp L227 includes it again in every step, on the step's MIYR_VL and FIL.
+
+GAMS: bnd_cum.mod L12-20 and L27-38, v4.9.7.
+"""
+function bnd_cum_data!(tm::TimesModel)
+    d = tm.data
     stored(tab) = (vals = Dict{keytype(tab),Float64}(); foreach(((k, x),) -> gassign!(vals, k, x), tab); vals)
     Reference.has_symbol(d.dump, "FLO_CUM") && gput!(tm, "FLO_CUM", stored(bnd_cum_flo(tm)))
     if Reference.has_symbol(d.dump, "COM_CUM")
         ctab, rc_cumcom = bnd_cum_com(tm)
         gput!(tm, "COM_CUM", stored(ctab)); gput!(tm, "RC_CUMCOM", rc_cumcom)
     end
-    # bnd_ucw.mod L13 (VAR_UC YES): CNT=0; bnd_ucv.mod L35, each UC right-hand side:
-    # %5(...,'UP')$((NOT %5(...,'UP'))$%5(...,'N')) = INF
-    if var_uc(tm)
-        gput_scalar!(tm, "CNT", 0.0)
-        for (name, n) in (("UC_RHS", 2), ("UC_RHSR", 3), ("UC_RHST", 3), ("UC_RHSRT", 4), ("UC_RHSTS", 4), ("UC_RHSRTS", 5))
-            vals = gvalues(tm, name, n)
-            for k in [k for k in keys(vals) if k[end] == "N"]
-                ku = (k[1:end-1]..., "UP")
-                haskey(vals, ku) || (vals[ku] = Inf)
-            end
-            Reference.has_symbol(d.dump, name) && gput!(tm, name, vals)
+    return tm
+end
+
+"""
+    bnd_ucw_data!(tm) -> tm
+
+The data statements of bnd_ucw.mod (VAR_UC YES; the bounds of the slack variables are `bnd_ucw!`):
+
+    CNT=0; UC_T_EACH(UC_T_SUCC) = YES;                                                              (L13)
+    [six bnd_ucv.mod includes, each UC right-hand side %5:
+     %5(...,'UP')\$((NOT %5(...,'UP'))\$%5(...,'N')) = INF;                                         (bnd_ucv.mod L35)]
+    UC_T_EACH(UC_T_SUCC) = NO;                                                                      (L21)
+
+L13 and L21 together take every member of UC_T_SUCC out of UC_T_EACH. Before the first solve the
+two are disjoint (ppmain.mod L1175); inside a step of a stepped run (solve.stp L193) solve.stp
+L147 and L151 have changed UC_T_SUCC.
+
+GAMS: bnd_ucw.mod L13-21, bnd_ucv.mod L35, v4.9.7.
+"""
+function bnd_ucw_data!(tm::TimesModel)
+    d = tm.data
+    gput_scalar!(tm, "CNT", 0.0)
+    for (name, n) in (("UC_RHS", 2), ("UC_RHSR", 3), ("UC_RHST", 3), ("UC_RHSRT", 4), ("UC_RHSTS", 4), ("UC_RHSRTS", 5))
+        vals = gvalues(tm, name, n)
+        for k in [k for k in keys(vals) if k[end] == "N"]
+            ku = (k[1:end-1]..., "UP")
+            haskey(vals, ku) || (vals[ku] = Inf)
         end
+        Reference.has_symbol(d.dump, name) && gput!(tm, name, vals)
     end
-    # L73: UC_TS_SUM(R,UC_N(OBV),S) = NO
-    obv = Set(k[1] for k in S("OBV", 1))
-    gput!(tm, "UC_TS_SUM", filter(k -> !(k[2] in obv), gmembers(tm, "UC_TS_SUM", 3)))
+    succ = gset_opt(d, "UC_T_SUCC", 3)
+    each = gmembers(tm, "UC_T_EACH", 3)
+    any(k -> k in succ, each) && gput!(tm, "UC_T_EACH", filter(k -> !(k in succ), each))
     return tm
 end
 
