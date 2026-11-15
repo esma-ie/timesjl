@@ -119,6 +119,16 @@ On 15 Nov 2026 James merged #126 to #137 (twelve pull requests): their built-in 
 
 ## Log by pull request
 
+### #140 M1.3 (42): the user-constraint attributes ANNUL, INVCOST, INVTAX, INVSUB (uc_ncap.mod L39); crafted case demo12_ucann (open)
+
+Built from James's answer to #123, decision 4 (15 Nov 2026). Logged here because #140 does not touch this file.
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the new crafted case demo12_ucann (demo12 + ucann.dd, CC BY 4.0) with one public CI fixture (as run: the pre-solve dump, the CONVERT matrix, the solutions; about 4 MB), no variant or DD-compile fixture? | Recommended: yes. Built in. | open |
+| 2 | The CST_ANNC term is compiled in only where uc_ncap.mod's %3 and %6 are written differently (`$IF NOT %3==%6`): the RHS direction of a dynamic constraint (equserco.mod L87). Elsewhere the attributes add nothing, whatever the values of the two periods. Translated as written. | Recommended: yes. Built in. | open |
+| 3 | ONLINE (uc_cap.mod L36-42) stays refused, the last refused UC_ATTR attribute; its own change. | Nothing to answer. | logged |
+
 ### #139 Dashboard: TIMES.jl in Dark green on light slides and Dark yellow on dark slides; GAMS orange (open)
 
 Built from James's answer to #127, decision 2 (15 Nov 2026). Its list is logged here because the dashboard branch does not touch this file.
