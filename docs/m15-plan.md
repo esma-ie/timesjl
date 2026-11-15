@@ -149,7 +149,7 @@ file gives the step's objective.
 | 4 | Done, 15 Nov 2026 ("Change 4 as built", below). The driver `solve_stepped!` (the loop, the solve, the levels kept between steps as SOLVEOPT=MERGE does), `stp_merge_point!`, `stp_finish!`, in `src/model/solve_stp.jl`; the two refusals removed | solve.stp L109, L285-294, L321, L325-329; solve.mod L12-41; err_stat.mod L63-69 | layer 3 per step and at the end, 1e-6: TIMES.jl with HiGHS against GAMS/CPLEX and GAMS/HiGHS, with GAMS's levels between the steps (and layers 1 and 2 again) and on TIMES.jl's own levels. demo12_step, both variants: the objective of each of the three steps equals GAMS's (relative difference under 3e-12). The step fixtures in CI; `scripts/m13_gate.jl` runs the stepped case to the end |
 | 5 | Done, 15 Nov 2026 ("Change 5 as built", below). The second crafted case, demo12_step2 (TIMESTEP 20, G_OVERLAP 15; CAP_BND; user constraints summed over the periods and over the regions, dynamic ones; COM_CUM, FLO_CUM, REG_CUMCST). One statement corrected: the lead of the N record in a second pass of bnd_cum.mod (`bnd_cum_flo`, `bnd_cum_com`). Harness 0.3.5 | solve.stp L44, L69-98, L132-196, L217-230, L279, L305; bnd_cum.mod L13-14, L19-20, L27-28, L34-35; bnd_ucv.mod L24-25 | layers 1 to 3 per step, both variants, from GAMS's input dump and from the DD files: all pass; CI: test_solve_stp2.jl on the fixtures of the case |
 | 6 | Done, 15 Nov 2026 ("Change 6 as built", below). A stepped run with OBJ ALT or LIN: the divisors of coef_alt.lin STP (`coef_alt_stp!`), with the crafted cases demo12_steplin, demo12_steplino, demo12_stepalt1, demo12_lin and demo12_alt. GAMS's rounding of `**` and POWER in `gpow` and `gpower` (G61). The DD reader sets ALTOBJ. OBJ ALT with several steps fails in GAMS itself (D42) | solve.stp L104-107, L124; coef_alt.lin L137-157; initmty.mod L421-423, L432 | layers 1 to 3 per step, both variants, from GAMS's input dump and from the DD files: all pass; CI: test_solve_stplin.jl on the fixtures of demo12_steplin |
-| 7 | Stepped variants of the blending case and of the unit commitment case (discrepancies.md U7; VAR_UPS, VAR_UPT, VAR_UDP) | solve.stp L205-207, L232-233, L281 | layers 1 to 3 per step |
+| 7 | Done, 15 Nov 2026 ("Change 7 as built", below). The third crafted case, demo12_step3 (TIMESTEP 20; dispatching and unit commitment, blending, an inter-period store, load shifting, retirement and refits, costs on the storage flows). No change to the translation. GAMS itself keeps blending fixed at zero from the second step on (D43; that part of U7 is settled) | solve.stp L128, L203-207, L220, L232-233, L281 | layers 1 to 3 per step, both variants, from GAMS's input dump and from the DD files: all pass; CI: test_solve_stp3.jl on the fixtures of the case |
 
 In change 3 a fixed variable stays a column: GAMS's matrix has the BACKWARD
 and FORWARD variables as columns with equal lower and upper bounds, and the
@@ -354,7 +354,8 @@ restart files are L232, L233 and L281; bndmain.mod does not touch VAR_BLND).
 So in a stepped run with blending, VAR_BLND would stay fixed at zero when a
 pending period becomes a step's own. Translated as written; no open model
 has blending in a stepped run, so it is not checked against GAMS
-(docs/discrepancies.md, U7).
+(docs/discrepancies.md, U7). Checked since on demo12_step3: GAMS does keep
+the fix (D43; "Change 7 as built", below).
 
 The run as a whole is still refused: `untranslated_families` notes
 "(stepped run)" for the run's model, not for the model of a step, until the
@@ -719,6 +720,132 @@ rows of demo12_cumlin (`test/fixtures/demo12_cumlin_cumrows.json`, 18 KB,
 written by `scripts/make_rows_fixture.jl`). Not reached: the exchange
 branch of EQ_CUMFLO (L29-30; the same weight).
 
+## Change 7 as built (15 Nov 2026)
+
+The third crafted stepped case, **demo12_step3** (`reference/dd/`,
+`reference/crafted.toml`): demo12 with TIMESTEP 20 and the default overlap
+(three steps: 2005-2020; 2020 and 2030; 2050), the DD files of five other
+crafted cases and one of its own. It brings the variables that demo12_step
+and demo12_step2 do not have:
+
+| DD file | What it adds | Statements of solve.stp |
+| --- | --- | --- |
+| `uc.dd` (demo12_uc) | dispatching and unit commitment: VAR_UPS, VAR_UPT, VAR_UDP | L205-207 |
+| `blnd.dd` (demo12_blnd) | refinery blending: VAR_BLND | L232-233, L281 |
+| `ips.dd` (demo12_ips), `ls.dd` (demo12_ls) | an inter-period store and load shifting: VAR_SIN, VAR_SOUT | L203-204, L271-272 |
+| `refit.dd` (demo12_refit) | retirement and refits: VAR_RCAP, VAR_SCAP, RVPRL | L128, L220 |
+| `step3.dd` (new) | FLO_COST and FLO_DELIV on the flows of the two storage processes | L203-204 |
+
+`step3.dd` is there for one reason. A storage flow of a period already
+solved is in no row of a later step unless it has a cost: the objective row
+then holds VAR_SIN and VAR_SOUT of every period up to the step's horizon
+(eqobjvar.mod L88-91). Without the costs GAMS fixes those columns (L203-204)
+and CONVERT writes none of them, so the fix could not be compared.
+
+**Nothing was to correct**: the translation of change 3 is unchanged.
+
+Checked on the workstation, GAMS 54.6.1 with CPLEX and HiGHS, REDUCE off
+and as run:
+
+- `scripts/m13_gate.jl` from GAMS's input dump: 36 checks, all pass. From
+  the DD files: 38 checks, all pass. Per step: layer 1 on every set and
+  parameter of the step's dump (958 symbols), layer 2 against the LP GAMS
+  solved, each optimum in the other LP, and the objective.
+- The LPs, rows, columns and nonzeros per step, equal to GAMS's: 6,635,
+  7,485, 23,813; 3,297, 5,003, 14,176; 1,513, 3,685, 7,850 with REDUCE
+  off; 2,867, 3,927, 15,165; 1,415, 2,857, 9,424; 649, 2,435, 5,620 as run.
+- The objectives of the three steps, GAMS/CPLEX: 12,331,414.7759,
+  20,235,475.8098 and 23,870,710.7256. TIMES.jl with HiGHS on its own
+  levels: relative differences 2.8e-13, 9.1e-13 and 3.8e-13; the last one
+  also equals GAMS/HiGHS's.
+
+**What the case reaches**, counted in the LP GAMS solved in each step (the
+counts are the same with REDUCE off and as run). Each cell gives the
+columns of the variable, those fixed at zero, and those fixed at another
+value:
+
+| Variable | Step 1 | Step 2 | Step 3 |
+| --- | --- | --- | --- |
+| VAR_UPS | 168; 0; 0 | 54; 11; 1 | 16; 15; 1 |
+| VAR_UPT | 72; 0; 0 | 72; 54; 0 | 72; 72; 0 |
+| VAR_UDP | 88; 0; 0 | 46; 24; 0 | 32; 32; 0 |
+| VAR_SCAP | 27; 1; 0 | 30; 4; 4 | 31; 13; 8 |
+| VAR_RCAP | 29; 1; 0 | 30; 1; 0 | 22; 2; 0 |
+| VAR_SIN | 46; 0; 0 | 60; 33; 0 | 73; 60; 0 |
+| VAR_SOUT | 78; 0; 0 | 76; 31; 2 | 81; 58; 2 |
+| VAR_BLND | 36; 0; 0 | 36; 26; 1 | 39; 38; 1 |
+
+The rows of the equation families the first two cases have none of, in
+steps 1, 2 and 3: EQL_BLND 7, 4, 2; EQG_BLND 8, 6, 3; EQE_BLND 3, 2, 1;
+EQ_STGIPS 16, 11, 5; EQ_STGAUX 14, 11, 5; EQ_SLSIFT 80, 40, 20; EQL_REFIT
+12, 13, 5; EQ_CUMRET 17 in each; EQL_SCAP 6, 7, 7; and in steps 1 and 2
+EQ_ACTRAMP 32, 8; EQL_ACTUPS 16, 4; EQE_ACTUPS 32, 8; EQ_CAPLOAD 32, 8.
+RVPRL (L128) is recomputed with the vintages of the step: 5 of its 8
+records differ from the state after eqmain.mod in step 1 and 3 in step 2
+(layer 1 of each step).
+
+**Does the case really check each statement?** Each fix statement was
+switched off in turn in TIMES.jl, and layer 2 of the three steps repeated
+with GAMS's levels (a scratch script, not in the repository):
+
+| Statement switched off | solve.stp | Layer 2 of steps 1, 2, 3 |
+| --- | --- | --- |
+| none | | pass, pass, pass |
+| VAR_SIN of the periods already solved, fixed at its level | L203 | pass, FAIL (33 column bounds), FAIL (60) |
+| VAR_SOUT, the same | L204 | pass, FAIL (33), FAIL (60) |
+| VAR_UPS, the same | L205 | pass, FAIL (12), FAIL (16) |
+| VAR_UPT, the same | L206 | pass, FAIL (54), FAIL (72) |
+| VAR_UDP, the same | L207 | pass, FAIL (24), FAIL (32) |
+| VAR_SCAP, the same | L220 | pass, FAIL (7), FAIL (20) |
+| VAR_BLND, the same | L233 | pass, FAIL (18), FAIL (24) |
+| VAR_BLND of the pending periods, fixed at zero | L281 | pass, FAIL (9), FAIL (9) |
+| VAR_SIN and VAR_SOUT of the pending periods, fixed at zero | L271-272 | pass, pass, pass |
+
+So the case checks L203-207, L220, L233 and L281. It does not check
+L271-272, and no LP can: a pending period has no column in the LP of its
+step, and bndmain.mod, included again after every step (L319), frees the
+storage flows before the period is solved. L232 sets levels, a starting
+point that an LP does not show.
+
+**Blending stays fixed at zero after the first step, in GAMS itself (D43).**
+Change 3 flagged that L281 fixes VAR_BLND of the pending periods at zero
+and that no statement lifts the fix (docs/discrepancies.md, U7). The LPs
+GAMS solved for demo12_step3 show it:
+
+- Step 1 (2005-2020): the 36 VAR_BLND columns are free; 2030 and 2050 have
+  none.
+- Step 2 (2020, 2030): the nine columns of 2020, solved again, are free.
+  The nine of 2030, the step's new period, are fixed at zero. The periods
+  already solved are fixed at their levels (L233): all zero but
+  `VAR_BLND(REG1,2010,TRAGSL,BIO)`, fixed at 1209.08.
+- Step 3 (2050): the nine columns of 2050, the step's only period, are
+  fixed at zero; so are those of 2020 and 2030.
+
+TIMES.jl gives the same LPs (layer 2), so there is no known difference:
+the translation follows the code. It looks like a fault of v4.9.7: every
+other variable that L268-279 fix is free again when its period is solved.
+A report to ETSAP needs James's yes (docs/decisions.md, Open decisions).
+
+CI: `test/unit/test_solve_stp3.jl` (109 tests) on the fixtures of the case
+as run (`demo12_step3_input`, `_ppm`, `_equ`, and one data and one matrix
+fixture per step; about 10 MB): the chain from GAMS's ppm dump, layers 1
+and 2 per step, the counts of the two tables above in TIMES.jl's LP and in
+GAMS's, the columns of D43, and `solve_stepped!` with HiGHS to the end of
+the run (layer 3 per step). `test_ddsource.jl` compiles the case from its
+DD files and compares the result with GAMS's input dump.
+
+Flagged:
+
+- **Not reached by an open stepped case**, translated as written: the
+  copy-back of L177 and L180-181 and L186-189 (regions in REG_FIXT only);
+  L178-179 (a user constraint summed over the regions with a UC_CAP
+  coefficient); EQE_UCRS; and L271-272, which no LP shows (above). TODO
+  for a later release: a case for L178-179 and for EQE_UCRS.
+- **One value each**: one blending level and one VAR_UPS level are fixed
+  at a value that is not zero; two of VAR_SOUT and eight of VAR_SCAP.
+- Not translated, as before: VAR_ELAST (L211, L276) and VAR_DAM (L212)
+  with their refused features, FIXBOH and REG_FIXT, the %SOW% forms.
+
 ## What demo12_step reaches, and what it does not
 
 Reached (records in the dump of step 2): user constraints by region and
@@ -729,7 +856,7 @@ and RTC_PRD 12; trade between the two regions; the salvage preparation
 (OBJ_LIFE 674, OBJSCC 107).
 
 Not reached by demo12_step, translated as GAMS has them. The last column
-is the state after change 6 (15 Nov 2026):
+is the state after change 7 (15 Nov 2026):
 
 | Branch | Lines of solve.stp | Checked against GAMS? |
 | --- | --- | --- |
@@ -741,8 +868,10 @@ is the state after change 6 (15 Nov 2026):
 | user constraints summed over regions (UC_R_SUM) and their right-hand sides | 141-144, 157, 178-179 | yes for L141-144, L157-176: demo12_step2; no for the copy-back of L178-179 (needs such a constraint with a UC_CAP coefficient) |
 | COM_CUM (VAR_CUMCOM) | 186-189, 222-230 | yes for L222-230: demo12_step2; L186-189 are REG_FIXT only |
 | REG_CUMCST | 196 | yes: demo12_step2 |
-| VAR_UPS, VAR_UPT, VAR_UDP (dispatching, unit commitment), VAR_SCAP (retirement) (translated in change 3, unchecked) | 205-207, 220 | no: change 7, a stepped variant of demo12_uc |
-| blending (translated in change 3, unchecked: U7), elastic demand, damage (refused) | 211-212, 232-233, 276, 281 | no: blending in change 7; the others with those features |
+| the fixes of storage flows (VAR_SIN, VAR_SOUT) | 203-204, 271-272 | yes for L203-204: demo12_step3; L271-272 show in no LP ("Change 7 as built") |
+| VAR_UPS, VAR_UPT, VAR_UDP (dispatching, unit commitment), VAR_SCAP (retirement), RVPRL | 128, 205-207, 220 | yes: demo12_step3 |
+| blending | 232-233, 281 | yes: demo12_step3; GAMS keeps blending fixed at zero after the first step (D43) |
+| elastic demand, damage (refused) | 211-212, 276 | no: with those features |
 | FIXBOH and REG_FIXT | 46-49, 158, 177, 180-181, 186-189, 234-264, 315-317 | no: see "Flagged" |
 
 ## Flagged

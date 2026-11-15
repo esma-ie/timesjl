@@ -181,8 +181,9 @@ Notes.
   fixes the blending of the periods already solved at their levels.
 - L281 fixes the blending of the pending periods at zero, and no statement
   resets a bound of VAR_BLND: it stays fixed when those periods become the
-  periods of a later step. Translated as written and flagged
-  (docs/m15-plan.md, "Change 3 as built").
+  periods of a later step. GAMS does the same: in the LPs it solves for
+  demo12_step3, blending is free in the periods of the first step only
+  (docs/discrepancies.md, D43; docs/m15-plan.md, "Change 7 as built").
 
 GAMS: solve.stp L193, L199-233, L267-281; bnd_ucw.mod with bnd_ucv.mod;
 bnd_cum.mod L23-24, L39-40, L44-48, v4.9.7.
