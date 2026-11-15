@@ -17,16 +17,24 @@
 # solve.stp L193-233, L267-281, L319 with bndmain.mod): in the same loop, the LP of each step
 # (`stp_model`, `generate!`) against the LP GAMS solved in that step (steps/<k>/matrix, CONVERT)
 # at 1e-9: rows, columns, coefficients, right-hand sides and bounds. The bounds of step k+1 fix
-# the periods of step k at GAMS's levels, loaded from the step's fixture. The run as a whole is
-# still refused (test_stepped.jl) until the loop with the SOLVE, change 4.
+# the periods of step k at GAMS's levels, loaded from the step's fixture.
+#
+# Change 4 (the loop with the SOLVE, solve.stp L109, L285-294, L321, L325-329; solve.mod L12-41):
+# `solve_stepped!` with HiGHS runs demo12_step to its end, twice. With GAMS's levels loaded between
+# the steps, the LP of each step is GAMS's (layer 2 again) and its optimum is compared with
+# GAMS/CPLEX's objective of that step (the step fixture's manifest, "tjl_step_solve") at 1e-6,
+# HiGHS's optimum evaluated in GAMS's LP. On TIMES.jl's own levels, each step's objective against
+# GAMS/CPLEX's and the last against every GAMS solver's final objective, at 1e-6. GAMS's optimum
+# evaluated in TIMES.jl's LP needs every level of the step (scripts/m13_gate.jl, on the reference).
 
 using TIMES: TimesModel, DumpData, layer1, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!,
              prepret_decl!, eqobjinv_prep!, eqobjfix_prep!, eqobsalv_prep!, eqmain_prep!, bnd_data!, pp_qack_data!,
              pp_clean!, stp_init!, stp_step_prep!, stp_next!, stp_load_point!, stp_level, stp_marginal, _stp_fx!,
              gscalar, gmembers, gvalues, gput_scalar!, gput!, gset, var_uc, UnportedError,
-             stp_model, stp_is_step, stp_bounds, bnd_ucw!, BoundTable, bounds, generate!, untranslated_families
-using TIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp
-import TOML
+             stp_model, stp_is_step, stp_bounds, bnd_ucw!, BoundTable, bounds, generate!, untranslated_families,
+             solve_stepped!, stp_merge_point!, stp_finish!, stp_unported, stp_point
+using TIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp, evaluate_point, jump_name_key
+import TOML, JSON, JuMP, HiGHS
 
 @testset "solve.stp: the steps of demo12_step" begin
     p = "demo12_step"
@@ -50,7 +58,16 @@ import TOML
         for extra in ("FIXBOH" => "2010", "STAGES" => "YES", "SPINES" => "YES", "SENSIS" => "YES", "CLI" => "YES")
             tmx = TimesModel(joinpath(FIXTURES, p * "_ppm"); reduce=vx["reduce"], switches=merge(sw, Dict(extra)))
             @test_throws UnportedError stp_init!(tmx)
+            @test length(stp_unported(tmx)) == 1 && "(stepped run)" in [x.family for x in untranslated_families(tmx)]
+            @test_throws UnportedError solve_stepped!(tmx, HiGHS.Optimizer)
         end
+        # OBJ ALT or LIN (LINFLO): the divisors of coef_alt.lin L137-157 in a stepped run are not translated
+        @test [x[1] for x in stp_unported(TimesModel(joinpath(FIXTURES, p * "_ppm"); switches=merge(sw, Dict("OBJ" => "LIN"))))] ==
+              ["coef_alt.lin L137-157"]
+        @test isempty(stp_unported(chain(sw))) && isempty(stp_unported(plain))
+        @test_throws ArgumentError solve_stepped!(plain, HiGHS.Optimizer)       # not a stepped run
+        @test_throws ArgumentError stp_finish!(plain)
+        @test_throws ArgumentError generate!(chain(sw))                         # the run as a whole has no single model
     end
 
     @testset "FX bounds copied to LO and UP (solve.stp L69-75)" begin
@@ -103,7 +120,7 @@ import TOML
             # --- change 3: the LP of the step, layer 2 ---
             st = stp_model(tm)
             @test stp_is_step(st) && !stp_is_step(tm) && st.data === tm.data
-            @test isempty(untranslated_families(st)) && !isempty(untranslated_families(tm))
+            @test isempty(untranslated_families(st)) && isempty(untranslated_families(tm))
             generate!(st)
             mdir = joinpath(FIXTURES, p * "_step$(k)_matrix")
             lp = canonical_from_jump(st.model)
@@ -149,6 +166,90 @@ import TOML
         @test length(gmembers(tm, "UC_T_EACH", 3)) == 24                        # L314: restored from STP_UCT
         @test issetequal(gmembers(tm, "MODLYEAR", 1), gset(equ, "MODLYEAR").keys)   # L311: V(T) = YES
         @test_throws ArgumentError stp_step_prep!(tm)                           # no step is left
+    end
+
+    # --- change 4: the loop with the SOLVE ---
+    @testset "solve_stepped!: the run to its end, HiGHS ($(own ? "TIMES.jl's own levels" : "GAMS's levels") between the steps)" for own in (false, true)
+        gams = [JSON.parsefile(joinpath(FIXTURES, p * "_step$k", "manifest.json"))["tjl_step_solve"] for k in 1:3]
+        rel(a, b) = abs(a - b) / max(1.0, abs(b))
+        tmx = chain(vx["switches"])
+        seen = Int[]
+        hook = function (tmx, st, info)
+            k = info.step
+            push!(seen, k)
+            @test stp_is_step(st) && JuMP.termination_status(st.model) == JuMP.OPTIMAL
+            # L286, SOLVEOPT=MERGE: the point of the run holds the levels of the step's model
+            fam = st.vars.families["VAR_ACT"]
+            act = stp_level(tmx, "VAR_ACT", 5)
+            @test !isempty(fam.keys) && all(get(act, key, 0.0) == JuMP.value(fam.refs[key]) for key in fam.keys)
+            @test !any(==(0), values(act))                                      # a zero level is no record
+            if k == 1
+                stp_level(tmx, "VAR_TEST", 1)[("X",)] = 4.0                     # a variable no later model holds
+            else
+                @test stp_level(tmx, "VAR_TEST", 1) == Dict(("X",) => 4.0)      # keeps its level
+            end
+            own && return
+            # GAMS's levels between the steps: the LP of each step is the LP GAMS solved (layer 2) ...
+            mdir = joinpath(FIXTURES, p * "_step$(k)_matrix")
+            ref = canonical_from_dump(joinpath(mdir, "matrix"), joinpath(mdir, "dictmap"))
+            c = compare_lp(canonical_from_jump(st.model), ref)
+            ispass(c) || (println(p, " step $k, layer 2 in the run: ", c); foreach(e -> println("   ", e), c.examples))
+            @test ispass(c)
+            # ... and HiGHS's optimum is feasible in it at 1e-6, with GAMS/CPLEX's objective (layer 3)
+            e = evaluate_point(ref, Dict(jump_name_key(JuMP.name(v)) => JuMP.value(v) for v in JuMP.all_variables(st.model)))
+            @test e.feasible && isempty(e.missing_columns) && rel(e.objective, gams[k]["objective"]) <= 1e-6
+            stp_load_point!(tmx, DumpData(joinpath(FIXTURES, p * "_step$k")))
+        end
+        # `attributes` are the solver's options. Not "threads" here: HiGHS fixes its thread count at the first
+        # solve of a process and ends a later solve that asks for another count with OTHER_ERROR.
+        steps = solve_stepped!(tmx, HiGHS.Optimizer; attributes=("time_limit" => 600.0,), step_hook=hook)
+        @test seen == [1, 2, 3] && tmx.cache["STP_STEPS"] === steps
+        @test [s.periods for s in steps] == [x[1] for x in expect]
+        @test [(s.rows, s.columns) for s in steps] == [(g["rows"], g["columns"]) for g in gams]
+        @test all(s.status == "OPTIMAL" for s in steps)
+        # layer 3 per step, 1e-6: objZ of each step against GAMS/CPLEX's of that step
+        for k in 1:3
+            rel(steps[k].objective, gams[k]["objective"]) <= 1e-6 ||
+                println(p, " step $k, objective: ", steps[k].objective, " vs GAMS/CPLEX ", gams[k]["objective"])
+            @test rel(steps[k].objective, gams[k]["objective"]) <= 1e-6
+        end
+        # ... and at the end, against the final objective of every GAMS solver (CPLEX, HiGHS)
+        fin = gams[3]["final_objective"]
+        @test Set(keys(fin)) == Set(["CPLEX", "HIGHS"]) && all(rel(steps[3].objective, x) <= 1e-6 for x in values(fin))
+        @test [g["model_status"] for g in gams] == [1, 1, 1]
+        # after the loop (L303-314, L325-329)
+        @test isempty(gmembers(tmx, "SUBT", 1)) && gscalar(tmx, "YR_V1") == Inf
+        ncap = stp_level(tmx, "VAR_NCAP", 3)
+        @test !isempty(ncap) && !any(==(0), values(ncap))                       # L325: no EPS level is left
+        fixed = Set(expect[3][2])                                               # NO_RT: the periods before the last step
+        @test Set(k[2] for (k, x) in gvalues(tmx, "NO_RT", 2) if x != 0) == fixed
+        @test !any(k[2] in fixed for k in keys(stp_marginal(tmx, "VAR_NCAP", 3)))               # L326
+        @test !any(k[3] in fixed for name in ("VAR_ACT" => 5, "VAR_FLO" => 6) for k in keys(stp_marginal(tmx, name[1], name[2])))  # L327-328
+        if own
+            @test !isempty(stp_marginal(tmx, "VAR_ACT", 5))                     # the last step's own period keeps its marginals
+            @test length(stp_point(tmx).level) > 10                             # every variable family of the models, not only those solve.stp reads
+        end
+    end
+
+    @testset "stp_finish! (L325-329) on a made-up point" begin
+        tmf = chain(vx["switches"])
+        stp_init!(tmf)
+        gput!(tmf, "NO_RT", Dict(("REG1", "2005") => 1.0))
+        l, mn = stp_level(tmf, "VAR_NCAP", 3), stp_marginal(tmf, "VAR_NCAP", 3)
+        l[("REG1", "2005", "P")] = 0.0                                          # an EPS level (L214: MAX(EPS, level))
+        l[("REG1", "2010", "P")] = 2.0
+        mn[("REG1", "2005", "P")] = 3.0
+        mn[("REG2", "2005", "P")] = 3.0
+        ma = stp_marginal(tmf, "VAR_ACT", 5)
+        ma[("REG1", "2000", "2005", "P", "ANNUAL")] = 1.0
+        ma[("REG1", "2005", "2010", "P", "ANNUAL")] = 1.0                       # the vintage is not the period
+        mi = stp_marginal(tmf, "VAR_IRE", 7)
+        mi[("REG1", "2005", "2005", "P", "C", "ANNUAL", "IMP")] = 1.0
+        stp_finish!(tmf)
+        @test l == Dict(("REG1", "2010", "P") => 2.0)                           # L325
+        @test mn == Dict(("REG2", "2005", "P") => 3.0)                          # L326: NO_RT(R,T)
+        @test ma == Dict(("REG1", "2005", "2010", "P", "ANNUAL") => 1.0)        # L327
+        @test isempty(mi)                                                       # L329
     end
 
     @testset "a given overlap (L44, L305)" begin

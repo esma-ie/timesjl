@@ -1,6 +1,7 @@
-# M1.5 part 1, change 2: the stepped (myopic) solve of solve.stp. This file
-# holds the partition of the horizon into steps and the data each step
-# prepares before its model is generated.
+# M1.5 part 1, changes 2 and 4: the stepped (myopic) solve of solve.stp. This
+# file holds the partition of the horizon into steps, the data each step
+# prepares before its model is generated (change 2), and the loop that solves
+# step after step, `solve_stepped!` (change 4).
 #
 # GAMS source (TIMES v4.9.7 @ d9a6a25):
 #   solve.stp L9-26       control checks; the symbols solve.stp declares
@@ -15,10 +16,14 @@
 #   solve.stp L288-289    PAR_CUMFLOM, PAR_UCR
 #   solve.stp L295-319    after the SOLVE: PRESOL, the marginals restored, the next SUBT, the saved
 #                         data restored, bndmain.mod with its second argument 1
+#   solve.stp L109, L285-294, L321   the loop: one SOLVE per step (solve.mod L12-41; err_stat.mod
+#                         L63-69), its solution merged into the point of the run (SOLVEOPT=MERGE, L286)
+#   solve.stp L325-329    after the loop: the EPS levels of VAR_NCAP and the marginals of the fixed
+#                         periods removed
 #
-# Not in this file: the variable bounds of a step (L199-282) and the equations
-# over SUBT (maindrv.mod L38-40) are change 3 of docs/m15-plan.md; the loop
-# with the SOLVE is change 4.
+# Not in this file: the variable bounds of a step (L199-282, src/model/bnd_stp.jl)
+# and the equations over SUBT (maindrv.mod L38-40) are change 3 of
+# docs/m15-plan.md.
 #
 # The run controls, as GAMS leaves them:
 # - maindrv.mod L23 includes setglobs.gms after the data is read, and its L11
@@ -126,6 +131,33 @@ function _stp_fx!(ok, vals::Dict{NTuple{N,String},Float64}, bd, bdneq) where {N}
 end
 
 """
+    stp_unported(tm) -> Vector{Tuple{String,String}}
+
+What a stepped run asks for that is not translated, as (GAMS lines, what):
+STAGES, SPINES or SENSIS (solve.stp L10-13 and the stochastic branches),
+FIXBOH (L28-39, L45; it needs a restart point), CLI (L149, clearsol.stp
+L26), UC_CLI data (L91), TM_HSX (L154: other tolerances) and the divisors
+under LINFLO (coef_alt.lin L137-157; OBJ ALT or LIN). Empty when the run
+can be solved step by step. `stp_init!` refuses with it, and
+`untranslated_families` lists it for a stepped run.
+"""
+function stp_unported(tm::TimesModel)
+    out = Tuple{String,String}[]
+    d = tm.data
+    yes(name) = uppercase(gswitch(tm, name, "")) == "YES"
+    # L10-13: $ABORT Stepped TIMES Not available with STAGES/SENSIS!; with SPINES the stochastic branches
+    (yes("STAGES") || yes("SPINES") || yes("SENSIS")) &&
+        push!(out, ("solve.stp L10-13", "a stepped run with STAGES, SPINES or SENSIS"))
+    haskey(tm.switches, "FIXBOH") &&
+        push!(out, ("solve.stp L28-39, L45", "FIXBOH (a run fixed to an earlier solution needs a restart point)"))
+    yes("CLI") && push!(out, ("solve.stp L149, clearsol.stp L26", "a stepped run with the climate extension"))
+    isempty(gparam_opt(d, "UC_CLI", 5)) || push!(out, ("solve.stp L91", "UC_CLI in a stepped run"))
+    Reference.has_symbol(d.dump, "TM_HSX") && push!(out, ("solve.stp L154", "the tolerances under TM_HSX"))
+    linflo(tm) && push!(out, ("coef_alt.lin L137-157", "the divisors of a stepped run under LINFLO (OBJ ALT or LIN)"))
+    return out
+end
+
+"""
     stp_init!(tm) -> tm
 
 The statements of solve.stp before its loop: the first partition of the
@@ -173,15 +205,8 @@ GAMS: solve.stp L9-26, L43-57, L69-107; clearsol.stp L8-10; setglobs.gms L11, v4
 function stp_init!(tm::TimesModel)
     stepped(tm) || throw(ArgumentError("stp_init!: not a stepped run (TIMESTEP is not set)"))
     d = tm.data
-    yes(name) = uppercase(gswitch(tm, name, "")) == "YES"
-    # L10-13: $ABORT Stepped TIMES Not available with STAGES/SENSIS!; with SPINES the stochastic branches
-    (yes("STAGES") || yes("SPINES") || yes("SENSIS")) &&
-        throw(UnportedError("solve.stp L10-13: a stepped run with STAGES, SPINES or SENSIS"))
-    haskey(tm.switches, "FIXBOH") &&
-        throw(UnportedError("solve.stp L28-39, L45: FIXBOH (a run fixed to an earlier solution needs a restart point)"))
-    yes("CLI") && throw(UnportedError("solve.stp L149, clearsol.stp L26: a stepped run with the climate extension"))
-    isempty(gparam_opt(d, "UC_CLI", 5)) || throw(UnportedError("solve.stp L91: UC_CLI in a stepped run"))
-    Reference.has_symbol(d.dump, "TM_HSX") && throw(UnportedError("solve.stp L154: the tolerances under TM_HSX"))
+    u = stp_unported(tm)
+    isempty(u) || throw(UnportedError(join(("$(x[1]): $(x[2])" for x in u), "; ")))
     S(name, n) = gset_opt(d, name, n)
     P(name, n) = gparam_opt(d, name, n)
     nz(x::GNum) = x.v != 0 || x.eps
@@ -756,4 +781,161 @@ function stp_next!(tm::TimesModel)
     bnd_data!(tm; cum=false)
     stp_bndmain!(tm)                                                            # its bound statements
     return tm
+end
+
+# ---------------------------------------------------------------------------
+# Change 4: the loop with the SOLVE
+# ---------------------------------------------------------------------------
+
+function _stp_merge!(tm::TimesModel, name::String, fam::VarFamily{N}, duals::Bool) where {N}
+    lev, mar = stp_level(tm, name, N), stp_marginal(tm, name, N)
+    for k in fam.keys
+        v = fam.refs[k]
+        x = JuMP.value(v)
+        x == 0 ? delete!(lev, k) : (lev[k] = x)
+        duals || continue
+        m = JuMP.reduced_cost(v)
+        m == 0 ? delete!(mar, k) : (mar[k] = m)
+    end
+    return nothing
+end
+
+"""
+    stp_merge_point!(tm, st) -> tm
+
+Merge the solution of the step model `st` (solved) into the point store of
+the run `tm`: every variable of the step's model takes its new level and
+marginal (the reduced cost), every other variable keeps the level and the
+marginal the earlier steps left. A level or a marginal of zero is stored as
+no record.
+
+`OPTION SOLVEOPT=MERGE` (L286): the SOLVE of a step changes only the
+variables of that step's model. Every variable of the JuMP model is a column
+of GAMS's model of the step (layer 2), so the same variables are replaced.
+
+Not reproduced, flagged (docs/m15-plan.md, "Change 4 as built"): GAMS
+returns EPS as the marginal of a nonbasic variable whose reduced cost is
+zero; here such a marginal is zero (no record). No statement of solve.stp
+that prepares a later step reads a marginal, so no step's LP depends on it;
+PAR_CUMFLOM and PAR_UCR (L288-289, L298-300) can differ in such a record.
+The levels and marginals of the equations are not kept (the reports, M1.6).
+
+GAMS: solve.stp L286; solve.mod L37, v4.9.7.
+"""
+function stp_merge_point!(tm::TimesModel, st::TimesModel)
+    duals = JuMP.has_duals(st.model)
+    for name in st.vars.order
+        fam = st.vars.families[name]
+        isempty(fam.keys) || _stp_merge!(tm, name, fam, duals)
+    end
+    return tm
+end
+
+"""
+    stp_finish!(tm) -> tm
+
+The statements after the loop of the steps:
+
+- L325: `VAR_NCAP.L(R,T,P)\$((VAR_NCAP.L(R,T,P) EQ 0)\$VAR_NCAP.L(R,T,P)) = 0;`
+  an EPS level of new capacity (L214 fixes at MAX(EPS, level)) is removed.
+- L326-329: the marginals of VAR_NCAP, VAR_ACT, VAR_FLO and VAR_IRE of the
+  periods in NO_RT are set to zero. NO_RT holds the periods before the last
+  step (L113, `NO_RT(R,T(BACKWARD)) = 1`): their variables were fixed in
+  the last solve, so their marginals are those of a fixed variable.
+
+Not translated: L330 (MY_FYEAR: FIXBOH is refused).
+
+GAMS: solve.stp L325-329, v4.9.7.
+"""
+function stp_finish!(tm::TimesModel)
+    stepped(tm) || throw(ArgumentError("stp_finish!: not a stepped run (TIMESTEP is not set)"))
+    filter!(kv -> kv[2] != 0, stp_level(tm, "VAR_NCAP", 3))                     # L325
+    no_rt = Set(k for (k, x) in gvalues(tm, "NO_RT", 2) if x != 0)
+    isempty(no_rt) && return tm
+    filter!(kv -> !((kv[1][1], kv[1][2]) in no_rt), stp_marginal(tm, "VAR_NCAP", 3))    # L326
+    for (name, n) in (("VAR_ACT", 5), ("VAR_FLO", 6), ("VAR_IRE", 7))                   # L327-329
+        filter!(kv -> !((kv[1][1], kv[1][3]) in no_rt), stp_marginal(tm, name, n))
+    end
+    return tm
+end
+
+"""
+    solve_stepped!(tm, optimizer; silent=true, attributes=(), step_hook=nothing) -> Vector{NamedTuple}
+
+Solve a stepped (myopic) run, `\$SET TIMESTEP n`: the horizon is solved in
+steps, each step with the periods of the earlier steps fixed at the levels
+found and the periods after it fixed at zero. `tm` is the run in the state
+before the SOLVE (the state `generate!` takes for a run that is not stepped:
+after `bnd_data!` and `pp_qack_data!`, maindrv.mod L92-108). `optimizer` is
+what `JuMP.set_optimizer` takes (`HiGHS.Optimizer`); `attributes` are pairs
+set on each step's model.
+
+For each step, in GAMS's order:
+
+1. `stp_step_prep!` (L111-282, L288-289): the periods, the data and the
+   bounds of the step;
+2. `pp_clean!` (solve.mod L12, inside the loop);
+3. `stp_model` and `generate!`: the model of the step (L285-294 solve the
+   model GAMS regenerates from the current sets and bounds);
+4. the solve, `MINIMIZING objZ` (solve.mod L37). err_stat.mod L63-69 aborts
+   unless the model status is 1, 2, 7 or 8 (optimal, locally optimal,
+   feasible solution, integer solution); here a step that does not end
+   `OPTIMAL` is an error (an LP ends optimal or the run stops);
+5. `stp_merge_point!` (L286, SOLVEOPT=MERGE);
+6. `step_hook(tm, st, info)`, if given: `st` is the solved model of the
+   step. A check can compare it and load another point for the next step;
+7. `stp_next!` (L295-319): the next step's periods, the bounds set again.
+
+The loop ends when no period is left (L109, `WHILE(CARD(SUBT), ...)`), then
+`stp_finish!` (L325-329). The levels and marginals of the whole run are in
+the point store (`stp_level`, `stp_marginal`); a step's model is not kept.
+
+Returns one record per step, also kept in `tm.cache["STP_STEPS"]`:
+`(step, periods, rows, columns, objective, status, prepare_s, generate_s,
+solve_s)`; `objective` is objZ of the step's model.
+
+Not reproduced: L285 (`OPTION BRATIO=1`, no starting basis is passed
+between the steps here), the optimizer file and PRIOROPT (solve.mod
+L14-15), TOLPROJ (L18), ERR_ABORT=NO (err_stat.mod L65).
+
+GAMS: solve.stp L109-329; solve.mod L12-41; err_stat.mod L63-69, v4.9.7.
+"""
+function solve_stepped!(tm::TimesModel, optimizer; silent::Bool=true, attributes=(), step_hook=nothing)
+    stp_init!(tm)                                                               # L9-107
+    steps = NamedTuple[]
+    tm.cache["STP_STEPS"] = steps
+    while !isempty(gmembers(tm, "SUBT", 1))                                     # L109
+        k = length(steps) + 1
+        tp = @elapsed begin
+            stp_step_prep!(tm)                                                  # L111-282, L288-289
+            pp_clean!(tm)                                                       # solve.mod L12
+        end
+        local st
+        tg = @elapsed begin
+            st = stp_model(tm)
+            generate!(st)
+        end
+        JuMP.set_optimizer(st.model, optimizer)
+        silent && JuMP.set_silent(st.model)
+        for (a, v) in attributes
+            JuMP.set_attribute(st.model, a, v)
+        end
+        ts = @elapsed JuMP.optimize!(st.model)                                  # solve.mod L37
+        status = JuMP.termination_status(st.model)
+        periods = sort!([key[1] for key in gmembers(tm, "SUBT", 1)])
+        # err_stat.mod L63-69: ABORT '*** ERRORS DURING SOLUTION ***'
+        status == JuMP.OPTIMAL ||
+            throw(ErrorException("*** ERRORS DURING SOLUTION ***: step $k of the stepped run (periods " *
+                                 join(periods, ", ") * ") ended with status $status"))
+        stp_merge_point!(tm, st)                                                # L286
+        info = (step=k, periods=periods,
+                rows=JuMP.num_constraints(st.model; count_variable_in_set_constraints=false),
+                columns=JuMP.num_variables(st.model), objective=JuMP.objective_value(st.model),
+                status=string(status), prepare_s=tp, generate_s=tg, solve_s=ts)
+        push!(steps, info)
+        step_hook === nothing || step_hook(tm, st, info)
+        stp_next!(tm)                                                           # L295-319
+    end
+    stp_finish!(tm)                                                             # L325-329
+    return steps
 end

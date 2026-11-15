@@ -3562,5 +3562,15 @@
   "YKAGE",
   "YKK",
   "YKVAL"
- ]
+ ],
+ "tjl_step_solve": {
+  "columns": 3183,
+  "model_status": 1,
+  "nonzeros": 12216,
+  "objective": 1.23979659863e7,
+  "rows": 2201,
+  "solver": "CPLEX",
+  "solver_status": 1,
+  "step": 1
+ }
 }

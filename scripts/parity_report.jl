@@ -31,7 +31,7 @@
 
 import JSON, TOML, JuMP, HiGHS, Dates, LibGit2
 using TIMES
-using TIMES: TimesModel, DumpData, generate!, untranslated_families, layer1, later_overwrites, ctst, UnportedError,
+using TIMES: TimesModel, DumpData, generate!, untranslated_families, layer1, later_overwrites, ctst, UnportedError, stepped,
              coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!
 using TIMES.Reference: canonical_from_jump, canonical_from_dump, compare_lp, evaluate_point, ispass, family, jump_name_key,
                        solution_levels
@@ -120,6 +120,15 @@ function layer23_checks!(checks, runrec, run, presolve, matrix, dictmap, points,
     u = untranslated_families(tm)
     if !isempty(u)
         refused!(checks, run, 2, "matrix", ["needs $(x.family): $(x.gams) [$(x.why)]" for x in u])
+        return
+    end
+    # A stepped (myopic) run has no single LP (one per step, solve.stp), and its pre-solve dump is the
+    # state after the loop: its steps are checked one by one by scripts/m13_gate.jl and in CI
+    # (test/unit/test_solve_stp.jl), not here.
+    if stepped(tm)
+        push!(checks, Dict{String,Any}("run" => run, "layer" => 2, "unit" => "matrix", "status" => "skipped",
+                                       "n_compared" => 0, "n_excluded" => 0, "n_mismatch" => 0,
+                                       "detail" => ["stepped run: one LP per step, checked by scripts/m13_gate.jl"]))
         return
     end
     t = try

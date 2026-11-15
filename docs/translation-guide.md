@@ -879,3 +879,24 @@ those checks, their figures and their crafted cases are not published
   zero that GAMS never lifts (solve.stp L281; discrepancies.md U7), are
   listed in docs/m15-plan.md, "Change 3 as built". The run as a whole stays
   refused until the loop with the SOLVE (change 4).
+- 15 Nov 2026: M1.5 change 4, the stepped run solved to its end.
+  `solve_stepped!(tm, optimizer)` (`src/model/solve_stp.jl`) is the loop of
+  solve.stp L109-321: for each step `stp_step_prep!`, `pp_clean!` (solve.mod
+  L12), the model of the step (`stp_model`, `generate!`), the solve (a step
+  that does not end optimal stops the run, err_stat.mod L63-69),
+  `stp_merge_point!` (SOLVEOPT=MERGE, L286: the step's variables take their
+  new levels and reduced costs, the others keep theirs), `stp_next!`; then
+  `stp_finish!` (L325-329). A stepped run is no longer refused:
+  `generate!` on the run as a whole names `solve_stepped!`, and
+  `stp_unported` lists what a stepped run still cannot have (FIXBOH, STAGES,
+  SPINES, SENSIS, CLI, TM_HSX, OBJ ALT or LIN). Layer 3 on demo12_step, both
+  variants, HiGHS: with GAMS's levels between the steps, layers 1 and 2 per
+  step again, each objective against GAMS/CPLEX's (under 3e-12) and each
+  optimum evaluated in the other LP; on TIMES.jl's own levels, each
+  objective against GAMS/CPLEX's and the last against GAMS/HiGHS's.
+  `scripts/m13_gate.jl` runs a stepped case to the end, `scripts/run_dd.jl
+  --solve` solves one from its DD files, CI runs it on the step fixtures
+  (test_solve_stp.jl, 181 tests). Flagged in docs/m15-plan.md, "Change 4 as
+  built": a later step depends on which optimum an earlier step took; a
+  step must end optimal; EPS marginals; equations' levels and marginals not
+  kept (M1.6).

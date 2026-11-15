@@ -39,12 +39,11 @@ function untranslated_families(tm::TimesModel)
         yes(sw) && note!("(variant $sw)", "mod_equa.mod / main_ext.mod", "switch $sw = YES")
     end
     # A stepped (myopic) run: %R_T% is 'R,SUBT(T)' (maindrv.mod L38-40), so every equation is generated for
-    # the periods of one step, and solve.stp solves step by step (maindrv.mod L111-113). The preparation
-    # before it is translated (coef_alt.lin L81, eqobsalv.mod L23-25); the stepped solve is M1.5
-    # (changes 2 and 3: `stp_model` gives the model of one step, which is generated; the run as a whole is
-    # refused until the loop with the SOLVE, change 4)
-    (stepped(tm) && !stp_is_step(tm)) && note!("(stepped run)", "maindrv.mod L38-40, L111-113; solve.stp",
-                                               "TIMESTEP = $(gswitch(tm, "TIMESTEP", ""))")
+    # the periods of one step, and solve.stp solves step by step (maindrv.mod L111-113): `solve_stepped!`
+    # (M1.5). What solve.stp does under controls that are not translated is listed here (`stp_unported`)
+    if stepped(tm) && !stp_is_step(tm)
+        foreach(x -> note!("(stepped run)", x[1], x[2]), stp_unported(tm))
+    end
     # %POWERFLO% YES: phase-angle grids are translated (EQ_GR_POWFLO, M1.3 change 27b), with the allocation of
     # supply and demand to grid nodes (EQ_GR_GENALL, EQ_GR_DEMALL, IREAUX: 27b-2); PTDF, gas grids and the N-1
     # constraint EQ_GR_XBND are not
@@ -107,6 +106,11 @@ Build the whole model: refuse if [`untranslated_families`](@ref) finds any,
 then generate the translated equation families, apply the bounds and set
 `MINIMIZING objZ`. Returns the number of rows.
 
+A stepped (myopic) run has no single model (maindrv.mod L111-113 includes
+solve.stp, which generates and solves one model per step): `generate!`
+throws an `ArgumentError` for the run itself and builds the model of one
+step (`stp_model`); [`solve_stepped!`](@ref) runs the steps.
+
 GAMS: eqmain.mod L34 (objective), L41 (EQ_ACTFLO), L47-49 (EQ(l)_ACTBND), L54-59 (EQ(l)_BNDNET, EQ(l)_BNDPRD), L64-66 (EQ_CAPACT), L67 (EQ(l)_CAPVAC, coef_csv.mod L75-77), L92
 (EQ_CUMFLO), L98-106 (EQ_COMBAL, EQE_COMPRD), L146 (EQ_IRE), L152-154 (EQ(l)_IREBND), L159 (EQ_PEAK), L164
 (EQ_PTRANS), L169 (EQ_STGIPS), L170 (EQ_STGAUX), L175 (EQ_STGTSS, EQ_STSBAL), L180-185 (EQ(l)_STGIN/STGOUT), L192 (EQ_BNDCST), L229 (EQE_UCT/UCRT/UCTS/UCRTS, the dynamic EQE_UCSU/UCRSU/UCRSUS/UCSUS and EQE_UCRS), L241-243 (EQ(l)_XBND); equ_ext.vda L85 (EQE_ACTEFF);
@@ -118,6 +122,9 @@ function generate!(tm::TimesModel)
     u = untranslated_families(tm)
     isempty(u) || throw(UnportedError("equation families not translated yet: " *
                                       join(("$(x.family) [$(x.gams); $(x.why)]" for x in u), "; ")))
+    (stepped(tm) && !stp_is_step(tm)) &&
+        throw(ArgumentError("generate!: a stepped run (TIMESTEP = $(gswitch(tm, "TIMESTEP", ""))) has no single model; " *
+                            "solve_stepped! generates and solves the model of each step (solve.stp)"))
     n = eq_obj!(tm)                  # eqmain.mod L34
     n += eq_actflo!(tm)              # L41
     n += eq_actbnd!(tm)              # L47-49

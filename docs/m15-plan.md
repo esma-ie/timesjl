@@ -146,7 +146,7 @@ file gives the step's objective.
 | 1 | The per-step reference: harness 0.3.4 | none (the hooks at maindrv.mod L50 and solve.mod L44) | sizes of each step in the CONVERT run equal the solve run's; HiGHS on each step's MPS file; a reference that is not stepped unchanged |
 | 2 | Done, 14 Nov 2026 ("Change 2 as built", below). The partition and the preparation of a step: `stp_init!`, `stp_step_prep!`, `stp_next!` and the point store `StpPoint`, in `src/model/solve_stp.jl` | solve.stp L9-26, L43-57, L69-107, L111-196, L217, L222-227, L288-289, L295-319; clearsol.stp L8-10; coef_alt.lin L27, L31-63, L134-136, L160 (the block L137-157, LINFLO only, refused until change 5); eqobsalv.mod L19-85; bnd_ucw.mod L13-21; bnd_cum.mod L12-20, L27-38; the data statements of bndmain.mod with its second argument 1 | layer 1 per step: every set and parameter of `steps/<k>/final` at 1e-9 (less the harness's own TJL symbols and Z), fed with GAMS's levels and marginals of step k-1. demo12_step, both variants: 957 symbols in each of the three steps, none differs |
 | 3 | Done, 15 Nov 2026 ("Change 3 as built", below). The equations over SUBT and the bounds of a step: `eq_periods`; `stp_bounds_init!`, `stp_step_bounds!`, `stp_bndmain!` and `stp_model` in `src/model/bnd_stp.jl` | maindrv.mod L38-41 and every macro use above; solve.stp L115 (V), L193-233, L267-281, L319; bndmain.mod with its second argument; bnd_ucw.mod with bnd_ucv.mod; bnd_cum.mod | layer 2 per step: `steps/<k>/matrix` at 1e-9 (rows, columns, order, coefficients, right-hand sides, bounds), fed with GAMS's levels of step k-1. demo12_step, both variants: the LP of each of the three steps equals GAMS's. Every model that is not stepped: LP identical (the whole suite) |
-| 4 | The driver `solve_stepped!` (the loop, the solve, the levels kept between steps as SOLVEOPT=MERGE does, L325-330); the two refusals removed | solve.stp L109, L285-295, L303-321, L325-330; solve.mod L12-44 | layer 3 per step and at the end, 1e-6: TIMES.jl with HiGHS, each step on its own levels, against GAMS/CPLEX and GAMS/HiGHS; a public fixture of the steps in CI; `scripts/m13_gate.jl` runs the stepped case to the end |
+| 4 | Done, 15 Nov 2026 ("Change 4 as built", below). The driver `solve_stepped!` (the loop, the solve, the levels kept between steps as SOLVEOPT=MERGE does), `stp_merge_point!`, `stp_finish!`, in `src/model/solve_stp.jl`; the two refusals removed | solve.stp L109, L285-294, L321, L325-329; solve.mod L12-41; err_stat.mod L63-69 | layer 3 per step and at the end, 1e-6: TIMES.jl with HiGHS against GAMS/CPLEX and GAMS/HiGHS, with GAMS's levels between the steps (and layers 1 and 2 again) and on TIMES.jl's own levels. demo12_step, both variants: the objective of each of the three steps equals GAMS's (relative difference under 3e-12). The step fixtures in CI; `scripts/m13_gate.jl` runs the stepped case to the end |
 | 5 | A second crafted case for branches demo12_step does not reach (below) | the same lines | layers 1 to 3 per step |
 
 In change 3 a fixed variable stays a column: GAMS's matrix has the BACKWARD
@@ -355,6 +355,109 @@ has blending in a stepped run, so it is not checked against GAMS
 The run as a whole is still refused: `untranslated_families` notes
 "(stepped run)" for the run's model, not for the model of a step, until the
 loop with the SOLVE (change 4).
+
+## Change 4 as built (15 Nov 2026)
+
+**The loop.** `solve_stepped!(tm, optimizer)` (src/model/solve_stp.jl) solves
+a stepped run to its end. `tm` is the run in the state an ordinary run is in
+when its model is generated, less `pp_clean!` (solve.mod L12 runs it inside
+each step). In GAMS's order (lines of solve.stp unless a file is named):
+
+| # | TIMES.jl | GAMS |
+| --- | --- | --- |
+| before | `stp_init!` | L9-107 |
+| 1 | `stp_step_prep!`: the periods, the data and the bounds of the step | L111-282, L288-289 |
+| 2 | `pp_clean!` | solve.mod L12 |
+| 3 | `stp_model`, `generate!`: the model of the step, built anew | the model the SOLVE generates (solve.mod L37) |
+| 4 | the solve; a step that does not end optimal stops the run with GAMS's message, `*** ERRORS DURING SOLUTION ***` | L291-294; solve.mod L37, L41; err_stat.mod L63-69 |
+| 5 | `stp_merge_point!`: the levels and reduced costs of the step's variables into the point of the run; every other variable keeps what the earlier steps left | L286, `OPTION SOLVEOPT=MERGE` |
+| 6 | `stp_next!`: the next step's periods, the saved data restored, the bounds set again | L295-319 |
+| after | `stp_finish!`: the EPS levels of VAR_NCAP removed; the marginals of VAR_NCAP, VAR_ACT, VAR_FLO and VAR_IRE of the periods before the last step set to zero | L325-329 |
+
+The loop runs while a period is left (L109). It returns one record per step
+(the periods, rows, columns, objective, status, and the seconds to prepare,
+generate and solve), also kept in `tm.cache["STP_STEPS"]`. The solver is an
+argument, as everywhere in `src/`; a `step_hook` is called after each step
+with the solved model, which is how the checks below look into a step and
+load GAMS's point for the next one.
+
+**The refusals removed.** `untranslated_families` no longer lists a stepped
+run. `generate!` on the run as a whole stops with a message that names
+`solve_stepped!` (a stepped run has no single model). What a stepped run
+still cannot have is listed by `stp_unported` and refused before the first
+step: FIXBOH, STAGES, SPINES, SENSIS, the climate extension (CLI), TM_HSX,
+and OBJ ALT or LIN (the divisors of coef_alt.lin L137-157, change 5).
+
+**The scripts.** `scripts/run_dd.jl --solve` solves a stepped run from its DD
+files step by step, one line per step (its solution is not written to
+`solution/` yet: M1.6). `scripts/m13_gate.jl` runs a stepped case to the end
+(below). `scripts/m11_probe.jl`, `scripts/parity_report.jl` and the cuOpt
+lane compare one LP per run, so they record a stepped run as skipped, with
+the reason, instead of refused.
+
+**How it was checked** (`scripts/m13_gate.jl` on TIMES_Demo-demo12_step, both
+variants, from GAMS's input dump and from the DD files; HiGHS, 12 threads).
+The run is solved twice.
+
+First with GAMS's levels and marginals loaded after each step, so that a
+difference in one step cannot hide in the next:
+
+| Step | Layer 1 (957 sets and parameters after the SOLVE; 832 from the DD files) | Layer 2 (the LP against CONVERT's) | Objective, HiGHS here against GAMS/CPLEX | Relative difference |
+| --- | --- | --- | --- | --- |
+| 1 | PASS | PASS | 12,397,965.9863 | 2.9e-12 |
+| 2 | PASS | PASS | 20,325,417.7629 | 1.0e-12 |
+| 3 | PASS | PASS | 23,960,685.7370 | 3.2e-13 |
+
+Each optimum is also evaluated in the other side's LP of the step: GAMS's
+point in TIMES.jl's LP gives GAMS's objective, with a largest row violation
+of 7.6e-8 (REDUCE off) and 1.1e-7 (as run) in step 1 and under 4e-9 after
+(the same point is as feasible in GAMS's own LP); HiGHS's point in GAMS's LP
+is feasible to 3.7e-9.
+
+Then on TIMES.jl's own levels, the run as a user makes it: the objective of
+each step equals GAMS/CPLEX's (2.9e-12, 1.0e-12, 3.3e-13), and the last
+equals the final objective of GAMS/HiGHS (23,960,685.737). Both passes give
+three steps, as GAMS does.
+
+- CI: `test/unit/test_solve_stp.jl` (181 tests) runs `solve_stepped!` on the
+  demo12_step fixtures both ways: layer 2 per step, HiGHS's optimum feasible
+  in GAMS's LP and the objective per step against GAMS/CPLEX's on GAMS's
+  levels; the objective per step and the final objectives of GAMS/CPLEX and
+  GAMS/HiGHS on its own levels. The step fixtures' manifests now hold GAMS's
+  objective of each step (`tjl_step_solve`) and the final objectives. GAMS's
+  optimum evaluated in TIMES.jl's LP is checked by the gate script, not in CI.
+- The whole test suite passes (34,857 tests).
+
+**Flagged.**
+
+- **More than one optimum.** On its own levels the LPs of steps 2 and 3 are
+  not GAMS's: HiGHS and CPLEX end step 1 at different optima with the same
+  objective, so the periods already solved are fixed at different levels
+  (several hundred column bounds differ). On demo12_step the objectives of
+  the later steps still agree to 1e-12. That is not guaranteed for every
+  model: in a myopic run a later step depends on which optimum an earlier
+  step took, and two solvers (or one solver with other settings) can then
+  give different later objectives, in GAMS as well. The pass on GAMS's levels
+  is the check that does not depend on this.
+- **A step must end optimal.** GAMS also goes on after a step with model
+  status 2, 7 or 8 (locally optimal, feasible, integer solution; the latter
+  need a nonlinear or discrete model) and, under `ERR_ABORT=NO`, after any
+  status (err_stat.mod L65). Here a step that is not optimal stops the run.
+- **EPS marginals.** GAMS returns EPS as the marginal of a nonbasic variable
+  whose reduced cost is zero; here it is zero (no record). No statement that
+  prepares a later step's model reads a marginal; PAR_CUMFLOM and PAR_UCR
+  (L288-289) can differ in such a record on TIMES.jl's own levels.
+- **Equations.** The levels and marginals of the equations of a step are not
+  kept: the loop does not read them. The reports of a stepped run need them
+  (M1.6).
+- **Solver settings not reproduced**: the advanced basis between the steps
+  (`BRATIO=1`, L285), the solver option file and PRIOROPT (solve.mod
+  L14-15), TOLPROJ (L18). None changes an LP or its optimum value.
+- **Not translated**: L330 (MY_FYEAR, for FIXBOH).
+- **Not checked against GAMS**: every branch demo12_step does not reach
+  (the lists under changes 2 and 3, and below), now also on TIMES.jl's own
+  levels; `stp_finish!` on VAR_FLO and VAR_IRE marginals is tested on a
+  made-up point as well as on demo12_step.
 
 ## What demo12_step reaches, and what it does not
 

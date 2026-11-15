@@ -3532,5 +3532,19 @@
   "YKK",
   "YKVAL",
   "Y_EOH"
- ]
+ ],
+ "tjl_step_solve": {
+  "columns": 1949,
+  "final_objective": {
+   "CPLEX": 2.3960685737007782e7,
+   "HIGHS": 2.3960685737007782e7
+  },
+  "model_status": 1,
+  "nonzeros": 4756,
+  "objective": 2.3960685737e7,
+  "rows": 540,
+  "solver": "CPLEX",
+  "solver_status": 1,
+  "step": 3
+ }
 }

@@ -4,7 +4,11 @@
 #
 #   <prefix>_step<k>/   of steps/<k>/final: the sets and parameters that differ from the equ dump
 #                       (the state after eqmain.mod, already a fixture: <prefix>_equ), and the
-#                       variables whose levels or marginals solve.stp reads (STP_POINT_VARS)
+#                       variables whose levels or marginals solve.stp reads (STP_POINT_VARS).
+#                       Its manifest also holds, under "tjl_step_solve", what GAMS/CPLEX's SOLVE of
+#                       the step returned (the reference manifest's runs.solve_cplex.steps[k]:
+#                       objective, sizes, statuses) and, for the last step, the final objective of
+#                       every GAMS solver of the reference ("final_objective"), for layer 3
 #   <prefix>_step<k>_matrix/matrix, /dictmap
 #                       the LP GAMS solved in step k (steps/<k>/matrix: the CONVERT DumpGDX export
 #                       made just before that SOLVE) and its dictionary (steps/<k>/matrix_dictmap),
@@ -65,6 +69,15 @@ function main(refrun, prefix)
         (u !== nothing && isfile(joinpath(src, u))) && cp(joinpath(src, u), joinpath(dst, u))
         m["symbols"] = keep
         m["tjl_same_as_equ"] = sort!(unchanged)
+        gs = [s for s in get(get(mf["runs"], "solve_cplex", Dict()), "steps", Any[]) if s["step"] == k]
+        length(gs) == 1 || error("$refrun: no record of step $k in runs.solve_cplex.steps of the manifest")
+        solve = Dict{String,Any}(gs[1])
+        solve["solver"] = "CPLEX"
+        if k == last(steps)
+            solve["final_objective"] = Dict(uppercase(tag[7:end]) => run["solveinfo"]["objval"] for (tag, run) in mf["runs"]
+                                            if startswith(tag, "solve_") && get(get(run, "solveinfo", Dict()), "modelstat", 0) == 1)
+        end
+        m["tjl_step_solve"] = solve
         m["source"] = "<$model $(mf["variant"]) solve run, after the SOLVE of step $k: what differs from the equ dump, " *
                       "and the variables solve.stp reads; $(strip(first(split(gams, "  "))))>"
         write(joinpath(dst, "manifest.json"), JSON.json(m, 1))
