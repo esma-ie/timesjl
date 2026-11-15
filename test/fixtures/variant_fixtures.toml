@@ -241,6 +241,22 @@ state    = "equ"
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", TIMESTEP = "20", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
 
+# Crafted case demo12_steplin (15 Nov 2026; M1.5 change 6): demo12 with objinv.dd as a stepped run with
+# OBJ LIN (TIMESTEP 20; three steps). Under OBJ LIN a stepped run changes the divisors of the investment
+# costs in every step (solve.stp L104-107, STP_DIV; coef_alt.lin L137-157, RTP_CAPVL, OBJ_DIVI, OBJ_DIVIV,
+# OBJ_DIVIII). Preprocessing from the input dump to ppm on every symbol; the steps
+# (test/unit/test_solve_stplin.jl): the ppm -> equ step, layers 1 and 2 of each step against
+# demo12_steplin_step<k> and demo12_steplin_step<k>_matrix, and the run to its end with HiGHS, layer 3 per
+# step; OBJ ALT with several steps stops where GAMS divides by zero (docs/discrepancies.md D42).
+[[variant]]
+prefix   = "demo12_steplin"
+model    = "TIMES_Demo-demo12_steplin"
+variant  = "as_run"
+reduce   = true
+state    = "equ"
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "LIN", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", TIMESTEP = "20", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []
+
 # Crafted case demo12_step2 (15 Nov 2026; M1.5 change 5): demo12 as a stepped run with what demo12_step does
 # not reach: a given overlap (G_OVERLAP 15), bounds on capacity (CAP_BND), cumulative, region-summed and
 # dynamic user constraints (ucdyn.dd, ucrt.dd, cumc.dd, step2.dd), cumulative bounds on flows and commodities

@@ -163,13 +163,37 @@ GAMS `POWER(x,n)`: `power(0,0) = power(EPS,0) = 1` (docs/discrepancies.md
 G4), `power(EPS,2) = EPS`, a negative base is allowed. A zero or EPS base
 with `n < 0` is an execution error (FUNC SINGULAR), and so is a non-integer
 `n` (FUNC DOMAIN), as confirmed on GAMS 54.6.0 (G16).
+
+The value is the one GAMS computes, to the last bit (G61): the product by
+repeated squaring ([`gams_intpower`](@ref)), not the correctly rounded
+power.
 """
 function gpower(a::GNum, n::Integer)
     n == 0 && return GNum(1.0)
     n < 0 && a.v == 0 && throw(DomainError(a, "POWER(x,$n) with x = $(a) (GAMS: FUNC SINGULAR)"))
     iszero(a) && return GZERO
-    p = a.v^n
+    p = gams_intpower(a.v, Int(n))
     return p == 0 ? GEPS : GNum(p)
+end
+
+"""
+    gams_intpower(x, n) -> Float64
+
+`POWER(x,n)` as GAMS rounds it (docs/discrepancies.md G61; GAMS 54.6.1,
+15 Nov 2026: 4,322 values with n from -100 to 100 and bases of both signs,
+all identical): the binary method from the lowest bit of |n| (the result
+times the base where the bit is set, the base squared after each bit), the
+reciprocal of that product for n < 0, and `1/x/x` for n = -2.
+"""
+function gams_intpower(x::Float64, n::Int)
+    n == -2 && return 1 / x / x
+    m, r, b = abs(n), 1.0, x
+    while m > 0
+        isodd(m) && (r *= b)
+        b *= b
+        m >>= 1
+    end
+    return n < 0 ? 1 / r : r
 end
 function gpower(a::GNum, y::GNum)
     isinteger(y.v) || throw(DomainError(y, "POWER(x,y) with y not an integer (GAMS: FUNC DOMAIN)"))
@@ -187,6 +211,13 @@ base (`0**EPS = EPS**EPS = 0**0 = 2**EPS = 1`); for `y > 0`, `0**y = 0` and
 `EPS**y = EPS`; `0**y` with `y < 0` and any negative base are execution
 errors. Unlike `POWER(x,n)` ([`gpower`](@ref)) a negative base is never
 allowed. Note `\$` binds tighter than `**`: `EPS**1\$c` is `EPS**(1\$c)`.
+
+GAMS computes `x**y` as `exp(y*log(x))`, and so does this function
+(docs/discrepancies.md G61; GAMS 54.6.1, 15 Nov 2026): of 6,000 values that
+form gives GAMS's bits in 5,935 and is within 20 units of the last place in
+the others (GAMS's own exp and log), where the correctly rounded power
+gives them in 2,624. The difference only shows where two powers nearly
+cancel (RTP_CAPVL of a stepped run under OBJ LIN, coef_alt.lin L144-145).
 """
 function gpow(a::GNum, b::GNum)
     b.v == 0 && return GNum(1.0)
@@ -195,7 +226,7 @@ function gpow(a::GNum, b::GNum)
         b.v < 0 && throw(DomainError(a, "x**y with x = 0, y < 0 (GAMS: rPower FUNC DOMAIN)"))
         return a                               # 0**y = 0, EPS**y = EPS
     end
-    p = a.v^b.v
+    p = exp(b.v * log(a.v))
     return p == 0 ? GEPS : GNum(p)
 end
 

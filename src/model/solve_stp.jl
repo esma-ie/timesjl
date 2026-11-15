@@ -136,9 +136,8 @@ end
 What a stepped run asks for that is not translated, as (GAMS lines, what):
 STAGES, SPINES or SENSIS (solve.stp L10-13 and the stochastic branches),
 FIXBOH (L28-39, L45; it needs a restart point), CLI (L149, clearsol.stp
-L26), UC_CLI data (L91), TM_HSX (L154: other tolerances) and the divisors
-under LINFLO (coef_alt.lin L137-157; OBJ ALT or LIN). Empty when the run
-can be solved step by step. `stp_init!` refuses with it, and
+L26), UC_CLI data (L91) and TM_HSX (L154: other tolerances). Empty when
+the run can be solved step by step. `stp_init!` refuses with it, and
 `untranslated_families` lists it for a stepped run.
 """
 function stp_unported(tm::TimesModel)
@@ -153,7 +152,6 @@ function stp_unported(tm::TimesModel)
     yes("CLI") && push!(out, ("solve.stp L149, clearsol.stp L26", "a stepped run with the climate extension"))
     isempty(gparam_opt(d, "UC_CLI", 5)) || push!(out, ("solve.stp L91", "UC_CLI in a stepped run"))
     Reference.has_symbol(d.dump, "TM_HSX") && push!(out, ("solve.stp L154", "the tolerances under TM_HSX"))
-    linflo(tm) && push!(out, ("coef_alt.lin L137-157", "the divisors of a stepped run under LINFLO (OBJ ALT or LIN)"))
     return out
 end
 

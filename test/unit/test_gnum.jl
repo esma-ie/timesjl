@@ -33,7 +33,18 @@ using TIMES: GNum, GZERO, GEPS, gv, gif, gexp, gpower, gpow, gmax, gparam, DumpD
     # power(0,-2), power(EPS,-2) FUNC SINGULAR; abs(EPS) = EPS.
     @test gpower(GEPS, 2) == GEPS && gpower(GEPS, 0) == GNum(1.0)
     @test gpower(GNum(-2.0), 3) == GNum(-8.0) && gpower(GNum(2.0), -2) == GNum(0.25)
-    @test gpower(GNum(1.01), GNum(4.0)) == GNum(1.01^4)
+    @test gpower(GNum(1.01), GNum(4.0)) == GNum((1.01 * 1.01) * (1.01 * 1.01))
+    # G61 (GAMS 54.6.1, 15 Nov 2026): POWER(x,n) to the last bit, the binary method from the lowest
+    # bit, the reciprocal for n < 0, 1/x/x for n = -2. Values of GAMS that Julia's x^n does not
+    # give (all six on Julia 1.13, four on Julia 1.10: which of them differ depends on the version,
+    # so only "some differ" is tested).
+    g61_power = ((3.61474609375, -12, 2.009400171819468e-7), (2.75341796875, -5, 0.00631886807931012),
+                 (1.6904296875, -3, 0.20701826586205585), (-2.1435546875, -2, 0.2176360645700261),
+                 (1.451171875, 10, 41.41794316763117), (0.57763671875, 25, 1.0999420575242372e-6))
+    for (x, n, g) in g61_power
+        @test gpower(GNum(x), n) == GNum(g)
+    end
+    @test any(x^n != g for (x, n, g) in g61_power)
     @test_throws DomainError gpower(GNum(1.01), GNum(3.5))
     @test_throws DomainError gpower(GZERO, -2)
     @test_throws DomainError gpower(GEPS, -2)
@@ -60,6 +71,20 @@ end
     @test gpow(e, GNum(0.5)) == GEPS             # EPS**0.5
     @test gpow(GNum(0.5), one) == GNum(0.5) && gpow(GNum(4.0), GNum(0.5)) == GNum(2.0)
     @test_throws DomainError gpow(GNum(-0.5), one)        # rPower: x < 0
+    # G61 (GAMS 54.6.1, 15 Nov 2026): x**y is exp(y*log(x)). Values of GAMS that Julia's power
+    # x^y does not give (all thirteen on Julia 1.13, twelve on Julia 1.10; only "some differ" is
+    # tested); the last five are powers of a discount factor 1/(1+r).
+    g61_pow = ((0.5595703125, -2.390625, 4.006682606424645), (1.4462890625, -37.625, 9.34118109498544e-7),
+               (3.9609375, 23.921875, 1.997325213924779e14), (3.912109375, 0.5, 1.9779052998058326),
+               (3.6943359375, 26.984375, 2.0635482575504642e15), (0.6455078125, 10.0, 0.012560734284896171),
+               (1.2109375, -4.625, 0.41263114555274166), (3.1396484375, 37.890625, 6.71633611391785e18),
+               (0.9147962032384143, 52.0, 0.009746897056821996), (0.9409386414279478, 23.0625, 0.2456165201469827),
+               (0.9456308438185386, 5.0, 0.7561503302343168), (0.9226679881963372, 30.515625, 0.08577093705558125),
+               (0.9300002270508366, -25.984375, 6.590951692874547))
+    for (x, y, g) in g61_pow
+        @test gpow(GNum(x), GNum(y)) == GNum(g)
+    end
+    @test any(x^y != g for (x, y, g) in g61_pow)
     @test_throws DomainError gpow(z, GNum(-1.0))          # rPower: x = 0, y < 0
     m1 = GNum(-1.0)
     @test gmax(z, e) == GEPS && gmax(e, z) == GEPS        # MAX(0,EPS), MAX(EPS,0)
