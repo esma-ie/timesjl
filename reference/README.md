@@ -16,9 +16,10 @@ For each model and variant, under `<out>/<model>/<variant>/`:
 | `input/`, `init/`, `prep/`, `prelv/` | M1.3 checkpoints (harness 0.3.0), written by the pre-solve run: every symbol before `$BATINCLUDE maindrv.mod` (the state preprocessing starts from: DD files read, switches set), after the extensions' `init_ext` (`maindrv.mod` L55), at their `prep_ext` (`preppm.mod` L217) and at their `pp_prelv` (`ppmain.mod` L615). With `ppm/` they split preprocessing into four segments (`scripts/m13_inventory.jl`) | Input data and layer 1 for M1.3 (`docs/m13-plan.md`); `input/` is also what the M1.4 DD reader must reproduce |
 | `equ/` | Stepped (myopic) runs only (TIMESTEP or FIXBOH; harness 0.3.3), written by the pre-solve run: every symbol after `eqmain.mod` and the extensions' `equ_ext` (`maindrv.mod` L79-80), before the MODEL statement, `bndmain` and `pp_qack`. In a stepped run `presolve/` is not a pre-solve state: with `SOLVE_NOW=NO` the run still goes through the loop of `solve.stp` (`maindrv.mod` L111-113), every step without a solve, so `presolve/` holds the state after the last step | Layer 1 for the preparation of a stepped run (M1.3 change 30); the state the stepped solve starts from (M1.5) |
 | `final/` | Every symbol at the end of the run (`gdx=`), including levels and marginals | Layers 3–4 |
-| `matrix/`, `matrix_dictmap/` | CONVERT `DumpGDX` and `DictMap` of the scalar model | Layer 2 |
-| `raw/` | CONVERT dictionary and MPS file (`tjl_model.mps.gz`: CPLEX MPS, gzipped), listings, logs, GAMS profile, each run's patched run file (`tjl_<run>.run`, harness 0.2.2+), the pre-solve run's QA log (`tjl_presolve_qa_check.log`, harness 0.3.2+; `reference/python/keep_qa_log.py` copies it into earlier references from the work folder) | Debugging, timings, switches for `scripts/m11_probe.jl`; the QA log for `scripts/m13_gate.jl` (M1.3 change 25b) |
-| `manifest.json` | TIMES version and commit, GAMS version, solver and options, wall times, model attributes (`resGen`, `resUsd`, `numEqu`, `numVar`, `numNZ`, `objVal`, ...), input checksums | Provenance, benchmarks |
+| `matrix/`, `matrix_dictmap/` | CONVERT `DumpGDX` and `DictMap` of the scalar model. A stepped run has none at this level: it has one model per step, under `steps/<k>/` | Layer 2 |
+| `steps/<k>/` | Stepped (myopic) runs only (harness 0.3.4), one folder per step k = 1, 2, ... of the loop of `solve.stp`: `final/` (every symbol just after the SOLVE of step k: the data that step's model was generated from, and its levels and marginals), `matrix/` and `matrix_dictmap/` (CONVERT's export of that step's model) | Layers 1 to 3 of each step of the stepped solve (`docs/m15-plan.md`) |
+| `raw/` | CONVERT dictionary and MPS file (`tjl_model.mps.gz`: CPLEX MPS, gzipped), listings, logs, GAMS profile, each run's patched run file (`tjl_<run>.run`, harness 0.2.2+), the pre-solve run's QA log (`tjl_presolve_qa_check.log`, harness 0.3.2+; `reference/python/keep_qa_log.py` copies it into earlier references from the work folder). A stepped run has them per step: `tjl_model_step<k>.mps.gz`, `tjl_dict_step<k>.txt`, and `tjl_point<k>.gdx`, GAMS's point file (levels and marginals) after the SOLVE of step k | Debugging, timings, switches for `scripts/m11_probe.jl`; the QA log for `scripts/m13_gate.jl` (M1.3 change 25b) |
+| `manifest.json` | TIMES version and commit, GAMS version, solver and options, wall times, model attributes (`resGen`, `resUsd`, `numEqu`, `numVar`, `numNZ`, `objVal`, ...), input checksums. For a stepped run also `steps` (how many) and, for the first solve run and the CONVERT run, each step's rows, columns, nonzeros, statuses and objective | Provenance, benchmarks |
 
 Variants: `reduce_off` (forces `$SET REDUCE NO`, used first for matrix
 parity) and `as_run` (the model's own settings).
@@ -47,6 +48,41 @@ maindrv.mod`. All four dump only when GAMS is started with
 `--TJL_CHECKPOINTS=1`, which the harness passes to the pre-solve run alone.
 A stepped run has a fifth, [`gams/equ_ext.tjlref`](gams/equ_ext.tjlref)
 (`maindrv.mod` L80), which dumps only when `%STEPPED%` is set as well.
+
+### The steps of a stepped run
+
+A stepped (myopic) run (`$SET TIMESTEP n`, or FIXBOH) has no single model:
+`solve.stp` solves one model per step, a few periods at a time, and builds
+each on the levels of the step before. The reference keeps every step
+(harness 0.3.4), again without editing TIMES. TIMES has two hooks of its own
+for a web front end, which it includes when the run is started with
+`--GAMS_CGI=WWW`: `www_in.cgi` before preprocessing (`maindrv.mod` L50) and
+`www_out.cgi` after every SOLVE (`solve.mod` L44), which in a stepped run is
+once per step. The harness supplies both files,
+[`gams/www_in.cgi`](gams/www_in.cgi) and [`gams/www_out.cgi`](gams/www_out.cgi).
+Both leave at their first line unless `%STEPPED%` is set, so GAMS itself
+decides whether a run is stepped, and a run that is not stepped is unchanged
+(checked on demo12: every symbol of every dump is the same as before, but
+for the harness's own record of the solve, which holds run times).
+
+- The first solve run of every model is started with `--GAMS_CGI=WWW
+  --TJL_STEPS=DUMP`. After the SOLVE of step k it writes every symbol
+  (`tjl_step<k>.gdx`, kept as `steps/<k>/final/`), and GAMS writes its point
+  file of that solve (`OPTION SAVEPOINT=2`; kept as `raw/tjl_point<k>.gdx`).
+- CONVERT returns no solution, so a plain CONVERT run would build its second
+  step on nothing. The CONVERT run of a stepped reference is started with
+  `--GAMS_CGI=WWW --TJL_STEPS=LOAD`: after the export of step k it loads the
+  point of step k (`execute_loadpoint`), so step k+1 is generated from the
+  same levels as in the solve run, and it gives step k+1 its own option file
+  (`convert.op2`, ...) so that each step's export has its own file names. The
+  manifest records each step's size in both runs and whether they agree
+  (`runs.convert.steps_match_solve`); a difference ends the reference with
+  `CHECK`.
+
+Checked with GAMS 54.6.1 on the crafted case demo12_step (TIMESTEP 20, three
+steps), both variants: the CONVERT run's three models have the solve run's
+rows, columns and nonzeros, and HiGHS on each step's MPS file gives the
+objective GAMS/CPLEX reports for that step.
 
 `execute_unload` with no symbol list writes every symbol the compiled program
 declares, so even the input dump holds symbols TIMES declares later in its
@@ -79,7 +115,10 @@ CONVERT's `CplexMPS` output (`reference/gams/convert.opt`), gzipped; tested
 with GAMS 54.6.1 on TIMES_Demo demo12, where it equals the full reference's MPS
 file apart from the date line. On James's workstation:
 `scripts\run_references.ps1 -Models <model> -Matrix -Resume` (with
-`-Checkpoints` for both passes).
+`-Checkpoints` for both passes). A stepped reference needs its solve run
+first: the pass exports the steps only where `raw/tjl_point<k>.gdx` exist
+(harness 0.3.4), so a stepped reference made with an earlier harness is
+rerun in full.
 
 ## Requirements
 
@@ -186,7 +225,9 @@ python reference/python/make_reference.py \
 ```
 
 Each model/variant ends with `OK` or `CHECK`; `CHECK` means a GAMS run returned
-an error or an expected dump is missing, and `raw/` holds the listings. A
+an error, an expected dump is missing, or the steps of a stepped run have
+another size in the CONVERT run than in the solve run; `raw/` holds the
+listings. A
 model whose `--root` is missing stops the run before any GAMS call.
 
 ## Without a licensed GAMS

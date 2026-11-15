@@ -12,6 +12,8 @@ writes, under ``<out>/<model>/<variant>/``:
                     (preppm.mod L217) and at pp_prelv (ppmain.mod L615)
     final/          all symbols at the end of the run       (layers 3-4)
     matrix/         CONVERT DumpGDX + DictMap               (layer 2)
+    steps/<k>/      stepped (myopic) runs only: final/, matrix/ and
+                    matrix_dictmap/ of step k, in place of matrix/
     raw/            CONVERT dictionary and MPS, listings, logs, profile, and
                     each run's patched run file (tjl_<run>.run)
 
@@ -20,6 +22,12 @@ the TJLREF hooks; a pre-solve run (SOLVE_NOW=NO) dumps the state the equations
 are generated from and the M1.3 checkpoints; the last run calls CONVERT to export
 the scalar model. Every extra solver in ``--solvers`` adds one more solve run
 (final dump only).
+
+A stepped run (TIMESTEP or FIXBOH) solves one model per step in the loop of
+solve.stp, each built on the levels of the step before. The first solve run
+dumps every symbol and a point file after each step; the CONVERT run exports
+each step's model and then loads that step's point, so its next step is the
+solve run's (reference/gams/www_in.cgi, www_out.cgi).
 
 ``--only presolve`` runs just the pre-solve run and adds its dumps to an existing
 reference (the manifest's other runs and dumps are kept); where the reference
@@ -63,7 +71,7 @@ from runfile import build_dd_run, patch_run  # noqa: E402
 from runlimits import RunSlot, default_max_parallel, default_slot_dir, default_threads, limit_threads  # noqa: E402
 from gdx2arrow import convert_gdx, gams_system_directory  # noqa: E402
 
-HARNESS_VERSION = "0.3.3"  # 0.3.3 (14 Nov 2026): equ/, the checkpoint of stepped runs (equ_ext.tjlref); 0.3.2 (9 Nov 2026): raw/tjl_presolve_qa_check.log; 0.3.1 (5 Nov 2026): --only convert; 0.3.0 (31 Oct 2026): M1.3 checkpoints, --only presolve; 0.2.4 (29 Oct 2026): run limits (threads, parallel runs); 0.2.3: model overrides; 0.2.2: raw/tjl_<run>.run; 0.2.1: extra_dd_dirs; 0.2.0: pre-solve run
+HARNESS_VERSION = "0.3.4"  # 0.3.4 (14 Nov 2026): steps/<k>/ of stepped runs (www_in.cgi, www_out.cgi); 0.3.3 (14 Nov 2026): equ/, the checkpoint of stepped runs (equ_ext.tjlref); 0.3.2 (9 Nov 2026): raw/tjl_presolve_qa_check.log; 0.3.1 (5 Nov 2026): --only convert; 0.3.0 (31 Oct 2026): M1.3 checkpoints, --only presolve; 0.2.4 (29 Oct 2026): run limits (threads, parallel runs); 0.2.3: model overrides; 0.2.2: raw/tjl_<run>.run; 0.2.1: extra_dd_dirs; 0.2.0: pre-solve run
 EXPECTED_TIMES_VERSION = "4.9.7"
 EXPECTED_TIMES_COMMIT = "d9a6a25"
 VARIANTS = {"reduce_off": {"REDUCE": "NO"}, "as_run": {}}
@@ -77,6 +85,60 @@ CHECKPOINTS = ["input", "init", "prep", "prelv"]
 # SOLVE_NOW=NO the run still goes through the loop of solve.stp (maindrv.mod L109-113), every step
 # without a solve, so the end-of-run dump holds the state after the last step.
 STEPPED_CHECKPOINT = "equ"
+# The steps of a stepped run (harness 0.3.4). TIMES includes www_in.cgi (maindrv.mod L50) and, after
+# every SOLVE, www_out.cgi (solve.mod L44) when GAMS_CGI is WWW; the harness's two files act only
+# when %STEPPED% is set, so GAMS decides whether a run is stepped and every other run is unchanged.
+# DUMP (the first solve run): after the SOLVE of step k, tjl_step<k>.gdx (every symbol) and the point
+# file <model>_p<k>.gdx (OPTION SAVEPOINT=2). LOAD (the CONVERT run): CONVERT returns no solution, so
+# after step k the point of that step is loaded, and step k+1 reads its own option file (OPTFILEID).
+STEP_DUMP_FLAGS = ["--GAMS_CGI=WWW", "--TJL_STEPS=DUMP"]
+STEP_LOAD_FLAGS = ["--GAMS_CGI=WWW", "--TJL_STEPS=LOAD"]
+
+
+def optfile_name(solver: str, k: int) -> str:
+    """The option file GAMS reads for <model>.optfile = k: <solver>.opt, .op2 to .op9, .o10 to .o99, .100 to .999."""
+    if not 1 <= k <= 999:
+        raise ValueError(f"no option file number {k}")
+    ext = "opt" if k == 1 else f"op{k}" if k < 10 else f"o{k}" if k < 100 else str(k)
+    return f"{solver.lower()}.{ext}"
+
+
+def step_convert_opt(base: str, k: int) -> str:
+    """convert.opt for step k of a stepped run: the same options, each output file named for the step
+    (tjl_matrix.gdx -> tjl_matrix_step<k>.gdx)."""
+    return re.sub(r"\btjl_(\w+)\.(gdx|txt|mps)\b", rf"tjl_\1_step{k}.\2", base)
+
+
+def numbered_files(folder: Path, pattern: str) -> list[Path]:
+    """The files of ``folder`` whose name matches ``pattern`` (one group: the number), for 1, 2, ...
+    as far as they go without a gap."""
+    found = {}
+    if folder.is_dir():
+        for f in folder.iterdir():
+            m = re.fullmatch(pattern, f.name, flags=re.I)
+            if m:
+                found[int(m.group(1))] = f
+    out = []
+    while len(out) + 1 in found:
+        out.append(found[len(out) + 1])
+    return out
+
+
+def parse_solves(lst: Path) -> list[dict]:
+    """One entry per SOLVE of a GAMS listing, in order: rows, columns, nonzeros (MODEL STATISTICS),
+    solver status, model status and objective (SOLVE SUMMARY)."""
+    if not lst.exists():
+        return []
+    text = lst.read_text(errors="replace")
+    num = lambda s: int(s.replace(",", ""))  # noqa: E731
+    stats = [{"rows": num(r), "columns": num(c), "nonzeros": num(n)} for r, c, n in re.findall(
+        r"^MODEL STATISTICS\s+BLOCKS OF EQUATIONS\s+[\d,]+\s+SINGLE EQUATIONS\s+([\d,]+)\s+"
+        r"BLOCKS OF VARIABLES\s+[\d,]+\s+SINGLE VARIABLES\s+([\d,]+)\s+NON ZERO ELEMENTS\s+([\d,]+)", text, flags=re.M)]
+    sums = [{"solver_status": int(s), "model_status": int(m), "objective": float(o) if o else None}
+            for s, m, o in re.findall(
+        r"^\*\*\*\* SOLVER STATUS\s+(\d+)[^\n]*\n\*\*\*\* MODEL STATUS\s+(\d+)[^\n]*\n"
+        r"(?:\*\*\*\* OBJECTIVE VALUE\s+(\S+))?", text, flags=re.M)]
+    return [{"step": k + 1, **st, **(sums[k] if k < len(sums) else {})} for k, st in enumerate(stats)]
 
 
 def load_suite(path: Path, roots: dict) -> dict:
@@ -164,8 +226,9 @@ def prepare_workdir(work: Path, model: dict, overrides: dict, solver_opts: dict,
     if work.exists():
         shutil.rmtree(work)
     work.mkdir(parents=True)
-    for f in (REPO / "reference" / "gams").glob("*.tjlref"):
-        shutil.copy(f, work / f.name)
+    for pattern in ("*.tjlref", "*.cgi"):
+        for f in (REPO / "reference" / "gams").glob(pattern):
+            shutil.copy(f, work / f.name)
     if model["kind"] == "dd":
         text = build_dd_run((REPO / "reference" / "templates" / "scenario.run").read_text(),
                             model["dd_files"], model["name"])
@@ -277,7 +340,7 @@ def make_one(args, suite, model_name: str, variant: str, source_info: dict):
                                           args.limits["threads"])
         shutil.copy(work / runfile, out / "raw" / f"tjl_{tag}.run")
         manifest["patch"] = report
-        extra_k = extra if k == 0 else [*extra, "--TJL_NODUMP=1"]
+        extra_k = [*extra, *STEP_DUMP_FLAGS] if k == 0 else [*extra, "--TJL_NODUMP=1"]
         print(f"[{model_name}/{variant}] GAMS solve with {solver} ...", flush=True)
         res = run_gams(args.gams, work, runfile, idirs, solver, extra_k, tag, final_gdx=True, limits=args.limits)
         res["gams_version"] = gams_version_line(work / f"tjl_{tag}.lst")
@@ -289,6 +352,8 @@ def make_one(args, suite, model_name: str, variant: str, source_info: dict):
             manifest["dumps"]["coef"] = convert(work / "tjl_coef.gdx", out / "coef", args.sysdir)
         final_dir = "final" if k == 0 else f"final_{solver.lower()}"
         manifest["dumps"][final_dir] = convert(work / "tjl_final.gdx", out / final_dir, args.sysdir)
+        if k == 0:
+            keep_steps(work, out, manifest, tag, args.sysdir)
         for f in work.glob(f"tjl_{tag}*"):
             shutil.copy(f, out / "raw" / f.name)
         if res["returncode"] != 0:
@@ -311,6 +376,24 @@ def make_one(args, suite, model_name: str, variant: str, source_info: dict):
         return finish(out, manifest, model_name, variant)
     convert_run(args, model, overrides, idirs, extra, out, work_root, manifest, model_name, variant)
     return finish(out, manifest, model_name, variant)
+
+
+def keep_steps(work: Path, out: Path, manifest: dict, tag: str, sysdir: str | None) -> int:
+    """The steps of a stepped run, after its first solve run: steps/<k>/final (every symbol after the
+    SOLVE of step k, tjl_step<k>.gdx) and raw/tjl_point<k>.gdx (GAMS's point file of that SOLVE, which
+    the CONVERT run loads). Nothing for a run that is not stepped."""
+    dumps = numbered_files(work, r"tjl_step(\d+)\.gdx")
+    points = numbered_files(work, r"(?!tjl_).+_p(\d+)\.gdx")
+    if not dumps:
+        return 0
+    if len(points) != len(dumps):
+        raise SystemExit(f"{work}: {len(dumps)} step dumps but {len(points)} point files")
+    for k, (d, p) in enumerate(zip(dumps, points), start=1):
+        manifest["dumps"][f"steps/{k}/final"] = convert(d, out / "steps" / str(k) / "final", sysdir)
+        shutil.copy(p, out / "raw" / f"tjl_point{k}.gdx")
+    manifest["steps"] = len(dumps)
+    manifest["runs"][tag]["steps"] = parse_solves(work / f"tjl_{tag}.lst")
+    return len(dumps)
 
 
 def presolve_run(args, model, overrides, idirs, extra, out, work_root, manifest, model_name, variant, ppm_coef_here):
@@ -350,12 +433,25 @@ def keep_qa_log(work: Path, dest: Path) -> bool:
 
 
 def convert_run(args, model, overrides, idirs, extra, out, work_root, manifest, model_name, variant):
-    """Last run: CONVERT for the matrix (matrix/, matrix_dictmap/) and the MPS file (raw/tjl_model.mps.gz)."""
+    """Last run: CONVERT for the matrix (matrix/, matrix_dictmap/) and the MPS file (raw/tjl_model.mps.gz).
+
+    A stepped run (raw/tjl_point<k>.gdx from its solve run, keep_steps) gets them per step instead:
+    steps/<k>/matrix, steps/<k>/matrix_dictmap, raw/tjl_model_step<k>.mps.gz, raw/tjl_dict_step<k>.txt.
+    One CONVERT run goes through the loop of solve.stp; each step writes through its own option file
+    and then loads the levels GAMS found at that step (www_out.cgi), so the next step's model is the
+    solve run's. It has no matrix/ of its own: a stepped run has no single model."""
     tag = "convert"
     work = work_root / tag
-    runfile, _ = prepare_workdir(work, model, overrides, {"convert.opt": REPO / "reference" / "gams" / "convert.opt"})
+    base_opt = REPO / "reference" / "gams" / "convert.opt"
+    points = numbered_files(out / "raw", r"tjl_point(\d+)\.gdx")
+    runfile, _ = prepare_workdir(work, model, overrides, {} if points else {"convert.opt": base_opt})
+    for k, p in enumerate(points, start=1):
+        shutil.copy(p, work / p.name)
+        (work / optfile_name("convert", k)).write_text(step_convert_opt(base_opt.read_text(), k))
+    if points:
+        extra = [*extra, *STEP_LOAD_FLAGS]
     shutil.copy(work / runfile, out / "raw" / f"tjl_{tag}.run")
-    print(f"[{model_name}/{variant}] GAMS CONVERT ...", flush=True)
+    print(f"[{model_name}/{variant}] GAMS CONVERT ..." + (f" ({len(points)} steps)" if points else ""), flush=True)
     # CONVERT returns model status 14 (no solution), which err_stat.mod L63-69
     # (v4.9.7) turns into an ABORT unless ERR_ABORT=NO (default YES at
     # initsys.mod L174). The matrix dump is written by CONVERT before that
@@ -366,13 +462,24 @@ def convert_run(args, model, overrides, idirs, extra, out, work_root, manifest, 
     res["gams_version"] = gams_version_line(work / f"tjl_{tag}.lst")
     res["solveinfo"] = read_solveinfo(work / "tjl_solveinfo.gdx", args.sysdir)
     manifest["runs"][tag] = res
-    manifest["dumps"]["matrix"] = convert(work / "tjl_matrix.gdx", out / "matrix", args.sysdir)
-    manifest["dumps"]["matrix_dictmap"] = convert(work / "tjl_dictmap.gdx", out / "matrix_dictmap", args.sysdir)
-    if (work / "tjl_dict.txt").exists():
-        shutil.copy(work / "tjl_dict.txt", out / "raw" / "tjl_dict.txt")
-    if (work / "tjl_model.mps").exists():
-        with open(work / "tjl_model.mps", "rb") as fi, gzip.open(out / "raw" / "tjl_model.mps.gz", "wb") as fo:
-            shutil.copyfileobj(fi, fo)
+    if points:
+        # each step's model must have the size it had in the solve run: the check that the loaded
+        # levels gave CONVERT the solve run's models
+        res["steps"] = parse_solves(work / f"tjl_{tag}.lst")
+        solved = next((r["steps"] for t, r in manifest["runs"].items() if t.startswith("solve_") and r.get("steps")), [])
+        size = lambda steps: [(s["rows"], s["columns"], s["nonzeros"]) for s in steps]  # noqa: E731
+        res["steps_match_solve"] = bool(solved) and size(solved) == size(res["steps"])
+    # (suffix of the work files, folder of the dumps): one pair, or one per step
+    for sfx, dest in ([(f"_step{k}", f"steps/{k}/") for k in range(1, len(points) + 1)] if points else [("", "")]):
+        manifest["dumps"][f"{dest}matrix"] = convert(work / f"tjl_matrix{sfx}.gdx", out / f"{dest}matrix", args.sysdir)
+        manifest["dumps"][f"{dest}matrix_dictmap"] = convert(work / f"tjl_dictmap{sfx}.gdx",
+                                                             out / f"{dest}matrix_dictmap", args.sysdir)
+        if (work / f"tjl_dict{sfx}.txt").exists():
+            shutil.copy(work / f"tjl_dict{sfx}.txt", out / "raw" / f"tjl_dict{sfx}.txt")
+        if (work / f"tjl_model{sfx}.mps").exists():
+            with open(work / f"tjl_model{sfx}.mps", "rb") as fi, \
+                    gzip.open(out / "raw" / f"tjl_model{sfx}.mps.gz", "wb") as fo:
+                shutil.copyfileobj(fi, fo)
     for f in work.glob(f"tjl_{tag}*"):
         shutil.copy(f, out / "raw" / f.name)
 
@@ -394,7 +501,9 @@ def parse_only(only: str | None) -> tuple[str, ...]:
 def finish(out: Path, manifest: dict, model_name: str, variant: str) -> str:
     (out / "manifest.json").write_text(json.dumps(manifest, indent=1, default=str))
     missing = [k for k, v in manifest["dumps"].items() if v is None]
-    status = "OK" if not missing and all(r["returncode"] == 0 for r in manifest["runs"].values()) else "CHECK"
+    runs = manifest["runs"].values()
+    status = "OK" if (not missing and all(r["returncode"] == 0 for r in runs)
+                      and all(r.get("steps_match_solve", True) for r in runs)) else "CHECK"
     print(f"[{model_name}/{variant}] {status}" + (f" (missing: {', '.join(missing)})" if missing else ""), flush=True)
     return status
 

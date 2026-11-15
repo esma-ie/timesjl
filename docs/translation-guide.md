@@ -829,3 +829,16 @@ those checks, their figures and their crafted cases are not published
   removed. The discrete form (DUC = YES, a MIP) stays refused, a TODO for a
   later release. Branches no case reaches: docs/m13-plan.md, change 40.
   Part II has no formulation of these equations: discrepancies.md D40.
+- 14 Nov 2026: M1.5 change 1, started before the M1.3 and M1.4 gates close
+  (James, 14 Nov 2026: the stepped solve is second in the order of the
+  refused features, and its tests may start before the gates): the plan of
+  the stepped (myopic) solve, docs/m15-plan.md, and harness 0.3.4, which
+  keeps every step of a stepped GAMS run: `steps/<k>/final` (every symbol
+  after the SOLVE of step k), `steps/<k>/matrix` and `matrix_dictmap`
+  (CONVERT's export of that step's model, generated from the solve run's
+  levels). TIMES is not edited: the harness supplies the two files TIMES
+  includes for a web front end (maindrv.mod L50, solve.mod L44). demo12_step
+  (TIMESTEP 20, three steps), both variants: the CONVERT run's models have
+  the solve run's sizes, and HiGHS on each step's MPS file gives the step's
+  objective. No Julia source changes; a stepped run is still refused at
+  model generation until changes 2 to 4 of the plan.
