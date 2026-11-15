@@ -1,0 +1,23 @@
+* TIMES.jl crafted case demo12_pfx (reference/crafted.toml, 15 Nov 2026): demo12_pfd (the
+* REG1-REG2 power-flow grid with the allocation of generation and demand to grid nodes, and a
+* second grid node in REG1) plus GR_XBND, the bound on a region's net imports into and exports
+* from its grid as a share of the capacity of the lines to other regions, so that powerflo.vda
+* generates the rows EQ_GR_XBND (L341-359), which no open model reaches:
+* - REG1: 0.6 in 2005 and 0.9 in 2030 (filparam.gms fills the periods from the data years);
+* - REG2: 0.4 in 2020;
+* - a past investment in the REG1-REG2 line in REG2 only (NCAP_PASTI, 2000): a constant on the
+*   right-hand side (L351, L356), and, with REDUCE (as run), a capacity variable for the line in
+*   REG2 but not in REG1 (pp_reduce.red L24), so that REG1's rows take the line's capacity in
+*   REG2 (L352-353, L357-358).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER GR_XBND /
+REG1.2005 0.6
+REG1.2030 0.9
+REG2.2020 0.4
+/;
+
+PARAMETER NCAP_PASTI /
+REG2.2000.TB_ELC_REG1_REG2_01 2
+/;

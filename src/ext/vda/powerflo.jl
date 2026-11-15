@@ -974,3 +974,103 @@ function eq_gr_demall!(tm)
     end
     return n
 end
+
+"""
+    eq_gr_xbnd!(tm) -> Int
+
+EQ_GR_XBND, the bound on the net imports into or exports from grid J (equ_ext.vda L101), one row
+for each region R and period T with GR_XBND(R,T), each grid J with an electricity node in R
+(GR_GRID(J,R,'ACT'), powerflo.vda L224), each direction IE and each of R's finest timeslices S:
+
+    EQ_GR_XBND(R,T,J,IE,RTS(S))\$(FINEST(R,S)\$GR_GRID(J,R,'ACT')\$GR_XBND(R,T))..
+      SUM((GR_GRID(J,R,C),GR_DEMMAP(R,C,COM))\$(RTC(R,T,COM)\$RC_GRID(R,T,C)), PROD(XPT(IE),-1) *
+        (VAR_GRIDIO(R,T,COM,C,S,'IN')\$GR_ALGMAP(R,'NRG',COM) - VAR_GRIDIO(R,T,COM,C,S,'OUT')))
+      =L=
+      SUM((GR_GRID(J,R,C),TOP_IRE(R,C,ALL_R,COM,P))\$((NOT SAMEAS(R,ALL_R))\$RC_GRID(R,T,C)),
+        SUM(V\$COEF_VNT(R,T,P,V), COEF_VNT(R,T,P,V) * PRC_CAPACT(R,P) * GR_XBND(R,T) * G_YRFR(R,S) *
+          (VAR_NCAP(R,V,P)\$TT(V)+NCAP_PASTI(R,V,P)\$PASTYEAR(V)))\$PRC_CAP(R,P) +
+        SUM((REG(ALL_R),V)\$COEF_VNT(REG,T,P,V), COEF_VNT(REG,T,P,V) * PRC_CAPACT(REG,P) * GR_XBND(R,T) * G_YRFR(R,S) *
+          (VAR_NCAP(REG,V,P)\$TT(V)+NCAP_PASTI(REG,V,P)\$PASTYEAR(V))\$PRC_CAP(REG,P))\$(NOT PRC_CAP(R,P)))\$XPT(IE) +
+      SUM((TOP_IRE(ALL_R,COM,R,C,P),GR_GRID(J,R,C))\$((NOT SAMEAS(R,ALL_R))\$RC_GRID(R,T,C)),
+        [the same two capacity terms])\$IMP(IE);
+
+The right-hand side is a share GR_XBND of the capacity of the lines that leave (exports) or enter
+(imports) R's grid nodes from another region: the line's capacity in R if it has one there
+(PRC_CAP(R,P)), else its capacity in the other region if that is an internal region (REG). TT is
+an alias of MILESTONYR (initmty.mod L94); a past investment (PASTYEAR) is a constant. RTS(S) is S
+(timslice.mod L31-39 without DYNTS). The capacity sums run once per TOP_IRE record, as GAMS sums
+them. In a stepped run %R_T% is `R,SUBT(T)` (`eq_periods`). The grid note's formulation (TIMES-Grid-Features
+§2.4) has only the line's capacity in R: docs/discrepancies.md D44. Returns the number of rows.
+
+GAMS: powerflo.vda L341-359, v4.9.7.
+"""
+function eq_gr_xbnd!(tm)
+    powerflo_on(tm) || return 0
+    d = tm.data
+    xbnd = gparam_opt(d, "GR_XBND", 2)
+    isempty(xbnd) && return 0
+    powerflo_vars!(tm)
+    x = gralloc_context(tm)
+    grid_of_r = indexby(gset_opt(d, "GR_GRID", 3), (2,))            # (r,) -> GR_GRID(j,r,c)
+    finest_of_r = indexby(gset(tm, "FINEST"), (1,))                  # (r,) -> FINEST(r,s)
+    exp_of = indexby(gset(tm, "TOP_IRE"), (1, 2))                    # (r,c) -> TOP_IRE(r,c,all_r,com,p)
+    imp_of = indexby(gset(tm, "TOP_IRE"), (3, 4))                    # (r,c) -> TOP_IRE(all_r,com,r,c,p)
+    vnt_of = indexby(gparam(tm, "COEF_VNT"), (1, 2, 3))              # (r,t,p) -> COEF_VNT(r,t,p,v)
+    coef_vnt, capact, yrfr, pasti = gparam(tm, "COEF_VNT"), gparam(tm, "PRC_CAPACT"), gparam(tm, "G_YRFR"), gparam(tm, "NCAP_PASTI")
+    prc_cap, reg, rtc = gset(tm, "PRC_CAP"), gset(tm, "REG"), gset(tm, "RTC")
+    milestonyr, pastyear, xpt, imp = gset(tm, "MILESTONYR"), gset(tm, "PASTYEAR"), gset(tm, "XPT"), gset(tm, "IMP")
+    ie_set = gset(tm, "IE").members
+    no2, no3, no4, no5 = NTuple{2,String}[], NTuple{3,String}[], NTuple{4,String}[], NTuple{5,String}[]
+    # SUM(V$COEF_VNT(Q,T,P,V), COEF_VNT(Q,T,P,V) * PRC_CAPACT(Q,P) * GR_XBND(R,T) * G_YRFR(R,S) *
+    #   (VAR_NCAP(Q,V,P)$TT(V)+NCAP_PASTI(Q,V,P)$PASTYEAR(V))), with Q = R or REG
+    function capacity!(rhs, q, t, p, k)
+        for (_, _, _, v) in get(vnt_of, (q, t, p), no4)
+            c = gv(coef_vnt, (q, t, p, v)) * gv(capact, (q, p)) * k
+            (v,) in milestonyr && addterm!(rhs, c, tm, "VAR_NCAP", q, v, p)
+            (v,) in pastyear && addconst!(rhs, c * gv(pasti, (q, v, p)))
+        end
+        return rhs
+    end
+    # the two capacity terms of one line P between R and ALL_R
+    function line!(rhs, r, allr, t, p, k)
+        if (r, p) in prc_cap
+            capacity!(rhs, r, t, p, k)
+        elseif (allr,) in reg && (allr, p) in prc_cap
+            capacity!(rhs, allr, t, p, k)
+        end
+        return rhs
+    end
+    n = 0
+    tx = eq_periods(tm)
+    for ((r, t), _) in sort(collect(xbnd.values); by=first)        # $GR_XBND(R,T)
+        (t,) in tx || continue                                       # %R_T%: SUBT in a stepped run (maindrv.mod L38-40)
+        for (j, _, a) in get(grid_of_r, (r,), no3)
+            a == "ACT" || continue                                    # $GR_GRID(J,R,'ACT')
+            nodes = [c for (jj, _, c) in get(grid_of_r, (r,), no3) if jj == j && (r, t, c) in x.rc_grid]
+            for (ie,) in ie_set, (_, s) in get(finest_of_r, (r,), no2)
+                sgn = (ie,) in xpt ? GNum(-1.0) : GNum(1.0)            # PROD(XPT(IE),-1)
+                k = gv(xbnd, (r, t)) * gv(yrfr, (r, s))
+                lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+                for c in nodes, (_, _, com) in get(x.dem_by_12, (r, c), no3)
+                    (r, t, com) in rtc || continue
+                    (r, "NRG", com) in x.algmap && addterm!(lhs, sgn, tm, "VAR_GRIDIO", r, t, com, c, s, "IN")
+                    addterm!(lhs, -sgn, tm, "VAR_GRIDIO", r, t, com, c, s, "OUT")
+                end
+                for c in nodes
+                    if (ie,) in xpt                                   # TOP_IRE(R,C,ALL_R,COM,P), exports
+                        for (_, _, allr, _, p) in get(exp_of, (r, c), no5)
+                            allr == r || line!(rhs, r, allr, t, p, k)
+                        end
+                    end
+                    if (ie,) in imp                                   # TOP_IRE(ALL_R,COM,R,C,P), imports
+                        for (allr, _, _, _, p) in get(imp_of, (r, c), no5)
+                            allr == r || line!(rhs, r, allr, t, p, k)
+                        end
+                    end
+                end
+                gconstraint!(tm, "EQ_GR_XBND", (r, t, j, ie, s), "L", lhs, rhs) === nothing || (n += 1)
+            end
+        end
+    end
+    return n
+end

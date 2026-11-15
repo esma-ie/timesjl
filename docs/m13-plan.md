@@ -143,6 +143,7 @@ GAMS 54.6.1):
 | 38 | EQ(l)_CAPVAC, refused since M1.1: the simulated vintages of PRC_SIMV processes (COEF_CSV, RTP_VINTYR over the simulated vintages, AFSV) and their capacity-activity equation, in place of EQ(l)_CAPACT and EQ(l)_CAFLAC | coef_csv.mod 11-77; eqcapvac.mod 14-28; eqmain.mod 67; mod_equa.mod 74 | layers 1 to 3 on the crafted case demo12_capvac, both variants, from the DD files (CI: test_eqcapvac.jl, the public and variant fixtures, the chain from DD files) |
 | 39 | EQ_BNDCST and VAR_CUMCST, refused since M1.3 (25-3): bounds on the costs of a region by cost type (REG_BNDCST in one period, REG_CUMCST over a range of years): investment costs with decommissioning, investment taxes and subsidies, fixed costs, taxes and subsidies, commodity and flow taxes and subsidies, and fourteen aggregates of them | eqbndcst.mod 42-77, 81-213; eqmain.mod 192; bnd_cum.mod 44-48 | layers 1 to 3 on the crafted case demo12_bndcst, both variants, from the DD files (CI: test_eqbndcst.jl, the public and variant fixtures, the chain from DD files) |
 | 40 | Unit commitment by start-up type in the linear formulation, refused since M1.1: the preparation (start-up types, their costs and times, the non-operational times DP_NON, the load and the losses of the start-up and shut-down phases DP_PSUD and DP_LOSD), the seven equations eq_sdlogic, eq_sudupt, eq_sdslant, eq_sdminon, eq_sudload, eq_sudtime and eq_sudpll with the variable VAR_UPT, and the start-up costs by type in EQ_OBJVAR. The discrete form (DUC = YES, a MIP) stays refused and is taken up after the M1.3 gate (James, 14 Nov 2026) | eqlducs.vda 12-41, 46-51, 53-124; eqobjvar.mod 38; equ_ext.vda 91; coef_ext.vda 78 | layers 1 to 3 on the crafted cases demo12_uc and demo12_ucv, both variants, from the DD files (CI: test_eqlducs.jl, the public and variant fixtures, the chain from DD files) |
+| 41 | EQ_GR_XBND, refused since M1.3 (27b): with GR_XBND data, the bound on a region's net imports into and exports from each power-flow grid it is part of, as a share of the capacity of its lines to other regions in each of its finest timeslices: the line's own capacity in the region, else its capacity in the other region if that region is internal; past investments are constants | powerflo.vda 341-359 | layers 1 to 3 on the crafted case demo12_pfx (demo12_pfd with GR_XBND in both regions and a past investment in the REG1-REG2 line in REG2 only), both variants, from the DD files: 96 rows in each variant; as run, 48 of REG1's rows take the line's capacity in REG2 (CI: demo12_pfx public fixture) |
 
 ## Parity (per change)
 
@@ -243,7 +244,8 @@ Not part of the gate, for the record:
   the whole model matches GAMS in both variants: the matrix (8,719 rows
   reduce_off, 3,257 as_run) and the objective 23,960,685.74 with CPLEX and
   HiGHS. Generation now refuses only the grid data not translated (PTDF,
-  node allocation, gas grids) and EQ_GR_XBND with GR_XBND data.
+  node allocation, gas grids) and EQ_GR_XBND with GR_XBND data (EQ_GR_XBND:
+  change 41, 15 Nov 2026).
 - (27a) powerflo.vda, phase-angle grids (`src/ext/vda/powerflo.jl`, 9 Nov
   2026). PREP interpolates PRC_REACT and the grid parameters
   (fillparm.gms, filparam.gms); the main block builds the grid from

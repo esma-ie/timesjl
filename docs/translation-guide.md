@@ -959,3 +959,15 @@ those checks, their figures and their crafted cases are not published
   zero after the first step (L281, never lifted): D43, followed as GAMS
   has it. CI: test_solve_stp3.jl. Not checked: L271-272 (no LP shows
   them), L177-181 and L186-189 with REG_FIXT or UC_CAP, EQE_UCRS.
+- 15 Nov 2026: M1.3 change 41: EQ_GR_XBND (powerflo.vda L341-359), refused
+  since 27b: the bound on a region's net imports into and exports from its
+  power-flow grid, as a share GR_XBND of the capacity of its lines to other
+  regions. New crafted case demo12_pfx (demo12_pfd with GR_XBND in both
+  regions and a past investment in the REG1-REG2 line in REG2 only): layers
+  1 to 3 PASS in both variants from the DD files (96 rows each; objective
+  23,941,260.27 with CPLEX and HiGHS). As run (REDUCE), the line has a
+  capacity variable in REG2 only, so REG1's rows take its capacity in REG2
+  (L352-353, L357-358), which the grid note does not describe
+  (discrepancies.md D44). In a stepped run the rows take the periods of the
+  step (`eq_periods`); no stepped grid case checks that. The refusal in
+  `generate!` is removed.
