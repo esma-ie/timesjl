@@ -900,3 +900,19 @@ those checks, their figures and their crafted cases are not published
   built": a later step depends on which optimum an earlier step took; a
   step must end optimal; EPS marginals; equations' levels and marginals not
   kept (M1.6).
+- 15 Nov 2026: M1.5 change 5, a second stepped case. demo12_step2
+  (`reference/dd/demo12_step2/`: TIMESTEP 20 with G_OVERLAP 15, CAP_BND,
+  user constraints summed over the periods and the regions, dynamic ones,
+  COM_CUM, FLO_CUM, REG_CUMCST) reaches most of the branches of solve.stp
+  that demo12_step does not: L44, L69-98, L132-196, L217-230, L279. Layers
+  1 to 3 per step pass on both variants, from GAMS's input dump and from
+  the DD files (`scripts/m13_gate.jl`); CI: test_solve_stp2.jl (90 tests)
+  on the fixtures of the case. One statement corrected: a second pass of
+  bnd_cum.mod (solve.stp L227 includes it in every step) reads the first
+  pass's modifier as a lead that is not an integer; GAMS rounds it (G29)
+  and sets no modifier, TIMES.jl stopped. So a stepped run applies a
+  cumulative bound to EOH without the modifier of the flexible horizon
+  (discrepancies.md D41, followed). Harness 0.3.5 reads MODEL STATISTICS
+  with "N projected". OBJ ALT or LIN in a stepped run stays refused and
+  becomes change 6; what no open stepped case reaches yet is listed in
+  docs/m15-plan.md, "Change 5 as built".

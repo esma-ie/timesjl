@@ -81,11 +81,19 @@ run's pre-solve dump (the state after the last step, each step without a solve):
 - L78-94, UC_RN and R_UC; L97, RTP_CAPYR; L101-103, STP_UCT; L132-134, UNCD1; L155-161, UC_BND; L217, NO_RVP;
   L225, FIL; L295, PRESOL;
 - L124, coef_alt.lin STP: L160 clears YK1 (eqflomrk.mod left it set);
-- L127, eqobsalv.mod STP EXIT (L26-82 for the last step): OBJ_SUMS, SALV_INV, OBJSCC, OBJ_DCEOH.
+- L127, eqobsalv.mod STP EXIT (L26-82 for the last step): OBJ_SUMS, SALV_INV, OBJSCC, OBJ_DCEOH;
+- reached by demo12_step2: L69 and L190-191, CAP_BND; L70-75 and L176-181, UC_RHS, UC_RHSR, UC_RHST,
+  UC_RHSTS, UC_RHSRT, UC_RHSRTS; L76 and L183-185, PRC_DYNUC; L96, RTP_VARP; L132-136, RXX and
+  UC_T_SUM; L140-151, UC_T, UC_T_EACH, UC_T_SUCC; L195, UC_RTSUC; L196, REG_CUMCST; L186-189 and
+  L227 (bnd_cum.mod in every step), COM_CUM, FLO_CUM, RC_CUMCOM.
+Every one of them is compared after each step instead (`stepped_check`, steps/<k>/final).
 """
 const STEPPED_LOOP_SYMBOLS = ("YR_V1", "YR_VL", "MY_FYEAR", "G_OVERLAP", "F", "Z", "SUBT", "BACKWARD", "RT_PP", "NO_RT",
                               "RTC_NET", "RTC_PRD", "RVT", "UC_RN", "R_UC", "RTP_CAPYR", "STP_UCT", "UNCD1", "UC_BND",
-                              "NO_RVP", "FIL", "PRESOL", "YK1", "OBJ_SUMS", "SALV_INV", "OBJSCC", "OBJ_DCEOH")
+                              "NO_RVP", "FIL", "PRESOL", "YK1", "OBJ_SUMS", "SALV_INV", "OBJSCC", "OBJ_DCEOH",
+                              "CAP_BND", "UC_RHS", "UC_RHSR", "UC_RHST", "UC_RHSTS", "UC_RHSRT", "UC_RHSRTS", "PRC_DYNUC",
+                              "RTP_VARP", "RXX", "UC_T_SUM", "UC_T", "UC_T_EACH", "UC_T_SUCC", "UC_RTSUC", "REG_CUMCST",
+                              "COM_CUM", "FLO_CUM", "RC_CUMCOM")
 
 "Carry `tm`'s state (every symbol read or written, and the switches) into a TimesModel of `dir`."
 function carry(tm, dir)

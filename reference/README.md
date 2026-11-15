@@ -84,6 +84,14 @@ steps), both variants: the CONVERT run's three models have the solve run's
 rows, columns and nonzeros, and HiGHS on each step's MPS file gives the
 objective GAMS/CPLEX reports for that step.
 
+Harness 0.3.5 (15 Nov 2026): GAMS writes "N projected" after the number of
+single variables in MODEL STATISTICS when it moved N starting levels onto
+their bounds, which a later step of a stepped run can do. The harness reads
+the line with or without it (0.3.4 took such a step for one without
+statistics and ended the reference with `CHECK`). Checked on the crafted
+case demo12_step2 (TIMESTEP 20, G_OVERLAP 15), both variants. A reference
+made with 0.3.4 stays valid.
+
 `execute_unload` with no symbol list writes every symbol the compiled program
 declares, so even the input dump holds symbols TIMES declares later in its
 source with data (and empty ones); the pre-solve run skips the reports

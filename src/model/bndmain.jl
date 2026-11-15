@@ -374,8 +374,17 @@ FLO_CUM after the changes bnd_cum.mod L12-20 make before it sets bounds:
       LOOP(UNCD7(R,P,C,YEAR,LL,JJ,''), FLO_CUM(R,P,C,YEAR,LL,'N') = MIN(0,ABS(MULTI(JJ,MIYR_L))-1)\$MULTI(JJ,MIYR_L)));
 
 YEAR and LL are ALLYEAR, BD is BND_TYPE (LO, FX, UP; initsys.mod L71);
-%EOTIME% is 2200 unless the run sets it (initsys.mod L36). GAMS: bnd_cum.mod
-L12-20, v4.9.7.
+%EOTIME% is 2200 unless the run sets it (initsys.mod L36).
+
+The statements are not idempotent, and a stepped run includes the file again
+in every step (solve.stp L227). The first pass leaves MIN(0,ABS(MULTI)-1) in
+the N record at %EOTIME%. The second pass moves that value, when it is not
+zero, to 'EOH' (L13) and clears the record at %EOTIME% (L14); the lead
+`J+(N-1)` is then below -1, rounded (G29), and names no element of J, so no
+modifier is set again: from its first step on, a stepped run applies the
+bound to EOH without the modifier of the flexible horizon (D41).
+
+GAMS: bnd_cum.mod L12-20, v4.9.7.
 """
 function bnd_cum_flo(tm::TimesModel, flo_cum::GamsParam{6}=gparam(tm, "FLO_CUM"))
     tab = gtable(flo_cum)
@@ -409,8 +418,7 @@ function bnd_cum_flo(tm::TimesModel, flo_cum::GamsParam{6}=gparam(tm, "FLO_CUM")
         for (r, p, c, y, ll) in rpc_cumflo
             ll == eotime || continue
             n = get(tab, (r, p, c, y, "EOH", "N"), GZERO).v
-            isinteger(n) || throw(ArgumentError("FLO_CUM$((r, p, c, y, "EOH", "N")) = $n is not an integer lead (bnd_cum.mod L19)"))
-            i = j1 === nothing ? 0 : j1 + Int(n) - 1
+            i = j1 === nothing ? 0 : j1 + glead(n - 1)       # a non-integer lead is rounded (G29)
             1 <= i <= length(j) && push!(uncd7, ((r, p, c, y, ll), j[i]))
         end
         for ((r, p, c, y, ll), jj) in uncd7
@@ -443,7 +451,10 @@ no EQ_CUM row); a range with no lower bound gets -INF when an annual
 COM_BNDNET/BNDPRD lower bound of the commodity is negative in some period
 (`x+1-1` is 0 for EPS, G6). YEAR and LL are ALLYEAR, BD is BND_TYPE (LO, FX,
 UP), %EOTIME% is 2200 unless the run sets it (initsys.mod L36). The STAGES
-form (%SW1%/%SW2%) is refused with the bounds.
+form (%SW1%/%SW2%) is refused with the bounds. A second pass (a stepped run,
+solve.stp L227) moves the modifier of the first to the '0' key and sets none
+again, as for FLO_CUM (`bnd_cum_flo`, D41); the EPS that L31 left under FX
+gives EPS under LO and UP and is cleared (L30).
 
 GAMS: bnd_cum.mod L27-38, v4.9.7.
 """
@@ -486,8 +497,7 @@ function bnd_cum_com(tm::TimesModel, com_cum::GamsParam{6}=gparam(tm, "COM_CUM")
             for (r, kk, y, ll, c) in rc_cumcom
                 (kk == kind && ll == eotime) || continue
                 n = get(tab, (r, kind, y, "0", c, "N"), GZERO).v
-                isinteger(n) || throw(ArgumentError("COM_CUM$((r, kind, y, "0", c, "N")) = $n is not an integer lead (bnd_cum.mod L34)"))
-                i = j1 === nothing ? 0 : j1 + Int(n) - 1
+                i = j1 === nothing ? 0 : j1 + glead(n - 1)   # a non-integer lead is rounded (G29)
                 1 <= i <= length(j) && push!(uncd7, ((r, kind, y, ll, c), j[i]))
             end
             for ((r, kk, y, ll, c), jj) in uncd7

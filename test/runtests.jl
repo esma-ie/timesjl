@@ -169,6 +169,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "The stepped solve: the partition, the preparation, the LP of each step and the run to its end, solve.stp on demo12_step (M1.5)" begin
         include("unit/test_solve_stp.jl")
     end
+    @testset "The stepped solve on a second case: a given overlap, CAP_BND, cumulative and dynamic user constraints, cumulative bounds, solve.stp on demo12_step2 (M1.5)" begin
+        include("unit/test_solve_stp2.jl")
+    end
     @testset "Commodity bounds above the tracked level: eqbndcom.mod on demo12_bndc (M1.3)" begin
         include("unit/test_eqbndcom.jl")
     end

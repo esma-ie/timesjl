@@ -110,7 +110,9 @@ end
     for f in files
         it = parse_dd_file(f)
         @test !isempty(it)
-        endswith(f, ".dd") && @test !isempty(syms(it)) && all(s -> !s.hasdata || all(r -> !isempty(r.labels), s.records), syms(it))
+        # a record without labels is the value of a scalar parameter (G_OVERLAP in demo12_step2/step2.dd)
+        scalar(s) = s.kind == :parameter && length(s.records) == 1 && isempty(s.records[1].labels)
+        endswith(f, ".dd") && @test !isempty(syms(it)) && all(s -> !s.hasdata || scalar(s) || all(r -> !isempty(r.labels), s.records), syms(it))
         endswith(f, ".run") && @test any(x -> x isa DDDirective && occursin(r"^BATINCLUDE\s+maindrv\.mod"i, x.text), it)
     end
 end

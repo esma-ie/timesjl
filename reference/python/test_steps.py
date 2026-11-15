@@ -39,6 +39,16 @@ NON ZERO ELEMENTS         6,930
 **** SOLVER STATUS     1 Normal Completion
 **** MODEL STATUS      14 No Solution Returned
 **** OBJECTIVE VALUE                0.0000
+
+MODEL STATISTICS
+
+BLOCKS OF EQUATIONS         104     SINGLE EQUATIONS        1,149
+BLOCKS OF VARIABLES          27     SINGLE VARIABLES        2,523  2 projected
+NON ZERO ELEMENTS         8,348
+
+**** SOLVER STATUS     1 Normal Completion
+**** MODEL STATUS      1 Optimal
+**** OBJECTIVE VALUE         80873281.9743
 """
 
 
@@ -84,7 +94,10 @@ class StepTests(unittest.TestCase):
                 {"step": 1, "rows": 5921, "columns": 6717, "nonzeros": 20736, "solver_status": 1, "model_status": 1,
                  "objective": 12397965.9863},
                 {"step": 2, "rows": 1380, "columns": 3179, "nonzeros": 6930, "solver_status": 1, "model_status": 14,
-                 "objective": 0.0}])
+                 "objective": 0.0},
+                # "N projected" after the number of single variables (harness 0.3.5)
+                {"step": 3, "rows": 1149, "columns": 2523, "nonzeros": 8348, "solver_status": 1, "model_status": 1,
+                 "objective": 80873281.9743}])
             self.assertEqual(parse_solves(Path(d) / "none.lst"), [])
 
     def test_a_run_that_is_not_stepped_keeps_no_steps(self):
