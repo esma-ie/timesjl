@@ -36,8 +36,13 @@
 # after eqmain.mod and the extensions' equ_ext, maindrv.mod L79-80), compared on every symbol. Its
 # pre-solve dump is not a pre-solve state: with SOLVE_NOW=NO the run still goes through the loop of
 # solve.stp, every step without a solve, so the dump holds the state after the last step. It is
-# compared less the symbols that loop assigns (STEPPED_LOOP_SYMBOLS). No model: the stepped solve
-# is M1.5.
+# compared less the symbols that loop assigns (STEPPED_LOOP_SYMBOLS). A stepped run has no single
+# model: with the per-step reference (harness 0.3.4, steps/<k>/) the run is solved step by step to
+# its end (M1.5 change 4, `solve_stepped!`, HiGHS), twice. First with GAMS's levels loaded between
+# the steps: each step's sets and parameters against GAMS's dump after its SOLVE (layer 1), its LP
+# against the LP GAMS solved (layer 2, 1e-9), and its objective against GAMS/CPLEX's, each optimum
+# evaluated in the other LP (layer 3, 1e-6). Then on TIMES.jl's own levels: each step's objective
+# against GAMS/CPLEX's and the last against GAMS/HiGHS's (1e-6).
 
 include(joinpath(@__DIR__, "m13_probe.jl"))      # M13_STEPS, M13_SEGMENTS, run_switches, runfile_of, suite_switches
 include(joinpath(@__DIR__, "m14_models.jl"))     # REFGAMS, dd_model_dirs, take_local!
@@ -172,6 +177,117 @@ function model_check(tm, dir, model, variant; solve=false)
 end
 
 """
+    stepped_state(snap) -> TimesModel
+
+The state of a stepped run before solve.stp, from a snapshot `snap` taken at the equ checkpoint:
+a copy of its data with the rest of maindrv.mod L81-108 run on it (the steps of equ -> presolve
+less `pp_clean!`, which solve.mod L12 runs inside each step). The run's REDUCE switch selects the
+reduced model, as scripts/m11_probe.jl sets it.
+"""
+function stepped_state(snap)
+    sw = snap.switches
+    nt = qa_carry!(TimesModel(deepcopy(snap.data); reduce=strip(get(sw, "REDUCE", "")) == "YES", switches=sw), snap)
+    foreach(f -> f(nt), filter(f -> f !== TIMES.pp_clean!, gate_steps("equ", "presolve")))
+    return nt
+end
+
+"""
+    stepped_check(snap, dir, model, variant) -> Bool
+
+M1.5 change 4 (docs/m15-plan.md): a stepped (myopic) run solved to its end by `solve_stepped!` with
+HiGHS (TIMESJL_THREADS threads), against the per-step reference `steps/<k>/` (harness 0.3.4), twice:
+
+- with GAMS's levels loaded after each step, so that a difference in one step cannot hide in the
+  next: the sets and parameters of the step against GAMS's dump after its SOLVE (layer 1, 1e-9), its
+  LP against the LP GAMS solved (layer 2, 1e-9), its objective against GAMS/CPLEX's of that step,
+  GAMS's optimum evaluated in TIMES.jl's LP and HiGHS's optimum in GAMS's LP (layer 3, 1e-6);
+- on TIMES.jl's own levels (the run as a user makes it): the objective of each step against
+  GAMS/CPLEX's, and of the last step against GAMS/HiGHS's (1e-6). The LPs of the later steps are
+  not compared there: where a step has more than one optimum, HiGHS and CPLEX may fix the periods
+  solved at different levels.
+"""
+function stepped_check(snap, dir, model, variant)
+    m = JSON.parsefile(joinpath(dir, "manifest.json"))
+    runs = get(m, "runs", Dict())
+    gsteps = get(get(runs, "solve_cplex", Dict()), "steps", Any[])
+    hfinal = get(get(get(runs, "solve_highs", Dict()), "solveinfo", Dict()), "objval", nothing)
+    threads = parse(Int, get(ENV, "TIMESJL_THREADS", "12"))
+    rel(a, b) = abs(a - b) / max(1.0, abs(b))
+    ok = true
+    for own in (false, true)
+        tag = string("== ", model, "/", variant, " stepped run on ", own ? "TIMES.jl's own" : "GAMS's", " levels")
+        tm = stepped_state(snap)
+        allok = true
+        hook = function (tm, st, info)
+            k = info.step
+            d = joinpath(dir, "steps", string(k))
+            parts, good = String[], true
+            if !own
+                ref = DumpData(joinpath(d, "final"))
+                names = sort!([i.name for i in values(ref.dump.symbols) if i.kind in (:set, :parameter) &&
+                               !startswith(i.name, "TJL_") && i.name != "Z" &&       # Z: err_stat.mod L56-63 after the SOLVE
+                               (haskey(tm.data.dump.symbols, i.name) || haskey(tm.data.sets, i.name) || haskey(tm.data.params, i.name))])
+                r = layer1(tm, ref, names)
+                bad = filter(!ispass, r)
+                good &= isempty(bad)
+                push!(parts, string("layer 1 ", isempty(bad) ? "PASS" : "FAIL", " (", length(r), " symbols)"))
+                foreach(x -> println("     ", x, " ", x.examples), first(bad, 10))
+                mine = canonical_from_jump(st.model)
+                theirs = canonical_from_dump(joinpath(d, "matrix"), joinpath(d, "matrix_dictmap"))
+                cmp = compare_lp(mine, theirs)
+                good &= ispass(cmp)
+                push!(parts, string("layer 2 ", ispass(cmp) ? "PASS" : "FAIL", " (", length(mine.rows), " rows, ", length(mine.cols),
+                                    " columns, ", length(mine.coefs), " nonzeros)"))
+                ispass(cmp) || foreach(e -> println("     ", e), first(cmp.examples, 10))
+                # each optimum in the other LP
+                g = evaluate_point(mine, solution_levels(joinpath(d, "final"); columns=keys(mine.cols)); nworst=typemax(Int))
+                gref = g.feasible ? g : evaluate_point(theirs, solution_levels(joinpath(d, "final"); columns=keys(theirs.cols)); nworst=typemax(Int))
+                e = evaluate_point(theirs, Dict(jump_name_key(JuMP.name(v)) => JuMP.value(v) for v in JuMP.all_variables(st.model)))
+                cross = as_feasible_as(g, gref) && e.feasible && isempty(e.missing_columns) && isempty(g.missing_columns) &&
+                        rel(e.objective, info.objective) <= 1e-6
+                good &= cross
+                push!(parts, string("each optimum in the other LP ", cross ? "PASS" : "FAIL", " (GAMS's here: objective ", g.objective,
+                                    ", largest row violation ", round(g.max_row_violation; sigdigits=2), "; HiGHS's in GAMS's LP: ",
+                                    round(e.max_row_violation; sigdigits=2), ")"))
+            end
+            gobj = k <= length(gsteps) ? get(gsteps[k], "objective", nothing) : nothing
+            if gobj === nothing
+                good = false
+                push!(parts, string("objective ", info.objective, "; no GAMS/CPLEX objective of this step"))
+            else
+                same = rel(info.objective, gobj) <= 1e-6
+                good &= same
+                push!(parts, string("objective vs GAMS/CPLEX ", same ? "PASS" : "FAIL", " (", info.objective, " vs ", gobj,
+                                    ", relative difference ", round(rel(info.objective, gobj); sigdigits=2), ")"))
+            end
+            allok &= good
+            println(tag, ", step ", k, " (periods ", join(info.periods, ", "), "): ", good ? "PASS" : "FAIL", "; ", join(parts, "; "),
+                    "; prepared, generated, solved in ", round(info.prepare_s; digits=2), ", ", round(info.generate_s; digits=2), ", ",
+                    round(info.solve_s; digits=2), " s")
+            own || TIMES.stp_load_point!(tm, DumpData(joinpath(d, "final")))
+        end
+        steps = try
+            TIMES.solve_stepped!(tm, HiGHS.Optimizer; attributes=("threads" => threads,), step_hook=hook)
+        catch e
+            e isa ErrorException || rethrow()
+            println(tag, ": FAIL (", sprint(showerror, e), ")")
+            ok = false
+            continue
+        end
+        allok &= length(steps) == length(gsteps)
+        note = string(length(steps), " steps, GAMS ", length(gsteps))
+        if own && hfinal !== nothing && !isempty(steps)
+            same = rel(steps[end].objective, hfinal) <= 1e-6
+            allok &= same
+            note *= string("; last objective vs GAMS/HiGHS ", same ? "PASS" : "FAIL", " (", steps[end].objective, " vs ", hfinal, ")")
+        end
+        ok &= allok
+        println(tag, ": ", allok ? "PASS" : "FAIL", " (", note, ")")
+    end
+    return ok
+end
+
+"""
     gate13(refdir, model; roots, variant, from_dd=nothing, solve=false) -> Bool
 
 The chain input -> init -> prep -> prelv -> ppm -> coef -> presolve on one
@@ -194,8 +310,11 @@ function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off"
         tm, ok = dd_input(dir, model, variant, from_dd, sw)
     end
     stp = TIMES.stepped(tm)
+    snap = nothing          # a stepped run: TIMES.jl's state at the equ checkpoint, for the steps
     for (a, b) in gate_segments(tm, dir)
         isdir(joinpath(dir, b)) || (println("== ", model, "/", variant, ": no ", b, " dump; the chain ends at ", a); break)
+        stp && a == "equ" && isdir(joinpath(dir, "steps")) &&
+            (snap = qa_carry!(TimesModel(deepcopy(tm.data); switches=tm.switches), tm))
         names = gate_symbols(tm.data)                 # the segment's start dump
         # a stepped run's pre-solve dump is the state after the loop of solve.stp (STEPPED_LOOP_SYMBOLS)
         stp && b == "presolve" && filter!(n -> !(n in STEPPED_LOOP_SYMBOLS), names)
@@ -244,9 +363,14 @@ function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off"
             ok && gate ? "PASS" : "FAIL", " to ", reached, " (TIMES.jl ", round(t_all; digits=1), " s)")
     # M1.4: the model from TIMES.jl's own state, against GAMS's matrix and objective
     if stp
-        println("== ", model, "/", variant, ": the chain ends before the model (stepped run, TIMESTEP ",
-                TIMES.gswitch(tm, "TIMESTEP", ""), ": the stepped solve, solve.stp, is M1.5)")
-        return ok && gate
+        # M1.5: no single model; the steps of solve.stp, each against GAMS's (stepped_check)
+        if snap === nothing || reached != "presolve"
+            println("== ", model, "/", variant, ": stepped run (TIMESTEP ", TIMES.gswitch(tm, "TIMESTEP", ""), "): ",
+                    snap === nothing ? "no per-step reference (steps/, harness 0.3.4), the steps are not run" :
+                                       "the chain did not reach the pre-solve state, the steps are not run")
+            return ok && gate
+        end
+        return stepped_check(snap, dir, model, variant) && ok && gate
     end
     reached == "presolve" && (from_dd !== nothing || solve) && (ok &= model_check(tm, dir, model, variant; solve))
     return ok && gate

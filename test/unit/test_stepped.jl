@@ -9,11 +9,12 @@
 # 1e-9. A stepped run's pre-solve dump is no reference for this state: with SOLVE_NOW=NO the run
 # still goes through the loop of solve.stp, every step without a solve, so that dump holds the
 # state after the last step. The stepped solve itself (solve.stp, the %R_T% restriction of
-# maindrv.mod L40) is M1.5: model generation refuses the run.
+# maindrv.mod L40) is M1.5 (test_solve_stp.jl): a stepped run has no single model, `solve_stepped!`
+# generates and solves the model of each step, and `generate!` on the run as a whole says so.
 
 using TIMES: TimesModel, DumpData, layer1, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!,
              prepret_decl!, eqobjinv_prep!, eqobjfix_prep!, eqobsalv_prep!, eqmain_prep!, bnd_data!, pp_qack_data!,
-             pp_clean!, generate!, untranslated_families, stepped, gset, gparam, UnportedError
+             generate!, untranslated_families, stepped, gset, gparam, stp_unported
 using TIMES.Reference: ispass
 import TOML
 
@@ -47,9 +48,13 @@ import TOML
         foreach(d -> ispass(d) || println(p, " ppm -> equ: ", d, " ", d.examples), r)
         @test length(r) > 800 && all(ispass, r)        # 833, as the chain compares at equ
     end
-    @testset "the stepped solve is refused (M1.5)" begin
-        foreach(f -> f(tm), (bnd_data!, pp_qack_data!, pp_clean!))          # maindrv.mod L92-113 before solve.stp
-        @test unique(x.family for x in untranslated_families(tm)) == ["(stepped run)"]
-        @test_throws UnportedError generate!(tm)
+    @testset "a stepped run has no single model (M1.5)" begin
+        foreach(f -> f(tm), (bnd_data!, pp_qack_data!))                     # maindrv.mod L92-108, before solve.stp
+        @test isempty(stp_unported(tm)) && isempty(untranslated_families(tm))   # nothing of this run is refused
+        @test_throws ArgumentError generate!(tm)                            # solve_stepped! builds the model of each step
+        # what a stepped run cannot have yet is listed for the run as a whole
+        tmf = TimesModel(joinpath(FIXTURES, p * "_ppm"); reduce=vx["reduce"], switches=merge(vx["switches"], Dict("FIXBOH" => "2010")))
+        u = [x for x in untranslated_families(tmf) if x.family == "(stepped run)"]
+        @test length(u) == 1 && occursin("FIXBOH", u[1].why) && u[1].gams == "solve.stp L28-39, L45"
     end
 end

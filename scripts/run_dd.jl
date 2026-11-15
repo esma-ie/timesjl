@@ -16,6 +16,9 @@
 #   4. with --solve, solve it with HiGHS (TIMESJL_THREADS threads, 12 by default), print the objective and
 #      write the solution (levels and marginals of every variable and equation) to <out>/solution/ in the
 #      harness's dump layout (write_solution, issue #97; reference/python/gdx2arrow.py, format version 1).
+# A stepped (myopic) run (TIMESTEP) has no single model: step 3 is skipped, and with --solve the run
+# is solved step by step (`solve_stepped!`, solve.stp; one line per step). Its solution is not written
+# to <out>/solution/ yet (M1.6).
 # The QA log TIMES writes (QA_CHECK.LOG) goes to the --out folder. A TIMES feature that TIMES.jl does
 # not translate yet stops the run with "not translated" and the GAMS lines it would need.
 #
@@ -61,9 +64,11 @@ function run_dd(args)
     qa_warnings!(tm, g.warnings)                  # $IF WARNINGS (ppmain.mod L35)
 
     tp = 0.0
+    stp = TIMES.stepped(tm)
     for (a, b) in GATE_SEGMENTS
         try
-            tp += @elapsed foreach(f -> f(tm), gate_steps(a))
+            # a stepped run: pp_clean.mod runs inside each step (solve.mod L12), not before the loop
+            tp += @elapsed foreach(f -> f(tm), filter(f -> !(stp && f === TIMES.pp_clean!), gate_steps(a)))
         catch e
             e isa TIMES.UnportedError || rethrow()
             println("== $name: not translated, in $a -> $b: ", sprint(showerror, e))
@@ -72,6 +77,29 @@ function run_dd(args)
     end
     write(joinpath(out, "QA_CHECK.LOG"), qa_text(tm))
     println("== $name: preprocessed in $(round(tp; digits=1)) s; QA log in ", joinpath(out, "QA_CHECK.LOG"))
+
+    if stp          # M1.5: one model per step (solve.stp), generated as each step is solved
+        if !solve
+            println("== $name: stepped run (TIMESTEP ", TIMES.gswitch(tm, "TIMESTEP", ""),
+                    "): one model per step, generated as each step is solved; run with --solve")
+            return true
+        end
+        hook = (tm, st, info) -> println("== $name: step ", info.step, " (periods ", join(info.periods, ", "), "): ", info.rows, " rows, ",
+                                         info.columns, " columns; HiGHS ", info.status, ", objective ", info.objective,
+                                         "; prepared, generated, solved in ", round(info.prepare_s; digits=1), ", ",
+                                         round(info.generate_s; digits=1), ", ", round(info.solve_s; digits=1), " s")
+        steps = try
+            TIMES.solve_stepped!(tm, HiGHS.Optimizer; attributes=("threads" => parse(Int, get(ENV, "TIMESJL_THREADS", "12")),),
+                                 step_hook=hook)
+        catch e
+            e isa Union{TIMES.UnportedError,ErrorException} || rethrow()
+            println("== $name: ", e isa TIMES.UnportedError ? "not translated, in the stepped solve: " : "", sprint(showerror, e))
+            return false
+        end
+        println("== $name: stepped run solved in ", length(steps), " steps; objective of the last step ", steps[end].objective,
+                "; the solution of a stepped run is not written yet (M1.6)")
+        return true
+    end
 
     tg = @elapsed generate!(tm)
     m = tm.model

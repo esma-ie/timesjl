@@ -13,7 +13,7 @@
 # run-file models, e.g. --root times_demo=../TIMES_Demo).
 
 using TIMES
-using TIMES: TimesModel, untranslated_families, generate!, UnportedError
+using TIMES: TimesModel, untranslated_families, generate!, UnportedError, stepped
 using TIMES.Reference: canonical_from_dump, canonical_from_jump, compare_lp, ispass, evaluate_point,
                        solution_levels, jump_name_key
 import JSON, JuMP, HiGHS, TOML
@@ -85,6 +85,9 @@ function probe(refdir, model; variant="reduce_off", roots=Dict{String,String}())
     if !isempty(u)
         return (; model, status="needs", families=unique(x.family for x in u), why=u, hasmatrix)
     end
+    # A stepped (myopic) run has no single LP, and its pre-solve dump is the state after the loop of
+    # solve.stp: solve_stepped! solves it step by step, and scripts/m13_gate.jl checks each step.
+    stepped(tm) && return (; model, status="stepped run: one LP per step, checked by scripts/m13_gate.jl", hasmatrix)
     try
         generate!(tm)
     catch e

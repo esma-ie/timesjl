@@ -120,6 +120,10 @@ function cuopt_checks!(checks, runrec, run, presolve, matrix, dictmap, points, s
                  join(unique(x.family for x in u), ", "))
         return
     end
+    if stepped(tm)      # one LP per step (solve.stp): no single model to hand to cuOpt
+        skipped!(checks, run, live, s.methods, "stepped run: one LP per step, not solved in this lane")
+        return
+    end
     tg = try
         @elapsed generate!(tm)
     catch e
