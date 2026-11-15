@@ -43,7 +43,7 @@ function eq_floshr!(tm::TimesModel)
     flo_shar = gparam(tm, "FLO_SHAR")
     isempty(flo_shar) && return 0
     modlyear = gset(tm, "MODLYEAR")
-    milestonyr = gset(tm, "MILESTONYR")
+    tx = eq_periods(tm)   # %R_T%, %TX%: SUBT in a stepped run (maindrv.mod L38-40)
     rp_std = gset(tm, "RP_STD")
     top = gset(tm, "TOP")
     rtpcs_varf = gset(tm, "RTPCS_VARF")
@@ -65,7 +65,7 @@ function eq_floshr!(tm::TimesModel)
             (b == bd && (v,) in modlyear) || continue
             ((r, p) in rp_std && (r, p, c, io) in top) || continue
             for (_, _, t, _) in get(t_of_rvp, (r, v, p), no4)
-                ((t,) in milestonyr && (r, t, p, c, s) in rtpcs_varf) || continue
+                ((t,) in tx && (r, t, p, c, s) in rtpcs_varf) || continue
                 push!(rows, (r, v, t, p, c, cg, s))
             end
         end

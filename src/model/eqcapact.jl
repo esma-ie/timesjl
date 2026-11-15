@@ -231,6 +231,7 @@ function eq_capact!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, 
     prc_vint = gset(tm, "PRC_VINT")
     milestonyr = gset(tm, "MILESTONYR")   # T: ALIAS(MILESTONYR,T,TT), initmty.mod L94
     modlyear = gset(tm, "MODLYEAR")
+    tx = eq_periods(tm)   # %R_T%, %TX%: SUBT in a stepped run (maindrv.mod L38-40)
     pastyear = gset(tm, "PASTYEAR")
     coef_cpt = gparam(tm, "COEF_CPT")
     coef_af = gparam(tm, "COEF_AF")
@@ -264,7 +265,7 @@ function eq_capact!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, 
     n = 0
     for (r, v, t, p) in rtp_vintyr
         # The domain RTP_VINTYR(R,V,T,P) is controlled by V (MODLYEAR) and T (MILESTONYR).
-        ((v,) in modlyear && (t,) in milestonyr) || continue
+        ((v,) in modlyear && (t,) in tx) || continue
         for (_, _, _, s, _) in get(s_of_rtpbd, (r, t, p, bd), NTuple{5,String}[])
             (r, p, s, bd) in rps_caflac && continue
             stg = (r, p) in rp_stg

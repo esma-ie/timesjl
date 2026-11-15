@@ -859,3 +859,23 @@ those checks, their figures and their crafted cases are not published
   reaches them. Branches demo12_step does not reach are listed in
   docs/m15-plan.md, "Change 2 as built". Model generation still refuses a
   stepped run until changes 3 and 4.
+- 15 Nov 2026: M1.5 change 3, the equations and the bounds of one step of a
+  stepped run. The macros `%R_T%`, `%TX%` and `%R_V_T%` (maindrv.mod L38-40)
+  are `eq_periods(tm)`: SUBT in a stepped run, every period otherwise; the
+  control period of each equation and bound statement written with them
+  takes it. The bounds (`src/model/bnd_stp.jl`): one bound table for the
+  run, as GAMS's bounds live through the run; `stp_bounds_init!`
+  (maindrv.mod L92), `stp_step_bounds!` (solve.stp L193-233, L267-281: the
+  periods already solved fixed at their levels, the pending ones at zero,
+  bnd_ucw.mod and bnd_cum.mod again), `stp_bndmain!` (L319, bndmain.mod with
+  its second argument 1, which resets some families and keeps others);
+  `stp_model` gives the model of one step, which `generate!` builds. Layer 2
+  per step on demo12_step, both variants, on GAMS's levels of the step
+  before: the LP of each of the three steps equals the one GAMS solved
+  (CONVERT) at 1e-9, sizes included; without the levels, steps 2 and 3 fail
+  on their column bounds, as they should. CI: test_solve_stp.jl with three
+  matrix fixtures. Every model that is not stepped keeps its LP (the whole
+  suite). Branches demo12_step does not reach, and the fix of blending at
+  zero that GAMS never lifts (solve.stp L281; discrepancies.md U7), are
+  listed in docs/m15-plan.md, "Change 3 as built". The run as a whole stays
+  refused until the loop with the SOLVE (change 4).

@@ -82,11 +82,12 @@ function eq_flomrk!(tm::TimesModel)
         end
     end
 
+    tx = eq_periods(tm)   # %R_T%: SUBT in a stepped run (maindrv.mod L38-40)
     n = 0
     for (eqtype, bd) in FLOMRK_VARIANTS
         name = "EQ$(eqtype)_FLOMRK"
         for (r, t, item, com, b, s) in rtx_mark
-            b == bd || continue
+            (b == bd && (t,) in tx) || continue                         # (%R_T%,ITEM,COM,S)
             lhs = JuMP.AffExpr(0.0)
             pw = gif(GNum(1.0), (r, "0", item, com, bd) in rx_mark) - 1
             for (_, _, c) in get(gmap_of_rcom, (r, com), no3), (_, p, _) in get(rpc_of_rc, (r, c), no3)

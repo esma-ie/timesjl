@@ -64,8 +64,10 @@ function eq_stgaux!(tm::TimesModel)
     varts_of = indexby(x.rpcs_var, (1, 2, 3))                     # (r,p,com) -> RPCS_VAR(r,p,com,ts)
     ipx = (pM = gparam(tm, "M"), pD = gparam(tm, "D"), pE = gparam(tm, "E"), yearval = gparam(tm, "YEARVAL"),
            periodyr_of_t = indexby(gset(tm, "PERIODYR"), (1,)), y_eoh = gset(tm, "Y_EOH"))
+    vx, tx = gset(tm, "MODLYEAR"), eq_periods(tm)                 # %R_V_T%: V, and SUBT in a stepped run (maindrv.mod L38-40)
     n = 0
     for (r, v, t, p) in gset(tm, "RTP_VINTYR")
+        ((v,) in vx && (t,) in tx) || continue
         (r, p) in x.rp_stg || continue
         stk = (r, "STK", p) in x.prc_map
         nst = (r, "NST", p) in x.prc_map

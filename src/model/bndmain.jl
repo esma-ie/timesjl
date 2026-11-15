@@ -46,8 +46,15 @@
 # (bnd_ire.vda, PREMILE), DSC semi-continuous capacity (mod_vars.dsc L18-19,
 # NCAP_SEMI), damage (eqdamage.mod L141-156), MACRO/MICRO demand
 # (pp_micro.mod L88-91, RD_NLP), POWERFLO (powerflo.vda), load points
-# (spoint.mod L83-85) and %R_T% variants (REG_FIXT, STEPPED; maindrv.mod
-# L40-41).
+# (spoint.mod L83-85) and the %R_T% variant of REG_FIXT (maindrv.mod L41).
+#
+# A stepped run (TIMESTEP; maindrv.mod L38-40): %R_T% is 'R,SUBT(T)', so the
+# three statements written with it (bnd_act.mod L22, bndmain.mod L46 and
+# L57-58) act on the periods of the step (`eq_periods`). SUBT is every period
+# when maindrv.mod L92 includes bndmain.mod (ppmain.mod L253), so that first
+# table is the one of an ordinary run. The bounds do not start at their
+# defaults in each step: `bnd_stp.jl` keeps one table for the whole run and
+# applies solve.stp's statements and bndmain.mod's second call to it.
 
 """
     BoundTable
@@ -101,7 +108,6 @@ function bounds_unported(tm::TimesModel)
     for sw in ("SPOINT", "LPOINT", "FIXBOH", "STEPPED")
         haskey(tm.switches, sw) && throw(UnportedError("bounds under $sw (spoint.mod L63-87 / maindrv.mod L40)"))
     end
-    stepped(tm) && throw(UnportedError("bounds under TIMESTEP (maindrv.mod L38-40: %R_T% is 'R,SUBT(T)'; solve.stp)"))
     haskey(tm.switches, "RPOINT") && uppercase(tm.switches["RPOINT"]) != "NO" &&
         throw(UnportedError("bounds under RPOINT (spoint.mod)"))
     notempty_par("NORTS", 3) && throw(UnportedError("dynslite.vda BOUNDS (dynamic timeslices)"))
@@ -133,7 +139,8 @@ end
     VAR_ACT.UP(...) \$= ACT_BND(R,T,P,S,'UP');  VAR_ACT.FX(RTP_VINTYR(%R_T%,T,P),S)\$(...) \$= ACT_BND(R,T,P,S,'FX');
     VAR_ACT.UP(RTP_VINTYR(R,V,T,P),S)\$(PRC_TS(R,P,S) * PRC_VINT(R,P)\$RTPS_OFF(R,T,P,S)) = EPS;
 
-GAMS: bnd_act.mod L13-24, v4.9.7 (%R_T% = R,T, maindrv.mod L39).
+GAMS: bnd_act.mod L13-24, v4.9.7 (%R_T% = R,T, maindrv.mod L39; R,SUBT(T) in
+a stepped run, L40: the FX statement alone).
 """
 function bnd_act!(bt::BoundTable, tm::TimesModel)
     act_bnd = gparam(tm, "ACT_BND")
@@ -141,12 +148,14 @@ function bnd_act!(bt::BoundTable, tm::TimesModel)
     prc_vint = gset(tm, "PRC_VINT")
     rtps_off = gset(tm, "RTPS_OFF")
     t_set, v_set = gset(tm, "MILESTONYR"), gset(tm, "MODLYEAR")
+    tx = eq_periods(tm)                                                         # %R_T% of L22
     for (r, v, t, p) in gset(tm, "RTP_VINTYR")
         ((v,) in v_set && (t,) in t_set) || continue
         for (_, _, s) in get(ts_of_rp, (r, p), NTuple{3,String}[])
             key = (r, v, t, p, s)
             if v == t && !((r, p) in prc_vint)                                  # L20-22
                 for (bd, which) in BD_WHICH
+                    (which === :fx && !((t,) in tx)) && continue                # L22: RTP_VINTYR(%R_T%,T,P)
                     setbound_if!(bt, tm, "VAR_ACT", key, which, gv(act_bnd, (r, t, p, s, bd)))
                 end
             end
@@ -287,10 +296,14 @@ end
     CAP_BND(RTP(RTP_VARP),'LO')\$CAP_BND(RTP,'UP') = SMIN(BDNEQ,CAP_BND(RTP,BDNEQ));
     VAR_CAP.LO(RTP(R,T,P)) \$= CAP_BND(R,T,P,'LO');       (.UP, .FX alike)
 
+L46 is `bnd_set.mod VAR_NCAP 'R,T,P' NCAP_BND '%R_T%,P' \$(RP(R,P))`: in a
+stepped run the bounds are taken for the periods of the step.
+
 GAMS: bndmain.mod L44-46 and L51-52 with bnd_set.mod L20-25, v4.9.7.
 """
 function bnd_ncap_cap!(bt::BoundTable, tm::TimesModel)
     t_set, rtp, rp = gset(tm, "MILESTONYR"), gset(tm, "RTP"), gset(tm, "RP")
+    tx = eq_periods(tm)                                                         # %R_T% of L46
     ncap = gtable(gparam(tm, "NCAP_BND"))
     for (r, y, p) in gset(tm, "RTP_OFF")                                        # L44
         gassign!(ncap, (r, y, p, "UP"), GEPS)
@@ -303,7 +316,7 @@ function bnd_ncap_cap!(bt::BoundTable, tm::TimesModel)
     end
     for ((r, t, p, bd), x) in sort!(collect(ncap); by=first)                     # L46
         which = bd == "LO" ? :lo : bd == "UP" ? :up : bd == "FX" ? :fx : continue
-        ((t,) in t_set && (r, p) in rp) && setbound_if!(bt, tm, "VAR_NCAP", (r, t, p), which, x)
+        ((t,) in tx && (r, p) in rp) && setbound_if!(bt, tm, "VAR_NCAP", (r, t, p), which, x)
     end
     cap = gtable(gparam(tm, "CAP_BND"))
     old = copy(cap)                                                             # L51
@@ -324,15 +337,19 @@ end
     VAR_COMNET.LO(RTCS_VARC(R,T,C,S)) \$= COM_BNDNET(R,T,C,S,'LO');  (.UP, .FX; and VAR_COMPRD from COM_BNDPRD)
     VAR_COMPRD.FX(RTCS_VARC(R,T,C,S))\$((NOT RHS_COMPRD(R,T,C,S))\$RCS_COMPRD(R,T,C,S,'FX')) = EPS;
 
+L57-58 are written with `RTCS_VARC(%R_T%,C,S)`: in a stepped run the bounds
+are taken for the periods of the step. L59 runs over every period.
+
 GAMS: bndmain.mod L57-59 with bnd_set.mod L20-25, v4.9.7.
 """
 function bnd_com!(bt::BoundTable, tm::TimesModel)
     t_set, varc = gset(tm, "MILESTONYR"), gset(tm, "RTCS_VARC")
+    tx = eq_periods(tm)                                                         # %R_T% of L57-58
     for (var, par) in (("VAR_COMNET", "COM_BNDNET"), ("VAR_COMPRD", "COM_BNDPRD"))
         p = gparam(tm, par)
         for (r, t, c, s, bd) in sort(p.keys)
             which = bd == "LO" ? :lo : bd == "UP" ? :up : bd == "FX" ? :fx : continue
-            ((t,) in t_set && (r, t, c, s) in varc) && setbound_if!(bt, tm, var, (r, t, c, s), which, gv(p, (r, t, c, s, bd)))
+            ((t,) in tx && (r, t, c, s) in varc) && setbound_if!(bt, tm, var, (r, t, c, s), which, gv(p, (r, t, c, s, bd)))
         end
     end
     rhs_comprd = gset(tm, "RHS_COMPRD")
@@ -574,18 +591,41 @@ The bounds of the user-constraint slack variables when VAR_UC is YES
     UC_T_EACH(UC_T_SUCC) = NO;
 
 The VAR_UC* variables are free (mod_vars.mod), so the -INF/+INF resets
-(bnd_ucv.mod L6-7) give the defaults. The last line raises UC_RHS* 'UP' to
-INF where only 'N' is given; the pre-solve dump already holds that, and it
-sets no bound. TT = MILESTONYR, R = REG.
+(bnd_ucv.mod L24-25) give the defaults in an ordinary run. The last line
+raises UC_RHS* 'UP' to INF where only 'N' is given; the pre-solve dump
+already holds that, and it sets no bound. TT = MILESTONYR, R = REG.
+
+`reset = true` applies the resets to a table that already holds bounds (a
+stepped run includes bnd_ucw.mod in every step, solve.stp L193, and again
+after the SOLVE, bndmain.mod L69):
+
+    %1.LO(UC_N%2%3%4%9)%12 = -INF;   %1.UP(UC_N%2%3%4%9) = INF;
+
+The upper bound of every record goes to INF. The lower bound goes to -INF
+for every record of VAR_UC, VAR_UCT and VAR_UCTS (no %12), for VAR_UCR where
+UC_R_EACH(R,UC_N), and for VAR_UCRT and VAR_UCRTS where UC_T_EACH(R,UC_N,TT)
+(with the members of UC_T_SUCC, L14); elsewhere it stays.
 
 GAMS: bnd_ucw.mod L2-12 with bnd_ucv.mod L2-18, v4.9.7 (STAGES parts refused
 with the bounds).
 """
-function bnd_ucw!(bt::BoundTable, tm::TimesModel)
+function bnd_ucw!(bt::BoundTable, tm::TimesModel; reset::Bool=false)
     var_uc(tm) || return bt                                    # bndmain.mod L69
     reg, milestonyr = gset(tm, "REG"), gset(tm, "MILESTONYR")
     uc_on = gset(tm, "UC_ON")
     t_each = union(Set(gset(tm, "UC_T_EACH").keys), Set(gset(tm, "UC_T_SUCC").keys))   # bnd_ucw.mod L5
+    if reset                                                   # bnd_ucv.mod L24-25
+        uc_r_each = gset_opt(tm.data, "UC_R_EACH", 2)
+        for var in ("VAR_UC", "VAR_UCR", "VAR_UCT", "VAR_UCRT", "VAR_UCTS", "VAR_UCRTS")
+            recs = get(bt.recs, var, nothing)
+            recs === nothing && continue
+            for (key, (lo, _)) in collect(recs)                # keys start with UC_N; then R, TT where present
+                free = var == "VAR_UCR" ? (key[2], key[1]) in uc_r_each :
+                       var in ("VAR_UCRT", "VAR_UCRTS") ? (key[2], key[1], key[3]) in t_each : true
+                recs[key] = (free ? -Inf : lo, Inf)
+            end
+        end
+    end
     regs = [k[1] for k in reg.keys]
     inT(t) = (t,) in milestonyr
     on(r, n) = (r, n) in uc_on

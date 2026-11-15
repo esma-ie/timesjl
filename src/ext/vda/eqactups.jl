@@ -304,8 +304,9 @@ function eq_actups!(tm::TimesModel)
     rp_upl, rp_pl, rp_upr = S("RP_UPL", 3), S("RP_PL", 3), S("RP_UPR", 3)
     (isempty(afups) && isempty(rp_ups) && isempty(rp_upc) && isempty(rp_upl) && isempty(rp_pl) && isempty(rp_upr)) && return 0
     modlyear, T = S("MODLYEAR", 1), S("MILESTONYR", 1)
+    tx = eq_periods(tm)   # %R_V_T%: SUBT in a stepped run (maindrv.mod L38-40)
     vint = gset(tm, "RTP_VINTYR")
-    vt_ok(v, t) = (v,) in modlyear && (t,) in T
+    vt_ok(v, t) = (v,) in modlyear && (t,) in tx
     vt_of_rp = indexby(vint, (1, 4))                                       # (r,p) -> RTP_VINTYR(r,v,t,p)
     vint_of_rtp = indexby(vint, (1, 3, 4))                                 # (r,t,p) -> RTP_VINTYR(r,v,t,p)
     prc_ts = S("PRC_TS", 3)

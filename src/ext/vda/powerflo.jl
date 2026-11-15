@@ -657,8 +657,9 @@ function eq_gr_powflo!(tm)
     react = gparam(tm, "PRC_REACT")
     no4, no5 = NTuple{4,String}[], NTuple{5,String}[]
     n = 0
+    tx = eq_periods(tm)
     for ((r, t, c, reg, com), a) in sort(collect(admit.values); by=first)
-        (r, t, c) in rc_grid || continue
+        ((r, t, c) in rc_grid && (t,) in tx) || continue             # RC_GRID(%R_T%,C): SUBT in a stepped run (maindrv.mod L38-40)
         for (_, _, _, s) in get(varc_of, (r, t, c), no4)
             lhs = JuMP.AffExpr(0.0)
             for (_, _, _, _, p) in get(top_of, (r, c, reg, com), no5)
@@ -806,7 +807,9 @@ function eq_gr_genall!(tm)
     rpc_stg, top, rtc = gset(tm, "RPC_STG"), gset(tm, "TOP"), gset(tm, "RTC")
     no3, no4, no5 = NTuple{3,String}[], NTuple{4,String}[], NTuple{5,String}[]
     n = 0
+    tx = eq_periods(tm)
     for (r, t, c) in x.gnall, (_, _, _, s) in get(varc_of, (r, t, c), no4), cg in get(x.cg_of_r, r, String[])
+        (t,) in tx || continue                                       # GR_GNALL(%R_T%,C): SUBT in a stepped run (maindrv.mod L38-40)
         lhs = JuMP.AffExpr(0.0)
         for (_, p, com, item) in get(x.prcmap_of_r, (r,), no4)
             (r, cg, com) in x.algmap || continue                     # GR_ALGMAP(R,CG,COM), all three parts
@@ -906,8 +909,9 @@ function eq_gr_demall!(tm)
     rp_std, rp_ire, rpc_ire, rtc = gset(tm, "RP_STD"), gset(tm, "RP_IRE"), gset(tm, "RPC_IRE"), gset(tm, "RTC")
     no3, no4, no5 = NTuple{3,String}[], NTuple{4,String}[], NTuple{5,String}[]
     n = 0
+    tx = eq_periods(tm)
     for (r, t, c) in x.rc_grid, (_, _, _, s) in get(varc_of, (r, t, c), no4)
-        haskey(x.demfr, (r, t, c, s)) || continue                    # $GR_DEMFR(R,T,C,S) (EPS is true, G3)
+        ((t,) in tx && haskey(x.demfr, (r, t, c, s))) || continue    # RC_GRID(%R_T%,C), $GR_DEMFR(R,T,C,S) (EPS is true, G3)
         demfr = gv(x.demfr, (r, t, c, s))
         ado = (r, t, c) in x.ado
         for (_, g, _) in get(x.gmapc_by_13, (r, c), no3)             # GR_GMAPC(R,NRG_GRID,C)

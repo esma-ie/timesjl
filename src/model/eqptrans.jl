@@ -40,7 +40,7 @@ function eq_ptrans!(tm::TimesModel)
 
     rtp_vintyr = gset(tm, "RTP_VINTYR")
     modlyear = gset(tm, "MODLYEAR")
-    milestonyr = gset(tm, "MILESTONYR")
+    tx = eq_periods(tm)   # %R_T%, %TX%: SUBT in a stepped run (maindrv.mod L38-40)
     rps_s1 = gset(tm, "RPS_S1")
     rp_std = gset(tm, "RP_STD")
     rpc = gset(tm, "RPC")
@@ -67,7 +67,7 @@ function eq_ptrans!(tm::TimesModel)
 
     n = 0
     for (r, v, t, p) in rtp_vintyr
-        ((v,) in modlyear && (t,) in milestonyr) || continue
+        ((v,) in modlyear && (t,) in tx) || continue
         (r, p) in rp_std || continue
         for (_, _, cg1, cg2) in get(ffunc_of_rp, (r, p), NTuple{4,String}[])
             ptran = get(ptran_of, (r, v, p, cg1, cg2), NTuple{7,String}[])

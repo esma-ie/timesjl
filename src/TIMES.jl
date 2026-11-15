@@ -109,6 +109,7 @@ include("prep/ppmain_reduce.jl")
 include("ext/vda/ppm_ext.jl")
 include("model/generate.jl")
 include("model/solve_stp.jl")     # M1.5: the stepped (myopic) solve, solve.stp
+include("model/bnd_stp.jl")       # M1.5: the bounds of a stepped run and the model of one step
 include("model/solution.jl")      # #97: the solution as a TIMES.jl dump (M1.6, started early)
 
 end # module TIMES

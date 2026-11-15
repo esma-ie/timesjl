@@ -50,8 +50,10 @@ function eq_actflo!(tm::TimesModel)
     pg_of_rp = indexby(rpc_pg, (1, 2))       # (r,p) -> RPC_PG members
     ire_of_rpc = indexby(rpc_ire, (1, 2, 3)) # (r,p,c) -> RPC_IRE members
 
+    vx, tx = gset(tm, "MODLYEAR"), eq_periods(tm)                 # %R_V_T%: V, and SUBT in a stepped run (maindrv.mod L38-40)
     n = 0
     for (r, v, t, p) in rtp_vintyr
+        ((v,) in vx && (t,) in tx) || continue
         (r, p) in prc_act || continue
         for (_, _, s) in get(ts_of_rp, (r, p), NTuple{3,String}[])
             tm.reduce && (r, t, p, s) in rtps_off && continue

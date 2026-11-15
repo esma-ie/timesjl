@@ -40,7 +40,7 @@ GAMS: eqbndcom.mod L16-24 with eqmain.mod L54-59, v4.9.7.
 function eq_bndcom!(tm::TimesModel)
     com_bnd = (("NET", gparam(tm, "COM_BNDNET")), ("PRD", gparam(tm, "COM_BNDPRD")))
     all(isempty(p) for (_, p) in com_bnd) && return 0
-    milestonyr = gset(tm, "MILESTONYR")
+    tx = eq_periods(tm)   # %R_T%, %TX%: SUBT in a stepped run (maindrv.mod L38-40)
     rtc, rcs_comts, com_ts = gset(tm, "RTC"), gset(tm, "RCS_COMTS"), gset(tm, "COM_TS")
     ts_map = gset(tm, "TS_MAP")
     varc_of_rtc = indexby(gset(tm, "RTCS_VARC"), (1, 2, 3))  # (r,t,c) -> RTCS_VARC(r,t,c,ts)
@@ -52,7 +52,7 @@ function eq_bndcom!(tm::TimesModel)
         rows = NTuple{4,String}[]
         for (r, t, c, s, b) in bnd.keys
             b == bd || continue
-            ((t,) in milestonyr && (r, t, c) in rtc) || continue
+            ((t,) in tx && (r, t, c) in rtc) || continue
             ((r, c, s) in rcs_comts && !((r, c, s) in com_ts)) || continue
             v = bnd.values[(r, t, c, s, b)]
             bd == "LO" && v == 0 && continue                 # (COM_BND%4(...,'LO') NE 0)

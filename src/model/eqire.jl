@@ -57,7 +57,7 @@ function eq_ire!(tm::TimesModel)
     name = "EQ_IRE"
 
     reg = gset(tm, "REG")
-    milestonyr = gset(tm, "MILESTONYR")      # T: ALIAS(MILESTONYR,T,TT), initmty.mod L94
+    tx = eq_periods(tm)   # %R_T%, %TX%: SUBT in a stepped run (maindrv.mod L38-40)
     rtp = gset(tm, "RTP")
     xpt = gset(tm, "XPT")
     imp = gset(tm, "IMP")
@@ -86,7 +86,7 @@ function eq_ire!(tm::TimesModel)
     for (r, p, c, ie) in rpc_eqire
         (r,) in reg || continue
         for (_, t, _) in get(t_of_rp, (r, p), no3)
-            (t,) in milestonyr || continue
+            (t,) in tx || continue
             for (_, _, _, s) in get(s_of_rpc, (r, p, c), no4)
                 push!(rows, (r, t, p, c, ie, s))
             end

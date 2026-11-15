@@ -72,7 +72,8 @@ GAMS: eqxbnd.mod L17-56 with eqmain.mod L241-243, v4.9.7.
 function eq_xbnd!(tm::TimesModel)
     ire_xbnd = gparam(tm, "IRE_XBND")
     isempty(ire_xbnd) && return 0
-    reg, milestonyr = gset(tm, "REG"), gset(tm, "MILESTONYR")
+    reg = gset(tm, "REG")
+    tx = eq_periods(tm)   # %R_T%, %TX%: SUBT in a stepped run (maindrv.mod L38-40)
     imp, xpt = gset(tm, "IMP"), gset(tm, "XPT")
     rpc_ire, rpc_aire, rs_tree = gset(tm, "RPC_IRE"), gset(tm, "RPC_AIRE"), gset(tm, "RS_TREE")
     prc_actflo, rs_fr, ire_tscvt = gparam(tm, "PRC_ACTFLO"), gparam(tm, "RS_FR"), gparam(tm, "IRE_TSCVT")
@@ -98,7 +99,7 @@ function eq_xbnd!(tm::TimesModel)
         rows = NTuple{5,String}[]
         for (all_reg, t, c, s, ie, b) in ire_xbnd.keys                              # L17
             b == bd || continue
-            ((t,) in milestonyr && haskey(ire_of_rc, (all_reg, c, ie))) || continue
+            ((t,) in tx && haskey(ire_of_rc, (all_reg, c, ie))) || continue
             val = ire_xbnd.values[(all_reg, t, c, s, ie, b)]
             (bd == "FX" || (bd == "LO" && val != 0) || (bd == "UP" && val != Inf)) || continue      # %3
             push!(rows, (all_reg, t, c, s, ie))

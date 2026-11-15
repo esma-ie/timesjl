@@ -69,7 +69,8 @@ GAMS: eqflofr.mod L15-27 with eqmain.mod L118-120, v4.9.7.
 function eq_flofr!(tm::TimesModel)
     flo_fr = gparam(tm, "FLO_FR")
     isempty(flo_fr) && return 0
-    milestonyr, rtpc, rp_flo = gset(tm, "MILESTONYR"), gset(tm, "RTPC"), gset(tm, "RP_FLO")
+    rtpc, rp_flo = gset(tm, "RTPC"), gset(tm, "RP_FLO")
+    tx = eq_periods(tm)   # %R_T%, %TX%: SUBT in a stepped run (maindrv.mod L38-40)
     ts_map, ips, bd = gset(tm, "TS_MAP"), gset(tm, "IPS"), gset(tm, "BD")
     lnx = [k[1] for k in gset(tm, "LNX").keys]
     rs_fr, stoa = gparam(tm, "RS_FR"), gparam(tm, "STOA")
@@ -86,7 +87,7 @@ function eq_flofr!(tm::TimesModel)
         rows = NTuple{6,String}[]
         for (r, t, p, c, s, l) in flo_fr.keys                                   # L15
             l in lims || continue
-            ((t,) in milestonyr && (r, t, p, c) in rtpc && (r, p) in rp_flo) || continue
+            ((t,) in tx && (r, t, p, c) in rtpc && (r, p) in rp_flo) || continue
             any(((_, _, _, ts),) -> (r, s, ts) in ts_map, get(var_of_rpc, (r, p, c), no4)) || continue
             push!(rows, (r, t, p, c, s, l))
         end

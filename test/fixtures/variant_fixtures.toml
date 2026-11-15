@@ -227,7 +227,10 @@ untranslated = []
 # Preprocessing from the input dump to ppm on every symbol, and the ppm -> equ step (test/unit/test_stepped.jl:
 # coef_alt.lin L81, eqobsalv.mod L23-25). `state` names the dump the refusal is checked on: equ, the state after
 # eqmain.mod (maindrv.mod L79-80); the pre-solve dump of a stepped run is the state after the loop of solve.stp.
-# Model generation refuses the run: the stepped solve (solve.stp) is M1.5.
+# Model generation refuses the run as a whole until the loop with the SOLVE (M1.5 change 4). The steps
+# themselves (test/unit/test_solve_stp.jl): demo12_step_step<k> is the state after the SOLVE of step k (the
+# sets and parameters that differ from the equ fixture, and the levels the next step fixes), and
+# demo12_step_step<k>_matrix the LP GAMS solved in step k (CONVERT), compared at 1e-9 (M1.5 change 3).
 [[variant]]
 prefix   = "demo12_step"
 model    = "TIMES_Demo-demo12_step"

@@ -457,7 +457,7 @@ function eq_combal!(tm::TimesModel, eqtype::String, lim::String, kind::String)
     name = "EQ$(eqtype)_COM$(kind)"
     x = combal_context(tm)
     rcs = gset(tm, "RCS_COM$(kind)")
-    milestonyr = gset(tm, "MILESTONYR")
+    tx = eq_periods(tm)   # %R_T%, %TX%: SUBT in a stepped run (maindrv.mod L38-40)
     rhs_comprd = gset(tm, "RHS_COMPRD")
     rhs_combal = gset(tm, "RHS_COMBAL")
     dem = gset(tm, "DEM")
@@ -473,7 +473,7 @@ function eq_combal!(tm::TimesModel, eqtype::String, lim::String, kind::String)
     n = 0
     for (r, t, c, s, l) in rcs
         l == lim || continue
-        (t,) in milestonyr || continue                   # %R_T% = R,T: T controls
+        (t,) in tx || continue                           # %R_T% = R,T (R,SUBT(T) in a stepped run): T controls
         kind == "PRD" && !((r, t, c, s) in rhs_comprd) && continue
 
         lhs = JuMP.AffExpr(0.0)

@@ -45,7 +45,7 @@ function eq_acteff!(tm::TimesModel)
     rpg_ace = gset_opt(tm.data, "RPG_ACE", 4)
     isempty(rpg_ace) && return 0
     rp_pl, act_lospl = gset_opt(tm.data, "RP_PL", 3), gparam_opt(tm.data, "ACT_LOSPL", 4)
-    modlyear, milestonyr = gset(tm, "MODLYEAR"), gset(tm, "MILESTONYR")
+    modlyear, tx = gset(tm, "MODLYEAR"), eq_periods(tm)   # %R_V_T%: SUBT in a stepped run (maindrv.mod L38-40)
     rpc_ace_of_rp = indexby(gset(tm, "RPC_ACE"), (1, 2))           # (r,p) -> RPC_ACE(r,p,c)
     com_gmap = gset(tm, "COM_GMAP")
     tsmap_of_rs = indexby(gset(tm, "TS_MAP"), (1, 2))              # (r,s) -> TS_MAP(r,s,ts)
@@ -69,7 +69,7 @@ function eq_acteff!(tm::TimesModel)
 
     rows = NTuple{7,String}[]
     for (r, p, cg, io) in rpg_ace, (_, v, t, _) in get(vt_of_rp, (r, p), no4)
-        ((v,) in modlyear && (t,) in milestonyr) || continue
+        ((v,) in modlyear && (t,) in tx) || continue
         for (_, _, s) in get(s1_of_rp, (r, p), no3)
             push!(rows, (r, v, t, p, cg, io, s))
         end

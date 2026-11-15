@@ -79,8 +79,10 @@ function eq_stgips!(tm::TimesModel)
     end
     vint_of_rtp = indexby(rtp_vintyr, (1, 3, 4))                          # (r,t,p) -> RTP_VINTYR(r,v,t,p)
     rps_set = Set(rps)
+    vx, tx = gset(tm, "MODLYEAR"), eq_periods(tm)                 # %R_V_T%: V, and SUBT in a stepped run (maindrv.mod L38-40)
     n = 0
     for (r, v, t, p) in rtp_vintyr
+        ((v,) in vx && (t,) in tx) || continue
         (r, p) in rps_set || continue
         first_vt = v in miyr1 && t in miyr1
         for ips in ("IN", "N")                                          # IPS / IN, N / (setglobs.gms L154)

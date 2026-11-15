@@ -67,7 +67,8 @@ GAMS: eqflobnd.mod L15-43 with eqmain.mod L111-113, v4.9.7.
 function eq_flobnd!(tm::TimesModel)
     flo_bnd = gparam(tm, "FLO_BND")
     isempty(flo_bnd) && return 0
-    milestonyr, rtp_vara = gset(tm, "MILESTONYR"), gset(tm, "RTP_VARA")
+    rtp_vara = gset(tm, "RTP_VARA")
+    tx = eq_periods(tm)   # %R_T%, %TX%: SUBT in a stepped run (maindrv.mod L38-40)
     ts_map, com_gmap, rs_below = gset(tm, "TS_MAP"), gset(tm, "COM_GMAP"), gset(tm, "RS_BELOW")
     rp_flo, rp_ire, rpc_aire = gset(tm, "RP_FLO"), gset(tm, "RP_IRE"), gset(tm, "RPC_AIRE")
     xpt, com = gset(tm, "XPT"), gset(tm, "COM")
@@ -84,7 +85,7 @@ function eq_flobnd!(tm::TimesModel)
         rows = NTuple{5,String}[]
         for (r, t, p, cg, s, b) in flo_bnd.keys
             b == bd || continue
-            ((t,) in milestonyr && (r, t, p) in rtp_vara) || continue
+            ((t,) in tx && (r, t, p) in rtp_vara) || continue
             marked = haskey(flo_bnd, (r, dflbl, p, cg, s, bd))                      # L19
             any(get(varf_of_rtp, (r, t, p), no5)) do (_, _, _, c, ts)                 # L18-20
                 (r, s, ts) in ts_map && (r, cg, c) in com_gmap && (marked || (r, s, ts) in rs_below)

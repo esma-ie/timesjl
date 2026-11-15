@@ -110,8 +110,10 @@ function eq_slsift!(tm::TimesModel)
     at(r, t, p, l) = gv(act_time, (r, t, p, l)).v
 
     rows = NTuple{7,String}[]
+    tx = eq_periods(tm)
     for (r, p, com) in rpc_ls, (_, _, s) in get(rps_prcts_of_rp, (r, p), no3)
         for (_, t, _) in get(t_of_rp, (r, p), no3)
+            (t,) in tx || continue                                     # RTP(%R_T%,P): SUBT in a stepped run (maindrv.mod L38-40)
             for lnx in ("N", "FX"), l in ("LO", "FX", "UP", "N")
                 ((r, p, s) in prc_ts && has_at(r, t, p, l)) || (lnx == "FX" && l in ("N", "FX")) || continue
                 push!(rows, (r, t, p, com, s, lnx, l))
