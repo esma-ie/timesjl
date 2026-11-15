@@ -115,6 +115,17 @@ Reviewed on 14 Nov 2026 against pull requests #1 to #120 (108 merged, six open: 
 
 ## Log by pull request
 
+### #135 Dashboard 15 Nov: the 14 Nov pass, changes 28 to 40, the stepped solve in review (open)
+
+Stacked on #127. Its list is logged here because the dashboard branches do not touch this file.
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Slide 6 with 35 CI runs (18 before): two panels, layer 1 (the seven coefficient files) one cell per run, the files in the tooltip. | Recommended: yes. Built in. | open |
+| 2 | Slide 3: ten tiles across (nine before), so the 68 changes fit. | Recommended: yes. Built in. | open |
+| 3 | Slide 2: the Solve stage counts `solve.stp` (377 lines with `solve.mod`) and shows "in review" while the stepped solve (#126 to #134) is open; the slide reads 10,521 of 11,534 lines (91%). | Recommended: yes. Built in. | open |
+| 4 | The batch figures are from the 14 Nov pass on main c04c8ab (to #104); the pass on main 5b0e1c2 goes into the next refresh. The M1.3 gate is not shown as passed. | Nothing to answer. | logged |
+
 ### #134 M1.5 (7): a third stepped case, demo12_step3 (unit commitment, blending, storage, retirement); layers 1 to 3 per step (open)
 
 | # | Question | Decided | How |
