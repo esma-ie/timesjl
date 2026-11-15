@@ -1,0 +1,119 @@
+* TIMES.jl crafted case demo12_ucann (reference/crafted.toml, 15 Nov 2026): user constraints on
+* the annual, undiscounted investment costs, taxes and subsidies of new capacity (UC_ATTR
+* INVCOST, INVTAX, INVSUB on an NCAP term; uc_ncap.mod L39 with CST_ANNC of eqbndcst.mod
+* L49-77; M1.3 change 42, docs/m13-plan.md). Added to TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo
+* @ 962db86, CC BY 4.0). ppmain.mod L1156 adds the attribute ANNUL to each of these, and L1161
+* the attribute CUMSUM, so each constraint is dynamic in the RHS direction (equserco.mod
+* L80-106): in each period the term sums the capacity installed up to that period, each vintage
+* with its annual cost in that period's milestone year.
+* demo12 has no investment taxes or subsidies, so the case adds them first:
+* - NCAP_ITAX on ELCTNCOA01 and ELCNNNUC01 (REG1) and ELCTNGAS01 (REG2);
+* - NCAP_ISUB on ELCRNWIN01 (both regions).
+* The constraints:
+* - ANN_INV (EQ_UCR, REG1 and REG2 each): the annual investment cost of new coal, nuclear,
+*   wind, gas and (REG1) biomass plants (INVCOST) is at most a bound in each period.
+* - ANN_TXS (EQ_UC, REG1 and REG2 summed): the annual investment taxes less the subsidies
+*   (INVTAX, INVSUB) together with the investment cost of the period (COST, OBJ_ICOST) of the
+*   same plants, at most a bound in each period.
+* - ANN_RHS (EQ_UCR, REG1): the annual investment cost of new gas plants at most twice that
+*   of new biomass plants plus a constant (INVCOST on both sides).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER
+NCAP_ITAX ' '/
+REG1.2005.ELCTNCOA01.MEuro05 200
+REG1.2005.ELCNNNUC01.MEuro05 100
+REG2.2006.ELCTNGAS01.MEuro05 50
+/
+
+PARAMETER
+NCAP_ISUB ' '/
+REG1.2005.ELCRNWIN01.MEuro05 300
+REG2.2005.ELCRNWIN01.MEuro05 200
+/
+
+SET UC_N
+/
+ANN_INV 'Annual investment cost of new plants'
+ANN_TXS 'Annual investment taxes less subsidies of new plants'
+ANN_RHS 'Annual investment cost of new nuclear against new wind'
+/
+
+SET UC_R_EACH
+/
+REG1.ANN_INV
+REG2.ANN_INV
+REG1.ANN_RHS
+/
+
+SET UC_R_SUM
+/
+REG1.ANN_TXS
+REG2.ANN_TXS
+/
+
+SET UC_ATTR
+/
+REG1.ANN_INV.LHS.NCAP.INVCOST
+REG2.ANN_INV.LHS.NCAP.INVCOST
+REG1.ANN_TXS.LHS.NCAP.INVTAX
+REG1.ANN_TXS.LHS.NCAP.INVSUB
+REG1.ANN_TXS.LHS.NCAP.COST
+REG2.ANN_TXS.LHS.NCAP.INVTAX
+REG2.ANN_TXS.LHS.NCAP.INVSUB
+REG2.ANN_TXS.LHS.NCAP.COST
+REG1.ANN_RHS.LHS.NCAP.INVCOST
+REG1.ANN_RHS.RHS.NCAP.INVCOST
+/
+
+PARAMETER
+UC_NCAP ' '/
+ANN_INV.LHS.REG1.2005.ELCTNCOA01 1
+ANN_INV.LHS.REG1.2005.ELCNNNUC01 1
+ANN_INV.LHS.REG1.2005.ELCRNWIN01 1
+ANN_INV.LHS.REG1.2006.ELCTNGAS01 1
+ANN_INV.LHS.REG1.2005.ELCRNBIO01 1
+ANN_INV.LHS.REG2.2005.ELCTNCOA01 1
+ANN_INV.LHS.REG2.2005.ELCRNWIN01 1
+ANN_INV.LHS.REG2.2006.ELCTNGAS01 1
+ANN_TXS.LHS.REG1.2005.ELCTNCOA01 1
+ANN_TXS.LHS.REG1.2005.ELCNNNUC01 1
+ANN_TXS.LHS.REG1.2005.ELCRNWIN01 1
+ANN_TXS.LHS.REG2.2005.ELCRNWIN01 1
+ANN_TXS.LHS.REG2.2006.ELCTNGAS01 1
+ANN_RHS.LHS.REG1.2006.ELCTNGAS01 1
+ANN_RHS.RHS.REG1.2005.ELCRNBIO01 2
+/
+
+PARAMETER
+UC_RHSRT ' '/
+REG1.ANN_INV.2005.UP 100000
+REG1.ANN_INV.2010.UP 100000
+REG1.ANN_INV.2015.UP 100000
+REG1.ANN_INV.2020.UP 100000
+REG1.ANN_INV.2030.UP 12000
+REG1.ANN_INV.2050.UP 100000
+REG2.ANN_INV.2005.UP 100000
+REG2.ANN_INV.2010.UP 100000
+REG2.ANN_INV.2015.UP 100000
+REG2.ANN_INV.2020.UP 100000
+REG2.ANN_INV.2030.UP 9000
+REG2.ANN_INV.2050.UP 100000
+REG1.ANN_RHS.2005.UP 100000
+REG1.ANN_RHS.2010.UP 100000
+REG1.ANN_RHS.2015.UP 100000
+REG1.ANN_RHS.2020.UP 2500
+REG1.ANN_RHS.2030.UP 100000
+REG1.ANN_RHS.2050.UP 100000
+/
+
+PARAMETER
+UC_RHST ' '/
+ANN_TXS.2005.UP 100000
+ANN_TXS.2010.UP 100000
+ANN_TXS.2015.UP 100000
+ANN_TXS.2020.UP 100000
+ANN_TXS.2030.UP 100000
+ANN_TXS.2050.UP 100000
+/

@@ -144,6 +144,7 @@ GAMS 54.6.1):
 | 39 | EQ_BNDCST and VAR_CUMCST, refused since M1.3 (25-3): bounds on the costs of a region by cost type (REG_BNDCST in one period, REG_CUMCST over a range of years): investment costs with decommissioning, investment taxes and subsidies, fixed costs, taxes and subsidies, commodity and flow taxes and subsidies, and fourteen aggregates of them | eqbndcst.mod 42-77, 81-213; eqmain.mod 192; bnd_cum.mod 44-48 | layers 1 to 3 on the crafted case demo12_bndcst, both variants, from the DD files (CI: test_eqbndcst.jl, the public and variant fixtures, the chain from DD files) |
 | 40 | Unit commitment by start-up type in the linear formulation, refused since M1.1: the preparation (start-up types, their costs and times, the non-operational times DP_NON, the load and the losses of the start-up and shut-down phases DP_PSUD and DP_LOSD), the seven equations eq_sdlogic, eq_sudupt, eq_sdslant, eq_sdminon, eq_sudload, eq_sudtime and eq_sudpll with the variable VAR_UPT, and the start-up costs by type in EQ_OBJVAR. The discrete form (DUC = YES, a MIP) stays refused and is taken up after the M1.3 gate (James, 14 Nov 2026) | eqlducs.vda 12-41, 46-51, 53-124; eqobjvar.mod 38; equ_ext.vda 91; coef_ext.vda 78 | layers 1 to 3 on the crafted cases demo12_uc and demo12_ucv, both variants, from the DD files (CI: test_eqlducs.jl, the public and variant fixtures, the chain from DD files) |
 | 41 | EQ_GR_XBND, refused since M1.3 (27b): with GR_XBND data, the bound on a region's net imports into and exports from each power-flow grid it is part of, as a share of the capacity of its lines to other regions in each of its finest timeslices: the line's own capacity in the region, else its capacity in the other region if that region is internal; past investments are constants | powerflo.vda 341-359 | layers 1 to 3 on the crafted case demo12_pfx (demo12_pfd with GR_XBND in both regions and a past investment in the REG1-REG2 line in REG2 only), both variants, from the DD files: 96 rows in each variant; as run, 48 of REG1's rows take the line's capacity in REG2 (CI: demo12_pfx public fixture) |
+| 42 | The user-constraint attributes ANNUL, INVCOST, INVTAX and INVSUB, refused since M1.3 (22) (James, 15 Nov 2026: yes to #123, decision 4): in the RHS direction of a dynamic constraint the NCAP term adds the annual, undiscounted investment cost, tax and subsidy CST_ANNC of each vintage in the milestone year of the period (eqbndcst.mod L49-77); the term is compiled in only where uc_ncap.mod's %3 and %6 are written differently (equserco.mod L87) | uc_ncap.mod 39 | layers 1 to 3 on the crafted case demo12_ucann (demo12 with investment taxes and subsidies and three user constraints: INVCOST in each region, INVTAX and INVSUB with COST summed over the regions, INVCOST on both sides), both variants, from the DD files; 24 new rows in each variant (18 EQE_UCRSU, 6 EQE_UCSU), every constraint binding somewhere in GAMS's optimum; objective 24,088,144.66 (CI: demo12_ucann public fixture) |
 
 ## Parity (per change)
 
@@ -2221,8 +2222,9 @@ Not part of the gate, for the record:
     with OBJ MOD.
   - The UC_ATTR lines L50 and L67 (TRACKP: CST_ANNC for the processes of a user constraint
     with the attribute INVCOST, INVTAX, INVSUB or ANNUL). The lines are translated, but
-    the user-constraint term that reads CST_ANNC (uc_ncap.mod L39) is still refused in
-    equserco.jl, so no model can reach them yet (an open decision of #123).
+    the user-constraint term that reads CST_ANNC (uc_ncap.mod L39) was still refused in
+    equserco.jl (an open decision of #123). Lifted in change 42 (15 Nov 2026): demo12_ucann
+    reaches L50 and L67.
   - A first year y1 before the horizon that YK holds a pair for. In the case the range
     2000-2012 starts before every year of YK, and the FLOTAX row then has the variable
     alone, in GAMS as in TIMES.jl.

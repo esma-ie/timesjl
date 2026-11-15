@@ -53,10 +53,11 @@
 # - nested constraints (equserco.mod L76, L99: UC_GMAP_U/UC_UCN) and the
 #   climate terms of the RHS direction (L101, uc_cli.mod; %CLI% is refused
 #   by the generation driver);
-# - the UC_ATTR attributes ANNUL (with INVCOST, INVTAX, INVSUB: CST_ANNC of
-#   eqbndcst.mod, uc_ncap.mod L39) and ONLINE (uc_cap.mod L36-42); the
-#   others are translated (`UC_ATTR_REFUSED`; PERIOD, NEWFLO, PERDISC, EFF,
-#   CAPACT, BUILDUP and COST/DELIV/TAX/SUB in M1.3 change 22);
+# - the UC_ATTR attribute ONLINE (uc_cap.mod L36-42); the others are
+#   translated (`UC_ATTR_REFUSED`; PERIOD, NEWFLO, PERDISC, EFF, CAPACT,
+#   BUILDUP and COST/DELIV/TAX/SUB in M1.3 change 22; ANNUL with INVCOST,
+#   INVTAX and INVSUB, uc_ncap.mod L39 with CST_ANNC of eqbndcst.mod L49-77,
+#   in change 42);
 # - capacity-related flows in uc_flo.mod L35-49 (UC_CAPFLO, cal_caps.mod).
 # Read from the pre-solve dump (computed elsewhere): UC_RHS*, UC_ON,
 # UC_R_*/UC_T_*/UC_TS_* maps, UC_GMAP_*/UC_MAP_*, UC_ATTR, UC_DYNDIR, LAGT,
@@ -152,12 +153,12 @@ function uc_setup(tm::TimesModel)
 end
 
 """
-UC_ATTR attributes refused (UC_NAME, initsys.mod L120-129): ANNUL and the
-names UC_MAPCOST maps to it (INVCOST, INVTAX, INVSUB), which read CST_ANNC
-of eqbndcst.mod (uc_ncap.mod L39; the term is not translated), and
-ONLINE (uc_cap.mod L36-42, the VDA RS family's VAR_UPS terms). Every other
-name is translated: GROWTH and PERDISC; the UC_DYNT types N, CUMSUM, CUM+
-and SYNC, which pick UC_TMAP entries in the RHS direction (equserco.mod L83;
+UC_ATTR attributes refused (UC_NAME, initsys.mod L120-129): ONLINE (uc_cap.mod
+L36-42, the VDA RS family's VAR_UPS terms). Every other name is translated:
+ANNUL and the names UC_MAPCOST maps to it (INVCOST, INVTAX, INVSUB), the
+annual costs CST_ANNC of eqbndcst.mod L49-77 in the RHS direction of a
+dynamic constraint (uc_ncap.mod L39; M1.3 change 42); GROWTH and PERDISC;
+the UC_DYNT types N, CUMSUM, CUM+ and SYNC, which pick UC_TMAP entries in the RHS direction (equserco.mod L83;
 M1.3 change 21); PERIOD, NEWFLO, EFF, CAPACT, BUILDUP and the cost
 attributes COST, DELIV, TAX and SUB (the uc_*.mod factors; change 22); NET
 and the old cost names FLO_COST ... NCAP_ISUB, which act only in
@@ -165,7 +166,7 @@ preprocessing (preppm.mod L41-43, ppmain.mod L1157); CAPFLO, whose only
 effect is UC_CAPFLO (refused on its own); YES, set only under %CLI%
 (refused by the generation driver).
 """
-const UC_ATTR_REFUSED = ("ANNUL", "INVCOST", "INVTAX", "INVSUB", "ONLINE")
+const UC_ATTR_REFUSED = ("ONLINE",)
 
 function uc_unported(tm::TimesModel, setup)
     var_uc(tm) || throw(UnportedError("user constraints with VAR_UC not YES (eqmain.mod L230-232, equcwrap.mod L13)"))
@@ -174,8 +175,8 @@ function uc_unported(tm::TimesModel, setup)
     isempty(gset_opt(d, "UC_GMAP_U", 3)) ||
         throw(UnportedError("equserco.mod L76/L99: nested user constraints (UC_GMAP_U, UC_UCN)"))
     let k = findfirst(k -> k[5] in UC_ATTR_REFUSED, gset(tm, "UC_ATTR").keys)
-        k === nothing || throw(UnportedError("uc_ncap.mod L39, uc_cap.mod L36-42: user-constraint attribute " *
-                                             "$(gset(tm, "UC_ATTR").keys[k]) (ANNUL needs eqbndcst.mod's CST_ANNC, ONLINE the VDA VAR_UPS terms)"))
+        k === nothing || throw(UnportedError("uc_cap.mod L36-42: user-constraint attribute " *
+                                             "$(gset(tm, "UC_ATTR").keys[k]) (ONLINE needs the VDA VAR_UPS terms)"))
     end
     isempty(gset(tm, "UC_CAPFLO")) ||
         throw(UnportedError("uc_flo.mod L35-49: capacity-related flows in user constraints (UC_CAPFLO, cal_caps.mod)"))
@@ -233,6 +234,7 @@ function uc_context(tm::TimesModel)
          ob_icost = gparam(tm, "OB_ICOST"),                                    # OBJ_ICOST(r,y,p,m) = OB_ICOST(r,p,m,y)
          ob_itax = gparam(tm, "OB_ITAX"),
          ob_isub = gparam(tm, "OB_ISUB"),
+         cst_annc = gparam(tm, "CST_ANNC"),                                    # eqbndcst.mod L55-75 (r,tt,p,t,uc_name,cur)
          obj_compd = gparam(tm, "OBJ_COMPD"),                                  # (r,t,c,ts,costype,cur)
          obj_comnt = gparam(tm, "OBJ_COMNT"),
          uc_sign = gparam(tm, "UC_SIGN"),                                      # initsys.mod L116
@@ -252,6 +254,9 @@ const _NO5 = NTuple{5,String}[]
 
 "UC_COST (initsys.mod L131-132)."
 const UC_COST = ("COST", "DELIV", "TAX", "SUB", "ANNUL")
+
+"UC_ANNUL (initsys.mod L141): the attributes whose annual costs CST_ANNC uc_ncap.mod L39 reads."
+const UC_ANNUL = ("INVCOST", "INVTAX", "INVSUB")
 
 "Whether UC_ATTR(R,UC_N,SIDE,grp,attr) is set."
 _uc_has(x, r, n, side, grp, attr) = (r, n, side, grp, attr) in x.uc_attr
@@ -386,7 +391,7 @@ function uc_flo!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::St
 end
 
 """
-    uc_ncap!(expr, tm, n, r, t; side="LHS", k0=1, lagt=nothing, tc=t) -> expr
+    uc_ncap!(expr, tm, n, r, t; side="LHS", k0=1, lagt=nothing, tc=t, annul=false) -> expr
 
     SUM(UC_GMAP_P(R,UC_N,'NCAP',P)\$RTP(R,T,P), UC_NCAP(UC_N,SIDE,R,TC,P) *
         (VAR_NCAP(R,T,P)\$(NOT RTP_OFF(R,T,P)) +
@@ -395,8 +400,19 @@ end
         [GROWTH factor, dynamic only] *
         PROD(UC_ATTR(R,UC_N,SIDE,'NCAP','BUILDUP'),1/LEAD(T)) *
         PROD(L('N'),PROD(REG(R)\$SUM(UC_ATTR(R,UC_N,SIDE,'NCAP',UC_COST),1),
-          SUM(RDCUR(R,CUR), [ANNUL: CST_ANNC, refused] + OBJ_ICOST(R,T,P,CUR)\$UC_ATTR(...'COST')
+          SUM(RDCUR(R,CUR), [\$IF NOT %3==%6: SUM(UC_ATTR(R,UC_N,SIDE,'NCAP',UC_ANNUL),CST_ANNC(R,T,P,TC,UC_ANNUL,CUR))+]
+              OBJ_ICOST(R,T,P,CUR)\$UC_ATTR(...'COST')
               + OBJ_ITAX(R,T,P,CUR)\$UC_ATTR(...'TAX') - OBJ_ISUB(R,T,P,CUR)\$UC_ATTR(...'SUB')))))
+
+The CST_ANNC term (L39) is compiled in only where the period index %3 and
+the index %6 of UC_NCAP are written differently: the RHS direction of a
+dynamic constraint (equserco.mod L87, `TT` and `LL`; `annul=true` from
+`uc_dyn_rhs!`), whatever their values. The other includes pass the same
+name twice (L36 `T T`, L64 `TT TT`), and there the attributes ANNUL,
+INVCOST, INVTAX and INVSUB add nothing; ANNUL, a UC_COST attribute, still
+makes the factor of PROD(REG(R)\$...) a sum over RDCUR. UC_ANNUL is
+{INVCOST, INVTAX, INVSUB} (initsys.mod L141); CST_ANNC 'INVSUB' is stored
+negative (eqbndcst.mod L75), so it is added.
 
 `PROD(RVPT(R,T,P,MILESTONYR),2)` is 2 when the period's investment is
 commissioned in a period (RVPT, eqmain.mod L199-201) and 1 otherwise.
@@ -406,12 +422,15 @@ L157-159).
 GAMS: uc_ncap.mod L3-50, v4.9.7.
 """
 function uc_ncap!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String;
-                  side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false)
+                  side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false,
+                  annul::Bool=false)
     x = uc_context(tm)
     period = _uc_has(x, r, n, side, "NCAP", "PERIOD")
     buildup = _uc_has(x, r, n, side, "NCAP", "BUILDUP")
     hascost = !isempty(get(x.cost_of_rnsg, (r, n, side, "NCAP"), _NO5))
     cost, tax, sub = (_uc_has(x, r, n, side, "NCAP", a) for a in ("COST", "TAX", "SUB"))
+    # SUM(UC_ATTR(R,UC_N,SIDE,'NCAP',UC_ANNUL), ...): the names of UC_ANNUL the group has, in set order
+    annuls = annul ? [a for a in UC_ANNUL if _uc_has(x, r, n, side, "NCAP", a)] : String[]
     for (_, _, _, p) in get(x.gmapp_of_rnk, (r, n, "NCAP"), _NO4)
         (r, t, p) in x.rtp || continue
         coef = gv(x.uc_ncap, (n, side, r, tc, p))
@@ -420,7 +439,11 @@ function uc_ncap!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::S
         if hascost
             f = GZERO
             for (_, cur) in get(x.rdcur_of_r, (r,), _NO2)
-                f = f + (gif(gv(x.ob_icost, (r, p, cur, t)), cost) + gif(gv(x.ob_itax, (r, p, cur, t)), tax) -
+                a = GZERO
+                for nm in annuls
+                    a = a + gv(x.cst_annc, (r, t, p, tc, nm, cur))
+                end
+                f = f + (a + gif(gv(x.ob_icost, (r, p, cur, t)), cost) + gif(gv(x.ob_itax, (r, p, cur, t)), tax) -
                          gif(gv(x.ob_isub, (r, p, cur, t)), sub))
             end
             k = k * f
@@ -788,7 +811,7 @@ function uc_dyn_rhs!(expr::JuMP.AffExpr, tm::TimesModel, n::String, regions, t::
         uc_flo!(expr, tm, n, r, tt, s; kw(ll, side)...)
     end
     for r in regions, (ll, tt, side) in take(r, "NCAP")
-        uc_ncap!(expr, tm, n, r, tt; kw(ll, side)...)
+        uc_ncap!(expr, tm, n, r, tt; kw(ll, side)..., annul=true)            # equserco.mod L87: %3 TT, %6 LL
     end
     for r in regions, (ll, tt, side) in take(r, "CAP")
         uc_cap!(expr, tm, n, r, tt; kw(ll, side)...)
