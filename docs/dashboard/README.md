@@ -57,6 +57,11 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
 
       julia --project=test scripts/parity_report.jl docs/dashboard/demo12.json --embed
 
+  Set `meta.host` to `"workstation"` in both copies before committing. Now:
+  35 fixture runs, 992 checks, all pass (15 Nov 2026). With more than 20 CI
+  runs, slide 6 shows them in two panels and the seven coefficient files of
+  layer 1 in one cell per run (the tooltip lists the files).
+
 - `suite-public*.json`: parity reports of the reference runs of the public
   suite models (`redistribute = "public"` in `reference/suite.toml`), made on
   James's workstation from `timesjl-reference` and embedded in the page's
@@ -86,9 +91,20 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
 
   `src/` is the same at 6f3d91e and 2fde1e3. The weekend report supersedes
   the earlier ones for its six runs, and the 7 Nov reports supersede it for
-  the five core models (TIMES-NZ shift keeps its 31 Oct result). OTUS9r
-  tax1_wo_mou (milestone tier, paused) shows its 30 Oct 05:51 result until a
-  milestone run probes it again.
+  the five core models.
+
+  The workstation batch writes two reports of the seven public runs at each
+  pass, `dashboard-public-solve-<stamp>.json` (demo12, OTCGEN gc_ref, OTNYC
+  s1_nyc_ref, solved with HiGHS) and `dashboard-public-nosolve-<stamp>.json`
+  (TIMES-NZ steady and shift, OTUS9r reference and tax1_wo_mou, layer 3 by
+  cross-evaluation), in `timesjl-reference/_probes`. The morning's dashboard
+  update embeds the newest finished pass as `report-suite-<mmdd>-solve` and
+  `report-suite-<mmdd>-nosolve`, in place of the blocks of the pass before,
+  with `meta.host` set to `"workstation"`; the files themselves are not
+  committed. Now embedded: `report-suite-1114-solve` and
+  `report-suite-1114-nosolve`, the pass of 14 Nov 2026 on main c04c8ab
+  (to #104): 281 checks, all pass. They supersede the reports above for all
+  seven runs.
 
   `--no-solve` records layer 3 without the HiGHS solve: each GAMS optimum
   cross-evaluated in TIMES.jl's model (objective, and feasibility as in
