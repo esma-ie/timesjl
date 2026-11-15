@@ -80,6 +80,13 @@
 # models, run at milestone gates or when a change touches a feature only they reach.
 # scripts/run_references.ps1 runs the core tier by default (-Set milestone or all for
 # the rest); reference/python/test_suite.py allows at most one core case per model.
+#
+# Solvers (James, 14 Nov 2026; #125, decision 10): a [[model]] may list the GAMS solvers of
+# its solve runs, `solvers = ["CPLEX", "HIGHS"]`, the reference solver CPLEX first.
+# scripts/run_references.ps1 (0.1.20) then runs it with those, whatever its -Solvers says; a
+# model without the line is run with -Solvers (default CPLEX,HIGHS). OTCGEN and OTNYC list
+# HiGHS, so that the run-time slides have GAMS with HiGHS beside TIMES.jl with HiGHS for
+# them; OTUS9r lists CPLEX alone (HiGHS on it is left out for now).
 # OTUS9r-tax1_wo_mou is paused in the milestone tier: its REDUCE-on CPLEX solve did
 # not leave crossover in 9 h (29-30 Oct 2026), and its REDUCE-off optimum has unscaled
 # infeasibilities; layer 1 passed on it (30 Oct 2026). It stays paused, and
@@ -178,6 +185,7 @@ kind = "run"
 run_file = "{otcgen}/dd/gc_ref/gc_ref.run"
 idirs = ["{otcgen}/dd/gc_ref"]
 solver_opt_dir = "{otcgen}/dd/gc_ref"
+solvers = ["CPLEX", "HIGHS"]
 
 # OTNYC (Open TIMES New York City, ESMA; CC-BY-SA-4.0 in esma-ie/OTNYC, from the US
 # EPA's COMET-NYC v16.0.1, US public domain). Its reference case S1_NYC_REF, exported by
@@ -202,6 +210,7 @@ kind = "run"
 run_file = "{otnyc}/dd/s1_nyc_ref/s1_nyc_ref.run"
 idirs = ["{otnyc}/dd/s1_nyc_ref"]
 solver_opt_dir = "{otnyc}/dd/s1_nyc_ref"
+solvers = ["CPLEX", "HIGHS"]
 
 # OTUS9r (Open TIMES US 9R, ESMA; CC-BY-SA-4.0 in esma-ie/OTUS9r, from the US EPA's
 # EPAUS9rT_v20.4, US public domain). Two Veda cases exported on 28 Oct 2026 from the
@@ -222,6 +231,7 @@ kind = "run"
 run_file = "{otus}/dd/reference/reference.run"
 idirs = ["{otus}/dd/reference"]
 solver_opt_dir = "{otus}/dd/reference"
+solvers = ["CPLEX"]
 
 [[model]]
 name = "OTUS9r-tax1_wo_mou"
@@ -235,6 +245,7 @@ kind = "run"
 run_file = "{otus}/dd/tax1_wo_mou/tax1_wo_mou.run"
 idirs = ["{otus}/dd/tax1_wo_mou"]
 solver_opt_dir = "{otus}/dd/tax1_wo_mou"
+solvers = ["CPLEX"]
 
 # TIM (times-ireland-model, MaREI, UCC; CC-BY-NC-SA-4.0): the named research-use
 # exception (James, 27 Oct 2026). James's DD export of 28 Oct 2026 from the esma-ie

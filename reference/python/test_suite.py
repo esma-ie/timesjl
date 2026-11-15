@@ -101,6 +101,28 @@ class SuiteTests(unittest.TestCase):
             self.assertNotIn(root, core, f"{name} and {core.get(root)} are both core cases of {root}")
             core[root] = name
 
+    def test_solver_lists(self):
+        # reference/suite.toml header, "Solvers" (James, 14 Nov 2026): a model may list the GAMS
+        # solvers of its solve runs, CPLEX (the reference solver) first; scripts/run_references.ps1
+        # reads the line with a regular expression, so it stays on one line.
+        suite = load_suite(SUITE, {r: f"/roots/{r}" for r in ROOTS})
+        for name, model in suite["models"].items():
+            if "solvers" not in model:
+                continue
+            with self.subTest(model=name):
+                self.assertIsInstance(model["solvers"], list)
+                self.assertEqual(model["solvers"][0], "CPLEX")
+                self.assertLessEqual(set(model["solvers"]), {"CPLEX", "HIGHS"})
+                self.assertEqual(len(set(model["solvers"])), len(model["solvers"]))
+                line = "solvers = [" + ", ".join(f'"{s}"' for s in model["solvers"]) + "]"
+                block = next(b for b in SUITE.read_text().split("[[model]]") if f'name = "{name}"' in b)
+                self.assertIn(line, [ln.strip() for ln in block.splitlines()])
+        models = suite["models"]
+        self.assertEqual(models["OTCGEN-gc_ref"]["solvers"], ["CPLEX", "HIGHS"])
+        self.assertEqual(models["OTNYC-s1_nyc_ref"]["solvers"], ["CPLEX", "HIGHS"])
+        for name in ("OTUS9r-reference", "OTUS9r-tax1_wo_mou"):
+            self.assertEqual(models[name]["solvers"], ["CPLEX"])
+
     def test_blocked_sources_are_not_used(self):
         # Outside comments, no model, root or path may point at a blocked source.
         text = "\n".join(l for l in SUITE.read_text().splitlines() if not l.lstrip().startswith("#"))
