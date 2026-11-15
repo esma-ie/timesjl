@@ -119,31 +119,40 @@ On 15 Nov 2026 James merged #126 to #137 (twelve pull requests): their built-in 
 
 ## Log by pull request
 
-### #140 M1.3 (42): the user-constraint attributes ANNUL, INVCOST, INVTAX, INVSUB (uc_ncap.mod L39); crafted case demo12_ucann (open)
+### #141 Dashboard: callout labels on slide 11 (open)
+
+Asked for by James on 15 Nov 2026 ("add callout labels identifying each CPLEX (orange) HiGHS (green) pair of model+scenario run").
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | One label per model-scenario pair (seven per panel), with a leader line to the top mark of each of its two LPs, rather than one label per LP (fourteen, whose leader lines crossed in the cluster of the large models). The variant is read from position: the as-run LP has fewer columns, so it is the left one (the legend says so; the tooltip of a label gives both LPs' sizes). | Recommended: yes. Built in. | open |
+| 2 | The labels stand in the widest empty band of the x axis (between demo12 and the large models), in the order of their marks' height; demo12's label is left-aligned on the band's left side. | Recommended: yes. Built in. | open |
+
+### #140 M1.3 (42): the user-constraint attributes ANNUL, INVCOST, INVTAX, INVSUB (uc_ncap.mod L39); crafted case demo12_ucann (merged 2026-11-15)
 
 Built from James's answer to #123, decision 4 (15 Nov 2026). Logged here because #140 does not touch this file.
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Keep the new crafted case demo12_ucann (demo12 + ucann.dd, CC BY 4.0) with one public CI fixture (as run: the pre-solve dump, the CONVERT matrix, the solutions; about 4 MB), no variant or DD-compile fixture? | Recommended: yes. Built in. | open |
-| 2 | The CST_ANNC term is compiled in only where uc_ncap.mod's %3 and %6 are written differently (`$IF NOT %3==%6`): the RHS direction of a dynamic constraint (equserco.mod L87). Elsewhere the attributes add nothing, whatever the values of the two periods. Translated as written. | Recommended: yes. Built in. | open |
+| 1 | Keep the new crafted case demo12_ucann (demo12 + ucann.dd, CC BY 4.0) with one public CI fixture (as run: the pre-solve dump, the CONVERT matrix, the solutions; about 4 MB), no variant or DD-compile fixture? | Recommended: yes. Built in. | accepted by merge, 15 Nov 2026 |
+| 2 | The CST_ANNC term is compiled in only where uc_ncap.mod's %3 and %6 are written differently (`$IF NOT %3==%6`): the RHS direction of a dynamic constraint (equserco.mod L87). Elsewhere the attributes add nothing, whatever the values of the two periods. Translated as written. | Recommended: yes. Built in. | accepted by merge, 15 Nov 2026 |
 | 3 | ONLINE (uc_cap.mod L36-42) stays refused, the last refused UC_ATTR attribute; its own change. | Nothing to answer. | logged |
 
-### #139 Dashboard: TIMES.jl in Dark green on light slides and Dark yellow on dark slides; GAMS orange (open)
+### #139 Dashboard: TIMES.jl in Dark green on light slides and Dark yellow on dark slides; GAMS orange (merged 2026-11-15)
 
 Built from James's answer to #127, decision 2 (15 Nov 2026). Its list is logged here because the dashboard branch does not touch this file.
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
 | 1 | The hex values: TIMES.jl `#eaaa00` on dark slides and `#004539` on light slides; GAMS `#e06000` (not the ESMA palette's `#ff6a1f`, which is too close to the yellow on dark slides). | Recommended: as used. A choice the pull request made. | open; on the Open decisions list until James answers |
-| 2 | Slide 10's 5x target line: Dark yellow on light slides, white on dark slides, so that it is never read as a TIMES.jl mark. | Recommended: yes. Built in. | open |
+| 2 | Slide 10's 5x target line: Dark yellow on light slides, white on dark slides, so that it is never read as a TIMES.jl mark. | Recommended: yes. Built in. | accepted by merge, 15 Nov 2026 |
 | 3 | Slide 9's HiGHS dark green on light slides is TIMES.jl's colour on slides 10 to 12; the two never share a slide. | Nothing to answer. | logged |
 
-### #138 Decision log: James's answers of 15 Nov 2026; merges of #126 to #137; extension scope (open)
+### #138 Decision log: James's answers of 15 Nov 2026; merges of #126 to #137; extension scope (merged 2026-11-15)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | James's scope answer in the plan: the stochastic extension, ETL, MACRO with MSA and damage costs before the M1.3 gate, smaller ones first; all other extensions after M1.7. "All other remaining extensions" is read as the extension modules: the core features still refused stay in the order of 14 Nov 2026. | Recommended: yes. Built in. | open |
+| 1 | James's scope answer in the plan: the stochastic extension, ETL, MACRO with MSA and damage costs before the M1.3 gate, smaller ones first; all other extensions after M1.7. "All other remaining extensions" is read as the extension modules: the core features still refused stay in the order of 14 Nov 2026. | Recommended: yes. Built in. | accepted by merge, 15 Nov 2026 |
 | 2 | Four new rows on the Open decisions list (MACRO with IPOPT, the colour hex values, the dp prefix in the repository, TIMES-NZ in the batch's DD stage). | Nothing to answer here; each is asked on the list. | logged |
 
 ### #137 M1.3 (41): EQ_GR_XBND, the bound on a grid's net imports and exports; crafted case demo12_pfx (merged 2026-11-15)

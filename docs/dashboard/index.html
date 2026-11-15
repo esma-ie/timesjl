@@ -714,6 +714,24 @@ function renderRunTime(){
     s+=`<line x1="${x0+L}" x2="${x0+PW-16}" y1="${Y1}" y2="${Y1}" stroke="${ink}" stroke-width="1"/><text x="${x0+L+(PW-L-16)/2}" y="${Y1+42}" font-size="14" text-anchor="middle" fill="${muted}">variables in the LP (columns), log scale</text>`;
     // a thin line joins the runs of one model-scenario pair and variant (they have the same LP)
     for(const r of new Set(pts.map(p=>p.r))){const ys=pts.filter(p=>p.r===r).map(p=>Y(p.v)); if(ys.length>1) s+=`<line x1="${x0+X(r.cols)}" x2="${x0+X(r.cols)}" y1="${Math.min(...ys)}" y2="${Math.max(...ys)}" stroke="${css('--edge')}" stroke-width="1"/>`;}
+    // callout labels (James, 15 Nov 2026): one per model-scenario pair, with a leader line to the top mark of each of its
+    // variants (one LP each); stacked in the widest empty band of the x axis, in the order of their marks' mean height.
+    // A label whose marks lie left of the band is left-aligned at the band's left side, the others right-aligned at its right.
+    const runsOf={}; for(const p of pts) (runsOf[p.r.model]=runsOf[p.r.model]||new Set()).add(p.r);
+    const groups=Object.entries(runsOf).map(([m,rs])=>{const tg=[...rs].map(r=>({r,x:x0+X(r.cols),y:Math.min(...pts.filter(p=>p.r===r).map(p=>Y(p.v)))}));
+      return {m,tg,y:tg.reduce((a,q)=>a+q.y,0)/tg.length};});
+    if(groups.length){
+      const xs=[...new Set(groups.flatMap(g=>g.tg.map(q=>q.x)))].sort((a,b)=>a-b), edges=[x0+L,...xs,x0+PW-16];
+      let gl=edges[0], gr=edges[1]; for(let i=1;i<edges.length;i++) if(edges[i]-edges[i-1]>gr-gl){gl=edges[i-1]; gr=edges[i];}
+      const fs=13, step=21, txt=g=>rtName(g.m);
+      groups.sort((a,b)=>a.y-b.y);
+      let prev=-Infinity; for(const g of groups){g.ly=Math.max(g.y+4,prev+step); prev=g.ly;}
+      let next=Y1-6+step; for(let i=groups.length-1;i>=0;i--){groups[i].ly=Math.min(groups[i].ly,next-step); next=groups[i].ly;}
+      for(const g of groups){ const w=txt(g).length*fs*0.55, left=g.tg.every(q=>q.x<=gl);
+        const tx=left?gl+18:gr-18, sx=left?tx-4:tx+4;
+        for(const q of g.tg) s+=`<path d="M${sx} ${g.ly-4.5}L${q.x} ${q.y}" fill="none" stroke="${muted}" stroke-width="1" stroke-opacity=".8"/>`;
+        s+=`<text x="${tx}" y="${g.ly}" font-size="${fs}" font-weight="700" text-anchor="${left?'start':'end'}" fill="${ink}" data-tip="${esc(`<b>${rtName(g.m)}</b><br>`+g.tg.sort((a,b)=>a.x-b.x).map(q=>`${variantName(q.r.variant)}: ${fmt(q.r.cols)} variables · ${fmt(q.r.rows)} rows`).join('<br>'))}">${txt(g)}</text>`; }
+    }
     for(const p of [...pts].sort((a,b)=>(b.faint?1:0)-(a.faint?1:0))) s+=`<g data-tip="${esc(tipOf(p))}"><circle cx="${x0+X(p.r.cols)}" cy="${Y(p.v)}" r="12" fill="transparent"/>${rtMark(p.sr,x0+X(p.r.cols),Y(p.v),p)}</g>`;
     legend.forEach((row,j)=>{let x=x0; for(const [mark,text,soft] of row){ if(mark) s+=mark(x+10,438+j*26-5); s+=`<text x="${x+(mark?26:0)}" y="${438+j*26}" font-size="15" fill="${soft?muted:ink}">${text}</text>`; x+=(mark?26:0)+text.length*7.6+26; }});
     return s;
@@ -723,7 +741,7 @@ function renderRunTime(){
   const inA=l=>(A.find(p=>p.e.language===l)||{sr:lang(l)}).sr, sv=sr=>(sr.label.split(' · ')[1]||'')+' run';
   const legA=[[[(x,y)=>rtMark(inA('GAMS'),x,y,{filled:true}),`GAMS (${sv(inA('GAMS'))})`],[(x,y)=>rtMark(inA('TIMES.jl'),x,y,{filled:true}),`TIMES.jl, warm (${sv(inA('TIMES.jl'))})`]]];
   if(A.some(p=>p.faint)) legA.push([[(x,y)=>rtMark(inA('TIMES.jl'),x,y,{faint:true}),'TIMES.jl, first run of its Julia process: it also compiles TIMES.jl']]);
-  legA.push([[null,'A line joins the runs of one model-scenario pair: the same LP.',true]]);
+  legA.push([[null,'A line joins the runs of one LP; as run is left of REDUCE off.',true]]);
   const legB=[[]]; let lw=0;
   for(const sr of usedB){ const w=52+sr.label.length*7.6; if(lw+w>PW-8&&legB[legB.length-1].length){legB.push([]); lw=0;} legB[legB.length-1].push([(x,y)=>rtMark(sr,x,y),sr.label]); lw+=w; }
   if(B.some(p=>p.limit)) legB.push([[(x,y)=>`<path d="M${x} ${y+8}v-15m-5 5.5l5 -5.5l5 5.5" fill="none" stroke="${ink}" stroke-width="2.5"/>`,'stopped at its time limit without an optimum: at least this long']]);

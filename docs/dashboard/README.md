@@ -231,6 +231,10 @@ language and the shape is the solver, wherever a slide draws them.
 - Slides 11 and 12: a faint mark is a first run that also compiles TIMES.jl;
   an arrow up marks a solve stopped at its time limit without an optimum (it
   took at least that long); a thin line joins the runs of one LP. On slide
+  11 a callout label names each model-scenario pair, with a leader line to
+  the top mark of each of its two LPs (James, 15 Nov 2026); the as-run LP
+  has fewer columns, so it is the left one. The labels are stacked in the
+  widest empty band of the x axis, in the order of their marks' height. On slide
   11's left panel each language has the mark of the run its time comes from
   (GAMS its CPLEX run, TIMES.jl its HiGHS run). On slide 12 the shading of a
   cell is the part's share of the run's measured time.
