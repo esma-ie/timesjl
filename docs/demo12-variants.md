@@ -28,7 +28,8 @@ large core models (or none of them) reach.
    2-3).
 
 Extension scope (docs/translation-guide.md): core and VDA in Phase 1, DSC next;
-MACRO, stochastics, ETL, climate and damage after M1.7.
+the stochastic extension, ETL, MACRO with MSA and damage costs before the M1.3
+gate (James, 15 Nov 2026); the other extensions after M1.7.
 
 ## Order: the order the features entered TIMES (James, 5 Nov 2026)
 
@@ -44,8 +45,9 @@ MACRO, stochastics, ETL, climate and damage after M1.7.
 | 7b | Recent attributes, second batch | | 4.9.2-4.9.3, Oct 2025 - Feb 2026: bounds on absolute power rate levels, OCOM flows from retirements | Version.log | |
 
 Later, outside Phase 1's core and VDA scope: lumpy investments and early
-retirement (DSC); logit market sharing (ECB), MACRO-MSA and MLF, stochastics,
-ETL, the Climate Module, damage costs; the Weymouth gas grid (nonlinear).
+retirement (DSC); logit market sharing (ECB), MLF, the Climate Module; the
+Weymouth gas grid (nonlinear). MACRO-MSA, stochastics, ETL and damage costs
+moved before the M1.3 gate (James, 15 Nov 2026).
 
 Crafted cases outside this list: features older than the ones above, refused
 until a case was made for them (James, 14 Nov 2026: every remaining refused

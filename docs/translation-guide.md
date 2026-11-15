@@ -72,8 +72,12 @@ Any mismatch blocks the merge. Record known, justified differences in
 ## Decisions (confirmed 17 Oct 2026)
 - "No reformulation" = same mathematics as GAMS; sparse data structures
   allowed from day one. Confirmed.
-- Extension scope: core + VDA in Phase 1; DSC next; MACRO, stochastic,
-  ETL, climate, damage after M1.7. Default unless changed.
+- Extension scope: core + VDA in Phase 1; DSC next. Changed by James on
+  15 Nov 2026 (docs/decisions.md): the stochastic extension, ETL, MACRO
+  with MSA and damage costs are translated before the M1.3 gate, the
+  smaller ones first (MACRO waits while CONOPT is not licensed); the other
+  extensions (ECB, CLI, ABS, IER, MLF, MCA, ...) after M1.7. Until
+  15 Nov 2026: MACRO, stochastic, ETL, climate, damage after M1.7.
 - Reference solver: CPLEX via James's GAMS licence for reference runs;
   HiGHS on both sides for open-source parity and CI; Gurobi trial
   possible later for benchmarks. Confirmed.
