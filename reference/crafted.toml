@@ -375,6 +375,25 @@ kind = "run"
 run_file = "{crafted}/demo12_step/demo12_step.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_step"]
 
+# TIMES_Demo demo12 as a stepped run with what demo12_step does not reach (15 Nov 2026; M1.5
+# change 5, docs/m15-plan.md): TIMESTEP 20 with G_OVERLAP 15 (three steps, 2005-2020, 2015-2030,
+# 2030-2050: the second and the third solve periods again), demo12_step2/step2.dd (CAP_BND UP, LO
+# and FX; user constraints summed over the periods and over the regions, one with negative
+# coefficients; REG_CUMCST) and the DD files of three other crafted cases: demo12_ucdyn/ucdyn.dd
+# (dynamic user constraints), demo12_ucrt/ucrt.dd (UC_DYNBND) and demo12_cumc/cumc.dd (cumulative
+# commodity and flow bounds). solve.stp L44, L69-98, L132-196, L217-230.
+[[model]]
+name = "TIMES_Demo-demo12_step2"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_step2/demo12_step2.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_ucdyn", "{crafted}/demo12_ucrt", "{crafted}/demo12_cumc", "{crafted}/demo12_step2"]
+
 # TIMES_Demo demo12 + demo12_bndc/bndc.dd (14 Nov 2026): bounds on the net amount and the production
 # of a commodity above the timeslice level it is tracked at. COM_BNDPRD and COM_BNDNET of ELC
 # (tracked at DAYNITE) at ANNUAL and at a season, LO, UP and FX (one FX with the value EPS), which

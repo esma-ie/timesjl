@@ -147,7 +147,9 @@ file gives the step's objective.
 | 2 | Done, 14 Nov 2026 ("Change 2 as built", below). The partition and the preparation of a step: `stp_init!`, `stp_step_prep!`, `stp_next!` and the point store `StpPoint`, in `src/model/solve_stp.jl` | solve.stp L9-26, L43-57, L69-107, L111-196, L217, L222-227, L288-289, L295-319; clearsol.stp L8-10; coef_alt.lin L27, L31-63, L134-136, L160 (the block L137-157, LINFLO only, refused until change 5); eqobsalv.mod L19-85; bnd_ucw.mod L13-21; bnd_cum.mod L12-20, L27-38; the data statements of bndmain.mod with its second argument 1 | layer 1 per step: every set and parameter of `steps/<k>/final` at 1e-9 (less the harness's own TJL symbols and Z), fed with GAMS's levels and marginals of step k-1. demo12_step, both variants: 957 symbols in each of the three steps, none differs |
 | 3 | Done, 15 Nov 2026 ("Change 3 as built", below). The equations over SUBT and the bounds of a step: `eq_periods`; `stp_bounds_init!`, `stp_step_bounds!`, `stp_bndmain!` and `stp_model` in `src/model/bnd_stp.jl` | maindrv.mod L38-41 and every macro use above; solve.stp L115 (V), L193-233, L267-281, L319; bndmain.mod with its second argument; bnd_ucw.mod with bnd_ucv.mod; bnd_cum.mod | layer 2 per step: `steps/<k>/matrix` at 1e-9 (rows, columns, order, coefficients, right-hand sides, bounds), fed with GAMS's levels of step k-1. demo12_step, both variants: the LP of each of the three steps equals GAMS's. Every model that is not stepped: LP identical (the whole suite) |
 | 4 | Done, 15 Nov 2026 ("Change 4 as built", below). The driver `solve_stepped!` (the loop, the solve, the levels kept between steps as SOLVEOPT=MERGE does), `stp_merge_point!`, `stp_finish!`, in `src/model/solve_stp.jl`; the two refusals removed | solve.stp L109, L285-294, L321, L325-329; solve.mod L12-41; err_stat.mod L63-69 | layer 3 per step and at the end, 1e-6: TIMES.jl with HiGHS against GAMS/CPLEX and GAMS/HiGHS, with GAMS's levels between the steps (and layers 1 and 2 again) and on TIMES.jl's own levels. demo12_step, both variants: the objective of each of the three steps equals GAMS's (relative difference under 3e-12). The step fixtures in CI; `scripts/m13_gate.jl` runs the stepped case to the end |
-| 5 | A second crafted case for branches demo12_step does not reach (below) | the same lines | layers 1 to 3 per step |
+| 5 | Done, 15 Nov 2026 ("Change 5 as built", below). The second crafted case, demo12_step2 (TIMESTEP 20, G_OVERLAP 15; CAP_BND; user constraints summed over the periods and over the regions, dynamic ones; COM_CUM, FLO_CUM, REG_CUMCST). One statement corrected: the lead of the N record in a second pass of bnd_cum.mod (`bnd_cum_flo`, `bnd_cum_com`). Harness 0.3.5 | solve.stp L44, L69-98, L132-196, L217-230, L279, L305; bnd_cum.mod L13-14, L19-20, L27-28, L34-35; bnd_ucv.mod L24-25 | layers 1 to 3 per step, both variants, from GAMS's input dump and from the DD files: all pass; CI: test_solve_stp2.jl on the fixtures of the case |
+| 6 | A stepped run with OBJ ALT or LIN: the divisors of coef_alt.lin STP, with a crafted case demo12_steplin (was part of change 5) | solve.stp L104-107, L124; coef_alt.lin L137-157 | layers 1 to 3 per step |
+| 7 | Stepped variants of the blending case and of the unit commitment case (discrepancies.md U7; VAR_UPS, VAR_UPT, VAR_UDP) | solve.stp L205-207, L232-233, L281 | layers 1 to 3 per step |
 
 In change 3 a fixed variable stays a column: GAMS's matrix has the BACKWARD
 and FORWARD variables as columns with equal lower and upper bounds, and the
@@ -212,8 +214,8 @@ loaded, `stp_next!`.
   `scripts/make_step_fixture.jl`.
 
 Translated as GAMS writes them, but not reached by demo12_step, so **not
-checked against GAMS** (the second crafted case of change 5 is to reach
-them):
+checked against GAMS** at the time of change 2 (demo12_step2 reaches most
+of them since: "Change 5 as built"):
 
 | Branch | Lines of solve.stp |
 | --- | --- |
@@ -229,7 +231,7 @@ them):
 | COR_SALVD and SALV_DEC records a step does not assign keep the step before's value (eqobsalv.mod STP) | 127 |
 
 Not translated, refused or flagged: the LINFLO block of coef_alt.lin STP
-(L137-157; refused, change 5); the start from a given solution (L61-66);
+(L137-157; refused, change 6); the start from a given solution (L61-66);
 the REG_FIXT statements (L186-189, L223, L315-317; FIXBOH refused); CM_MAXC
 (L149; CLI refused).
 
@@ -326,7 +328,9 @@ VAR_ACT, VAR_CAP, VAR_COMNET, VAR_COMPRD, VAR_CUMFLO, VAR_FLO, VAR_IRE,
 VAR_NCAP, VAR_OBJ, VAR_UCRT, VAR_UCRTS.
 
 Translated as GAMS writes them, but not reached by demo12_step, so **not
-checked against GAMS** (change 5, or the feature's own stepped case):
+checked against GAMS** at the time of change 3 (demo12_step2 reaches the
+CAP_BND, VAR_CUMCOM and slack rows since, "Change 5 as built"; the others
+wait for the feature's own stepped case):
 
 | Branch | Lines of solve.stp |
 | --- | --- |
@@ -386,7 +390,7 @@ run. `generate!` on the run as a whole stops with a message that names
 `solve_stepped!` (a stepped run has no single model). What a stepped run
 still cannot have is listed by `stp_unported` and refused before the first
 step: FIXBOH, STAGES, SPINES, SENSIS, the climate extension (CLI), TM_HSX,
-and OBJ ALT or LIN (the divisors of coef_alt.lin L137-157, change 5).
+and OBJ ALT or LIN (the divisors of coef_alt.lin L137-157, change 6).
 
 **The scripts.** `scripts/run_dd.jl --solve` solves a stepped run from its DD
 files step by step, one line per step (its solution is not written to
@@ -459,6 +463,121 @@ three steps, as GAMS does.
   levels; `stp_finish!` on VAR_FLO and VAR_IRE marginals is tested on a
   made-up point as well as on demo12_step.
 
+## Change 5 as built (15 Nov 2026)
+
+A second crafted case, **demo12_step2** (`reference/dd/demo12_step2/`), for
+the branches of solve.stp that demo12_step does not reach. It is demo12 with
+TIMESTEP 20 and G_OVERLAP 15, the DD files of three other crafted cases
+(`ucdyn.dd`, dynamic user constraints; `ucrt.dd`, UC_DYNBND; `cumc.dd`,
+cumulative commodity and flow bounds) and `step2.dd`: CAP_BND UP, LO and FX;
+a user constraint summed over the periods (UC_T_SUM) for one region and one
+summed over the regions as well; a user constraint summed over the regions
+with a negative coefficient, each period; REG_CUMCST.
+
+GAMS 54.6.1 solves three steps, and the second and the third solve periods
+again:
+
+| Step | Periods solved (SUBT) | Fixed (BACKWARD) | MIYR_VL |
+| --- | --- | --- | --- |
+| 1 | 2005, 2010, 2015, 2020 | none | 2025 |
+| 2 | 2015, 2020, 2030 | 2005, 2010 | 2040 |
+| 3 | 2030, 2050 | 2005, 2010, 2015, 2020 | 2052 |
+
+**One statement corrected** (`src/model/bndmain.jl`, `bnd_cum_flo` and
+`bnd_cum_com`). bnd_cum.mod is included before the loop and again in every
+step (solve.stp L227), and it is not idempotent: the second pass reads the
+modifier the first pass left as the row number of MULTI, and the lead
+`J+(N-1)` is then -1.2. TIMES.jl stopped there ("not an integer lead");
+GAMS rounds the lead (G29), finds no element and sets no modifier. The lead
+is now `glead(n - 1)`, as GAMS has it, also in a run that is not stepped.
+The effect in GAMS, followed here: from its first step on, a stepped run
+applies a cumulative bound to EOH without the modifier of the flexible
+horizon (docs/discrepancies.md, D41).
+
+**The harness, 0.3.5.** GAMS writes "N projected" after the number of single
+variables in MODEL STATISTICS when it moved N starting levels onto their
+bounds; in a stepped run the levels of an earlier step can lie outside a
+relaxed bound by a rounding. `parse_solves` reads the line with or without
+it (it took such a step for one without statistics, and the reference ended
+with CHECK). References made with 0.3.4 stay valid.
+
+**The gate script.** The pre-solve dump of a stepped run is the state after
+the last step, so `scripts/m13_gate.jl` leaves the symbols the loop assigns
+out of the pre-solve checkpoint and compares them after each step instead
+(`steps/<k>/final`). demo12_step2 reaches 19 more of them (46 in all):
+CAP_BND, the six UC_RHS tables, PRC_DYNUC, RTP_VARP, RXX, UC_T_SUM, UC_T,
+UC_T_EACH, UC_T_SUCC, UC_RTSUC, REG_CUMCST, COM_CUM, FLO_CUM, RC_CUMCOM.
+
+**Checked** with `scripts/m13_gate.jl`, both variants, from GAMS's input
+dump and from the DD files (four runs, all PASS; HiGHS with 12 threads).
+The chain to the pre-solve state passes (833 symbols at each checkpoint,
+959 at coef, 787 at presolve). Then the stepped run, first with GAMS's
+levels loaded after each step:
+
+| Step | Layer 1 | Layer 2: rows, columns, nonzeros (REDUCE off; as run) | Objective, GAMS/CPLEX | TIMES.jl with HiGHS on its own levels, relative difference |
+| --- | --- | --- | --- | --- |
+| 1 | PASS, 957 symbols | PASS: 6,019, 6,813, 21,560; 2,299, 3,279, 13,040 | 42,561,995.5428 | 1.6e-13 |
+| 2 | PASS, 957 symbols | PASS: 4,630, 5,960, 18,508; 1,800, 2,916, 11,458 | 77,180,290.0509 | 8.0e-14 |
+| 3 | PASS, 957 symbols | PASS: 2,893, 4,637, 12,860; 1,149, 2,523, 8,348 | 80,873,281.9743 | 2.0e-13 |
+
+Each optimum is evaluated in the other side's LP at every step: GAMS's
+point in TIMES.jl's LP (largest row violation 1.1e-7 in step 1, under
+3e-8 after; it gives GAMS's objective) and HiGHS's point in GAMS's LP
+(under 2e-8). On TIMES.jl's own levels the
+last objective equals the final objective of GAMS/HiGHS
+(80,873,281.97428). From the DD files layer 1 compares 832 symbols per
+step.
+
+**What the case reaches** (records in GAMS's dumps of steps 1, 2, 3, as
+run; TIMES.jl equal in each):
+
+| Branch | Lines of solve.stp | In demo12_step2 |
+| --- | --- | --- |
+| G_OVERLAP given | 44, 305 | 15: steps 2 and 3 solve the periods of the overlap again |
+| CAP_BND: FX copied to LO and UP, RTP_VARP, the capacity levels | 69, 96-98 | 13 records, RTP_VARP 45 |
+| CAP_BND relaxed after each step | 190-191 | UP = MAX(bound, level × (1 + 3e-6)): 50 → 50.00015 where the level sits on the bound, unchanged where it is below; LO × (1 - 3e-6) in every step: 2 → 1.999994 → 1.999988 |
+| CAP_BND on the capacity of fixed and of pending periods | 217-219, 279 | NO_RVP 0, 10, 9, with 7 and 5 UP or LO records of CAP_BND on them; UP in the pending periods of step 1 |
+| a user constraint summed over the periods | 132-137 | UC_T_SUM 20, 25, 30 |
+| dynamic user constraints | 140-151 | UC_T_EACH 24, 18, 12; UC_T_SUCC and UC_RTSUC 78, 61, 44; UC_DYNBND 5 |
+| the growth coefficients relaxed | 76, 183-185 | PRC_DYNUC 44 records, 13 relaxed between the steps (UP × (1 + 3e-6), LO × (1 - 1e-5)) |
+| user constraints summed over the regions; all six kinds of right-hand side in UC_BND | 141-144, 155-175 | UC_BND 0, 66, 66 (kinds 1 to 6: 1, 3, 18, 6, 26, 12); the absolute tolerance of a constraint with a negative coefficient (UC_RN) |
+| the right-hand side copied back | 176 | UC_RHS: 90 → 90.00027 → 90.00054 |
+| REG_CUMCST: the upper bound of a range that ends in a fixed period removed | 196 | 5, 5, 3 records |
+| COM_CUM and FLO_CUM through bnd_cum.mod in every step; VAR_CUMCOM | 222-230 | COM_CUM 7, FLO_CUM 22; levels of VAR_CUMCOM 5, VAR_CUMFLO 21, VAR_CUMCST 4 |
+| the slacks of user constraints reset | 193 (bnd_ucv.mod L24-25) | VAR_UC, VAR_UCR, VAR_UCT, VAR_UCTS are columns of the LPs |
+
+Families its LPs hold beyond demo12_step's: EQE_UC, EQE_UCR, EQE_UCT,
+EQE_UCSU, EQE_UCSUS, EQE_UCRSU, EQE_UCRSUS, EQN_UCRTC, EQN_UCRTP, EQ_BNDCST,
+EQ_CUMNET, EQ_CUMPRD; VAR_UC, VAR_UCR, VAR_UCT, VAR_UCTS, VAR_CUMCOM,
+VAR_CUMCST.
+
+**CI.** Fixtures of the case (about 10 MB: input, ppm, equ, the run file,
+and a data and a matrix fixture per step) and `test/unit/test_solve_stp2.jl`
+(90 tests): the chain from ppm to equ, each step's partition and layer 1,
+the reach figures of the table above, layer 2 per step, and `solve_stepped!`
+to the end on GAMS's levels and on its own (HiGHS). `test_ddsource.jl`
+compiles the case from its DD files; `test_bnd_cum.jl` has the second and
+the third pass of bnd_cum.mod.
+
+**Flagged.**
+- A CAP_BND upper bound below the capacity still standing makes the first
+  step infeasible, as it makes a run that is not stepped (seen while the
+  case was written; the case keeps its bounds above the standing capacity).
+- **D41**: a stepped run loses the modifier of a cumulative bound to EOH
+  (above). Followed as GAMS runs; a report to ETSAP needs James's yes.
+- **Still not reached by an open stepped case**, translated as written:
+  the copy-back of L177 and L180-181 (regions in REG_FIXT only) and of
+  L178-179 (UC_T after L157: a user constraint summed over the regions
+  that has a UC_CAP coefficient; demo12_step2's have UC_NCAP, so UC_T is
+  empty and UC_RHST and UC_RHSTS keep their data values); L186-189
+  (REG_FIXT); the fixes of storage flows (L203-204, L271-272), of VAR_UPS,
+  VAR_UPT, VAR_UDP (L205-207) and VAR_SCAP (L220); RVPRL (L128); blending
+  (L232-233, L281; U7); EQE_UCRS.
+- **OBJ ALT or LIN in a stepped run stays refused.** The plan had it in
+  this change; it is a file of its own (coef_alt.lin L137-157) with a case
+  of its own, so it is change 6 (demo12_steplin). The stepped variants of
+  the blending and the unit commitment cases are change 7.
+
 ## What demo12_step reaches, and what it does not
 
 Reached (records in the dump of step 2): user constraints by region and
@@ -468,20 +587,21 @@ bnd_cum.mod in each step; VAR_CAP with RTP_VARP 18 and NO_RVP 4; RTC_NET 84
 and RTC_PRD 12; trade between the two regions; the salvage preparation
 (OBJ_LIFE 674, OBJSCC 107).
 
-Not reached, translated as GAMS has them and to be flagged in each PR:
+Not reached by demo12_step, translated as GAMS has them. The last column
+is the state after change 5 (15 Nov 2026):
 
-| Branch | Lines of solve.stp | In a second crafted case? |
+| Branch | Lines of solve.stp | Checked against GAMS? |
 | --- | --- | --- |
-| G_OVERLAP given by the user | 44 | yes |
-| OBJ ALT or LIN (LINFLO): STP_DIV, coef_alt.lin STP | 104-107, 124 | yes |
-| CAP_BND | 69, 96, 190-191, 218-219, 279 | yes |
-| a cumulative user constraint (UC_T_SUM) | 132-137 | yes |
-| a dynamic user constraint (UC_T_SUCC, UC_DYNBND, PRC_DYNUC) | 144-151, 183-185 | yes |
-| user constraints summed over regions (UC_R_SUM) and their right-hand sides | 141-144, 157, 178-179 | yes |
-| COM_CUM (VAR_CUMCOM) | 186-189, 222-230 | yes |
-| REG_CUMCST | 196 | yes, if demo12's data allow |
-| VAR_UPS, VAR_UPT, VAR_UDP (dispatching, unit commitment), VAR_SCAP (retirement) (translated in change 3, unchecked) | 205-207, 220 | to try: a stepped variant of demo12_uc |
-| blending (translated in change 3, unchecked: U7), elastic demand, damage (refused) | 211-212, 232-233, 276, 281 | with those features |
+| G_OVERLAP given by the user | 44 | yes: demo12_step2 |
+| OBJ ALT or LIN (LINFLO): STP_DIV, coef_alt.lin STP | 104-107, 124 | no: refused; change 6 (demo12_steplin) |
+| CAP_BND | 69, 96, 190-191, 218-219, 279 | yes: demo12_step2 |
+| a cumulative user constraint (UC_T_SUM) | 132-137 | yes: demo12_step2 |
+| a dynamic user constraint (UC_T_SUCC, UC_DYNBND, PRC_DYNUC) | 144-151, 183-185 | yes: demo12_step2 |
+| user constraints summed over regions (UC_R_SUM) and their right-hand sides | 141-144, 157, 178-179 | yes for L141-144, L157-176: demo12_step2; no for the copy-back of L178-179 (needs such a constraint with a UC_CAP coefficient) |
+| COM_CUM (VAR_CUMCOM) | 186-189, 222-230 | yes for L222-230: demo12_step2; L186-189 are REG_FIXT only |
+| REG_CUMCST | 196 | yes: demo12_step2 |
+| VAR_UPS, VAR_UPT, VAR_UDP (dispatching, unit commitment), VAR_SCAP (retirement) (translated in change 3, unchecked) | 205-207, 220 | no: change 7, a stepped variant of demo12_uc |
+| blending (translated in change 3, unchecked: U7), elastic demand, damage (refused) | 211-212, 232-233, 276, 281 | no: blending in change 7; the others with those features |
 | FIXBOH and REG_FIXT | 46-49, 158, 177, 180-181, 186-189, 234-264, 315-317 | no: see "Flagged" |
 
 ## Flagged

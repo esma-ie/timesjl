@@ -241,6 +241,21 @@ state    = "equ"
 switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", TIMESTEP = "20", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
 untranslated = []
 
+# Crafted case demo12_step2 (15 Nov 2026; M1.5 change 5): demo12 as a stepped run with what demo12_step does
+# not reach: a given overlap (G_OVERLAP 15), bounds on capacity (CAP_BND), cumulative, region-summed and
+# dynamic user constraints (ucdyn.dd, ucrt.dd, cumc.dd, step2.dd), cumulative bounds on flows and commodities
+# and bounds on cumulative costs (REG_CUMCST). Preprocessing from the input dump to ppm on every symbol; the
+# steps (test/unit/test_solve_stp2.jl): the ppm -> equ step, layers 1 and 2 of each step against
+# demo12_step2_step<k> and demo12_step2_step<k>_matrix, and the run to its end with HiGHS, layer 3 per step.
+[[variant]]
+prefix   = "demo12_step2"
+model    = "TIMES_Demo-demo12_step2"
+variant  = "as_run"
+reduce   = true
+state    = "equ"
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "NO", TIMESTEP = "20", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+untranslated = []
+
 # Crafted case demo12_bndc (14 Nov 2026): COM_BNDNET and COM_BNDPRD of ELC (tracked at DAYNITE) at
 # ANNUAL and at a season, LO, UP and FX (one FX with the value EPS), which GAMS writes as the
 # equations EQ(l)_BNDNET and EQ(l)_BNDPRD (eqbndcom.mod L16-24); one bound at the commodity's own

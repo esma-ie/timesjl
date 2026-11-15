@@ -68,4 +68,24 @@ let vx = only(v for v in TOML.parsefile(joinpath(FIXTURES, "variant_fixtures.tom
         @test col("VAR_CUMCOM(REG1,TOTCO2,NET,2010,2030)").lb == -Inf
         @test col("VAR_CUMCOM(REG2,TOTCO2,NET,2020,2050)").lb == 0
     end
+    @testset "a second and a third pass (a stepped run includes bnd_cum.mod in every step, solve.stp L227)" begin
+        # The statements are not idempotent (D41). Values as in GAMS's dump of every step of demo12_step2,
+        # which reads cumc.dd: the modifier of the first pass moves to the 'EOH' / '0' key (L13, L27), the
+        # record at %EOTIME% is cleared (L14, L28), and the lead J+(-0.2-1), rounded to -1 (G29), names no
+        # element of J, so no modifier is set again (L19-20, L34-35).
+        for pass in 2:3
+            TIMES.bnd_cum_data!(tm)
+            flo, com = gparam(tm, "FLO_CUM"), gparam(tm, "COM_CUM")
+            @test gv(flo, ("REG2", "MINGAS2", "GAS", "2010", "EOH", "N")).v ≈ -0.2
+            @test iszero(gv(flo, ("REG2", "MINGAS2", "GAS", "2010", "2200", "N")))
+            @test gv(com, ("REG2", "NET", "2010", "0", "TOTCO2", "N")).v ≈ -0.2
+            @test iszero(gv(com, ("REG2", "NET", "2010", "2200", "TOTCO2", "N")))
+            # L30 on the EPS that L31 left: EPS under LO and UP, FX cleared
+            @test all(b -> gv(com, ("REG1", "NET", "2060", "2070", "TOTCO2", b)).eps, ("LO", "UP"))
+            @test iszero(gv(com, ("REG1", "NET", "2060", "2070", "TOTCO2", "FX")))
+            # the bounds themselves are unchanged
+            @test gv(flo, ("REG2", "MINOIL2", "OIL", "2005", "2030", "UP")).v == 9500
+            @test gv(com, ("REG2", "PRD", "2010", "2050", "ELCCO2", "UP")).v == 1.85e7
+        end
+    end
 end

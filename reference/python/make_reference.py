@@ -71,7 +71,7 @@ from runfile import build_dd_run, patch_run  # noqa: E402
 from runlimits import RunSlot, default_max_parallel, default_slot_dir, default_threads, limit_threads  # noqa: E402
 from gdx2arrow import convert_gdx, gams_system_directory  # noqa: E402
 
-HARNESS_VERSION = "0.3.4"  # 0.3.4 (14 Nov 2026): steps/<k>/ of stepped runs (www_in.cgi, www_out.cgi); 0.3.3 (14 Nov 2026): equ/, the checkpoint of stepped runs (equ_ext.tjlref); 0.3.2 (9 Nov 2026): raw/tjl_presolve_qa_check.log; 0.3.1 (5 Nov 2026): --only convert; 0.3.0 (31 Oct 2026): M1.3 checkpoints, --only presolve; 0.2.4 (29 Oct 2026): run limits (threads, parallel runs); 0.2.3: model overrides; 0.2.2: raw/tjl_<run>.run; 0.2.1: extra_dd_dirs; 0.2.0: pre-solve run
+HARNESS_VERSION = "0.3.5"  # 0.3.5 (15 Nov 2026): parse_solves reads MODEL STATISTICS with "N projected"; 0.3.4 (14 Nov 2026): steps/<k>/ of stepped runs (www_in.cgi, www_out.cgi); 0.3.3 (14 Nov 2026): equ/, the checkpoint of stepped runs (equ_ext.tjlref); 0.3.2 (9 Nov 2026): raw/tjl_presolve_qa_check.log; 0.3.1 (5 Nov 2026): --only convert; 0.3.0 (31 Oct 2026): M1.3 checkpoints, --only presolve; 0.2.4 (29 Oct 2026): run limits (threads, parallel runs); 0.2.3: model overrides; 0.2.2: raw/tjl_<run>.run; 0.2.1: extra_dd_dirs; 0.2.0: pre-solve run
 EXPECTED_TIMES_VERSION = "4.9.7"
 EXPECTED_TIMES_COMMIT = "d9a6a25"
 VARIANTS = {"reduce_off": {"REDUCE": "NO"}, "as_run": {}}
@@ -126,14 +126,16 @@ def numbered_files(folder: Path, pattern: str) -> list[Path]:
 
 def parse_solves(lst: Path) -> list[dict]:
     """One entry per SOLVE of a GAMS listing, in order: rows, columns, nonzeros (MODEL STATISTICS),
-    solver status, model status and objective (SOLVE SUMMARY)."""
+    solver status, model status and objective (SOLVE SUMMARY). GAMS adds "N projected" after the
+    number of single variables when it moved N starting levels onto their bounds (in a stepped run the
+    levels of an earlier step can lie outside a bound by a rounding)."""
     if not lst.exists():
         return []
     text = lst.read_text(errors="replace")
     num = lambda s: int(s.replace(",", ""))  # noqa: E731
     stats = [{"rows": num(r), "columns": num(c), "nonzeros": num(n)} for r, c, n in re.findall(
         r"^MODEL STATISTICS\s+BLOCKS OF EQUATIONS\s+[\d,]+\s+SINGLE EQUATIONS\s+([\d,]+)\s+"
-        r"BLOCKS OF VARIABLES\s+[\d,]+\s+SINGLE VARIABLES\s+([\d,]+)\s+NON ZERO ELEMENTS\s+([\d,]+)", text, flags=re.M)]
+        r"BLOCKS OF VARIABLES\s+[\d,]+\s+SINGLE VARIABLES\s+([\d,]+)(?:[ \t]+[\d,]+[ \t]+projected)?\s+NON ZERO ELEMENTS\s+([\d,]+)", text, flags=re.M)]
     sums = [{"solver_status": int(s), "model_status": int(m), "objective": float(o) if o else None}
             for s, m, o in re.findall(
         r"^\*\*\*\* SOLVER STATUS\s+(\d+)[^\n]*\n\*\*\*\* MODEL STATUS\s+(\d+)[^\n]*\n"

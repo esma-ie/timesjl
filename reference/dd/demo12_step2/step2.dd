@@ -1,0 +1,137 @@
+* TIMES.jl crafted case demo12_step2 (reference/crafted.toml, 15 Nov 2026): data for the branches
+* of the stepped (myopic) solve that demo12_step does not reach (solve.stp; M1.5 change 5,
+* docs/m15-plan.md). Added to TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0),
+* in a run with TIMESTEP 20 that also reads ucdyn.dd (dynamic user constraints in the RHS
+* direction), ucrt.dd (dynamic process and commodity bounds, UC_DYNBND) and cumc.dd (cumulative
+* bounds on commodities and flows) of the other crafted cases.
+* - G_OVERLAP 15 (solve.stp L44; the default is half the step): the steps are 2005-2020,
+*   2015-2030 and 2030-2050, so the second step solves two periods again.
+* - CAP_BND (L69, L96, L190-191, L218-219): REG1 wind UP, binding in the first step; REG1 new
+*   coal UP; REG1 solar LO; REG2 solar FX in 2030 (L69 turns it into LO and UP); REG1 existing
+*   hydro UP 10 in 2030, above the 5.466 still standing then (a bound below the standing
+*   capacity makes the first step infeasible, as it would make a run that is not stepped).
+* - CUM_WIN: REG1's new wind capacity summed over the periods, UP (UC_R_EACH with UC_T_SUM,
+*   UC_RHSR; L133-136).
+* - CUM_GAS: new gas-plant capacity summed over the regions and the periods, UP (UC_R_SUM with
+*   UC_T_SUM, UC_RHS; L134-136, L160, L176).
+* - MIX_RNW: new wind less twice the new coal capacity, summed over the regions, each period,
+*   UP and LO (UC_R_SUM with UC_T_EACH, UC_RHST; a negative coefficient, so UC_RN and the
+*   absolute tolerance of L173-174; L141-143, L162, L168, L178).
+* - REG_CUMCST (L196): upper bounds on REG1's and REG2's investment costs over ranges of years
+*   that end in the periods 2010, 2020 and 2030 (the bound of a range that ends in a period
+*   already fixed is removed), and a lower bound on REG1's fixed costs (kept).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER
+G_OVERLAP ' '/
+15
+/
+
+PARAMETER
+CAP_BND ' '/
+REG1.2015.ELCRNWIN01.UP 10
+REG1.2020.ELCRNWIN01.UP 25
+REG1.2030.ELCRNWIN01.UP 70
+REG1.2050.ELCRNWIN01.UP 150
+REG1.2015.ELCTNCOA01.UP 45
+REG1.2020.ELCTNCOA01.UP 50
+REG1.2030.ELCTNCOA01.UP 80
+REG1.2020.ELCRNSOL01.LO 2
+REG1.2030.ELCRNSOL01.LO 5
+REG1.2050.ELCRNSOL01.LO 5
+REG2.2030.ELCRNSOL01.FX 3
+REG1.2030.ELCREHYD00.UP 10
+/
+
+SET UC_N
+/
+CUM_WIN 'New wind capacity over the horizon, REG1'
+CUM_GAS 'New gas-plant capacity over the horizon, both regions'
+MIX_RNW 'New wind against new coal capacity, both regions'
+/
+
+SET UC_R_EACH
+/
+REG1.CUM_WIN
+/
+
+SET UC_R_SUM
+/
+REG1.CUM_GAS
+REG2.CUM_GAS
+REG1.MIX_RNW
+REG2.MIX_RNW
+/
+
+PARAMETER
+UC_NCAP ' '/
+CUM_WIN.LHS.REG1.2005.ELCRNWIN01 1
+CUM_WIN.LHS.REG1.2010.ELCRNWIN01 1
+CUM_WIN.LHS.REG1.2015.ELCRNWIN01 1
+CUM_WIN.LHS.REG1.2020.ELCRNWIN01 1
+CUM_WIN.LHS.REG1.2030.ELCRNWIN01 1
+CUM_WIN.LHS.REG1.2050.ELCRNWIN01 1
+CUM_GAS.LHS.REG1.2005.ELCTNGAS01 1
+CUM_GAS.LHS.REG1.2010.ELCTNGAS01 1
+CUM_GAS.LHS.REG1.2015.ELCTNGAS01 1
+CUM_GAS.LHS.REG1.2020.ELCTNGAS01 1
+CUM_GAS.LHS.REG1.2030.ELCTNGAS01 1
+CUM_GAS.LHS.REG1.2050.ELCTNGAS01 1
+CUM_GAS.LHS.REG2.2005.ELCTNGAS01 1
+CUM_GAS.LHS.REG2.2010.ELCTNGAS01 1
+CUM_GAS.LHS.REG2.2015.ELCTNGAS01 1
+CUM_GAS.LHS.REG2.2020.ELCTNGAS01 1
+CUM_GAS.LHS.REG2.2030.ELCTNGAS01 1
+CUM_GAS.LHS.REG2.2050.ELCTNGAS01 1
+MIX_RNW.LHS.REG1.2005.ELCRNWIN01 1
+MIX_RNW.LHS.REG1.2010.ELCRNWIN01 1
+MIX_RNW.LHS.REG1.2015.ELCRNWIN01 1
+MIX_RNW.LHS.REG1.2020.ELCRNWIN01 1
+MIX_RNW.LHS.REG1.2030.ELCRNWIN01 1
+MIX_RNW.LHS.REG1.2050.ELCRNWIN01 1
+MIX_RNW.LHS.REG1.2005.ELCTNCOA01 -2
+MIX_RNW.LHS.REG1.2010.ELCTNCOA01 -2
+MIX_RNW.LHS.REG1.2015.ELCTNCOA01 -2
+MIX_RNW.LHS.REG1.2020.ELCTNCOA01 -2
+MIX_RNW.LHS.REG1.2030.ELCTNCOA01 -2
+MIX_RNW.LHS.REG1.2050.ELCTNCOA01 -2
+MIX_RNW.LHS.REG2.2005.ELCRNWIN01 1
+MIX_RNW.LHS.REG2.2010.ELCRNWIN01 1
+MIX_RNW.LHS.REG2.2015.ELCRNWIN01 1
+MIX_RNW.LHS.REG2.2020.ELCRNWIN01 1
+MIX_RNW.LHS.REG2.2030.ELCRNWIN01 1
+MIX_RNW.LHS.REG2.2050.ELCRNWIN01 1
+MIX_RNW.LHS.REG2.2005.ELCTNCOA01 -2
+MIX_RNW.LHS.REG2.2010.ELCTNCOA01 -2
+MIX_RNW.LHS.REG2.2015.ELCTNCOA01 -2
+MIX_RNW.LHS.REG2.2020.ELCTNCOA01 -2
+MIX_RNW.LHS.REG2.2030.ELCTNCOA01 -2
+MIX_RNW.LHS.REG2.2050.ELCTNCOA01 -2
+/
+
+PARAMETER
+UC_RHSR ' '/
+REG1.CUM_WIN.UP 150
+/
+
+PARAMETER
+UC_RHS ' '/
+CUM_GAS.UP 90
+/
+
+PARAMETER
+UC_RHST ' '/
+MIX_RNW.0.UP 5
+MIX_RNW.2005.UP 60
+MIX_RNW.0.LO 5
+MIX_RNW.2005.LO -200
+/
+
+PARAMETER
+REG_CUMCST ' '/
+REG1.2008.2012.INV.MEuro05.UP 10000000
+REG1.2012.2034.INV.MEuro05.UP 10000000
+REG2.2010.2020.INV.MEuro05.UP 10000000
+REG1.2013.2022.FOM.MEuro05.LO 1
+/

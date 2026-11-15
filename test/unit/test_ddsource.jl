@@ -87,6 +87,11 @@ end
                         globals=Dict("RUN_NAME" => "TIMES_Demo-demo12_step"))
         @test g.globals["STEPPED"] == "+" && g.globals["VAR_UC"] == "YES"      # L446-447
     end
+    # M1.5 change 5: the second stepped case, with DD files of its own (G_OVERLAP, CAP_BND, REG_CUMCST,
+    # user constraints summed over regions and periods)
+    @testset "demo12_step2: TIMESTEP 20, G_OVERLAP 15" begin
+        check_dd_case("TIMES_Demo-demo12_step2", "demo12_step2_run", "demo12_step2_input")
+    end
     # demo12 with the controls given as on the command line (--TIMESTEP=5): members of AGE (1*200),
     # of ALLYEAR (1960*2200), of J (1*999) or YES pass; anything else is GAMS's ABORT
     ctl(gl) = compile_run(joinpath(FIX, "demo12_off_run", "tjl_presolve.run");
