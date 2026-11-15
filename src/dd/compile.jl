@@ -811,6 +811,21 @@ INIT_EXEC[("initmty.mod", 369)] = function (g, text)
     end
 end
 
+# initmty.mod L421-423 and L432: the alternative objective controls. Each statement arrives only when
+# its `$IFI` holds, and assigns a constant to the scalar ALTOBJ (1 from its declaration, L420):
+#   L421 $IFI %OBJ%==STD ALTOBJ=0;      L422 $IFI %OBJ%==ALT ALTOBJ=2;      L423 $IFI %OBJ%==LIN ALTOBJ=3;
+#   L432 $IFI '%OBLONG%%OBJ%'==YESALT ALTOBJ = -2;
+# L424 (MACRO) and L425 (VALIDATE) are not translated: a run with either stops here.
+function init_altobj(g, text, line)
+    m = match(r"^\s*ALTOBJ\s*=\s*(-?\d+)\s*;?\s*$"i, text)
+    m === nothing && error("initmty.mod L$line: unexpected text $(repr(text))")
+    gsym(g, "ALTOBJ").vals[String[]] = (parse(Float64, m[1]), :none)
+    nothing
+end
+for l in (421, 422, 423, 432)
+    INIT_EXEC[("initmty.mod", l)] = (g, text) -> init_altobj(g, text, l)
+end
+
 # initmty.mod L442-444: the controls of restart and stepped runs, each checked only when it is set
 # (`$IF SET SPOINT`, `$IF SET TIMESTEP`, `$IF SET FIXBOH`):
 #   L442 IF((NOT J('%SPOINT%'))$(NOT SAMEAS('%SPOINT%','YES')), ABORT 'Invalid Control: SPOINT');

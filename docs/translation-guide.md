@@ -916,3 +916,23 @@ those checks, their figures and their crafted cases are not published
   with "N projected". OBJ ALT or LIN in a stepped run stays refused and
   becomes change 6; what no open stepped case reaches yet is listed in
   docs/m15-plan.md, "Change 5 as built".
+- 15 Nov 2026: M1.5 change 6, OBJ LIN and OBJ ALT in a stepped run.
+  coef_alt.lin L137-157 (`coef_alt_stp!`): in each step the divisors of the
+  investment, fixed and decommissioning costs are the ones saved before the
+  loop (STP_DIV, solve.stp L104-107) times 1+RTP_CAPVL, the correction for
+  the period that the end of the step's horizon cuts. Five crafted cases on
+  the run file of demo12_objinv: demo12_steplin (OBJ LIN, TIMESTEP 20; CI
+  fixtures, test_solve_stplin.jl, 91 tests), demo12_steplino (with OBLONG),
+  demo12_stepalt1 (OBJ ALT, one step), demo12_lin and demo12_alt (not
+  stepped). Layers 1 to 3 pass on all five, both variants, from GAMS's
+  input dump and from the DD files (`scripts/m13_gate.jl`). Three findings.
+  GAMS rounds `x**y` as `exp(y*log(x))` and POWER as a product by repeated
+  squaring (discrepancies.md G61); `gpow` and `gpower` now do the same,
+  which RTP_CAPVL needs (values of 1e-10 left by cancellation). OBJ ALT
+  with several steps fails in GAMS itself: a division by zero at
+  coef_alt.lin L51 or L52, the solve of the step skipped, the run ending
+  normally (D42); TIMES.jl stops with a `DomainError`. The DD reader did
+  not translate the statements that set ALTOBJ (initmty.mod L421-423,
+  L432), so no run with OBJ STD, ALT or LIN started from DD files; it does
+  now. Not checked yet under OBJ LIN: the weights of EQ_CUMFLO, EQ_CUMNET
+  and EQ_CUMPRD; EQ_STGIPS stays refused there.

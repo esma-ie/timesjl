@@ -144,11 +144,11 @@ file gives the step's objective.
 | # | Change | GAMS | Parity check |
 | --- | --- | --- | --- |
 | 1 | The per-step reference: harness 0.3.4 | none (the hooks at maindrv.mod L50 and solve.mod L44) | sizes of each step in the CONVERT run equal the solve run's; HiGHS on each step's MPS file; a reference that is not stepped unchanged |
-| 2 | Done, 14 Nov 2026 ("Change 2 as built", below). The partition and the preparation of a step: `stp_init!`, `stp_step_prep!`, `stp_next!` and the point store `StpPoint`, in `src/model/solve_stp.jl` | solve.stp L9-26, L43-57, L69-107, L111-196, L217, L222-227, L288-289, L295-319; clearsol.stp L8-10; coef_alt.lin L27, L31-63, L134-136, L160 (the block L137-157, LINFLO only, refused until change 5); eqobsalv.mod L19-85; bnd_ucw.mod L13-21; bnd_cum.mod L12-20, L27-38; the data statements of bndmain.mod with its second argument 1 | layer 1 per step: every set and parameter of `steps/<k>/final` at 1e-9 (less the harness's own TJL symbols and Z), fed with GAMS's levels and marginals of step k-1. demo12_step, both variants: 957 symbols in each of the three steps, none differs |
+| 2 | Done, 14 Nov 2026 ("Change 2 as built", below). The partition and the preparation of a step: `stp_init!`, `stp_step_prep!`, `stp_next!` and the point store `StpPoint`, in `src/model/solve_stp.jl` | solve.stp L9-26, L43-57, L69-107, L111-196, L217, L222-227, L288-289, L295-319; clearsol.stp L8-10; coef_alt.lin L27, L31-63, L134-136, L160 (the block L137-157, LINFLO only, refused until change 6); eqobsalv.mod L19-85; bnd_ucw.mod L13-21; bnd_cum.mod L12-20, L27-38; the data statements of bndmain.mod with its second argument 1 | layer 1 per step: every set and parameter of `steps/<k>/final` at 1e-9 (less the harness's own TJL symbols and Z), fed with GAMS's levels and marginals of step k-1. demo12_step, both variants: 957 symbols in each of the three steps, none differs |
 | 3 | Done, 15 Nov 2026 ("Change 3 as built", below). The equations over SUBT and the bounds of a step: `eq_periods`; `stp_bounds_init!`, `stp_step_bounds!`, `stp_bndmain!` and `stp_model` in `src/model/bnd_stp.jl` | maindrv.mod L38-41 and every macro use above; solve.stp L115 (V), L193-233, L267-281, L319; bndmain.mod with its second argument; bnd_ucw.mod with bnd_ucv.mod; bnd_cum.mod | layer 2 per step: `steps/<k>/matrix` at 1e-9 (rows, columns, order, coefficients, right-hand sides, bounds), fed with GAMS's levels of step k-1. demo12_step, both variants: the LP of each of the three steps equals GAMS's. Every model that is not stepped: LP identical (the whole suite) |
 | 4 | Done, 15 Nov 2026 ("Change 4 as built", below). The driver `solve_stepped!` (the loop, the solve, the levels kept between steps as SOLVEOPT=MERGE does), `stp_merge_point!`, `stp_finish!`, in `src/model/solve_stp.jl`; the two refusals removed | solve.stp L109, L285-294, L321, L325-329; solve.mod L12-41; err_stat.mod L63-69 | layer 3 per step and at the end, 1e-6: TIMES.jl with HiGHS against GAMS/CPLEX and GAMS/HiGHS, with GAMS's levels between the steps (and layers 1 and 2 again) and on TIMES.jl's own levels. demo12_step, both variants: the objective of each of the three steps equals GAMS's (relative difference under 3e-12). The step fixtures in CI; `scripts/m13_gate.jl` runs the stepped case to the end |
 | 5 | Done, 15 Nov 2026 ("Change 5 as built", below). The second crafted case, demo12_step2 (TIMESTEP 20, G_OVERLAP 15; CAP_BND; user constraints summed over the periods and over the regions, dynamic ones; COM_CUM, FLO_CUM, REG_CUMCST). One statement corrected: the lead of the N record in a second pass of bnd_cum.mod (`bnd_cum_flo`, `bnd_cum_com`). Harness 0.3.5 | solve.stp L44, L69-98, L132-196, L217-230, L279, L305; bnd_cum.mod L13-14, L19-20, L27-28, L34-35; bnd_ucv.mod L24-25 | layers 1 to 3 per step, both variants, from GAMS's input dump and from the DD files: all pass; CI: test_solve_stp2.jl on the fixtures of the case |
-| 6 | A stepped run with OBJ ALT or LIN: the divisors of coef_alt.lin STP, with a crafted case demo12_steplin (was part of change 5) | solve.stp L104-107, L124; coef_alt.lin L137-157 | layers 1 to 3 per step |
+| 6 | Done, 15 Nov 2026 ("Change 6 as built", below). A stepped run with OBJ ALT or LIN: the divisors of coef_alt.lin STP (`coef_alt_stp!`), with the crafted cases demo12_steplin, demo12_steplino, demo12_stepalt1, demo12_lin and demo12_alt. GAMS's rounding of `**` and POWER in `gpow` and `gpower` (G61). The DD reader sets ALTOBJ. OBJ ALT with several steps fails in GAMS itself (D42) | solve.stp L104-107, L124; coef_alt.lin L137-157; initmty.mod L421-423, L432 | layers 1 to 3 per step, both variants, from GAMS's input dump and from the DD files: all pass; CI: test_solve_stplin.jl on the fixtures of demo12_steplin |
 | 7 | Stepped variants of the blending case and of the unit commitment case (discrepancies.md U7; VAR_UPS, VAR_UPT, VAR_UDP) | solve.stp L205-207, L232-233, L281 | layers 1 to 3 per step |
 
 In change 3 a fixed variable stays a column: GAMS's matrix has the BACKWARD
@@ -578,6 +578,127 @@ the third pass of bnd_cum.mod.
   of its own, so it is change 6 (demo12_steplin). The stepped variants of
   the blending and the unit commitment cases are change 7.
 
+## Change 6 as built (15 Nov 2026)
+
+A stepped run with OBJ LIN or OBJ ALT: the divisors of the investment,
+fixed and decommissioning costs are corrected in every step for the period
+that the end of the step's horizon cuts (coef_alt.lin L137-157, under
+LINFLO). Until this change such a run was refused.
+
+**GAMS source** (v4.9.7 @ `d9a6a25`):
+- solve.stp L104-107: before the loop, when ALTOBJ > 1, the divisors
+  OBJ_DIVI, OBJ_DIVIV and OBJ_DIVIII are saved in STP_DIV, over the
+  milestone years only (T). Translated in change 2 (`stp_init!`), checked
+  now.
+- solve.stp L124 with coef_alt.lin L137-157 (`coef_alt_stp!` in
+  `src/coef/coef_alt.jl`, called by `stp_step_prep!`): RTP_CAPVL, the
+  relative change of a capacity's discounted availability in the last
+  period of the step (L139-146); without OBLONG, combined with the
+  correction for trapezoidal periods (L150-153; L148 skips it with OBLONG);
+  then each divisor of a milestone year is the saved one times 1+RTP_CAPVL
+  (L155-157, over RTP: the divisors of past years keep their values).
+- initmty.mod L421-423 and L432 (`init_altobj` in `src/dd/compile.jl`): the
+  statements that set the scalar ALTOBJ from the OBJ and OBLONG controls
+  (STD 0, ALT 2, LIN 3, OBLONG with ALT -2; 1 otherwise, L420). The DD
+  reader stopped at them, so no run with OBJ STD, ALT or LIN could start
+  from DD files.
+
+**The cases** (`reference/dd/`, `reference/crafted.toml`). All five are the
+run file of demo12_objinv (demo12 with decommissioning costs, a short-lived
+plant and a lead time, so all three divisors have records) with other
+controls:
+
+| Case | Controls | What it checks | Where |
+| --- | --- | --- | --- |
+| demo12_steplin | OBJ LIN, TIMESTEP 20 | L137-157 without OBLONG, three steps | fixtures, CI; the gate script |
+| demo12_steplino | OBJ LIN, OBLONG YES, TIMESTEP 20 | the OBLONG branch (L148), three steps | the gate script |
+| demo12_stepalt1 | OBJ ALT, TIMESTEP 60 | OBJ ALT in a stepped run of one step | the gate script |
+| demo12_lin | OBJ LIN | the base that is not stepped; initmty.mod L423 from DD files | the gate script, `scripts/m11_probe.jl` |
+| demo12_alt | OBJ ALT | the base that is not stepped; initmty.mod L422 from DD files | the gate script, `scripts/m11_probe.jl` |
+
+**demo12_steplin** (GAMS 54.6.1; the default overlap, half of TIMESTEP:
+step 2 solves 2020 again):
+
+| Step | Periods solved (SUBT) | Fixed (BACKWARD) | MIYR_VL | LP as run (rows, columns, nonzeros) | LP with REDUCE off | Objective, GAMS/CPLEX | TIMES.jl with HiGHS, own levels: relative difference |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 2005, 2010, 2015, 2020 | none | 2025 | 2,201, 3,215, 12,253 | 5,921, 6,749, 20,871 | 12,226,884.0052 | 7.1e-13 |
+| 2 | 2020, 2030 | 2005, 2010, 2015 | 2040 | 1,133, 2,339, 7,808 | 2,975, 4,535, 12,562 | 20,271,827.2496 | 1.8e-12 |
+| 3 | 2050 | 2005 to 2030 | 2052 | 540, 1,959, 4,808 | 1,380, 3,189, 6,982 | 24,230,172.1369 | 2.0e-13 |
+
+What the steps reach (records in GAMS's dump of each step, as run):
+
+| Symbol | Step 1 | Step 2 | Step 3 |
+| --- | --- | --- | --- |
+| RTP_CAPVL | 396 | 498 | 586 |
+| of them positive (the divisor is raised) | 1 | 1 | 1 |
+| OBJ_DIVI that differ from the saved value (of 458) | 269 | 359 | 447 |
+| STP_DIV (458 + 346 + 18 divisor records, less 42 of past years) | 780 | 780 | 780 |
+
+With OBLONG (demo12_steplino) the steps have 147, 241 and 191 records of
+RTP_CAPVL. In its last step all 191 are below 3e-10 in size: the
+availability over the step's horizon and the period's own cancel but for
+rounding, so the values are what GAMS's rounding of `**` leaves (below).
+
+**Parity.** `scripts/m13_gate.jl` on the five cases, both variants, from
+GAMS's input dump and from the DD files: all pass. For the three stepped
+cases: the chain to the pre-solve state; with GAMS's levels between the
+steps, layer 1 per step (958 sets and parameters; 957 for demo12_stepalt1),
+layer 2 per step with GAMS's sizes, each optimum evaluated in the other
+side's LP; on TIMES.jl's own levels, the objective of each step against
+GAMS/CPLEX's and the last against GAMS/HiGHS's. demo12_steplino:
+12,226,966.9684, 20,271,871.1782 and 24,230,247.8344 (relative differences
+3.6e-12, 1.5e-12, 1.3e-12). demo12_stepalt1: 24,230,694.1056 (1.2e-13).
+demo12_lin and demo12_alt: layers 1 and 2 and the solve (8,695 rows with
+REDUCE off, 3,233 as run; objectives 24,229,859.0038 and 24,230,694.1049,
+equal to GAMS/CPLEX's and GAMS/HiGHS's).
+
+**GAMS's rounding of powers (G61).** RTP_CAPVL is a difference of terms
+`1 - f**n` that nearly cancel, so the last bits of `**` show in it: with
+Julia's `^` (the correctly rounded power) values of the order 1e-10
+differed from GAMS's beyond 1e-9 relative. Probed on GAMS 54.6.1: `x**y`
+is `exp(y*log(x))`, and `POWER(x,n)` is the product by repeated squaring
+(`1/x/x` for n = -2). `gpow` and `gpower` (`src/model/gams_data.jl`) now
+compute them so. This is shared code: every other fixture and reference
+case stays within the tolerances (the full suite; the generated LPs are
+unchanged at 1e-9).
+
+**OBJ ALT in a stepped run of several steps fails in GAMS itself (D42).**
+coef_alt.lin L51 (L52 with OBLONG) divides COEF_PVT of every period by a
+sum over the years of the step's horizon; for a period beyond the horizon
+the sum is empty. GAMS 54.6.1 reports "division by zero", skips the solve
+of the step, clears the error (err_stat.mod L70) and goes on: on the run
+file of demo12_objinv with OBJ ALT and TIMESTEP 20 it skips steps 1 and 2,
+solves step 3 alone (objective 4,647,225.0032) and ends with "Normal
+completion"; with OBLONG YES as well it skips step 1 and solves steps 2
+and 3. TIMES.jl stops at the first such step with a
+`DomainError` that names the line. With one step over the whole horizon
+(demo12_stepalt1) no sum is empty and the run is as GAMS's.
+
+**CI.** Fixtures of demo12_steplin (about 9.6 MB: input, ppm, equ, the run
+file, a data and a matrix fixture per step) and
+`test/unit/test_solve_stplin.jl` (91 tests): the chain from ppm to equ,
+STP_DIV as saved, each step's partition, layer 1, the record counts and
+values above, L155-157 as a relation between the symbols, layer 2 per step,
+`solve_stepped!` to the end on GAMS's levels and on its own (HiGHS), and
+the `DomainError` of a stepped OBJ ALT. `test_ddsource.jl` compiles the
+case from its DD files and checks ALTOBJ for each setting of OBJ and
+OBLONG; `test_gnum.jl` has GAMS's values of `**` and POWER where Julia's
+`^` differs.
+
+**Flagged.**
+- **D42** (above): TIMES.jl stops where GAMS skips a step and goes on. A
+  report to ETSAP needs James's yes.
+- **initmty.mod L421 (OBJ STD) and L432 (OBLONG with OBJ ALT)** are
+  translated as written and checked against the source's `$IFI` lines
+  only: no reference run starts from DD files with them. L424 (MACRO) and
+  L425 (VALIDATE) stay refused.
+- **Checked on the workstation only** (no fixture): demo12_steplino,
+  demo12_stepalt1, demo12_lin, demo12_alt.
+- **Not checked yet under OBJ LIN**: the weights of EQ_CUMFLO, EQ_CUMNET
+  and EQ_CUMPRD (eqcumflo.mod L21, L24; the cases here have no cumulative
+  bound) and EQ_STGIPS (eqstgips.lin, still refused). A crafted case with
+  the cumulative bounds of demo12_cumc and OBJ LIN can settle the first.
+
 ## What demo12_step reaches, and what it does not
 
 Reached (records in the dump of step 2): user constraints by region and
@@ -588,12 +709,12 @@ and RTC_PRD 12; trade between the two regions; the salvage preparation
 (OBJ_LIFE 674, OBJSCC 107).
 
 Not reached by demo12_step, translated as GAMS has them. The last column
-is the state after change 5 (15 Nov 2026):
+is the state after change 6 (15 Nov 2026):
 
 | Branch | Lines of solve.stp | Checked against GAMS? |
 | --- | --- | --- |
 | G_OVERLAP given by the user | 44 | yes: demo12_step2 |
-| OBJ ALT or LIN (LINFLO): STP_DIV, coef_alt.lin STP | 104-107, 124 | no: refused; change 6 (demo12_steplin) |
+| OBJ ALT or LIN (LINFLO): STP_DIV, coef_alt.lin STP | 104-107, 124 | yes: demo12_steplin, demo12_steplino (OBJ LIN), demo12_stepalt1 (OBJ ALT, one step; with several steps GAMS fails, D42) |
 | CAP_BND | 69, 96, 190-191, 218-219, 279 | yes: demo12_step2 |
 | a cumulative user constraint (UC_T_SUM) | 132-137 | yes: demo12_step2 |
 | a dynamic user constraint (UC_T_SUCC, UC_DYNBND, PRC_DYNUC) | 144-151, 183-185 | yes: demo12_step2 |

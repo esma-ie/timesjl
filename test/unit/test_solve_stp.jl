@@ -61,9 +61,9 @@ import TOML, JSON, JuMP, HiGHS
             @test length(stp_unported(tmx)) == 1 && "(stepped run)" in [x.family for x in untranslated_families(tmx)]
             @test_throws UnportedError solve_stepped!(tmx, HiGHS.Optimizer)
         end
-        # OBJ ALT or LIN (LINFLO): the divisors of coef_alt.lin L137-157 in a stepped run are not translated
-        @test [x[1] for x in stp_unported(TimesModel(joinpath(FIXTURES, p * "_ppm"); switches=merge(sw, Dict("OBJ" => "LIN"))))] ==
-              ["coef_alt.lin L137-157"]
+        # OBJ ALT or LIN (LINFLO): the divisors of coef_alt.lin L137-157 in a stepped run are translated
+        # (M1.5 change 6; test/unit/test_solve_stplin.jl)
+        @test isempty(stp_unported(TimesModel(joinpath(FIXTURES, p * "_ppm"); switches=merge(sw, Dict("OBJ" => "LIN")))))
         @test isempty(stp_unported(chain(sw))) && isempty(stp_unported(plain))
         @test_throws ArgumentError solve_stepped!(plain, HiGHS.Optimizer)       # not a stepped run
         @test_throws ArgumentError stp_finish!(plain)

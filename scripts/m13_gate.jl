@@ -93,7 +93,11 @@ const STEPPED_LOOP_SYMBOLS = ("YR_V1", "YR_VL", "MY_FYEAR", "G_OVERLAP", "F", "Z
                               "NO_RVP", "FIL", "PRESOL", "YK1", "OBJ_SUMS", "SALV_INV", "OBJSCC", "OBJ_DCEOH",
                               "CAP_BND", "UC_RHS", "UC_RHSR", "UC_RHST", "UC_RHSTS", "UC_RHSRT", "UC_RHSRTS", "PRC_DYNUC",
                               "RTP_VARP", "RXX", "UC_T_SUM", "UC_T", "UC_T_EACH", "UC_T_SUCC", "UC_RTSUC", "REG_CUMCST",
-                              "COM_CUM", "FLO_CUM", "RC_CUMCOM")
+                              "COM_CUM", "FLO_CUM", "RC_CUMCOM",
+                              # under LINFLO (coef_alt.lin L137-157) and with decommissioning costs (the objective's
+                              # preparation runs in every step)
+                              "RTP_CAPVL", "STP_DIV", "OBJ_DIVI", "OBJ_DIVIV", "OBJ_DIVIII", "FIL2", "MY_F",
+                              "COR_SALVD", "OBJ_CRFD", "OBJ_SUMS3", "SALV_DEC")
 
 "Carry `tm`'s state (every symbol read or written, and the switches) into a TimesModel of `dir`."
 function carry(tm, dir)

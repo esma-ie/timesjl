@@ -92,6 +92,32 @@ end
     @testset "demo12_step2: TIMESTEP 20, G_OVERLAP 15" begin
         check_dd_case("TIMES_Demo-demo12_step2", "demo12_step2_run", "demo12_step2_input")
     end
+    # M1.5 change 6: a stepped run with OBJ LIN (the DD files of demo12_objinv)
+    @testset "demo12_steplin: OBJ LIN, TIMESTEP 20" begin
+        check_dd_case("TIMES_Demo-demo12_steplin", "demo12_steplin_run", "demo12_steplin_input")
+    end
+    # initmty.mod L420-432: ALTOBJ is 1 by its declaration; the OBJ and OBLONG controls of the run file
+    # set it (L421 STD: 0; L422 ALT: 2; L423 LIN: 3; L432 OBLONG with ALT: -2). The run file of
+    # demo12_steplin with its OBJ line replaced. GAMS's values of LIN and ALT are in the input dumps of
+    # the crafted cases; STD and OBLONG with ALT follow the source (no reference run has them).
+    @testset "the alternative objective controls, initmty.mod L420-432" begin
+        run = read(joinpath(FIX, "demo12_steplin_run", "tjl_presolve.run"), String)
+        line = r"\$ +SET +OBJ +LIN"
+        @test count(line, run) == 1
+        altobj(ctl) = mktempdir() do dir
+            f = joinpath(dir, "tjl_presolve.run")
+            write(f, replace(run, line => ctl))
+            g = compile_run(f; dirs=[case_dirs("TIMES_Demo-demo12_steplin"); joinpath(REFDIR, "gams")],
+                            globals=Dict("RUN_NAME" => "TIMES_Demo-demo12_steplin"))
+            only(grecords(g, g.syms["ALTOBJ"])[2])[1]
+        end
+        @test altobj("\$   SET OBJ LIN") == 3
+        @test altobj("\$   SET OBJ ALT") == 2
+        @test altobj("\$   SET OBJ STD") == 0
+        @test altobj("\$   SET OBJ MOD") == 1 && altobj("\$   SET OBJ AUTO") == 1
+        @test altobj("\$   SET OBJ ALT\n\$   SET OBLONG YES") == -2
+        @test altobj("\$   SET OBJ LIN\n\$   SET OBLONG YES") == 3
+    end
     # demo12 with the controls given as on the command line (--TIMESTEP=5): members of AGE (1*200),
     # of ALLYEAR (1960*2200), of J (1*999) or YES pass; anything else is GAMS's ABORT
     ctl(gl) = compile_run(joinpath(FIX, "demo12_off_run", "tjl_presolve.run");

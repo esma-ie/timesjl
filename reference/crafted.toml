@@ -394,6 +394,89 @@ kind = "run"
 run_file = "{crafted}/demo12_step2/demo12_step2.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_ucdyn", "{crafted}/demo12_ucrt", "{crafted}/demo12_cumc", "{crafted}/demo12_step2"]
 
+# TIMES_Demo demo12 + demo12_objinv/objinv.dd as a stepped run with OBJ LIN, TIMESTEP 20 (15 Nov
+# 2026; M1.5 change 6, docs/m15-plan.md): three steps, 2005-2020, 2020-2030, 2050. With OBJ LIN
+# (%LINFLO% 1) solve.stp L124 includes coef_alt.lin again in every step, and its STP label (L134-157)
+# corrects the divisors of the investment costs for the capacity that is available beyond the
+# step's horizon (RTP_CAPVL; OBJ_DIVI, OBJ_DIVIV, OBJ_DIVIII from STP_DIV, solve.stp L104-107).
+# objinv.dd gives the lead times, decommissioning and repeated investments these divisors act on.
+# Checked step by step (steps/<k>/) and solved to its end by `solve_stepped!` (scripts/m13_gate.jl).
+[[model]]
+name = "TIMES_Demo-demo12_steplin"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_steplin/demo12_steplin.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_objinv", "{crafted}/demo12_steplin"]
+
+# demo12_steplin with OBLONG YES (15 Nov 2026; M1.5 change 6): coef_alt.lin L44 (%ILED% empty) and
+# L148 (the STP label skips L150-153, the correction by the period's capacity transfer). Checked with
+# scripts/m13_gate.jl on the workstation; no CI fixture.
+[[model]]
+name = "TIMES_Demo-demo12_steplino"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_steplino/demo12_steplino.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_objinv", "{crafted}/demo12_steplino"]
+
+# TIMES_Demo demo12 + demo12_objinv/objinv.dd as a stepped run with OBJ ALT and TIMESTEP 60, one
+# step over the whole horizon (15 Nov 2026; M1.5 change 6): OBJ ALT through solve.stp and the STP
+# label of coef_alt.lin. With several steps GAMS itself fails under OBJ ALT (division by zero at
+# coef_alt.lin L51 or L52, the solve of the step skipped; docs/discrepancies.md D42), so one step is
+# the only stepped OBJ ALT run that has a reference. Checked with scripts/m13_gate.jl on the
+# workstation; no CI fixture.
+[[model]]
+name = "TIMES_Demo-demo12_stepalt1"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_stepalt1/demo12_stepalt1.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_objinv", "{crafted}/demo12_stepalt1"]
+
+# TIMES_Demo demo12 + demo12_objinv/objinv.dd with OBJ LIN, not stepped (15 Nov 2026; M1.5 change
+# 6): the base that demo12_steplin is read against, and the first open case with OBJ LIN (%CTST%
+# **EPS; coef_alt.lin L11-87, eqobjvar.mod L14-17). Checked with scripts/m13_gate.jl and
+# scripts/m11_probe.jl on the workstation; no CI fixture.
+[[model]]
+name = "TIMES_Demo-demo12_lin"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_lin/demo12_lin.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_objinv", "{crafted}/demo12_lin"]
+
+# TIMES_Demo demo12 + demo12_objinv/objinv.dd with OBJ ALT, not stepped (15 Nov 2026; M1.5 change
+# 6): OBJ_ALTV (coef_alt.lin L49-53) and the alternative objective. Checked with scripts/m13_gate.jl
+# and scripts/m11_probe.jl on the workstation; no CI fixture.
+[[model]]
+name = "TIMES_Demo-demo12_alt"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_alt/demo12_alt.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_objinv", "{crafted}/demo12_alt"]
+
 # TIMES_Demo demo12 + demo12_bndc/bndc.dd (14 Nov 2026): bounds on the net amount and the production
 # of a commodity above the timeslice level it is tracked at. COM_BNDPRD and COM_BNDNET of ELC
 # (tracked at DAYNITE) at ANNUAL and at a season, LO, UP and FX (one FX with the value EPS), which
