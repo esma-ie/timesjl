@@ -84,7 +84,8 @@ function eq_irebnd!(tm::TimesModel)
     ire_bnd = gparam(tm, "IRE_BND")
     isempty(ire_bnd) && return 0
     ire_unported(tm)                                                # RPC_MARKET: L46-51 cannot be reached
-    reg, milestonyr, rcs_comts = gset(tm, "REG"), gset(tm, "MILESTONYR"), gset(tm, "RCS_COMTS")
+    reg, rcs_comts = gset(tm, "REG"), gset(tm, "RCS_COMTS")
+    tx = eq_periods(tm)   # %R_T%, %TX%: SUBT in a stepped run (maindrv.mod L38-40)
     imp, xpt = gset(tm, "IMP"), gset(tm, "XPT")
     rpc_eqire, rpc_aire = gset(tm, "RPC_EQIRE"), gset(tm, "RPC_AIRE")
     rs_tree, ts_map, rs_below = gset(tm, "RS_TREE"), gset(tm, "TS_MAP"), gset(tm, "RS_BELOW")
@@ -119,7 +120,7 @@ function eq_irebnd!(tm::TimesModel)
         rows = NTuple{6,String}[]
         for (r, t, c, s, all_reg, ie, b) in ire_bnd.keys                            # L18-19
             b == bd || continue
-            ((r,) in reg && (t,) in milestonyr && (r, c, s) in rcs_comts && haskey(ire_of_rc, (r, c, ie))) || continue
+            ((r,) in reg && (t,) in tx && (r, c, s) in rcs_comts && haskey(ire_of_rc, (r, c, ie))) || continue
             val = ire_bnd.values[(r, t, c, s, all_reg, ie, b)]
             (bd == "FX" || (bd == "LO" && val != 0) || (bd == "UP" && val != Inf)) || continue      # %3
             push!(rows, (r, t, c, s, all_reg, ie))

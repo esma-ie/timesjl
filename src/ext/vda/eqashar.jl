@@ -208,7 +208,7 @@ function eq_ashar!(tm::TimesModel)
     flo_ashar = gparam_opt(d, "FLO_ASHAR", 7)                     # init_ext.vda L44
     rpcg_ashar = gparam_opt(d, "RPCG_ASHAR", 5)
     (isempty(flo_ashar) || isempty(rpcg_ashar)) && return 0
-    modlyear, milestonyr = gset(tm, "MODLYEAR"), gset(tm, "MILESTONYR")
+    modlyear, tx = gset(tm, "MODLYEAR"), eq_periods(tm)   # %R_V_T%: SUBT in a stepped run (maindrv.mod L38-40)
     rp_flo, rp_ire, rp_stg = gset(tm, "RP_FLO"), gset(tm, "RP_IRE"), gset(tm, "RP_STG")
     rp_pgflo, rp_pgact, rp_std = gset(tm, "RP_PGFLO"), gset(tm, "RP_PGACT"), gset(tm, "RP_STD")
     no_act = gset(tm, "NO_ACT")
@@ -243,7 +243,7 @@ function eq_ashar!(tm::TimesModel)
             for (_, s, _) in get(tree_of_rts, (r, ts), no3)      # SUM(RS_TREE(R,S,TS)$FLO_ASHAR(...,TS,'%2'),1)
                 rpcg_on((r, p, cg, cg2, s)) || continue
                 for (_, _, t, _) in get(vt_of_rvp, (r, v, p), no4)
-                    (t,) in milestonyr && push!(rows, (r, v, t, p, cg, cg2, s))
+                    (t,) in tx && push!(rows, (r, v, t, p, cg, cg2, s))
                 end
             end
         end

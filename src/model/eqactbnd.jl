@@ -30,7 +30,8 @@ GAMS: eqactbnd.mod L17-28 with eqmain.mod L47-49, v4.9.7.
 function eq_actbnd!(tm::TimesModel)
     act_bnd = gparam(tm, "ACT_BND")
     isempty(act_bnd) && return 0
-    milestonyr, modlyear = gset(tm, "MILESTONYR"), gset(tm, "MODLYEAR")
+    modlyear = gset(tm, "MODLYEAR")
+    tx = eq_periods(tm)   # %R_T%, %TX%: SUBT in a stepped run (maindrv.mod L38-40)
     rtp_vara = gset(tm, "RTP_VARA")
     rps_prcts = gset(tm, "RPS_PRCTS")
     prc_vint, prc_ts = gset(tm, "PRC_VINT"), gset(tm, "PRC_TS")
@@ -45,7 +46,7 @@ function eq_actbnd!(tm::TimesModel)
         rows = NTuple{4,String}[]
         for (r, t, p, s, b) in act_bnd.keys
             b == bd || continue
-            ((t,) in milestonyr && (r, t, p) in rtp_vara && (r, p, s) in rps_prcts) || continue
+            ((t,) in tx && (r, t, p) in rtp_vara && (r, p, s) in rps_prcts) || continue
             ((r, p) in prc_vint || !((r, p, s) in prc_ts)) || continue
             v = act_bnd.values[(r, t, p, s, b)]
             bd == "LO" && v == 0 && continue                 # (ACT_BND(...,'LO') NE 0)

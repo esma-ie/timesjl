@@ -583,6 +583,22 @@
    "file": "OBJ_LINT.arrow"
   },
   {
+   "name": "VAR_ACT",
+   "kind": "variable",
+   "type": "positive",
+   "dimension": 5,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "ALLYEAR",
+    "P",
+    "S"
+   ],
+   "description": "Overall activity of a process",
+   "records": 1998,
+   "file": "VAR_ACT.arrow"
+  },
+  {
    "name": "VAR_CAP",
    "kind": "variable",
    "type": "positive",
@@ -597,6 +613,41 @@
    "file": "VAR_CAP.arrow"
   },
   {
+   "name": "VAR_FLO",
+   "kind": "variable",
+   "type": "positive",
+   "dimension": 6,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "ALLYEAR",
+    "P",
+    "C",
+    "S"
+   ],
+   "description": "Level of process commodity flow",
+   "records": 2858,
+   "file": "VAR_FLO.arrow"
+  },
+  {
+   "name": "VAR_IRE",
+   "kind": "variable",
+   "type": "positive",
+   "dimension": 7,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "ALLYEAR",
+    "P",
+    "C",
+    "S",
+    "IE"
+   ],
+   "description": "Inter-regional trade flow",
+   "records": 958,
+   "file": "VAR_IRE.arrow"
+  },
+  {
    "name": "VAR_NCAP",
    "kind": "variable",
    "type": "positive",
@@ -609,6 +660,36 @@
    "description": "New capacity of a process",
    "records": 1442,
    "file": "VAR_NCAP.arrow"
+  },
+  {
+   "name": "VAR_COMNET",
+   "kind": "variable",
+   "type": "positive",
+   "dimension": 4,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "C",
+    "S"
+   ],
+   "description": "Net commodity level",
+   "records": 268,
+   "file": "VAR_COMNET.arrow"
+  },
+  {
+   "name": "VAR_COMPRD",
+   "kind": "variable",
+   "type": "positive",
+   "dimension": 4,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "C",
+    "S"
+   ],
+   "description": "Production of commodity",
+   "records": 208,
+   "file": "VAR_COMPRD.arrow"
   },
   {
    "name": "VAR_CUMCOM",
@@ -641,6 +722,121 @@
    "description": "Cumulative process flow",
    "records": 18,
    "file": "VAR_CUMFLO.arrow"
+  },
+  {
+   "name": "VAR_SIN",
+   "kind": "variable",
+   "type": "positive",
+   "dimension": 6,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "ALLYEAR",
+    "P",
+    "C",
+    "S"
+   ],
+   "description": "Input flow into storage",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "VAR_SOUT",
+   "kind": "variable",
+   "type": "positive",
+   "dimension": 6,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "ALLYEAR",
+    "P",
+    "C",
+    "S"
+   ],
+   "description": "Output flow from storage",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "VAR_BLND",
+   "kind": "variable",
+   "type": "positive",
+   "dimension": 4,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "COM",
+    "COM"
+   ],
+   "description": "Refinery blending",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "VAR_SCAP",
+   "kind": "variable",
+   "type": "positive",
+   "dimension": 4,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "LL",
+    "P"
+   ],
+   "description": "Cumulative retirements",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "VAR_UPS",
+   "kind": "variable",
+   "type": "positive",
+   "dimension": 6,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "ALLYEAR",
+    "P",
+    "S",
+    "L"
+   ],
+   "description": "Start-ups",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "VAR_UPT",
+   "kind": "variable",
+   "type": "positive",
+   "dimension": 6,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "ALLYEAR",
+    "P",
+    "S",
+    "UPT"
+   ],
+   "description": "Start-ups by type",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "VAR_UDP",
+   "kind": "variable",
+   "type": "positive",
+   "dimension": 6,
+   "domain": [
+    "R",
+    "ALLYEAR",
+    "ALLYEAR",
+    "P",
+    "S",
+    "L"
+   ],
+   "description": "Unit dispatching",
+   "records": 0,
+   "file": null
   },
   {
    "name": "VAR_UC",

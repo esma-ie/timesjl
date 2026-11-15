@@ -5,6 +5,10 @@
 #   <prefix>_step<k>/   of steps/<k>/final: the sets and parameters that differ from the equ dump
 #                       (the state after eqmain.mod, already a fixture: <prefix>_equ), and the
 #                       variables whose levels or marginals solve.stp reads (STP_POINT_VARS)
+#   <prefix>_step<k>_matrix/matrix, /dictmap
+#                       the LP GAMS solved in step k (steps/<k>/matrix: the CONVERT DumpGDX export
+#                       made just before that SOLVE) and its dictionary (steps/<k>/matrix_dictmap),
+#                       for layer 2 of the step (test/unit/test_bnd_stp.jl)
 #
 #   julia --project=test scripts/make_step_fixture.jl <reference>/<model>/<variant> <prefix>
 #
@@ -65,6 +69,20 @@ function main(refrun, prefix)
                       "and the variables solve.stp reads; $(strip(first(split(gams, "  "))))>"
         write(joinpath(dst, "manifest.json"), JSON.json(m, 1))
         println("wrote ", dst, ": ", length(keep), " symbols kept, ", length(unchanged), " as in the equ dump")
+        mdst = joinpath(REPO, "test", "fixtures", "$(prefix)_step$(k)_matrix")
+        isdir(mdst) && rm(mdst; recursive=true)
+        for (from, to, what) in (("matrix", "matrix", "the LP"), ("matrix_dictmap", "dictmap", "the dictionary of the LP"))
+            msrc = joinpath(refrun, "steps", string(k), from)
+            isdir(msrc) || error("$msrc missing: make the reference with harness 0.3.4 or later")
+            mkpath(joinpath(mdst, to))
+            for f in readdir(msrc)
+                cp(joinpath(msrc, f), joinpath(mdst, to, f))
+            end
+            mm = JSON.parsefile(joinpath(mdst, to, "manifest.json"))
+            mm["source"] = "<$model $(mf["variant"]) solve run, $what of step $k (CONVERT); $(strip(first(split(gams, "  "))))>"
+            write(joinpath(mdst, to, "manifest.json"), JSON.json(mm, 1))
+        end
+        println("wrote ", mdst)
     end
 end
 

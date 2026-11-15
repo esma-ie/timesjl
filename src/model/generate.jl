@@ -41,8 +41,10 @@ function untranslated_families(tm::TimesModel)
     # A stepped (myopic) run: %R_T% is 'R,SUBT(T)' (maindrv.mod L38-40), so every equation is generated for
     # the periods of one step, and solve.stp solves step by step (maindrv.mod L111-113). The preparation
     # before it is translated (coef_alt.lin L81, eqobsalv.mod L23-25); the stepped solve is M1.5
-    stepped(tm) && note!("(stepped run)", "maindrv.mod L38-40, L111-113; solve.stp",
-                         "TIMESTEP = $(gswitch(tm, "TIMESTEP", ""))")
+    # (changes 2 and 3: `stp_model` gives the model of one step, which is generated; the run as a whole is
+    # refused until the loop with the SOLVE, change 4)
+    (stepped(tm) && !stp_is_step(tm)) && note!("(stepped run)", "maindrv.mod L38-40, L111-113; solve.stp",
+                                               "TIMESTEP = $(gswitch(tm, "TIMESTEP", ""))")
     # %POWERFLO% YES: phase-angle grids are translated (EQ_GR_POWFLO, M1.3 change 27b), with the allocation of
     # supply and demand to grid nodes (EQ_GR_GENALL, EQ_GR_DEMALL, IREAUX: 27b-2); PTDF, gas grids and the N-1
     # constraint EQ_GR_XBND are not

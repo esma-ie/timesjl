@@ -172,7 +172,7 @@ function eq_caflac!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, 
     d = tm.data
     name = "EQ$(eqtype)_CAFLAC"
     afs = afs_solve(tm)
-    modlyear, milestonyr = gset(tm, "MODLYEAR"), gset(tm, "MILESTONYR")
+    modlyear, tx = gset(tm, "MODLYEAR"), eq_periods(tm)   # %R_V_T%: SUBT in a stepped run (maindrv.mod L38-40)
     rp_std, rpc_stg = gset(tm, "RP_STD"), gset_opt(d, "RPC_STG", 3)
     rp_aire, rpg_afcx = gset(tm, "RP_AIRE"), gset_opt(d, "RPG_AFCX", 4)
     afcx_of_rpc = indexby(rpg_afcx, (1, 2, 3))                  # (r,p,c) -> RPG_AFCX(r,p,c,ie)
@@ -193,7 +193,7 @@ function eq_caflac!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, 
 
     n = 0
     for (r, v, t, p) in gset(tm, "RTP_VINTYR")
-        ((v,) in modlyear && (t,) in milestonyr) || continue
+        ((v,) in modlyear && (t,) in tx) || continue
         for (_, _, _, s, _) in get(s_of_rtpbd, (r, t, p, bd), no5)
             (r, p, s, bd) in rps_caflac || continue
             std = (r, p) in rp_std
@@ -286,7 +286,7 @@ GAMS: eqcaflac.vda L40-60, v4.9.7.
 function eq_capflo!(tm::TimesModel, ncap_afc::GamsParam{5})
     isempty(ncap_afc) && return 0
     d = tm.data
-    modlyear, milestonyr = gset(tm, "MODLYEAR"), gset(tm, "MILESTONYR")
+    modlyear, tx = gset(tm, "MODLYEAR"), eq_periods(tm)   # %R_V_T%: SUBT in a stepped run (maindrv.mod L38-40)
     rp_flo, rp_stg, rpc = gset(tm, "RP_FLO"), gset(tm, "RP_STG"), gset(tm, "RPC")
     rpc_stg = gset_opt(d, "RPC_STG", 3)
     rs_tslvl, rs_fr, rtcs_fr = gparam(tm, "RS_TSLVL"), gparam(tm, "RS_FR"), gparam(tm, "RTCS_FR")
@@ -305,7 +305,7 @@ function eq_capflo!(tm::TimesModel, ncap_afc::GamsParam{5})
 
     n = 0
     for (r, v, t, p) in gset(tm, "RTP_VINTYR")
-        ((v,) in modlyear && (t,) in milestonyr) || continue
+        ((v,) in modlyear && (t,) in tx) || continue
         for (_, _, _, cg, s) in get(afc_of_rvp, (r, v, p), no5)
             haskey(rs_tslvl, (r, s)) || continue                   # RS_TSLVL(R,S); S in STL
             lhs = JuMP.AffExpr(0.0)

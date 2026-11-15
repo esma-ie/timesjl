@@ -144,8 +144,10 @@ GAMS: eqstgtss.mod L13-48, v4.9.7.
 function eq_stgtss_rows!(tm::TimesModel)
     x = stg_context(tm)
     one = GNum(1.0)
+    vx, tx = gset(tm, "MODLYEAR"), eq_periods(tm)                 # %R_V_T%: V, and SUBT in a stepped run (maindrv.mod L38-40)
     n = 0
     for (r, v, t, p) in gset(tm, "RTP_VINTYR")
+        ((v,) in vx && (t,) in tx) || continue
         (r, p) in x.rp_stg || continue
         nst = (r, "NST", p) in x.prc_map
         sts = (r, p) in x.rp_sts
@@ -232,8 +234,10 @@ function eq_stsbal!(tm::TimesModel)
     stl_of_rp = indexby(gset(tm, "RP_STL"), (1, 2))         # (r,p) -> RP_STL(r,p,tsl,l)
     group_of = indexby(gset(tm, "TS_GROUP"), (1, 2))        # (r,tsl) -> TS_GROUP(r,tsl,s)
     ips, bd = gset(tm, "IPS"), gset(tm, "BD")
+    vx, tx = gset(tm, "MODLYEAR"), eq_periods(tm)                 # %R_V_T%: V, and SUBT in a stepped run (maindrv.mod L38-40)
     n = 0
     for (r, v, t, p) in gset(tm, "RTP_VINTYR")
+        ((v,) in vx && (t,) in tx) || continue
         stls = get(stl_of_rp, (r, p), NTuple{4,String}[])
         isempty(stls) && continue
         for (_, _, tsl, l) in stls, (_, _, s) in get(group_of, (r, tsl), NTuple{3,String}[])

@@ -75,6 +75,7 @@ function eq_capvac!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, 
     d = tm.data
     name = "EQ$(eqtype)_CAPVAC"
     modlyear, milestonyr = gset(tm, "MODLYEAR"), gset(tm, "MILESTONYR")   # V, K; T
+    tx = eq_periods(tm)   # %R_T%, %TX%: SUBT in a stepped run (maindrv.mod L38-40)
     rps_caflac = gset_opt(d, "RPS_CAFLAC", 4)
     ts_map, rp_std, com_type = gset(tm, "TS_MAP"), gset(tm, "RP_STD"), gset(tm, "COM_TYPE")
     ncap_afcs = gparam_opt(d, "NCAP_AFCS", 5)
@@ -95,7 +96,7 @@ function eq_capvac!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, 
     n = 0
     for (r, v, t, p) in gset(tm, "RTP_VINTYR")
         # The domain RTP_VINTYR(R,V,T,P) is controlled by V (MODLYEAR) and T (MILESTONYR).
-        ((v,) in modlyear && (t,) in milestonyr) || continue
+        ((v,) in modlyear && (t,) in tx) || continue
         for (_, _, _, s, _) in get(s_of_rtpbd, (r, t, p, bd), no5)
             lhs = JuMP.AffExpr(0.0)
             if !((r, p, s, bd) in rps_caflac)

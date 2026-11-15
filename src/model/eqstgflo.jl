@@ -52,7 +52,8 @@ function eq_stgflo!(tm::TimesModel, io::String, eqtype::String, bd::String)
     isempty(bnd) && return 0
     x = stg_context(tm)
     one = GNum(1.0)
-    milestonyr, modlyear, rtpc = gset(tm, "MILESTONYR"), gset(tm, "MODLYEAR"), gset(tm, "RTPC")
+    modlyear, rtpc = gset(tm, "MODLYEAR"), gset(tm, "RTPC")
+    tx = eq_periods(tm)   # %R_T%, %TX%: SUBT in a stepped run (maindrv.mod L38-40)
     prc_vint, rps_prcts = gset(tm, "PRC_VINT"), gset(tm, "RPS_PRCTS")
     varts_of = indexby(x.rpcs_var, (1, 2, 3))                     # (r,p,c) -> RPCS_VAR(r,p,c,ts)
     v_of_rtp = indexby(gset(tm, "RTP_VINTYR"), (1, 3, 4))         # (r,t,p) -> RTP_VINTYR(r,v,t,p)
@@ -61,7 +62,7 @@ function eq_stgflo!(tm::TimesModel, io::String, eqtype::String, bd::String)
     rows = NTuple{5,String}[]
     for (r, t, p, c, s, b) in bnd.keys
         b == bd || continue
-        ((t,) in milestonyr && (r, t, p, c) in rtpc) || continue
+        ((t,) in tx && (r, t, p, c) in rtpc) || continue
         v = bnd.values[(r, t, p, c, s, b)]
         bd == "LO" && v == 0 && continue                          # NE 0 (EPS is 0, G12)
         bd == "UP" && v == Inf && continue                        # NE INF

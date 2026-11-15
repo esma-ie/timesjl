@@ -273,6 +273,7 @@ function eq_ucrtp!(tm::TimesModel)
     sgn(bd) = bd in ("UP", "FX") ? GNum(-1.0) : one               # 1-2$BDUPX(BD)
     lead = gparam(tm, "LEAD")
     t_set = gset(tm, "MILESTONYR")
+    tx = eq_periods(tm)   # %R_T%, %TX%: SUBT in a stepped run (maindrv.mod L38-40)
     t_list = [k[1] for k in t_set.keys]                             # T in order
     t_prev = Dict(t_list[i] => t_list[i-1] for i in 2:length(t_list))   # SAMEAS(T-1,V(TT))
     n = 0
@@ -291,7 +292,7 @@ function eq_ucrtp!(tm::TimesModel)
         end
         for (u, side, r, t, p, grp, bd) in dynuc.keys
             side == "RHS" || continue
-            ((t,) in t_set && (r, t, p) in rtp) || continue           # RTP(%R_T%,P)
+            ((t,) in tx && (r, t, p) in rtp) || continue              # RTP(%R_T%,P)
             name, eqtype = bd == "FX" ? ("EQE_UCRTP", "E") : bd in ("LO", "UP") ? ("EQN_UCRTP", "L") : continue
             s = sgn(bd)
             lt = gv(lead, (t,))
@@ -320,7 +321,7 @@ function eq_ucrtp!(tm::TimesModel)
         bds_of = indexby(dynbnd, (1,))                                    # UC_N -> UC_DYNBND(UC_N,BD)
         for (u, cv, side, r, t, c, s, tag) in uc_com.keys
             (side == "RHS" && tag == "UCN" && s == "ANNUAL") || continue  # ANNUAL(S), 'UCN'
-            ((t,) in t_set && (r, t, c) in rtc) || continue                # RTC(%R_T%,C)
+            ((t,) in tx && (r, t, c) in rtc) || continue                   # RTC(%R_T%,C)
             for (_, bd) in get(bds_of, (u,), NTuple{2,String}[])
                 bd in ("LO", "UP") || continue                             # BD(BDNEQ)
                 sg = sgn(bd)

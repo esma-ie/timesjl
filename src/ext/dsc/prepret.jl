@@ -514,7 +514,7 @@ function eq_ret!(tm::TimesModel)
 
     # EQ_CUMRET (L98-102)
     for (r, v, t, p) in rtp_cptyr
-        ((r, p) in prc_rcap && (t,) in t_set) || continue
+        ((r, p) in prc_rcap && (t,) in t_set && (v,) in modlyear) || continue   # V: without the pending periods in a step (solve.stp L115)
         k = haskey(rp_rtf.values, (r, p)) ? t : get(t_prev, t, nothing)  # K(T-(1-1$RP_RTF))
         (k !== nothing && (v, k) in vntrt) || continue
         lhs = JuMP.AffExpr(0.0)
@@ -532,7 +532,7 @@ function eq_ret!(tm::TimesModel)
     rvprl, obj_sums, prc_vint = gparam(tm, "RVPRL"), gset(tm, "OBJ_SUMS"), gset(tm, "PRC_VINT")
     ncap_pasti = gparam(tm, "NCAP_PASTI")
     for (r, v, p) in gset(tm, "RTP")
-        (r, p) in prc_rcap || continue
+        ((r, p) in prc_rcap && (v,) in modlyear) || continue            # RTP(R,V(LL),P): V as solve.stp L115 leaves it
         haskey(rvprl.values, (r, v, p)) || continue                      # $RVPRL(RTP)
         ((r, v, p) in obj_sums || (!((r, p) in prc_vint) && (v,) in t_set)) || continue
         lhs = JuMP.AffExpr(0.0)
@@ -564,6 +564,7 @@ function eq_ret!(tm::TimesModel)
         (bdl || (vtt && rtf.v == 3)) || continue
         lhs = JuMP.AffExpr(0.0)
         for (_, _, p) in get(refit_of, (r, prc), NTuple{3,String}[])
+            (tt,) in modlyear || break                                  # SUM((V(TT),P)...): V as solve.stp L115 leaves it
             (vtt || gv(prc_refit, (r, prc, p)).v < 0) || continue
             c = gv(coef_cpt, (r, tt, t, p))
             addterm!(lhs, c, tm, "VAR_NCAP", r, tt, p)
@@ -574,6 +575,7 @@ function eq_ret!(tm::TimesModel)
         k = get(t_prev, tt, nothing)                                    # K(TT-1)
         odd = rtf.v != 0 && rem(rtf.v, 2) != 0                          # MOD(RP_RTF,2) (G43)
         for v in get(vret_of, (r, tt, prc), String[])
+            (v,) in modlyear || continue                                # SUM(VNRET(V,TT,PRC),...): V as solve.stp L115 leaves it
             c = gv(coef_cpt, (r, v, t, prc))
             addterm!(rhs, c, tm, "VAR_RCAP", r, v, tt, prc)
             if k !== nothing && (k,) in modlyear && (v, k) in vnt

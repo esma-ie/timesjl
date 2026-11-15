@@ -55,6 +55,25 @@ end
 """
 stepped(tm) = gswitch(tm, "TIMESTEP", "") != ""
 
+"""
+    eq_periods(tm) -> GamsSet{1}
+
+The periods the equations and bounds written with `%R_T%`, `%TX%` or
+`%R_V_T%` are generated for:
+
+    \$ SET R_T 'R,T' SET TX 'T' SET R_V_T 'R,V,T' SET RTPX ''
+    \$ IF SET STEPPED \$SET R_T 'R,SUBT(T)' SET TX 'SUBT(T)' SET R_V_T 'R,V,SUBT(T)'
+
+T (MILESTONYR) in an ordinary run; in a stepped run SUBT, the periods of the
+step being solved (every period until solve.stp starts, ppmain.mod L253).
+Only the control period of the equation takes it: a sum inside the equation
+that runs over T keeps MILESTONYR. The REG_FIXT form of L41 (RT_PP, RVT) is
+refused with FIXBOH.
+
+GAMS: maindrv.mod L38-41; ppmain.mod L253, v4.9.7.
+"""
+eq_periods(tm) = gset(tm, stepped(tm) ? "SUBT" : "MILESTONYR")
+
 "GAMS `LOG(x)`: a non-positive argument is an execution error."
 function glog(x::GNum)
     x.v > 0 || throw(DomainError(x, "LOG of a non-positive value (GAMS: FUNC DOMAIN)"))

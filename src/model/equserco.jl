@@ -97,11 +97,21 @@ its rows: one per slice S of the level TSL named in UC_DS, with UC_NUMBER =
 TSL (setglobs.gms L121: UC_NUMBER holds the level names). ppmain.mod L1114
 removes UC_TS_EACH for those constraints, so the EACH lines skip them.
 
-GAMS: eqmain.mod L208-226, v4.9.7.
+In the model of one step of a stepped run (`stp_is_step`) the maps are the
+stored ones: eqmain.mod builds them once, before solve.stp, from the user
+constraints' period sets as the data give them, and the loop of the steps
+changes only UC_RTSUC (solve.stp L195). The period sets a step cuts down
+(UC_T_EACH, UC_T_SUCC; L141-159) are not read again for them.
+
+GAMS: eqmain.mod L208-226; solve.stp L195, v4.9.7.
 """
 function uc_setup(tm::TimesModel)
     get!(tm.cache, "UC_SETUP") do
         d = tm.data
+        if stp_is_step(tm)
+            return (; rhsmap=gset_opt(d, "UC_RHSMAP", 5), ut=gset_opt(d, "UC_UT", 2),
+                    uts=gset_opt(d, "UC_UTS", 3), rtsuc=gset_opt(d, "UC_RTSUC", 3))
+        end
         reg, milestonyr = gset(tm, "REG"), gset(tm, "MILESTONYR")
         uc_rhsrt, uc_rhsrts = gparam(tm, "UC_RHSRT"), gparam(tm, "UC_RHSRTS")
         t_each, t_succ = gset(tm, "UC_T_EACH"), gset(tm, "UC_T_SUCC")
@@ -1128,9 +1138,10 @@ function eq_uc!(tm::TimesModel)
         add_time!(rhs, n, regs, t)
         gconstraint!(tm, "EQE_UCT", (n, t), "E", lhs, rhs) === nothing || (n_rows += 1)
     end
-    # EQE_UCRT(R,T,UC_N), equcwrap L28.
+    # EQE_UCRT(R,T,UC_N), equcwrap L28: RT(%R_T%,UC_N), SUBT in a stepped run (maindrv.mod L38-40).
+    tx = eq_periods(tm)
     for (r, t, n, num, s) in setup.rhsmap
-        (num == "SEVERAL" && s == "ANNUAL") || continue
+        (num == "SEVERAL" && s == "ANNUAL" && (t,) in tx) || continue
         lhs = uc_lhs!(JuMP.AffExpr(0.0), tm, n, (r,), t, rr -> tssum(rr, n))
         rhs = JuMP.AffExpr(0.0)
         addterm!(rhs, GNum(1.0), tm, "VAR_UCRT", n, r, t)
@@ -1148,19 +1159,19 @@ function eq_uc!(tm::TimesModel)
         add_time!(rhs, n, regs, t)
         gconstraint!(tm, "EQE_UCTS", (n, t, s), "E", lhs, rhs) === nothing || (n_rows += 1)
     end
-    # EQE_UCRTS(R,T,UC_N,S), equcwrap L32.
+    # EQE_UCRTS(R,T,UC_N,S), equcwrap L32: RTS(%R_T%,UC_N,RTS(S)).
     for (r, t, n, num, s) in setup.rhsmap
-        num == "EACH" || continue
+        (num == "EACH" && (t,) in tx) || continue
         lhs = uc_lhs!(JuMP.AffExpr(0.0), tm, n, (r,), t, _ -> (s,))
         rhs = JuMP.AffExpr(0.0)
         addterm!(rhs, GNum(1.0), tm, "VAR_UCRTS", n, r, t, s)
         add_time!(rhs, n, (r,), t)
         gconstraint!(tm, "EQE_UCRTS", (r, t, n, s), "E", lhs, rhs) === nothing || (n_rows += 1)
     end
-    # EQE_UCRS(R,T,UC_N,TSL,SL), equcwrap L42.
+    # EQE_UCRS(R,T,UC_N,TSL,SL), equcwrap L42: RS(%R_T%,UC_N,TSL(UC_NUMBER),RTS(SL)).
     uc_ds = gset_opt(tm.data, "UC_DS", 3)
     for (r, t, n, tsl, sl) in setup.rhsmap
-        (r, n, tsl) in uc_ds || continue
+        ((r, n, tsl) in uc_ds && (t,) in tx) || continue
         pairs = uc_rs_pairs(tm, r, n, tsl, sl)
         lhs = uc_rs_lhs!(JuMP.AffExpr(0.0), tm, n, r, t, pairs)
         rhs = JuMP.AffExpr(0.0)

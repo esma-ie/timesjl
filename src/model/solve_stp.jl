@@ -63,9 +63,15 @@ stp_level(tm::TimesModel, name::AbstractString, N::Int) =
 stp_marginal(tm::TimesModel, name::AbstractString, N::Int) =
     get!(() -> Dict{NTuple{N,String},Float64}(), stp_point(tm).marginal, String(name))::Dict{NTuple{N,String},Float64}
 
-"The variables whose levels or marginals the data statements of solve.stp read (L97-98, L137, L160-171, L186-190, L288-301)."
+"""
+The variables whose levels or marginals solve.stp reads: its data statements
+(L97-98, L137, L160-171, L186-190, L288-301) the first two lines, the fixes
+of the periods already solved (L200-220, L233; `stp_step_bounds!`) the rest.
+"""
 const STP_POINT_VARS = ("VAR_NCAP", "VAR_CAP", "VAR_UC", "VAR_UCR", "VAR_UCT", "VAR_UCTS", "VAR_UCRT", "VAR_UCRTS",
-                        "VAR_CUMFLO", "VAR_CUMCOM")
+                        "VAR_CUMFLO", "VAR_CUMCOM",
+                        "VAR_ACT", "VAR_FLO", "VAR_IRE", "VAR_SIN", "VAR_SOUT", "VAR_UPS", "VAR_UPT", "VAR_UDP",
+                        "VAR_COMNET", "VAR_COMPRD", "VAR_SCAP", "VAR_BLND")
 
 # One field of a variable's records as point-store values: a record is kept where the field is nonzero or EPS.
 function _stp_field(r::Reference.SymbolRecords{N}, col::String) where {N}
@@ -187,6 +193,7 @@ function stp_init!(tm::TimesModel)
     tm.cache["STP_POINT"] = StpPoint()                                          # the run starts from no point
     gput_scalar!(tm, "PRESOL", 1.0)                                             # L18
     gput!(tm, "REG_FIXT", Dict{NTuple{1,String},Float64}())                     # setglobs.gms L11
+    stp_bounds_init!(tm)                                                        # maindrv.mod L92: bndmain.mod with 0
     reg_fixt = Dict{NTuple{1,String},Float64}()
     fixt(r) = gv(reg_fixt, (r,)).v
     # L43
@@ -665,6 +672,7 @@ function stp_step_prep!(tm::TimesModel)
         end
         gput!(tm, "PAR_UCR", par_ucr)
     end
+    stp_step_bounds!(tm)                                                        # L193, L199-233, L267-281: the bounds
     return tm
 end
 
@@ -746,5 +754,6 @@ function stp_next!(tm::TimesModel)
     end
     # L319: $BATINCLUDE bndmain.%1 %1 1
     bnd_data!(tm; cum=false)
+    stp_bndmain!(tm)                                                            # its bound statements
     return tm
 end

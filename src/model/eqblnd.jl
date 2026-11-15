@@ -55,7 +55,7 @@ function eq_blnd!(tm::TimesModel)
     d = tm.data
     ble_tp = gset_opt(d, "BLE_TP", 3)
     isempty(ble_tp) && return 0
-    milestonyr = gset(tm, "MILESTONYR")
+    tx = eq_periods(tm)   # %R_T%, %TX%: SUBT in a stepped run (maindrv.mod L38-40)
     ble, opr, spe = gset_opt(d, "BLE", 1), gset_opt(d, "OPR", 1), gset_opt(d, "SPE", 1)
     bl_type, bl_com, bl_spec = gparam_opt(d, "BL_TYPE", 3), gparam_opt(d, "BL_COM", 4), gparam_opt(d, "BL_SPEC", 3)
     ru_cvt = gparam_opt(d, "RU_CVT", 4)
@@ -68,7 +68,7 @@ function eq_blnd!(tm::TimesModel)
         name = "EQ$(eqtype)_BLND"
         rows = NTuple{4,String}[]
         for (r, t, b) in ble_tp                                        # L67
-            ((t,) in milestonyr && (b,) in ble) || continue
+            ((t,) in tx && (b,) in ble) || continue
             for k in get(type_of_rb, (r, b), no3)
                 ((k[3],) in spe && bl_type.values[k] == code) || continue
                 push!(rows, (r, t, b, k[3]))

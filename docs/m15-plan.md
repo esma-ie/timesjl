@@ -145,7 +145,7 @@ file gives the step's objective.
 | --- | --- | --- | --- |
 | 1 | The per-step reference: harness 0.3.4 | none (the hooks at maindrv.mod L50 and solve.mod L44) | sizes of each step in the CONVERT run equal the solve run's; HiGHS on each step's MPS file; a reference that is not stepped unchanged |
 | 2 | Done, 14 Nov 2026 ("Change 2 as built", below). The partition and the preparation of a step: `stp_init!`, `stp_step_prep!`, `stp_next!` and the point store `StpPoint`, in `src/model/solve_stp.jl` | solve.stp L9-26, L43-57, L69-107, L111-196, L217, L222-227, L288-289, L295-319; clearsol.stp L8-10; coef_alt.lin L27, L31-63, L134-136, L160 (the block L137-157, LINFLO only, refused until change 5); eqobsalv.mod L19-85; bnd_ucw.mod L13-21; bnd_cum.mod L12-20, L27-38; the data statements of bndmain.mod with its second argument 1 | layer 1 per step: every set and parameter of `steps/<k>/final` at 1e-9 (less the harness's own TJL symbols and Z), fed with GAMS's levels and marginals of step k-1. demo12_step, both variants: 957 symbols in each of the three steps, none differs |
-| 3 | The equations over SUBT and the bounds of a step | maindrv.mod L38-41 and every macro use above; solve.stp L115 (V), L195-282; bndmain.mod with its second argument; bnd_ucw.mod; bnd_cum.mod | layer 2 per step: `steps/<k>/matrix` at 1e-9 (rows, columns, order, coefficients, right-hand sides, bounds), fed with GAMS's levels of step k-1; every model that is not stepped: LP identical |
+| 3 | Done, 15 Nov 2026 ("Change 3 as built", below). The equations over SUBT and the bounds of a step: `eq_periods`; `stp_bounds_init!`, `stp_step_bounds!`, `stp_bndmain!` and `stp_model` in `src/model/bnd_stp.jl` | maindrv.mod L38-41 and every macro use above; solve.stp L115 (V), L193-233, L267-281, L319; bndmain.mod with its second argument; bnd_ucw.mod with bnd_ucv.mod; bnd_cum.mod | layer 2 per step: `steps/<k>/matrix` at 1e-9 (rows, columns, order, coefficients, right-hand sides, bounds), fed with GAMS's levels of step k-1. demo12_step, both variants: the LP of each of the three steps equals GAMS's. Every model that is not stepped: LP identical (the whole suite) |
 | 4 | The driver `solve_stepped!` (the loop, the solve, the levels kept between steps as SOLVEOPT=MERGE does, L325-330); the two refusals removed | solve.stp L109, L285-295, L303-321, L325-330; solve.mod L12-44 | layer 3 per step and at the end, 1e-6: TIMES.jl with HiGHS, each step on its own levels, against GAMS/CPLEX and GAMS/HiGHS; a public fixture of the steps in CI; `scripts/m13_gate.jl` runs the stepped case to the end |
 | 5 | A second crafted case for branches demo12_step does not reach (below) | the same lines | layers 1 to 3 per step |
 
@@ -233,6 +233,129 @@ Not translated, refused or flagged: the LINFLO block of coef_alt.lin STP
 the REG_FIXT statements (L186-189, L223, L315-317; FIXBOH refused); CM_MAXC
 (L149; CLI refused).
 
+## Change 3 as built (15 Nov 2026)
+
+**The equations of a step.** maindrv.mod L38-40 sets the macros `%R_T%`,
+`%TX%` and `%R_V_T%` to `R,SUBT(T)`, `SUBT(T)` and `R,V,SUBT(T)` in a stepped
+run, so an equation written with one of them is generated for the periods of
+the step only. `eq_periods(tm)` (src/coef/coef_alt.jl) is that set: SUBT in a
+stepped run, every period otherwise. It replaces the period test of the
+control index, and only that one (a sum inside an equation that runs over T
+keeps every period), in:
+
+- `src/model/`: eqactbnd, eqactflo, eqblnd, eqbndcom, eqcapact, eqcapvac,
+  eqcombal, eqflobnd, eqflofr, eqflomrk, eqfloshr, eqire, eqirebnd, eqpeak,
+  eqptrans, eqstgaux, eqstgflo, eqstgips, eqstgtss, equserco (EQE_UCRT,
+  EQE_UCRTS, EQE_UCRS), eqxbnd, and three bound statements of bndmain
+  (bnd_act.mod L22, bndmain.mod L46, L57-58);
+- `src/ext/vda/`: equcrtp, eqactups, eqlducs, eqashar, eqcaflac, pp_actef,
+  eqslsift, powerflo; `src/ext/dsc/prepret.jl`.
+
+The objective, EQ(l)_CPT and the cumulative equations are not written with
+these macros: they are cut to the step by the sets `stp_step_prep!` changes
+(the vintages V without the pending periods, L115; RTP_VARP; the horizon that
+ends at MIYR_VL). The maps of the user constraints' right-hand sides
+(UC_RHSMAP, UC_UT, UC_UTS) are built once by eqmain.mod, before solve.stp;
+the model of a step reads the stored ones and UC_RTSUC as L195 sets it
+(`uc_setup`).
+
+**The bounds of a step** (`src/model/bnd_stp.jl`; GAMS lines of solve.stp
+unless a file is named). In GAMS a bound is an attribute of the variable and
+lives through the whole run. bndmain.mod's second call (after each SOLVE)
+resets VAR_ACT, VAR_FLO, VAR_SIN and VAR_SOUT of storage processes,
+VAR_NCAP, VAR_CAP, VAR_COMNET, VAR_COMPRD and part of the user constraints'
+slacks before it reads the data again; VAR_IRE, VAR_UPS, VAR_UPT, VAR_UDP,
+VAR_SCAP, VAR_BLND, VAR_CUMFLO, VAR_CUMCOM, VAR_CUMCST and VAR_OBJ keep what
+a step gave them. So TIMES.jl keeps one bound table for the run and applies
+GAMS's statements to it in GAMS's order:
+
+| Function | GAMS | What |
+| --- | --- | --- |
+| `stp_bounds_init!` (from `stp_init!`) | maindrv.mod L92; bndmain.mod with 0 | the table of an ordinary run (SUBT is every period then, ppmain.mod L253) |
+| `stp_step_bounds!` (from `stp_step_prep!`) | L193; L199-233; L267-281 | bnd_ucw.mod with the resets of bnd_ucv.mod L24-25; the periods already solved fixed at the levels of the point store (VAR_ACT, VAR_FLO, VAR_SIN, VAR_SOUT, VAR_IRE, VAR_UPS, VAR_UPT, VAR_UDP, VAR_COMNET, VAR_COMPRD, VAR_NCAP, VAR_SCAP, VAR_BLND), their VAR_CAP freed (CAP_BND for NO_RVP); bnd_cum.mod and the lower bounds of VAR_CUMFLO and VAR_CUMCOM it relaxes (L229-230); the pending periods fixed at zero (VAR_ACT, VAR_FLO, VAR_SIN, VAR_SOUT, VAR_COMNET, VAR_COMPRD, VAR_BLND), their VAR_CAP bounded by CAP_BND |
+| `stp_bndmain!` (from `stp_next!`) | L319; bndmain.mod with 1 | the families above reset and taken from the data again, for the periods of the next step where the statement has `%R_T%` |
+| `stp_model` | the model the SOLVE of a step gets | the model of one step: a new JuMP model on the run's data, bound table and point store; `generate!` builds it |
+| `bnd_ucw!(...; reset=true)` (src/model/bndmain.jl) | bnd_ucv.mod L24-25 | the upper bound of every slack to INF; the lower bound to -INF where the macro's condition holds (all of VAR_UC, VAR_UCT, VAR_UCTS; VAR_UCR under UC_R_EACH; VAR_UCRT and VAR_UCRTS under UC_T_EACH) |
+
+The point store now also keeps the levels these fixes read (VAR_ACT, VAR_FLO,
+VAR_IRE, VAR_SIN, VAR_SOUT, VAR_UPS, VAR_UPT, VAR_UDP, VAR_COMNET,
+VAR_COMPRD, VAR_SCAP, VAR_BLND).
+
+Two readings the check confirms:
+
+- V is a control index of the fixes over RTP_VINTYR and RTP_CPTYR, and L115
+  takes the pending periods out of V. So the fixes of the pending periods at
+  zero (L268-272) reach what an earlier vintage does there, not a pending
+  vintage's own variables: `VAR_ACT(REG1,2030,2030,EXPLPG1,ANNUAL)` keeps its
+  bound from the data in step 1, in GAMS's LP and in TIMES.jl's.
+- L270 is a comment in v4.9.7: the trade of a pending period is not fixed.
+
+How it was checked. For each step, in GAMS's order: `stp_step_prep!`,
+`stp_model`, `generate!`, then the LP against `steps/<k>/matrix` (the model
+GAMS solved in that step, written by CONVERT) at 1e-9: rows, columns,
+coefficients, right-hand sides and bounds; then GAMS's levels and marginals
+of the step loaded and `stp_next!`.
+
+| Step | REDUCE off: rows / columns / nonzeros, GAMS and TIMES.jl | as run | Layer 2 |
+| --- | --- | --- | --- |
+| 1 | 5,921 / 6,717 / 20,736 | 2,201 / 3,183 / 12,216 | PASS, PASS |
+| 2 | 2,975 / 4,421 / 12,438 | 1,133 / 2,305 / 7,782 | PASS, PASS |
+| 3 | 1,380 / 3,179 / 6,930 | 540 / 1,949 / 4,756 | PASS, PASS |
+
+- Negative control: the same check without GAMS's levels loaded between the
+  steps passes step 1 and fails steps 2 and 3 on 409 and 584 column bounds
+  (as run), so the comparison does test the fixes.
+- In the run with REDUCE the trade flows that carry a level are replaced by
+  the activity, and every level of VAR_IRE GAMS writes is zero (560, 958 and
+  1,270 records); the reference without REDUCE has 179, 216 and 251 nonzero
+  levels of VAR_IRE and fixes at them, and its LPs are equal too.
+- CI: `test/unit/test_solve_stp.jl` (104 tests) compares the LP of each step
+  with three more fixtures, `test/fixtures/demo12_step_step<k>_matrix` (the
+  CONVERT matrix and its dictionary, about 1.3 MB in all, CC BY 4.0), and
+  tests the bound table between the steps; the step fixtures now hold the
+  levels of the variables added to the point store (about 1.4 MB in all).
+  Both are made by `scripts/make_step_fixture.jl`.
+- Every model that is not stepped: `eq_periods` is every period there and
+  `bnd_ucw!` does not reset, so no statement changes; the whole test suite
+  passes (34,780 of 34,780 tests), with layer 2 on every fixture.
+
+Families the three LPs hold: EQE_ACTEFF, EQ(l)_COMBAL, EQE_COMPRD, EQE_CPT,
+EQ(l)_INSHR, EQ(l)_OUTSHR, EQE_UCRT, EQE_UCRTS, EQL_ACTBND, EQL_CAPACT,
+EQ_ACTFLO, EQ_CUMFLO, EQ_IRE, EQ_OBJ and its parts, EQ_PEAK, EQ_PTRANS;
+VAR_ACT, VAR_CAP, VAR_COMNET, VAR_COMPRD, VAR_CUMFLO, VAR_FLO, VAR_IRE,
+VAR_NCAP, VAR_OBJ, VAR_UCRT, VAR_UCRTS.
+
+Translated as GAMS writes them, but not reached by demo12_step, so **not
+checked against GAMS** (change 5, or the feature's own stepped case):
+
+| Branch | Lines of solve.stp |
+| --- | --- |
+| the fixes of storage flows (VAR_SIN, VAR_SOUT) | 203-204, 271-272 |
+| the fixes of VAR_UPS, VAR_UPT, VAR_UDP (dispatching, unit commitment) | 205-207 |
+| VAR_SCAP (early retirement) | 220 |
+| CAP_BND on VAR_CAP (NO_RVP; the pending periods) | 218-219, 279 |
+| VAR_CUMCOM (COM_CUM) | 227, 230 |
+| blending: VAR_BLND levels and fixes | 232-233, 281 |
+| the resets of the slacks VAR_UC, VAR_UCR, VAR_UCT, VAR_UCTS (bnd_ucv.mod L24-25; a unit test on a made-up table only) | 193 |
+| EQE_UCRS, and the period test of the equation families demo12_step has no row of: storage (EQ_STGAUX, EQ_STGFLO, EQ_STGIPS, EQ_STGTSS), EQ(l)_FLOBND, EQ(l)_FLOFR, EQ(l)_FLOMRK, EQ(l)_BLND, EQ(l)_BNDNET/BNDPRD, EQ(l)_CAPVAC, EQ(l)_IREBND, EQ(l)_XBND, the VDA families (EQ(l)_ASHAR, EQ(l)_CAFLAC, EQ_ACTUPS and the unit commitment, EQ_SLSIFT, the grid) and early retirement | maindrv.mod L38-40 |
+
+Not translated: VAR_ELAST (L211, L276; elastic demand is refused) and VAR_DAM
+(L212; damage is refused); the REG_FIXT loops (L199, L234, L266, L282) and
+L236-264 (FIXBOH refused); the %SOW% forms (STAGES refused).
+
+One statement to flag: **L281 fixes the blending variables of the pending
+periods at zero, and no statement in v4.9.7 lifts that fix** (the only
+statements on a bound or level of VAR_BLND outside the reports and the
+restart files are L232, L233 and L281; bndmain.mod does not touch VAR_BLND).
+So in a stepped run with blending, VAR_BLND would stay fixed at zero when a
+pending period becomes a step's own. Translated as written; no open model
+has blending in a stepped run, so it is not checked against GAMS
+(docs/discrepancies.md, U7).
+
+The run as a whole is still refused: `untranslated_families` notes
+"(stepped run)" for the run's model, not for the model of a step, until the
+loop with the SOLVE (change 4).
+
 ## What demo12_step reaches, and what it does not
 
 Reached (records in the dump of step 2): user constraints by region and
@@ -254,8 +377,8 @@ Not reached, translated as GAMS has them and to be flagged in each PR:
 | user constraints summed over regions (UC_R_SUM) and their right-hand sides | 141-144, 157, 178-179 | yes |
 | COM_CUM (VAR_CUMCOM) | 186-189, 222-230 | yes |
 | REG_CUMCST | 196 | yes, if demo12's data allow |
-| VAR_UPS, VAR_UPT, VAR_UDP (dispatching, unit commitment), VAR_SCAP (retirement) | 204-206, 220 | to try: a stepped variant of demo12_uc |
-| blending, elastic demand, damage | 208-209, 232-233, 281 | with those features |
+| VAR_UPS, VAR_UPT, VAR_UDP (dispatching, unit commitment), VAR_SCAP (retirement) (translated in change 3, unchecked) | 205-207, 220 | to try: a stepped variant of demo12_uc |
+| blending (translated in change 3, unchecked: U7), elastic demand, damage (refused) | 211-212, 232-233, 276, 281 | with those features |
 | FIXBOH and REG_FIXT | 46-49, 158, 177, 180-181, 186-189, 234-264, 315-317 | no: see "Flagged" |
 
 ## Flagged

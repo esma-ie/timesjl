@@ -369,7 +369,8 @@ function eq_lducs!(tm::TimesModel)
     rp_dp, rp_dpl = S("RP_DP", 2), S("RP_DPL", 3)
     (isempty(rp_dp) && isempty(rp_dpl)) && return 0
     modlyear, T = S("MODLYEAR", 1), S("MILESTONYR", 1)
-    vt_ok(v, t) = (v,) in modlyear && (t,) in T
+    tx = eq_periods(tm)   # %R_V_T%: SUBT in a stepped run (maindrv.mod L38-40)
+    vt_ok(v, t) = (v,) in modlyear && (t,) in tx
     vt_of_rp = indexby(gset(tm, "RTP_VINTYR"), (1, 4))                     # (r,p) -> RTP_VINTYR(r,v,t,p)
     prc_ts, prc_tsl = S("PRC_TS", 3), S("PRC_TSL", 3)
     ts_of_rp = indexby(prc_ts, (1, 2))                                     # (r,p) -> PRC_TS(r,p,ts)
