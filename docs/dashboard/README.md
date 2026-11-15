@@ -205,37 +205,43 @@ file (`later_overwrites`). Objective slide: CPLEX and HiGHS references on a
 log axis against the 1e-6 gate. Timing slide: the GAMS profile of the
 coefficient stage against TIMES.jl, warm, with the Phase 1 5x target.
 
-Languages and solvers (James, 14 Nov 2026): the colour is the language and
-the shape is the solver, wherever a slide draws them.
+Languages and solvers (James, 14 and 15 Nov 2026): the colour is the
+language and the shape is the solver, wherever a slide draws them.
 
-- GAMS is orange, `#e06000`. TIMES.jl is green, `#00c463`: the Green of the
-  ESMA brand book (Pantone 2420 C), the page's `--green`, on light and dark
-  slides. The brand book has no orange; `#e06000` is the orange that the
-  `dataviz` palette validator passes beside that green. Slides 10, 11 and 12
-  use the two colours.
+- GAMS is orange, `#e06000`, on light and dark slides. TIMES.jl is ESMA
+  Dark green `#004539` on light slides and ESMA Dark yellow `#eaaa00`
+  ("sunshine yellow") on dark slides (James, 15 Nov 2026: "ESMA orange for
+  GAMS and ESMA sunshine yellow for the TIMES.jl on a green background and
+  ESMA green if on a light background"). The brand book has no orange.
+  ESMA's technology palette has one, `#ff6a1f`, but beside the yellow on the
+  dark slides it falls under the normal-vision floor, so the board keeps
+  `#e06000`. The hex values are on the Open decisions list until James
+  confirms them (`docs/decisions.md`). Slides 10, 11 and 12 use the colours;
+  slide 10's 5x target line is Dark yellow on light slides and white on
+  dark slides, so that it is never read as a TIMES.jl mark.
 - CPLEX is a circle; HiGHS is an isosceles triangle pointing up. Slides 9,
   11 and 12 use the two shapes. Every mark is filled.
 - Slide 9 (objective) keeps its own colours, the CPLEX blue and the HiGHS
-  dark green (white on dark slides): its marks are TIMES.jl's difference from a GAMS solve, so they
-  belong to neither language. Its fail red is close to the orange (colour
+  dark green (white on dark slides): its marks are TIMES.jl's difference
+  from a GAMS solve, so they belong to neither language. On light slides
+  its HiGHS dark green is TIMES.jl's colour on slides 10 to 12; the two
+  never share a slide. Its fail red is close to the orange (colour
   difference 6.5, under the validator's floor of 15), and the two never
-  share a slide.
+  share a slide either.
 - Slides 11 and 12: a faint mark is a first run that also compiles TIMES.jl;
   an arrow up marks a solve stopped at its time limit without an optimum (it
   took at least that long); a thin line joins the runs of one LP. On slide
   11's left panel each language has the mark of the run its time comes from
   (GAMS its CPLEX run, TIMES.jl its HiGHS run). On slide 12 the shading of a
   cell is the part's share of the run's measured time.
-- Validator results for the pair (`validate_palette.py`, every pair):
-  - Light slides (white): colour-vision separation passes (worst 8.5,
-    target 8), normal vision passes (30.4, floor 15). The green's contrast
-    with white is 2.31:1, under 3:1, which the validator allows only with
-    labels or a table: the legends and slide 12's table carry the same
-    information without colour.
-  - Dark slides (Dark green `#004539`): colour-vision separation 8.5 and
-    normal vision pass; contrast passes (orange 3.06:1, green 4.75:1). The
-    validator's lightness band fails for the green (0.718, limit 0.67): the
-    band is set for a near-black surface, and the brand green is lighter.
-    The darker `#00ae55` passes the band, but its separation from the orange
-    under colour-vision deficiency falls to 6.2, under the target. The brand
-    green is kept.
+- The checks of the `dataviz` palette validator, computed for the pair on
+  15 Nov 2026 (OKLab difference x100, Machado simulation):
+  - Light slides (white), orange and Dark green: normal vision 37.0;
+    protanopia 21.7, deuteranopia 33.8, tritanopia 40.4 (target 8);
+    contrast with white 3.59:1 and 10.99:1 (at least 3:1).
+  - Dark slides (Dark green), orange and Dark yellow: normal vision 17.2
+    (floor 15); protanopia 18.5, deuteranopia 13.5, tritanopia 16.4;
+    contrast with the surface 3.06:1 and 5.36:1. With `#ff6a1f` instead:
+    normal vision 14.6 (under the floor) and deuteranopia 7.3.
+  - The legends and slide 12's table name the language as well, so no
+    reading depends on colour alone.
