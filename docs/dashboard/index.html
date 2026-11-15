@@ -21,16 +21,17 @@
   --pass:var(--green); --on-pass:var(--dark-green); --fail:#c8502a; --on-fail:#ffffff;
   --refused:var(--charcoal); --on-refused:#ffffff; --review:var(--dark-yellow);
   --cplex:var(--blue); --highs:var(--dark-green);
-  /* slides 10 to 12: the two languages. GAMS orange (the brand book has no orange; this one is the
-     orange the dataviz palette validator passes beside the green for colour-vision deficiencies on both
-     surfaces), TIMES.jl the brand's Green, the same on light and dark slides (James, 14 Nov 2026) */
-  --gams:#e06000; --tjl:var(--green);
+  /* slides 10 to 12: the two languages (James, 15 Nov 2026). GAMS orange: the brand book has no
+     orange, and #e06000 keeps its separation from the yellow and the dark green (the ESMA palette's
+     #ff6a1f falls under the normal-vision floor beside the yellow on dark slides). TIMES.jl in Dark
+     green on light slides and in Dark yellow ("sunshine yellow") on dark slides (below) */
+  --gams:#e06000; --tjl:var(--dark-green); --target:var(--dark-yellow);
   --sans:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   color-scheme:light;
 }
 :root[data-theme="dark"]{
   --surface:var(--dark-green); --tint:#0b5446; --ink:var(--white); --muted:var(--turquoise);
-  --grid:rgba(255,255,255,.16); --edge:rgba(175,225,218,.45); --highs:var(--white);
+  --grid:rgba(255,255,255,.16); --edge:rgba(175,225,218,.45); --highs:var(--white); --tjl:var(--dark-yellow); --target:var(--white);
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -641,10 +642,10 @@ function renderTiming(){
   const n=TIMINGS.length, gw=(W-L-R)/n, bw=64;
   TIMINGS.forEach((t,i)=>{const x0=L+i*gw+gw/2;
     [[t.gams,css('--gams')],[t.julia,css('--tjl')]].forEach(([v,c],k)=>{const x=x0+(k-0.5)*(bw+10); s+=`<rect x="${x-bw/2}" y="${y(v)}" width="${bw}" height="${H-B-y(v)}" fill="${c}"/><text x="${x}" y="${y(v)-8}" font-size="15" text-anchor="middle" fill="${css('--ink')}" class="num">${sec(v)} s</text>`;});
-    const tg=y(t.gams*5); s+=`<line x1="${x0-bw-14}" x2="${x0+bw+14}" y1="${tg}" y2="${tg}" stroke="${css('--dark-yellow')}" stroke-width="3" stroke-dasharray="7 4"/>`;
+    const tg=y(t.gams*5); s+=`<line x1="${x0-bw-14}" x2="${x0+bw+14}" y1="${tg}" y2="${tg}" stroke="${css('--target')}" stroke-width="3" stroke-dasharray="7 4"/>`;
     s+=`<text x="${x0}" y="${H-B+26}" font-size="17" font-weight="700" text-anchor="middle" fill="${css('--ink')}">${t.short}</text><text x="${x0}" y="${H-B+48}" font-size="15" text-anchor="middle" fill="${css('--muted')}">${t.rows>=1e6?fmt(t.rows/1e6,1)+' M':fmt(t.rows)} rows · ${fmt(t.julia/t.gams)}× GAMS</text>`;});
   s+=`<line x1="${L}" x2="${W-R}" y1="${H-B}" y2="${H-B}" stroke="${css('--ink')}" stroke-width="1"/>`;
-  s+=`<g transform="translate(${L},486)" font-size="15" fill="${css('--ink')}"><rect x="0" y="-13" width="16" height="16" fill="${css('--gams')}"/><text x="24" y="0">GAMS 54.6.1, its own profile</text><rect x="270" y="-13" width="16" height="16" fill="${css('--tjl')}"/><text x="294" y="0">TIMES.jl, warm, one thread</text><line x1="540" x2="580" y1="-5" y2="-5" stroke="${css('--dark-yellow')}" stroke-width="3" stroke-dasharray="7 4"/><text x="590" y="0">Phase 1 target: within 5× GAMS (M1.7)</text></g>`;
+  s+=`<g transform="translate(${L},486)" font-size="15" fill="${css('--ink')}"><rect x="0" y="-13" width="16" height="16" fill="${css('--gams')}"/><text x="24" y="0">GAMS 54.6.1, its own profile</text><rect x="270" y="-13" width="16" height="16" fill="${css('--tjl')}"/><text x="294" y="0">TIMES.jl, warm, one thread</text><line x1="540" x2="580" y1="-5" y2="-5" stroke="${css('--target')}" stroke-width="3" stroke-dasharray="7 4"/><text x="590" y="0">Phase 1 target: within 5× GAMS (M1.7)</text></g>`;
   s+='</svg>';
   set('timing-sub',"Seconds for the coefficient stage, same machine, log scale · making TIMES.jl fast is Phase 2 work (item P2-2)");
   set('timing-body',s);
@@ -661,7 +662,7 @@ const RT_PARTS = [
   ["solve","Solve","the solver's time as GAMS reports it (etsolver)","JuMP.optimize! with HiGHS"],
   ["reports","Reports","the statements after the solve (GAMS's profile)","TIMES.jl does not write reports yet (milestone M1.6)"],
 ];
-// one series per language and solver: the colour is the language (GAMS orange, TIMES.jl green), the shape is
+// one series per language and solver: the colour is the language (GAMS orange, TIMES.jl dark green or yellow), the shape is
 // the solver (CPLEX a circle, HiGHS an isosceles triangle pointing up); James, 14 Nov 2026
 const RT_SERIES = [
   {language:"GAMS", solver:"CPLEX", label:"GAMS · CPLEX", color:"--gams", shape:"circle", filled:true},
