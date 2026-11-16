@@ -52,6 +52,7 @@ answer yet.
 | 15 Nov 2026 | #139 | The colours James chose on 15 Nov 2026 (#127 d2), as hex values (#139 d1): TIMES.jl in ESMA Dark yellow `#eaaa00` ("sunshine yellow"; the brand book's one yellow, Pantone 124 C) on dark slides and in Dark green `#004539` (Pantone 3308 C) on light slides; GAMS stays `#e06000`, since the brand book has no orange and the ESMA palette's orange `#ff6a1f` (geothermal) falls under the normal-vision floor beside the yellow on dark slides (14.6 against 15; deuteranopia 7.3), where `#e06000` gives 17.2 and 13.5. Are these the colours meant? | as used | Open; a choice #139 made for James, so it stays here until he answers. |
 | 15 Nov 2026 | chat | Discrepancies are "dp" in the chat (James, 15 Nov 2026), while docs/discrepancies.md and the code comments write D1 to D44. Rename them to DP1 to DP44 in the repository too, in one pull request, so the chat and the files agree? | yes | Open; nothing is renamed until James answers. |
 | 15 Nov 2026 | chat | The workstation batch's DD-file stage: the HiGHS solve of TIMES-NZ shift with REDUCE off hit its one-hour limit on 14 Nov 2026 (3,625.7 s; with REDUCE on it solved in 2,658 s). Solve TIMES-NZ in that stage with REDUCE on only, its REDUCE-off model still compared with GAMS's matrix and cross-evaluated? | yes | Open; the batch keeps its one-hour limit meanwhile. |
+| 16 Nov 2026 | chat (q5) | The M1.3 gate waits for every remaining refused feature (James, 14 Nov 2026, #109). Some of them are not linear programs: the lumpy investments and block retirements of the DSC options (mixed-integer) and TIMES-Micro (nonlinear). Move those after the M1.3 gate, as the discrete unit commitment was (#120 d5), so the gate covers the linear features only? Rule-level (the milestone scope). | yes | Open; asked in the chat on 16 Nov 2026. |
 
 Reviewed on 14 Nov 2026 against pull requests #1 to #120 (108 merged, six open: #114, #115, #117 to #120). Four questions that James had answered left this list for the log of their pull requests: the demo12 trade case (#68, #104); refused features before v4.9.8 (#109, decision 3); the stepped solve before the gates (#108, decision 3); the M1.4 CI criterion with demo12_uc refused (#118, decision 2). Five questions asked in the chat and never listed were added (issues #97, #100 and #17, the commit trailer, the unused worktree). Every row of the log that is still "open" is either on this list or is a built-in default of an open pull request, which its merge decides. Later the same evening James merged #114 to #125 (eleven pull requests): their built-in defaults are accepted by merge, and his answers on #120 (decision 5), #121 (decision 2) and #125 (decisions 6, 8, 9 and 10) are in the log of those pull requests. Two more pull requests were opened later that evening, #127 (the dashboard changes James asked for on #125) and #128 (M1.5 change 2); #127's choice of the green and the orange joined this list.
 
@@ -119,14 +120,22 @@ On 15 Nov 2026 James merged #126 to #137 (twelve pull requests): their built-in 
 
 ## Log by pull request
 
-### #141 Dashboard: callout labels on slide 11 (open)
+### #142 Dashboard 16 Nov: the pass of 15 Nov, M1.3 changes 41 and 42 (open)
+
+The morning refresh before the 9:00 check-in (James, 11 and 14 Nov 2026), made at 06:10 before the workstation was switched off for the day.
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | The batch was stopped at 06:07 for the shutdown, before the M1.3 probe of demo12 ran; slide 5 shows the other six runs from the pass of 15 Nov (420 of 420 steps) and demo12 from the pass before (15 Nov, main 5b0e1c2, 70 of 70), and says so in its note. | Recommended: yes. Built in. | open |
+
+### #141 Dashboard: callout labels on slide 11 (merged 2026-11-15)
 
 Asked for by James on 15 Nov 2026 ("add callout labels identifying each CPLEX (orange) HiGHS (green) pair of model+scenario run").
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | One label per model-scenario pair (seven per panel), with a leader line to the top mark of each of its two LPs, rather than one label per LP (fourteen, whose leader lines crossed in the cluster of the large models). The variant is read from position: the as-run LP has fewer columns, so it is the left one (the legend says so; the tooltip of a label gives both LPs' sizes). | Recommended: yes. Built in. | open |
-| 2 | The labels stand in the widest empty band of the x axis (between demo12 and the large models), in the order of their marks' height; demo12's label is left-aligned on the band's left side. | Recommended: yes. Built in. | open |
+| 1 | One label per model-scenario pair (seven per panel), with a leader line to the top mark of each of its two LPs, rather than one label per LP (fourteen, whose leader lines crossed in the cluster of the large models). The variant is read from position: the as-run LP has fewer columns, so it is the left one (the legend says so; the tooltip of a label gives both LPs' sizes). | Recommended: yes. Built in. | accepted by merge, 15 Nov 2026 |
+| 2 | The labels stand in the widest empty band of the x axis (between demo12 and the large models), in the order of their marks' height; demo12's label is left-aligned on the band's left side. | Recommended: yes. Built in. | accepted by merge, 15 Nov 2026 |
 
 ### #140 M1.3 (42): the user-constraint attributes ANNUL, INVCOST, INVTAX, INVSUB (uc_ncap.mod L39); crafted case demo12_ucann (merged 2026-11-15)
 

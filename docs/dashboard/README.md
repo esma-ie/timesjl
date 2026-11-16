@@ -58,7 +58,7 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
       julia --project=test scripts/parity_report.jl docs/dashboard/demo12.json --embed
 
   Set `meta.host` to `"workstation"` in both copies before committing. Now:
-  35 fixture runs, 992 checks, all pass (15 Nov 2026). With more than 20 CI
+  37 fixture runs, 1048 checks, all pass (16 Nov 2026). With more than 20 CI
   runs, slide 6 shows them in two panels and the seven coefficient files of
   layer 1 in one cell per run (the tooltip lists the files).
 
@@ -101,9 +101,9 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
   update embeds the newest finished pass as `report-suite-<mmdd>-solve` and
   `report-suite-<mmdd>-nosolve`, in place of the blocks of the pass before,
   with `meta.host` set to `"workstation"`; the files themselves are not
-  committed. Now embedded: `report-suite-1114-solve` and
-  `report-suite-1114-nosolve`, the pass of 14 Nov 2026 on main c04c8ab
-  (to #104): 281 checks, all pass. They supersede the reports above for all
+  committed. Now embedded: `report-suite-1115-solve` and
+  `report-suite-1115-nosolve`, the pass of 15 Nov 2026 on main a232468
+  (to #140): 281 checks, all pass. They supersede the reports above for all
   seven runs.
 
   `--no-solve` records layer 3 without the HiGHS solve: each GAMS optimum
