@@ -57,8 +57,9 @@
 #   M1.3 change 44; the others were translated before: PERIOD, NEWFLO, PERDISC, EFF, CAPACT,
 #   BUILDUP and COST/DELIV/TAX/SUB in M1.3 change 22; ANNUL with INVCOST,
 #   INVTAX and INVSUB, uc_ncap.mod L39 with CST_ANNC of eqbndcst.mod L49-77,
-#   in change 42);
-# - capacity-related flows in uc_flo.mod L35-49 (UC_CAPFLO, cal_caps.mod).
+#   in change 42).
+# The capacity-related flows of uc_flo.mod L50-59 (UC_CAPFLO, cal_caps.mod) are
+# translated since M1.3 change 58 (`uc_capflo!`, `cal_caps!`).
 # Read from the pre-solve dump (computed elsewhere): UC_RHS*, UC_ON,
 # UC_R_*/UC_T_*/UC_TS_* maps, UC_GMAP_*/UC_MAP_*, UC_ATTR, UC_DYNDIR, LAGT,
 # UC_SIGN, RHS_COMBAL/RHS_COMPRD, RTP_OFF (eqmain.mod L199-202 add to it;
@@ -164,7 +165,7 @@ M1.3 change 21); PERIOD, NEWFLO, EFF, CAPACT, BUILDUP and the cost
 attributes COST, DELIV, TAX and SUB (the uc_*.mod factors; change 22); NET
 and the old cost names FLO_COST ... NCAP_ISUB, which act only in
 preprocessing (preppm.mod L41-43, ppmain.mod L1157); CAPFLO, whose only
-effect is UC_CAPFLO (refused on its own); YES, set only under %CLI%
+effect is UC_CAPFLO (uc_flo.mod L50-59, M1.3 change 58); YES, set only under %CLI%
 (refused by the generation driver).
 """
 const UC_ATTR_REFUSED = ()
@@ -172,8 +173,6 @@ const UC_ATTR_REFUSED = ()
 function uc_unported(tm::TimesModel, setup)
     var_uc(tm) || throw(UnportedError("user constraints with VAR_UC not YES (eqmain.mod L230-232, equcwrap.mod L13)"))
     d = tm.data
-    isempty(gset(tm, "UC_CAPFLO")) ||
-        throw(UnportedError("uc_flo.mod L35-49: capacity-related flows in user constraints (UC_CAPFLO, cal_caps.mod)"))
     return nothing
 end
 
@@ -237,7 +236,9 @@ function uc_context(tm::TimesModel)
          uc_ncap = gparam(tm, "UC_NCAP"),
          uc_cap = gparam(tm, "UC_CAP"),
          uc_com = gparam(tm, "UC_COM"),
-         uc_ire = gparam(tm, "UC_IRE"))
+         uc_ire = gparam(tm, "UC_IRE"),
+         capflo_of_nsr = indexby(gset(tm, "UC_CAPFLO"), (1, 2, 3)),          # (n,side,r) -> UC_CAPFLO(n,side,r,p,c)
+         rpcs_var_of_rpc = indexby(gset(tm, "RPCS_VAR"), (1, 2, 3)))         # (r,p,c) -> RPCS_VAR(r,p,c,ts)
     end
 end
 
@@ -363,7 +364,9 @@ end
         PROD(ANNUAL,1)*PROD(RS_BELOW(R,TS,S),RS_FR(R,S,TS)*(1+RTCS_FR(R,T,C,S,TS))) *
         [GROWTH factor, dynamic only] * [PERIOD/NEWFLO factor] * [cost factor])
 
-GAMS: uc_flo.mod L4-59, v4.9.7 (L35-49 UC_CAPFLO refused).
+    + SUM(UC_CAPFLO(UC_N,SIDE,R,P,C), [cal_caps.mod T "UC_FLO(UC_N,SIDE,R,TC,P,C,TS)" TS] * ...)   (`uc_capflo!`)
+
+GAMS: uc_flo.mod L4-59, v4.9.7.
 """
 function uc_flo!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String, s::String;
                  side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false)
@@ -379,6 +382,103 @@ function uc_flo!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::St
                     _uc_perds(x, r, n, side, "FLO", v, t, p) * _uc_fcost(x, r, n, side, "FLO", t, p, c, ts)
                 cal_nored!(expr, tm, k, r, v, t, p, c, ts)
             end
+        end
+    end
+    uc_capflo!(expr, tm, x, n, r, t, s, side, k0, lagt, tc)          # L50-59
+    return expr
+end
+
+"""
+    uc_capflo!(expr, tm, x, n, r, t, s, side, k0, lagt, tc) -> expr
+
+The capacity-related flows of a flow group (UC_CAPFLO: UC_ATTR CAPFLO on a
+commodity of RPC_CAPFLO with UC_FLO data, ppmain.mod L660-661, L1189):
+
+    SUM(UC_CAPFLO(UC_N,SIDE,R,P,C),
+        [cal_caps.mod T "UC_FLO(UC_N,SIDE,R,TC,P,C,TS)" TS] *
+        [%6 = 1: PROD(UC_ATTR(R,UC_N,SIDE,'FLO','GROWTH'),
+                   SUM(RPCS_VAR(R,P,C,TS),RS_FR(R,TS,S)*POWER(ABS(UC_FLO(UC_N,SIDE,R,TC,P,C,TS)),LAGT*UC_SIGN(SIDE)-1)))] *
+        PROD(UC_ATTR(R,UC_N,SIDE,'FLO',UC_PERDS),FPD(T)\$(NOT UC_NEWFLO(UC_PERDS))) *
+        PROD(REG(R)\$SUM(UC_ATTR(R,UC_N,SIDE,'FLO',UC_COST),1),
+          SUM(RPCS_VAR(R,P,C,TS),RS_FR(R,TS,S) *
+            SUM((RDCUR(R,CUR),TS_ANN(TS,SL)), OBJ_FCOST\$COST + OBJ_FDELV\$DELIV + MIN(0,OBJ_FTAX)\$SUB + MAX(0,OBJ_FTAX)\$TAX))))
+
+PERIOD gives FPD(T); NEWFLO gives 0, so a group with NEWFLO has no
+capacity-related flows. `k0` is the caller's factor on the whole term
+(UC_SIGN, 1/G_YRFR, the several-period factor of uc_flo.mod L22).
+
+GAMS: uc_flo.mod L50-59, v4.9.7.
+"""
+function uc_capflo!(expr::JuMP.AffExpr, tm::TimesModel, x, n, r, t, s, side, k0::GNum, lagt, tc)
+    for (_, _, _, p, c) in get(x.capflo_of_nsr, (n, side, r), _NO5)
+        tss = [k[4] for k in get(x.rpcs_var_of_rpc, (r, p, c), _NO4)]
+        uf = sum((gv(x.rs_fr, (r, ts, s)) * gv(x.uc_flo, (n, side, r, tc, p, c, ts)) for ts in tss); init=GZERO)
+        k = k0
+        if lagt !== nothing && _uc_has(x, r, n, side, "FLO", "GROWTH")
+            k = k * sum((gv(x.rs_fr, (r, ts, s)) *
+                         gpower(abs(gv(x.uc_flo, (n, side, r, tc, p, c, ts))), lagt * gv(x.uc_sign, (side,)) - 1) for ts in tss); init=GZERO)
+        end
+        _uc_has(x, r, n, side, "FLO", "PERIOD") && (k = k * gv(x.fpd, (t,)))
+        _uc_has(x, r, n, side, "FLO", "NEWFLO") && (k = k * GZERO)
+        if !isempty(get(x.cost_of_rnsg, (r, n, side, "FLO"), _NO5))
+            k = k * sum((gv(x.rs_fr, (r, ts, s)) * _uc_fcost(x, r, n, side, "FLO", t, p, c, ts) for ts in tss); init=GZERO)
+        end
+        cal_caps!(expr, tm, k, r, t, p, c, s, uf)
+    end
+    return expr
+end
+
+"""
+    cal_caps!(expr, tm, k, r, t, p, c, s, uf) -> expr
+
+cal_caps.mod, the capacity-related flows of commodity C of process P in
+period T at timeslice S whatever their direction, as a user constraint's
+flow term reads them (uc_flo.mod L51, %2 = UC_FLO, %3 = TS); `uf` is
+`SUM(RPCS_VAR(R,P,C,TS),RS_FR(R,TS,S)*UC_FLO(...,TS))` and `k` the caller's
+factor:
+
+    SUM((VNT(V,T),RPC_CAPFLO(R,V,P,C)),
+      ((COEF_ICOM(R,V,T,P,C)+COEF_OCOM(R,V,T,P,C)) * G_YRFR(R,S) *
+        (VAR_NCAP(R,V,P)\$MILESTONYR(V) + NCAP_PASTI(R,V,P)) * uf)\$(COEF_ICOM(R,V,T,P,C)+COEF_OCOM(R,V,T,P,C)) +
+      SUM((RTP_CPTYR(R,V,T,P),IO)\$NCAP_COM(R,V,P,C,IO),
+        COEF_CPT(R,V,T,P) * NCAP_COM(R,V,P,C,IO) * G_YRFR(R,S) *
+        (VAR_NCAP(R,V,P)\$T(V) + NCAP_PASTI(R,V,P) - SUM(VNTRT(V,MODLYEAR(T)),VAR_SCAP(R,V,T,P))\$PRC_RCAP(R,P)) *
+        uf * (1+COEF_CIO(R,V,T,P,C,IO))))
+
+Unlike cal_cap.mod (the balance rows), both terms are read only for the
+vintages V of VNT(V,T) with RPC_CAPFLO(R,V,P,C), the lifetime flows of both
+directions add up with the same sign, NCAP_PASTI is taken unconditioned, and
+early retirement takes off VAR_SCAP(R,V,T,P) of the period itself.
+T(V) is MILESTONYR, as in the other uc_*.mod terms.
+
+GAMS: cal_caps.mod L16-28, v4.9.7.
+"""
+function cal_caps!(expr::JuMP.AffExpr, tm::TimesModel, k::GNum, r, t, p, c, s, uf::GNum)
+    y = get!(tm.cache, "CAL_CAPS") do
+        (vnt = gset(tm, "VNT"), capflo = gset(tm, "RPC_CAPFLO"), icom = gparam(tm, "COEF_ICOM"),
+         ocom = gparam(tm, "COEF_OCOM"), ncom = gparam(tm, "NCAP_COM"), coef_cpt = gparam(tm, "COEF_CPT"),
+         coef_cio = gparam(tm, "COEF_CIO"), cptyr = gset(tm, "RTP_CPTYR"), pasti = gparam(tm, "NCAP_PASTI"),
+         g_yrfr = gparam(tm, "G_YRFR"), vntrt = gset_opt(tm.data, "VNTRT", 2), prc_rcap = gset(tm, "PRC_RCAP"),
+         modlyear = gset(tm, "MODLYEAR"), milestonyr = gset(tm, "MILESTONYR"),
+         v_of_t = indexby(gset(tm, "VNT"), (2,)))                           # t -> VNT(v,t)
+    end
+    yrfr = gv(y.g_yrfr, (r, s))
+    for (v, _) in get(y.v_of_t, (t,), NTuple{2,String}[])
+        (r, v, p, c) in y.capflo || continue
+        ic = gv(y.icom, (r, v, t, p, c)) + gv(y.ocom, (r, v, t, p, c))
+        if !iszero(ic)
+            kk = k * (ic * yrfr * uf)
+            (v,) in y.milestonyr && addterm!(expr, kk, tm, "VAR_NCAP", r, v, p)
+            addconst!(expr, kk * gv(y.pasti, (r, v, p)))
+        end
+        (r, v, t, p) in y.cptyr || continue
+        for io in ("IN", "OUT")
+            ncom = gv(y.ncom, (r, v, p, c, io))
+            iszero(ncom) && continue
+            kk = k * (gv(y.coef_cpt, (r, v, t, p)) * ncom * yrfr * uf * (1 + gv(y.coef_cio, (r, v, t, p, c, io))))
+            (v,) in y.milestonyr && addterm!(expr, kk, tm, "VAR_NCAP", r, v, p)
+            addconst!(expr, kk * gv(y.pasti, (r, v, p)))
+            ((r, p) in y.prc_rcap && (v, t) in y.vntrt && (t,) in y.modlyear) && addterm!(expr, -kk, tm, "VAR_SCAP", r, v, t, p)
         end
     end
     return expr

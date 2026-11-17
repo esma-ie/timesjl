@@ -1078,3 +1078,7 @@ those checks, their figures and their crafted cases are not published
   demo12_ptdf: layers 1 to 3 PASS in both variants from the DD files
   (objective 23,941,260.27). The discrete candidate lines (%DSC% and
   %SOLMIP% YES) stay refused.
+- 17 Nov 2026: M1.3 change 58: capacity-related flows in user constraints
+  (UC_CAPFLO: uc_flo.mod L50-59 with cal_caps.mod), the last refused term
+  of the UC families. New crafted case demo12_uccf: layers 1 to 3 PASS in
+  both variants from the DD files (objective 24,020,747.77).

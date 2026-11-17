@@ -761,3 +761,16 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 3607
 cols = 4851
 nonzeros = 19723
+
+# Crafted case TIMES_Demo-demo12_uccf (reference/crafted.toml: demo12 + capflo.dd, capcom.dd and uccf.dd), 17 Nov
+# 2026 (GAMS 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): capacity-related flows in
+# user constraints (UC_CAPFLO: uc_flo.mod L50-59, cal_caps.mod), the whole model. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_uccf"
+model    = "TIMES_Demo-demo12_uccf"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3252
+cols = 4517
+nonzeros = 18585
