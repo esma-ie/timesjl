@@ -14,7 +14,7 @@
 #     (`eqactups_prep!`, called by `eqmain_prep!`; L33 is in eqmain_prep.jl);
 #   - EQ_CAPLOAD (L39-46), EQ_ACTRAMP (L50-61), EQE_ACTUPS (L65-72),
 #     EQL_ACTUPS (L76-82), EQL_ACTUPC (L86-95), EQ_ACTPL (L99-105) and
-#     EQ_ACTRMPC (L113-117) (`eq_actups!`).
+#     EQ_ACTRMPC (L113-117) (`eq_actups!`); EQL_STGCCL (L121-125, `eql_stgccl!`, M1.3 change 43).
 # EQ_SLSIFT (L127-158) is in eqslsift.jl. Not translated: EQL_STGCCL
 # (L121-125, STG_MAXCYC; refused by the generation driver) and the last term
 # of EQ_ACTPL (L106-109), which needs DP_UNS, a parameter only the discrete
@@ -544,6 +544,81 @@ function eq_actups!(tm::TimesModel)
             ups!(rhs, k, r, v, t, p, s, "N")
         end
         gconstraint!(tm, "EQ_ACTRMPC", (r, v, t, p, ts), "E", lhs, rhs) === nothing || (n += 1)
+    end
+    return n
+end
+
+"""
+    eql_stgccl!(tm) -> Int
+
+EQL_STGCCL, the limit on the number of storage cycles over a storage
+process's lifetime (STG_MAXCYC), with the extra on-line capacity
+VAR_UPS(R,V,T,P,'ANNUAL','UP') that relaxes it at the start-up cost
+ACT_CSTUP (annualised by coef_ext.vda L39):
+
+    EQL_STGCCL(RTP_VINTYR(%R_V_T%,P),'1')\$(SUM(RPS_STG(R,P,S)\$COEF_AFUPS(R,V,P,S),1)\$STG_MAXCYC(R,V,P)\$RP_STG(R,P))..
+      (%MX%+VAR_UPS(R,V,T,P,'ANNUAL','UP'))/EXP(PRC_SC(R,P))*SMAX(RPS_STG(R,P,S),COEF_AFUPS(R,V,P,S))*PRC_CAPACT(R,P) =G=
+      SUM((TOP(RPC_STG(R,P,C),'OUT'),RPCS_VAR(R,P,C,S)),VAR_SOUT(R,V,T,P,C,S)/PRC_ACTFLO(R,V,P,C))*NCAP_TLIFE(R,V,P)/STG_MAXCYC(R,V,P);
+
+%MX% is the macro of L35, with no %TMP%: the capacity of vintage V in
+period T, SUM(RVP_KMAP(R,V,P,MODLYEAR(K)),COEF_VNT(R,T,P,K)*(VAR_NCAP(R,K,P)\$T(K)+NCAP_PASTI(R,K,P)%RCAPSBM%)),
+also for a process in RP_UX. %SWTX% is empty and %SWX% is ,'1' (setglobs.gms L363-365):
+every row has the last index '1'. The row is =G= although its name is EQL_.
+
+The start-up variable's cost term (eqobjvar.mod L37, RP_UPS(R,P,'ANNUAL','UP')
+from eqactups.vda L25 with RP_PL(R,P,'UP') of init_ext.vda L67) is in `eq_obj!`.
+
+# GAMS: eqactups.vda L121-125 (with L35, %MX%), v4.9.7
+"""
+function eql_stgccl!(tm::TimesModel)
+    d = tm.data
+    maxcyc = gparam_opt(d, "STG_MAXCYC", 3)
+    isempty(maxcyc) && return 0
+    S(name, n) = gset_opt(d, name, n)
+    P(name, n) = gparam_opt(d, name, n)
+    modlyear, T = S("MODLYEAR", 1), S("MILESTONYR", 1)
+    tx = eq_periods(tm)                                                    # %R_V_T%
+    rp_stg = S("RP_STG", 2)
+    stg_of_rp = indexby(S("RPS_STG", 3), (1, 2))                           # (r,p) -> RPS_STG(r,p,s)
+    afups, capact, prc_sc = P("COEF_AFUPS", 4), P("PRC_CAPACT", 2), P("PRC_SC", 2)
+    coef_vnt, pasti, actflo, tlife = P("COEF_VNT", 4), P("NCAP_PASTI", 3), P("PRC_ACTFLO", 4), P("NCAP_TLIFE", 3)
+    kmap = get!(() -> indexby(gset_opt(d, "RVP_KMAP", 4), (1, 2, 3)), tm.cache, "RVP_KMAP/rvp")
+    top = S("TOP", 4)
+    rpc_stg = indexby(S("RPC_STG", 3), (1, 2))                             # (r,p) -> RPC_STG(r,p,c)
+    rpcs_var = indexby(S("RPCS_VAR", 4), (1, 2, 3))                        # (r,p,c) -> RPCS_VAR(r,p,c,s)
+    no3, no4 = NTuple{3,String}[], NTuple{4,String}[]
+    rows = NTuple{4,String}[]
+    for (r, v, t, p) in gset(tm, "RTP_VINTYR")
+        ((v,) in modlyear && (t,) in tx && (r, p) in rp_stg) || continue
+        iszero(gv(maxcyc, (r, v, p))) && continue
+        any(k -> !iszero(gv(afups, (r, v, p, k[3]))), get(stg_of_rp, (r, p), no3)) || continue
+        push!(rows, (r, v, t, p))
+    end
+    n = 0
+    for (r, v, t, p) in gams_sort!(rows, d)
+        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+        smax = nothing                                                     # SMAX over a non-empty RPS_STG(R,P,S)
+        for (_, _, s) in get(stg_of_rp, (r, p), no3)
+            a = gv(afups, (r, v, p, s))
+            smax = smax === nothing ? a : gmax(smax, a)
+        end
+        c = GNum(1.0) / gexp(gv(prc_sc, (r, p))) * smax * gv(capact, (r, p))
+        for (_, _, _, k) in get(kmap, (r, v, p), no4)                      # %MX%
+            (k,) in modlyear || continue
+            ck = c * gv(coef_vnt, (r, t, p, k))
+            (k,) in T && addterm!(lhs, ck, tm, "VAR_NCAP", r, k, p)
+            addconst!(lhs, ck * gv(pasti, (r, k, p)))
+            rcapsub!(lhs, ck, tm, r, k, t, p)                              # %RCAPSBM%
+        end
+        addterm!(lhs, c, tm, "VAR_UPS", r, v, t, p, "ANNUAL", "UP")
+        f = gv(tlife, (r, v, p)) / gv(maxcyc, (r, v, p))
+        for (_, _, com) in get(rpc_stg, (r, p), no3)
+            (r, p, com, "OUT") in top || continue
+            for (_, _, _, s) in get(rpcs_var, (r, p, com), no4)
+                addterm!(rhs, GNum(1.0) / gv(actflo, (r, v, p, com)) * f, tm, "VAR_SOUT", r, v, t, p, com, s)
+            end
+        end
+        gconstraint!(tm, "EQL_STGCCL", (r, v, t, p, "1"), "G", lhs, rhs) === nothing || (n += 1)
     end
     return n
 end

@@ -727,3 +727,18 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_ucann/demo12_ucann.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_ucann"]
+
+# TIMES_Demo demo12 + demo12_stgccl/stgccl.dd (17 Nov 2026): a DAYNITE battery storage of
+# electricity with a lifetime cycle limit STG_MAXCYC and an annual start-up cost, in both regions
+# (REG2 vintaged, with a past investment): EQL_STGCCL (eqactups.vda L121-125) (M1.3 change 43).
+[[model]]
+name = "TIMES_Demo-demo12_stgccl"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_stgccl/demo12_stgccl.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_stgccl"]

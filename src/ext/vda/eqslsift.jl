@@ -7,8 +7,7 @@
 # limits the shifted share and ACT_TIME (LO/UP/N/FX) the advance, delay or
 # balancing time windows. The dispatching families of eqactups.vda
 # (EQ_CAPLOAD, EQ_ACTRAMP, EQ(l)_ACTUPS, EQL_ACTUPC, EQ_ACTPL, EQ_ACTRMPC) are
-# in eqactups.jl; EQL_STGCCL (L121-125) is not translated and stays refused
-# by the generation driver.
+# in eqactups.jl, with EQL_STGCCL (L121-125, `eql_stgccl!`, M1.3 change 43).
 #
 # Macro expansions: %EQ% -> EQ, %VAR% -> VAR, %SOW%/%SWT% -> '' (setglobs.gms
 # L348); %R_T% -> 'R,T' (maindrv.mod L39); RTS(S) -> S; %PGPRIM% -> 'ACT'
