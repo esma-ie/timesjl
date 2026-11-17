@@ -1,0 +1,21 @@
+* TIMES.jl crafted case demo12_pfcst (reference/crafted.toml, 17 Nov 2026): costs on the
+* components of the balances of power-flow grid nodes, COM_CSTBAL with %POWERFLO% (powerflo.vda
+* CSTBAL L388-394 and the grid terms of EQ_OBJBAL L411-425; M1.3 change 50, docs/m13-plan.md),
+* added to demo12_pfd (TIMES_Demo demo12, etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0), whose grid
+* nodes (RC_GRID) are ELC and TRAELC in REG1 and ELC in REG2. All three are in GR_ALLMAP, so none
+* is TRACKC and every cost takes the grid branches:
+* - REG1 ELC: a cost on generation (PRD: 'GEN'), on imports and on exports;
+* - REG1 TRAELC: a cost on net imports (NTX, from the grid);
+* - REG2 ELC: a penalty on net positive generation (NPG) from 2010, which also adds the group
+*   'FIN' to the node's allocation maps (GR_ALLMAP, GR_ALGMAP: L392-393).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER
+COM_CSTBAL ' '/
+REG1.2005.ELC.ANNUAL.PRD.MEURO05 0.2
+REG1.2005.ELC.ANNUAL.IMP.MEURO05 0.15
+REG1.2005.ELC.ANNUAL.EXP.MEURO05 0.05
+REG1.2005.TRAELC.ANNUAL.NTX.MEURO05 0.1
+REG2.2010.ELC.ANNUAL.NPG.MEURO05 0.5
+/

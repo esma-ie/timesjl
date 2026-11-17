@@ -149,6 +149,13 @@ On 17 Nov 2026 James answered three questions of the list in the chat (below, un
 | 2 | Translate eqstgips.lin and the IPS terms of eqstgaux.lin in one change: the second is only reached with the first (both are OBJ LIN's inter-period storage), and one crafted case checks both. | Recommended: yes. Built in. | open |
 | 3 | `bnd_ire.vda` (item (f) of 17 Nov 2026) is a run option: it acts only when GDX_IREBND or GDX_IPRIC load an earlier run's trade flows and prices (init_ext.vda L137-151). Move it to M1.5, out of the M1.3 gate? Rule-level (the milestone scope). | Recommended: move to M1.5. Not built in: the refusal stays either way. | open (on the Open decisions list) |
 
+### #151 M1.3 (50): costs on the components of a commodity's balance, COM_CSTBAL (powerflo.vda L372-434); crafted cases demo12_cstbal and demo12_pfcst (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Two new crafted cases, each with a public CI fixture (as run, about 4 MB each): demo12_cstbal (demo12 + cstbal.dd, the branches without a grid) and demo12_pfcst (demo12_pfd + pfcst.dd, the grid branches). One case cannot reach both: a commodity that is a grid node allocation is never TRACKC. | Recommended: yes. Built in. | open |
+| 2 | The labels the CSTBAL code names itself (PRD, IMP, EXP, GEN, NTX, NPG, FIN, FX and the empty label) are added to the label order when the dump it starts from lacks them, after every known label (G36). Their place there only orders OBJ_COMBAL's records, which every compare matches by key. | Recommended: yes. Built in. | open |
+
 ### #147 M1.3 (46): nested user constraints (equserco.mod L75-76, L98-99; pp_qack.mod L53); crafted case demo12_ucn (open)
 
 Logged here because #147 does not touch this file.

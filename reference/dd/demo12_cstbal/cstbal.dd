@@ -1,0 +1,25 @@
+* TIMES.jl crafted case demo12_cstbal (reference/crafted.toml, 17 Nov 2026): costs on the
+* components of a commodity's balance, COM_CSTBAL, without a power-flow grid (powerflo.vda CSTBAL
+* L372-396, from coef_ext.vda L80, and OBJBAL L398-435, the equation EQ_OBJBAL from equ_ext.vda
+* L100; M1.3 change 50, docs/m13-plan.md). Added to TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo
+* @ 962db86, CC BY 4.0).
+* Without a grid (RC_GRID empty) the costs go to OBJ_COMBAL at 'PRD' (PRD+CON+OUT: on the
+* production VAR_COMPRD, which RHS_COMPRD adds), 'IMP' (IMP+NTX-PRD) and 'EXP' (EXP-NTX-CON),
+* on the imports and exports of the exchange processes, and EQ_OBJBAL sums them into
+* VAR_OBJ(R,'OBJBAL',CUR):
+* - REG1 ELC: a production cost (ANNUAL);
+* - REG1 GAS: a cost on imports (IMPGAS1 and the trade from REG2), ANNUAL;
+* - REG2 GAS: a cost on exports (to REG1), from 2010;
+* - REG2 ELC: a cost on consumption in the winter (W, above ELC's DAYNITE level: levelled by
+*   pp_lvlfc.mod) and on net imports (NTX) in 2020, so PRD, IMP and EXP all get terms.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER
+COM_CSTBAL ' '/
+REG1.2005.ELC.ANNUAL.PRD.MEURO05 0.5
+REG1.2005.GAS.ANNUAL.IMP.MEURO05 0.3
+REG2.2010.GAS.ANNUAL.EXP.MEURO05 0.2
+REG2.2005.ELC.W.CON.MEURO05 0.4
+REG2.2020.ELC.ANNUAL.NTX.MEURO05 0.1
+/
