@@ -1009,3 +1009,7 @@ those checks, their figures and their crafted cases are not published
   retirements, the discrete unit commitment and TIMES-Micro after it);
   MACRO after the gate, checked with IPOPT on both sides; the 5x speed
   target moves to Phase 2.
+- 17 Nov 2026: M1.3 change 44: the UC_ATTR attribute ONLINE (uc_cap.mod
+  L36-43), the last refused attribute, in the RS family. New crafted case
+  demo12_uconl. Layer 1 checked in the cloud with the PyPI GAMS; layers
+  2-3 need the workstation, before merge.
