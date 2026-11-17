@@ -169,6 +169,13 @@ On 17 Nov 2026 James answered three questions of the list in the chat (below, un
 | --- | --- | --- | --- |
 | 1 | A new crafted case, demo12_stsflx, with one public CI fixture (as run, about 4 MB): demo12 with a general timeslice storage STSELC (PRC_MAP STS) and $SET STSFLX YES. demo12_stgccl's battery cannot serve: it is not an STS storage, so it has no RP_STL entries. | Recommended: yes. Built in. | open |
 
+### #154 M1.3 (53): commodity flows tied to investment and decommissioning (coef_nio.mod L13-71, cal_cap.mod, cal_caps.mod); crafted case demo12_capflo (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | A new crafted case, demo12_capflo, with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
+| 2 | Capacity-related flows are split into two changes: this one (investment and decommissioning, NCAP_ICOM, NCAP_CLED, NCAP_OCOM) and a second for the flows over the lifetime (NCAP_COM, NCAP_CLAG, COEF_CIO), early retirements (RCAP_OCAP), the capacity transfer (FLO_FUNCX CAPFLO = 3) and UC_CAPFLO. Each part stays refused with its own message until then. | Recommended: yes. Built in. | open |
+
 ### #147 M1.3 (46): nested user constraints (equserco.mod L75-76, L98-99; pp_qack.mod L53); crafted case demo12_ucn (open)
 
 Logged here because #147 does not touch this file.

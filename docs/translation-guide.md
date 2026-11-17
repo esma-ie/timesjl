@@ -1030,6 +1030,12 @@ those checks, their figures and their crafted cases are not published
   coef_ext.vda L31 in EQ(l)_CAPACT and EQL_CAPFLO), refused since M1.1.
   New crafted case demo12_stsflx: layers 1 to 3 PASS in both variants
   from the DD files (objective 23,960,741.42 with CPLEX and HiGHS).
+- 17 Nov 2026: M1.3 change 53: commodity flows tied to investment and to
+  decommissioning (NCAP_ICOM, NCAP_CLED, NCAP_OCOM: coef_nio.mod, the
+  second term of cal_cap.mod, cal_caps.mod L18-21). New crafted case
+  demo12_capflo: layers 1 to 3 PASS in both variants from the DD files
+  (objective 23,960,613.42 with CPLEX and HiGHS). The flows over the
+  lifetime (NCAP_COM) and of early retirements (RCAP_OCAP) stay refused.
 - 17 Nov 2026: James's answers (docs/decisions.md): the M1.3 gate covers
   the linear features only (ETL, the DSC lumpy investments and block
   retirements, the discrete unit commitment and TIMES-Micro after it);
