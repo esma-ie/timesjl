@@ -631,3 +631,16 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 3279
 cols = 4571
 nonzeros = 18867
+
+# Crafted case TIMES_Demo-demo12_ipslin (reference/crafted.toml: demo12_ips under OBJ LIN), 17 Nov 2026
+# (GAMS 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): inter-period storage
+# under OBJ LIN (eqstgips.lin L12-66, eqstgaux.lin L25-31), the whole model. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_ipslin"
+model    = "TIMES_Demo-demo12_ipslin"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "LIN", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3335
+cols = 4624
+nonzeros = 18926
