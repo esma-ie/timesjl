@@ -1,0 +1,72 @@
+* TIMES.jl crafted case demo12_ucbet (reference/crafted.toml, 17 Nov 2026): the VDA "betting"
+* constraints EQG_UCMAX and EQG_UCSUMAX (ucbet.vda L46-125, included from equ_ext.vda L99 when
+* UC_FLOBET is DEFINED; M1.3 change 47, docs/m13-plan.md). Added to TIMES_Demo demo12
+* (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0).
+* Each constraint is cumulative (a bound without a period), and its variable is at least each of
+* the weighted cumulative activities or flows UC_ACTBET / UC_FLOBET name, so its bound limits the
+* largest of them. init_ext.vda L132 copies UC_ACTBET into UC_FLOBET with the commodity %PGPRIM%
+* (ACT). The four constraints take the four branches of EQG_UCMAX:
+* - BET_ACT (global bound UC_RHS): the activity of each process in each region (ucbet.vda L89-103),
+*   with the discounting attribute PERDISC in REG1; MINGAS1 is an exchange process (its imports).
+* - BET_ACTG (global bound, UC_ATTR ACT N): the activity of each process summed over the regions
+*   (L105-119), the IMPEXP group of L25-26.
+* - BET_FLO (regional bounds UC_RHSR): the flows of each commodity in each region (L57-71), with
+*   EQG_UCSUMAX summing the regional variables (L123-125); PERDISC in REG2; IMPGAS1's imports.
+* - BET_FLOG (global bound): the flows of each commodity summed over the regions (L73-87).
+* Each bound is about a quarter below the largest of its cumulative values in demo12, so every
+* constraint binds in GAMS's optimum.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET UC_N
+/
+BET_ACT 'Largest cumulative activity of a power plant or gas supply'
+BET_ACTG 'Largest cumulative activity, regions summed'
+BET_FLO 'Largest cumulative flow of a commodity, by region'
+BET_FLOG 'Largest cumulative flow of a commodity, regions summed'
+/
+
+PARAMETER
+UC_ACTBET ' '/
+BET_ACT.REG1.2005.ELCTNCOA01 1
+BET_ACT.REG1.2005.ELCTNGAS01 1
+BET_ACT.REG1.2005.MINGAS1 0.5
+BET_ACT.REG2.2005.ELCTNCOA01 1
+BET_ACTG.REG1.2005.ELCTNGAS01 1
+BET_ACTG.REG2.2005.ELCTNGAS01 0.8
+BET_ACTG.REG1.2005.MINCOA1 0.25
+BET_ACTG.REG2.2005.MINCOA1 0.25
+/
+
+PARAMETER
+UC_FLOBET ' '/
+BET_FLO.REG1.2005.ELCTNGAS01.ELC 1
+BET_FLO.REG1.2005.ELCTNCOA01.ELC 1
+BET_FLO.REG1.2005.ELCTNCOA01.ELCCOA 0.5
+BET_FLO.REG2.2005.ELCTNGAS01.ELC 1
+BET_FLO.REG2.2005.IMPGAS1.GAS 1
+BET_FLOG.REG1.2005.MINGAS1.GAS 1
+BET_FLOG.REG2.2005.MINGAS1.GAS 1
+BET_FLOG.REG1.2005.ELCTNGAS01.ELCGAS 0.5
+/
+
+SET UC_ATTR
+/
+REG1.BET_ACT.LHS.ACT.PERDISC
+REG1.BET_ACTG.LHS.ACT.N
+REG2.BET_ACTG.LHS.ACT.N
+REG2.BET_FLO.LHS.ACT.PERDISC
+/
+
+PARAMETER
+UC_RHS ' '/
+BET_ACT.UP 16000
+BET_ACTG.UP 125000
+BET_FLOG.UP 28000
+/
+
+PARAMETER
+UC_RHSR ' '/
+REG1.BET_FLO.UP 90000
+REG2.BET_FLO.UP 210000
+/

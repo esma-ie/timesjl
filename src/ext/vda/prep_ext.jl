@@ -40,9 +40,8 @@ function prep_ext_unported(tm)
     dsc_loaded(tm) && append!(out, init_ext_dsc_unported(tm))
     yes("POWERFLO") && append!(out, powerflo_unported(tm))
     hasdata(tm, "GR_VARGEN", 4) && push!(out, "prep_ext.vda L38 (GR_VARGEN has data: resloadc.vda)")
-    # init_ext.vda L132 fills UC_FLOBET from UC_ACTBET at run time: whether UC_FLOBET is DEFINED (L35) then
-    # depends on the DD files, which the dumps do not show
-    hasdata(tm, "UC_ACTBET", 4) && push!(out, "prep_ext.vda L35 (UC_ACTBET has data: \$IF DEFINED UC_FLOBET undecidable from the dump)")
+    # UC_ACTBET: init_ext.vda L131-132 compiles an assignment to UC_FLOBET, so it is DEFINED (L35); its
+    # records are those init_ext! copied, and a DEFINED UC_FLOBET without records changes nothing (ucbet.jl)
     strip(gswitch(tm, "VINTOPT", "")) == "1" && push!(out, "prep_ext.vda L42-43 (VINTOPT 1: fillvint.gms with arguments)")
     yes("WAVER") && push!(out, "prep_ext.vda L63 (WAVER YES)")
     return out

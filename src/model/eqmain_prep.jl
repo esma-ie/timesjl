@@ -9,7 +9,8 @@
 # user-constraint maps); then equ_ext.vda L76-79 (RP_PL, AFS), eqactups.vda L9-32 (the dispatching
 # preparation, `eqactups_prep!` in ext/vda/eqactups.jl) and L33 (RP_UPR, outside the dispatching
 # IF, so in every model), eqlducs.vda L46-51 (the unit-commitment processes, `eqlducs_equ!` in
-# ext/vda/eqlducs.jl). The other includes have no data
+# ext/vda/eqlducs.jl), ucbet.vda L11-40 (equ_ext.vda L99, when UC_FLOBET is DEFINED: `ucbet_prep!` in
+# ext/vda/ucbet.jl, M1.3 change 47). The other includes have no data
 # statements that act here: eqflomrk.mod, eqashar.vda and pp_actef.vda jump to their equations
 # under the arguments eqmain.mod and equ_ext.vda pass.
 #
@@ -46,7 +47,8 @@ eqmain_prep_symbols(tm) = vcat(["AFS", "SUPERYR", "REG_CUMCST", "YK1", "RT_IAN",
                                 "AFUPS", "RPS_UPS", "RP_UX", "RTP_VARP", "COEF_AF", "RP_UPS", "RPC_CUR", "ACT_LOSPL",
                                 "ACT_UPS", "RTP_PL", "RP_UPC"],   # TS_ARRAY (L28) is cleared later (pp_clean)
                                eqactups_dispatching(tm.data) ? ["UNCD7"] : String[],   # eqactups.vda L10, L28
-                               simv_defined(tm) ? coef_csv_symbols(tm) : String[])
+                               simv_defined(tm) ? coef_csv_symbols(tm) : String[],
+                               ucbet_symbols(tm))   # ucbet.vda L11-40
 
 """
     eqmain_prep!(tm) -> tm
@@ -339,5 +341,7 @@ function eqmain_prep!(tm::TimesModel)
     gput!(tm, "RP_UPR", Set((k[1], k[3], k[4]) for k in P("ACT_CSTRMP", 5).keys))
     # eqlducs.vda L46-51 (equ_ext.vda L91): the unit-commitment processes leave the linear dispatching sets
     eqlducs_equ!(tm)
+    # ucbet.vda L11-40 (equ_ext.vda L99, when UC_FLOBET is DEFINED): the betting constraints' sets (M1.3 change 47)
+    ucbet_prep!(tm)
     return tm
 end
