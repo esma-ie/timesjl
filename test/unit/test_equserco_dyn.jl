@@ -4,7 +4,7 @@
 # checked against GAMS in test_public_parity.jl; here the pieces: UC_TMAP against GAMS's,
 # the direction rule, and the user-constraint rows alone against the CONVERT export.
 
-using TIMES: TimesModel, DumpData, gset, gset_opt, gput!, uc_tmap, uc_rhsdir, eq_uc!, UnportedError
+using TIMES: TimesModel, DumpData, gset, gset_opt, gput!, uc_tmap, uc_rhsdir, eq_uc!, UnportedError, UC_ATTR_REFUSED
 using TIMES.Reference: canonical_from_jump, canonical_from_dump
 import TOML
 isdefined(@__MODULE__, :check_family_parity) || include("parity_helpers.jl")
@@ -46,11 +46,7 @@ let vx = only(v for v in TOML.parsefile(joinpath(FIXTURES, "variant_fixtures.tom
         @test r.hi != 0 && isapprox(r.hi, ref.rows["EQE_UCRSU(REG1,2005,GRW_HYD)"].hi; rtol=1e-9)
     end
 
-    @testset "attributes still refused" begin
-        tm = mk()
-        attr = Set(gset(tm, "UC_ATTR").keys)
-        push!(attr, ("REG1", "GRW_HYD", "RHS", "CAP", "ONLINE"))      # uc_cap.mod L36-42, the VDA VAR_UPS terms
-        gput!(tm, "UC_ATTR", attr)
-        @test_throws UnportedError eq_uc!(tm)
+    @testset "every UC_ATTR attribute is translated" begin
+        @test isempty(UC_ATTR_REFUSED)                               # ONLINE: M1.3 change 44 (uc_cap.mod L36-42)
     end
 end

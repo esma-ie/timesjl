@@ -53,8 +53,8 @@
 # - nested constraints (equserco.mod L76, L99: UC_GMAP_U/UC_UCN) and the
 #   climate terms of the RHS direction (L101, uc_cli.mod; %CLI% is refused
 #   by the generation driver);
-# - the UC_ATTR attribute ONLINE (uc_cap.mod L36-42); the others are
-#   translated (`UC_ATTR_REFUSED`; PERIOD, NEWFLO, PERDISC, EFF, CAPACT,
+# - (none of the UC_ATTR attributes: ONLINE, uc_cap.mod L36-42, came in
+#   M1.3 change 44; the others were translated before: PERIOD, NEWFLO, PERDISC, EFF, CAPACT,
 #   BUILDUP and COST/DELIV/TAX/SUB in M1.3 change 22; ANNUL with INVCOST,
 #   INVTAX and INVSUB, uc_ncap.mod L39 with CST_ANNC of eqbndcst.mod L49-77,
 #   in change 42);
@@ -153,8 +153,9 @@ function uc_setup(tm::TimesModel)
 end
 
 """
-UC_ATTR attributes refused (UC_NAME, initsys.mod L120-129): ONLINE (uc_cap.mod
-L36-42, the VDA RS family's VAR_UPS terms). Every other name is translated:
+UC_ATTR attributes refused (UC_NAME, initsys.mod L120-129): none since M1.3
+change 44, which translated ONLINE (uc_cap.mod L36-42, the VDA RS family's
+VAR_UPS terms, `uc_cap_online!`). The other names were translated before:
 ANNUL and the names UC_MAPCOST maps to it (INVCOST, INVTAX, INVSUB), the
 annual costs CST_ANNC of eqbndcst.mod L49-77 in the RHS direction of a
 dynamic constraint (uc_ncap.mod L39; M1.3 change 42); GROWTH and PERDISC;
@@ -166,7 +167,7 @@ preprocessing (preppm.mod L41-43, ppmain.mod L1157); CAPFLO, whose only
 effect is UC_CAPFLO (refused on its own); YES, set only under %CLI%
 (refused by the generation driver).
 """
-const UC_ATTR_REFUSED = ("ONLINE",)
+const UC_ATTR_REFUSED = ()
 
 function uc_unported(tm::TimesModel, setup)
     var_uc(tm) || throw(UnportedError("user constraints with VAR_UC not YES (eqmain.mod L230-232, equcwrap.mod L13)"))
@@ -174,10 +175,6 @@ function uc_unported(tm::TimesModel, setup)
     # Dynamic families (equcwrap L34-40): nested UCs.
     isempty(gset_opt(d, "UC_GMAP_U", 3)) ||
         throw(UnportedError("equserco.mod L76/L99: nested user constraints (UC_GMAP_U, UC_UCN)"))
-    let k = findfirst(k -> k[5] in UC_ATTR_REFUSED, gset(tm, "UC_ATTR").keys)
-        k === nothing || throw(UnportedError("uc_cap.mod L36-42: user-constraint attribute " *
-                                             "$(gset(tm, "UC_ATTR").keys[k]) (ONLINE needs the VDA VAR_UPS terms)"))
-    end
     isempty(gset(tm, "UC_CAPFLO")) ||
         throw(UnportedError("uc_flo.mod L35-49: capacity-related flows in user constraints (UC_CAPFLO, cal_caps.mod)"))
     return nothing
@@ -469,7 +466,7 @@ end
         PROD(UC_ATTR(R,UC_N,SIDE,'CAP','CAPACT'),PRC_CAPACT(R,P)) * PROD(L('N'),1))
 
 GAMS: uc_cap.mod L3-34, v4.9.7 (L36-50, VDA ONLINE and ABS reserves, only
-for the RS family: ONLINE and ABS are refused).
+for the RS family: ONLINE is `uc_cap_online!`, ABS is refused).
 """
 function uc_cap!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String;
                  side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false)
@@ -481,6 +478,46 @@ function uc_cap!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::St
         k = k0 * coef * _uc_growth(x, r, n, side, "CAP", coef, lagt)
         capact && (k = k * gv(x.prc_capact, (r, p)))
         addterm!(expr, k, tm, "VAR_CAP", r, t, p)
+    end
+    return expr
+end
+
+"""
+    uc_cap_online!(expr, tm, n, r, t, s; side, k0=1) -> expr
+
+The ONLINE term of the RS family (%VDA% YES, %5 = S): the off-line capacity
+of a dispatchable process (RP_UPL(R,P,'FX'), from the VDA dispatching data)
+subtracted from its capacity term, for the slice S of a (SIDE, S) pair:
+
+    + %2 SUM(RTP(R,T,P)\$(RP_UPL(R,P,'FX')\$UC_GMAP_P(R,UC_N,'CAP',P)), EPS+
+             UC_CAP(UC_N,SIDE,R,T,P)*PROD(UC_ATTR(R,UC_N,SIDE,'CAP','CAPACT'),PRC_CAPACT(R,P)) *
+             SUM(RTP_VINTYR(R,V,T,P),(%UPSCAPS%)))\$UC_ATTR(R,UC_N,SIDE,'CAP','ONLINE') )
+
+with %UPSCAPS% (coef_ext.vda L30) `-SUM(TS_MAP(R,ALL_TS,S)\$RPS_UPS(R,P,ALL_TS),VAR_UPS(R,V,T,P,ALL_TS,'N'))`
+and %2 the RS family's sum over the (SIDE, S) pairs times UC_SIGN(SIDE)
+(`k0`). The EPS is a constant: it adds no column and keeps no row (every
+row of the family has its VAR_UCRTS variable, VAR_UC YES).
+
+GAMS: uc_cap.mod L36-43 (with coef_ext.vda L30), v4.9.7.
+"""
+function uc_cap_online!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String, s::String;
+                        side::String="LHS", k0::GNum=GNum(1.0))
+    x = uc_context(tm)
+    _uc_has(x, r, n, side, "CAP", "ONLINE") || return expr
+    d = tm.data
+    rp_upl = get!(() -> gset_opt(d, "RP_UPL", 3), tm.cache, "UC_ONLINE/RP_UPL")
+    ups_of_rp = get!(() -> indexby(gset_opt(d, "RPS_UPS", 3), (1, 2)), tm.cache, "UC_ONLINE/RPS_UPS")
+    tsmap = get!(() -> gset_opt(d, "TS_MAP", 3), tm.cache, "UC_ONLINE/TS_MAP")
+    capact = _uc_has(x, r, n, side, "CAP", "CAPACT")
+    for (_, _, _, p) in get(x.gmapp_of_rnk, (r, n, "CAP"), _NO4)
+        ((r, t, p) in x.rtp && (r, p, "FX") in rp_upl) || continue
+        k = k0 * gv(x.uc_cap, (n, side, r, t, p))
+        capact && (k = k * gv(x.prc_capact, (r, p)))
+        for (_, v, _, _) in get(x.vint_of_rtp, (r, t, p), _NO4)
+            for (_, _, ts) in get(ups_of_rp, (r, p), _NO3)
+                (r, ts, s) in tsmap && addterm!(expr, -k, tm, "VAR_UPS", r, v, t, p, ts, "N")
+            end
+        end
     end
     return expr
 end
@@ -983,9 +1020,9 @@ the (SIDE, S) sum of [`uc_rs_pairs`](@ref), %6 = '(' and %8 = S (HS = SIDE):
 each uc_*.mod term at period T, side SIDE and slice S, times UC_SIGN(SIDE).
 The flow-type files (uc_flo L5, uc_act L15, uc_com L14, uc_ire L15) add the
 factor `1/G_YRFR(R,S)` for %6 = S; uc_ncap and uc_cap have none. uc_cap.mod
-L15-27 (VDA ONLINE and ABS reserve terms, compiled for %VDA%%5 = YESS) give
-nothing: ONLINE is a UC_ATTR attribute (refused with the others) and ABS is
-refused by the generation driver.
+L36-50 (VDA ONLINE and ABS reserve terms, compiled for %VDA%%5 = YESS): the
+ONLINE term is [`uc_cap_online!`](@ref), right after the CAP term (M1.3
+change 44); ABS is refused by the generation driver.
 
 GAMS: equcwrap.mod L42 with equserco.mod L23-46, uc_flo.mod L5, uc_act.mod
 L15, uc_com.mod L14, uc_ire.mod L15, uc_cap.mod L15-27, v4.9.7.
@@ -1003,6 +1040,9 @@ function uc_rs_lhs!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t:
     end
     for (side, _) in pairs
         uc_cap!(expr, tm, n, r, t; side, k0=sgn(side))
+    end
+    for (side, s) in pairs
+        uc_cap_online!(expr, tm, n, r, t, s; side, k0=sgn(side))
     end
     for (side, s) in pairs
         uc_act!(expr, tm, n, r, t, s; side, k0=per_s(side, s))

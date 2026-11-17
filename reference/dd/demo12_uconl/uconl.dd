@@ -1,0 +1,51 @@
+* TIMES.jl crafted case demo12_uconl (reference/crafted.toml, 17 Nov 2026): a user constraint
+* of the RS family (by DAYNITE timeslice, UC_TSL) on the on-line capacity of the dispatchable gas
+* plants of demo12_disp, added to TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo @ 962db86,
+* CC BY 4.0), for M1.3 change 44: the UC_ATTR attribute ONLINE (uc_cap.mod L36-43), which
+* subtracts the off-line capacity VAR_UPS(..,'N') of a process in RP_UPL(R,P,'FX').
+* - ONL_GAS (REG1 and REG2, UC_R_EACH): the capacity of the gas plant, less its off-line
+*   capacity, at least a must-run level in each DAYNITE timeslice (UC_TSL LHS DAYNITE).
+* - REG1: ELCTEGAS00 (not vintaged, start-ups at DAYNITE: RPS_UPS at the row's own slice) and
+*   ELCNNNUC01, which has no dispatching data, so only its CAP term (L17-34) enters; the
+*   bounds at WD and SN, in 2010 and 2020.
+* - REG2: ELCTNGAS01 (vintaged, start-ups at SEASON: TS_MAP picks the parent season of the
+*   row's slice) with the attribute CAPACT as well; the bound at the season W, levelled to WD and
+*   WN (ppmain.mod L1111-1112), from 2010 (no new ELCTNGAS01 in 2005), set so that it binds:
+*   the model invests in more ELCTNGAS01 or keeps less of it off line.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET UC_N
+/
+ONL_GAS 'Crafted: on-line gas capacity at least a must-run level (TIMES.jl demo12_uconl)'
+/
+SET UC_R_EACH
+/
+REG1.ONL_GAS
+REG2.ONL_GAS
+/
+SET UC_TSL
+/
+REG1.ONL_GAS.LHS.DAYNITE
+REG2.ONL_GAS.LHS.DAYNITE
+/
+SET UC_ATTR
+/
+REG1.ONL_GAS.LHS.CAP.ONLINE
+REG2.ONL_GAS.LHS.CAP.ONLINE
+REG2.ONL_GAS.LHS.CAP.CAPACT
+/
+PARAMETER
+UC_CAP ' '/
+ONL_GAS.LHS.REG1.2005.ELCTEGAS00 1
+ONL_GAS.LHS.REG1.2005.ELCNNNUC01 0.5
+ONL_GAS.LHS.REG2.2005.ELCTNGAS01 1
+/
+PARAMETER
+UC_RHSRTS ' '/
+REG1.ONL_GAS.2010.WD.LO 6
+REG1.ONL_GAS.2010.SN.LO 4
+REG1.ONL_GAS.2020.WD.LO 5
+REG2.ONL_GAS.2010.W.LO 270
+REG2.ONL_GAS.2030.W.LO 5200
+/
