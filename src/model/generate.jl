@@ -66,8 +66,7 @@ function untranslated_families(tm::TimesModel)
             ("EQ_DAMAGE / EQ_OBJDAM", "eqdamage.mod, mod_equa.mod L209-210", "DAM_COST", 4, :p),
             # VDA (always loaded, initmty.mod L458) and DSC extensions
             # the dispatching equations of eqactups.vda L39-117 (eq_actups!) and the unit commitment by
-            # start-up type of eqlducs.vda L67-124 (eq_lducs!) are translated
-            ("EQL_STGCCL", "eqactups.vda L121", "STG_MAXCYC", 3, :p),
+            # start-up type of eqlducs.vda L67-124 (eq_lducs!) are translated; so is EQL_STGCCL (L121-125, eql_stgccl!)
             ("eq_sdind_1/eq_sdind_0", "eqlducs.vda L158-169", "DP_UNS", 7, :p),
             ("EQG_UCMAX/EQG_UCSUMAX", "ucbet.vda L46-125", "UC_GMAX", 5, :s),
             ("EQ_OBJBAL", "powerflo.vda (mod_ext.vda L42-43)", "COM_CSTBAL", 6, :p),
@@ -152,6 +151,7 @@ function generate!(tm::TimesModel)
     n += eq_acteff!(tm)              # VDA: equ_ext.vda L85 (pp_actef.vda L56)
     n += eq_caflac!(tm)              # VDA: equ_ext.vda L88-89
     n += eq_actups!(tm)              # VDA: equ_ext.vda L90 (eqactups.vda L39-117)
+    n += eql_stgccl!(tm)             #   eqactups.vda L121-125
     n += eq_slsift!(tm)              #   eqactups.vda L131
     n += eq_lducs!(tm)               # VDA: equ_ext.vda L91 (eqlducs.vda L67-124)
     n += eq_ashar!(tm)               # VDA: equ_ext.vda L94-96

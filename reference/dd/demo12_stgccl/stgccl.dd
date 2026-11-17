@@ -1,0 +1,105 @@
+* TIMES.jl crafted case demo12_stgccl (reference/crafted.toml, 17 Nov 2026): a battery storage
+* of electricity with a limit on its number of storage cycles over its lifetime, added to
+* TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0), for M1.3 change 43:
+* EQL_STGCCL (eqactups.vda L121-125) with the extra on-line capacity VAR_UPS(..,'ANNUAL','UP')
+* that relaxes it at an annualised start-up cost (ACT_CSTUP at ANNUAL, coef_ext.vda L39;
+* init_ext.vda L67 makes RP_PL 'UP', eqactups.vda L25 RP_UPS ANNUAL 'UP').
+* - BATELC, a DAYNITE storage of ELC (PRC_MAP STG) in both regions.
+* - REG1 is not vintaged, REG2 is (PRC_VINT) and has a past investment (NCAP_PASTI in 2000):
+*   the capacity terms of %MX% for both (RVP_KMAP, COEF_VNT, NCAP_PASTI).
+* - NCAP_AF UP by DAYNITE timeslice (COEF_AFUPS, coef_ext.vda L35): four values in REG1, one
+*   in REG2 (WD), so SMAX(RPS_STG, COEF_AFUPS) takes the maximum over values and zeros.
+* - STG_MAXCYC: one value in REG1; two years in REG2 (interpolated, prep_ext.vda L34).
+* - demo12's electricity has the same price in every DAYNITE timeslice, so a storage earns
+*   nothing by itself: STGOUT_BND sets a lower bound on each region's annual discharge, so the
+*   cycle limit binds and the model chooses between more capacity (NCAP_COST) and the extra
+*   on-line capacity VAR_UPS(..,'ANNUAL','UP') at the start-up cost.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET PRC
+/
+BATELC 'Crafted: battery storage of electricity with a cycle limit (TIMES.jl demo12_stgccl)'
+/
+SET COM_GRP
+/
+BATELC_NRGO
+/
+SET COM_GMAP
+/
+REG1.BATELC_NRGO.ELC
+REG2.BATELC_NRGO.ELC
+/
+SET PRC_MAP
+/
+REG1.STG.BATELC
+REG2.STG.BATELC
+/
+SET PRC_TSL
+/
+REG1.BATELC.DAYNITE
+REG2.BATELC.DAYNITE
+/
+SET PRC_ACTUNT
+/
+REG1.BATELC.BATELC_NRGO.PJ
+REG2.BATELC.BATELC_NRGO.PJ
+/
+SET TOP
+/
+REG1.BATELC.ELC.IN
+REG1.BATELC.ELC.OUT
+REG2.BATELC.ELC.IN
+REG2.BATELC.ELC.OUT
+/
+SET PRC_VINT
+/
+REG2.BATELC
+/
+PARAMETER
+STG_EFF ' '/
+REG1.2005.BATELC 0.9
+REG2.2005.BATELC 0.85
+/
+PARAMETER
+NCAP_COST ' '/
+REG1.2005.BATELC.MEURO05 2
+REG2.2005.BATELC.MEURO05 3
+/
+PARAMETER
+NCAP_TLIFE ' '/
+REG1.2005.BATELC 15
+REG2.2005.BATELC 12
+/
+PARAMETER
+NCAP_PASTI ' '/
+REG2.2000.BATELC 0.2
+/
+PARAMETER
+NCAP_AF ' '/
+REG1.2005.BATELC.SD.UP 0.9
+REG1.2005.BATELC.SN.UP 0.8
+REG1.2005.BATELC.WD.UP 0.95
+REG1.2005.BATELC.WN.UP 0.85
+REG2.2005.BATELC.WD.UP 0.7
+/
+PARAMETER
+STG_MAXCYC ' '/
+REG1.2005.BATELC 600
+REG2.2005.BATELC 300
+REG2.2030.BATELC 450
+/
+PARAMETER
+ACT_CSTUP ' '/
+REG1.2005.BATELC.ANNUAL.MEURO05 0.5
+REG2.2005.BATELC.ANNUAL.MEURO05 0.8
+/
+PARAMETER
+STGOUT_BND ' '/
+REG1.2010.BATELC.ELC.ANNUAL.LO 2
+REG1.2015.BATELC.ELC.ANNUAL.LO 2
+REG1.2020.BATELC.ELC.ANNUAL.LO 2.5
+REG1.2030.BATELC.ELC.ANNUAL.LO 3
+REG2.2010.BATELC.ELC.ANNUAL.LO 1
+REG2.2020.BATELC.ELC.ANNUAL.LO 1.5
+/

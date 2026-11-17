@@ -993,6 +993,13 @@ those checks, their figures and their crafted cases are not published
   New crafted case demo12_ucann: layers 1 to 3 PASS in both variants
   from the DD files (objective 24,088,144.66 with CPLEX and HiGHS).
   ONLINE (uc_cap.mod L36-42) stays refused.
+- 17 Nov 2026: M1.3 change 43: EQL_STGCCL (eqactups.vda L121-125), the
+  lifetime cycle limit of a storage process (STG_MAXCYC), refused since
+  M1.1. New crafted case demo12_stgccl. Developed in the cloud workspace:
+  layer 1 at every checkpoint from the DD files with the PyPI GAMS
+  54.6.0 (pre-solve and checkpoint dumps need no licence); the matrix
+  and the objective (layers 2-3) need the licensed GAMS on James's
+  workstation, before merge.
 - 17 Nov 2026: M1.3 change 45: the PRC_STGIPS charging terms of EQ_STSBAL
   at ANNUAL (eqstgtss.mod L78-83). Unreachable in v4.9.7 (RP_STL never has
   ANNUAL: ppmain.mod L23 and L1089), so they are checked on a constructed
