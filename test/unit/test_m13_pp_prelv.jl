@@ -72,7 +72,9 @@ end
     tm = TimesModel(joinpath(FIXTURES, "demo12_off_prep"); switches=merge(fx["switches"], Dict("POWERFLO" => "YES")))
     @test isempty(pp_prelv_unported(tm))                              # phase-angle grids: M1.3 change 27a
     TIMES.gput!(tm, "GR_PTDF", Dict{NTuple{6,String},Float64}(("REG1", "2005", "ELCTECOA00", "ELC", "REG2", "ELC") => 0.5))
-    @test any(s -> occursin("GR_PTDF", s), pp_prelv_unported(tm))   # the PTDF formulation stays refused (27a-2)
+    @test isempty(pp_prelv_unported(tm))                              # the PTDF formulation: M1.3 change 57
+    tm.switches["DSC"] = "YES"; tm.switches["SOLMIP"] = "YES"
+    @test any(s -> occursin("GR_PTDF", s), pp_prelv_unported(tm))   # its discrete candidate lines stay refused
 end
 
 # init_ext.vda L134-135: %POWERFLO% YES comes from the data, not the run file, and a

@@ -202,6 +202,14 @@ Stacked on #154 (branch m13-capflo).
 | 1 | A new crafted case, demo12_dam, with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
 | 2 | %DAMAGE% NLP (eqdamage.mod NLPDAM, BDNLP) stays refused with a message: it is non-linear, so it goes with the features after the M1.3 gate (q5 of 17 Nov 2026), checked with IPOPT like MACRO. | Recommended: yes. Built in. | open |
 
+### #158 M1.3 (57): the PTDF formulation of powerflo.vda; crafted case demo12_ptdf (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | A new crafted case, demo12_ptdf (demo12_pfd plus `ptdf.dd`, CC BY 4.0), with one public CI fixture. | Recommended: yes. Built in. | open |
+| 2 | The discrete candidate lines (GR_PTDF with %DSC% and %SOLMIP% YES: GR_DUNIT, GR_DNCAP, VAR_PTDNCAP, a MIP) stay refused with a message, with the other MIP features after the M1.3 gate (q5 of 17 Nov 2026). | Recommended: yes. Built in. | open |
+| 3 | At a node of a PTDF grid, VAR_COMAUX appears only in EQ_GR_PTDFLO in v4.9.7: no GAMS statement ties it to the node's net injection. Translated as written; to be checked against the TIMES grid user note, and logged as a discrepancy or asked of ETSAP if the note says otherwise. | Recommended: translate as written; check the note. Built in. | open |
+
 ### #147 M1.3 (46): nested user constraints (equserco.mod L75-76, L98-99; pp_qack.mod L53); crafted case demo12_ucn (open)
 
 Logged here because #147 does not touch this file.

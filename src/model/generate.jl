@@ -46,7 +46,8 @@ function untranslated_families(tm::TimesModel)
     end
     # %POWERFLO% YES: phase-angle grids are translated (EQ_GR_POWFLO, M1.3 change 27b), with the allocation of
     # supply and demand to grid nodes (EQ_GR_GENALL, EQ_GR_DEMALL, IREAUX: 27b-2) and the bound on a grid's net
-    # imports and exports (EQ_GR_XBND); PTDF and gas grids are not
+    # imports and exports (EQ_GR_XBND), and the PTDF formulation (EQ_GR_PTDFLO, EQ_GR_VIRTCAP, EQ_GR_VIRTBND: change 57);
+    # gas grids and the PTDF formulation's discrete candidate lines are not
     if yes("POWERFLO")
         foreach(w -> note!("(variant POWERFLO)", "powerflo.vda", w), powerflo_model_unported(tm))
     end
@@ -148,6 +149,9 @@ function generate!(tm::TimesModel)
     n += eq_rl!(tm)                  # VDA: equ_ext.vda L102, resloadc.vda EQUA (GR_VARGEN)
     n += eq_ucrtp!(tm)               # VDA: equ_ext.vda L105-106
     n += eq_gr_powflo!(tm)           # VDA: equ_ext.vda L101 (powerflo.vda POWFLO, M1.3 change 27b)
+    n += eq_gr_ptdflo!(tm)           #   powerflo.vda L262-274 (M1.3 change 57)
+    n += eq_gr_virtcap!(tm)          #   powerflo.vda L276-279
+    n += eq_gr_virtbnd!(tm)          #   powerflo.vda L281-287
     n += eq_gr_genall!(tm)           #   powerflo.vda L290-313 (M1.3 change 27b-2)
     n += eq_gr_demall!(tm)           #   powerflo.vda L314-340 (M1.3 change 27b-2)
     n += eq_gr_xbnd!(tm)             #   powerflo.vda L341-359

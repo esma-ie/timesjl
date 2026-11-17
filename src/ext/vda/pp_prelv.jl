@@ -19,8 +19,8 @@
 # zero removes a record; `$=` writes only nonzero or EPS (G24); a statement
 # reads the values from before it (G11).
 #
-# Refused: GR_PTDF, node-allocation and gas-grid data under %POWERFLO% YES (L114,
-# powerflo.vda: `powerflo_main!`, M1.3 change 27a) and TS_OFF data (L125:
+# Refused: GR_DEMFR and gas-grid data under %POWERFLO% YES, and GR_PTDF with %DSC%
+# and %SOLMIP% YES (L114, powerflo.vda: `powerflo_main!`, M1.3 changes 27a, 57) and TS_OFF data (L125:
 # dynslite.vda PRELEV runs when %RTS% is not S, that is with TS_OFF data,
 # timslice.mod L33; no core model has any). Not translated: the DISPLAY of
 # L18. The QA log of L81-85 is written (M1.3 change 25b-1). %SHELL% ANSWER
