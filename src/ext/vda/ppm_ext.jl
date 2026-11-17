@@ -16,8 +16,7 @@
 # ppm_ext.dsc exits at L12 (%DSC% is NO, init_ext.dsc L15-23: discrete
 # capacities are refused there), and ppm_ext.vda is included as
 # `ppm_ext.vda VDA mod`, so `pp_actef.%1` is pp_actef.vda. Refused
-# (UnportedError): GR_VARGEN data (L12, resloadc.vda; refused at prep_ext.vda
-# L38 already), discrete capacities (ppm_ext.dsc L16), RP_FFSGG (L76-83, the
+# (UnportedError): discrete capacities (ppm_ext.dsc L16), RP_FFSGG (L76-83, the
 # stochastic extension), dynslite.vda (L169, %DYNTS% YES with TS_OFF data).
 # Index sets: R is REG, V MODLYEAR (without '0', so a condition on a '0'
 # record stays put while V runs), LL ALLYEAR, T MILESTONYR, S TS SL ALL_TS,
@@ -45,7 +44,6 @@ What ppm_ext.dsc and ppm_ext.vda L11-58 meet that is not translated.
 function ppm_ext_unported(tm)
     out = String[]
     append!(out, init_ext_dsc_unported(tm))
-    isempty(gparam_opt(tm.data, "GR_VARGEN", 4).keys) || push!(out, "ppm_ext.vda L12 (GR_VARGEN has data: resloadc.vda COEF)")
     return out
 end
 
@@ -111,7 +109,8 @@ function ppm_ext_actef!(tm)
     ingrp(r, p, cg, io) = [c for c in get(top_of, (r, p, io), String[]) if (r, cg, c) in gmap]
 
     # --- ppm_ext.vda L12-15: dispatching and partial loads -----------------------------------------------
-    # L12: $IF DEFINED GR_VARGEN $BATINCLUDE resloadc.vda COEF   (no data: ppm_ext_unported)
+    # L12: $IF DEFINED GR_VARGEN $BATINCLUDE resloadc.vda COEF (M1.3 change 55)
+    resloadc_coef!(tm)
     # L13: OPTION RP_UPL < ACT_UPS  (ACT_UPS(R,ALLYEAR,P,S,L) -> RP_UPL(R,P,L))
     rp_upl = project(keys(gvalues(tm, "ACT_UPS", 5)), (1, 3, 5))
     # L14: RP_UPL(RP,L)$(NOT PRC_CAP(RP)*RP_STD(RP)) = NO

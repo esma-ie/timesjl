@@ -21,8 +21,7 @@
 # init_ext.dsc leaves YES only with discrete-capacity data (refused there,
 # init_ext.jl). The other extensions (ECB, MACRO, ETL, CLI, ABS, MCA, and
 # STAGES at preppm.mod L214) are refused, as are gas grids under %POWERFLO%
-# YES (L37, powerflo.vda PREP: `powerflo_prep!`, M1.3 change 27a), GR_VARGEN
-# data (L38, resloadc.vda), %VINTOPT% 1 (L42-43,
+# YES (L37, powerflo.vda PREP: `powerflo_prep!`, M1.3 change 27a), %VINTOPT% 1 (L42-43,
 # fillvint.gms with arguments) and %WAVER% YES (L63). L63 is compiled only
 # with %WAVER% YES (`$IFI` takes the rest of the line), so without it the line
 # does nothing. L75 (`$IF NOT DEFINED VNRET $CLEAR RCAP_OCAP`) is a
@@ -39,7 +38,6 @@ function prep_ext_unported(tm)
     gswitch(tm, "MACRO", "") == "" || push!(out, "prep_ext.tm/.mlf (MACRO set)")
     dsc_loaded(tm) && append!(out, init_ext_dsc_unported(tm))
     yes("POWERFLO") && append!(out, powerflo_unported(tm))
-    hasdata(tm, "GR_VARGEN", 4) && push!(out, "prep_ext.vda L38 (GR_VARGEN has data: resloadc.vda)")
     # UC_ACTBET: init_ext.vda L131-132 compiles an assignment to UC_FLOBET, so it is DEFINED (L35); its
     # records are those init_ext! copied, and a DEFINED UC_FLOBET without records changes nothing (ucbet.jl)
     strip(gswitch(tm, "VINTOPT", "")) == "1" && push!(out, "prep_ext.vda L42-43 (VINTOPT 1: fillvint.gms with arguments)")
@@ -175,6 +173,8 @@ function prep_ext_vda!(st::InterpState)
     hasdata(tm, "COM_CSTBAL", 6) && fillparm!(st, "COM_CSTBAL", "R", "C,S,ITEM,CUR", pd(",'0','0'"), T, one, ge0)
     # L37: $IFI %POWERFLO%==YES $BATINCLUDE powerflo.vda PREP (M1.3 change 27a)
     uppercase(strip(gswitch(tm, "POWERFLO", ""), ['\'', '"'])) == "YES" && powerflo_prep!(st)
+    # L38: $IF DEFINED GR_VARGEN $BATINCLUDE resloadc.vda (M1.3 change 55)
+    resloadc_prep!(st, T)
     # L39: $BATINCLUDE equcrtp.vda PREP_EXT
     equcrtp_prep_ext!(st)
 

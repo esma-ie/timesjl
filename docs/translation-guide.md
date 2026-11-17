@@ -1042,6 +1042,12 @@ those checks, their figures and their crafted cases are not published
   PASS in both variants from the DD files (objective 23,961,596.62).
   COEF_RCOM is empty outside the capacity transfer, as in GAMS (coef_nio.mod
   L58 runs before coef_alt.lin L77 fills COEF_CPT).
+- 17 Nov 2026: M1.3 change 55: the residual load curve constraints of the
+  VDA extension (resloadc.vda, GR_VARGEN). New crafted case demo12_rldc:
+  layers 1 to 3 PASS in both variants from the DD files (objective
+  23,960,706.31). The DD reader reads `(SET.R)` in a record key and lists
+  the dump's labels dimension by dimension (G55); D45 logs GAMS's
+  'RL_THMIN' spelling.
 - 17 Nov 2026: James's answers (docs/decisions.md): the M1.3 gate covers
   the linear features only (ETL, the DSC lumpy investments and block
   retirements, the discrete unit commitment and TIMES-Micro after it);
