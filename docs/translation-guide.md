@@ -1025,6 +1025,11 @@ those checks, their figures and their crafted cases are not published
   demo12 with a third internal region REG3 (a gas hub and a fan-out
   exporter, both marketplaces): layers 1 to 3 PASS in both variants from
   the DD files (objective 23,960,686.52 with CPLEX and HiGHS).
+- 17 Nov 2026: M1.3 change 52: storage flexibility, %STSFLX% YES
+  (eqstgtss.mod L53-93 with EQ_STSLEV, and the VAR_STS macro of
+  coef_ext.vda L31 in EQ(l)_CAPACT and EQL_CAPFLO), refused since M1.1.
+  New crafted case demo12_stsflx: layers 1 to 3 PASS in both variants
+  from the DD files (objective 23,960,741.42 with CPLEX and HiGHS).
 - 17 Nov 2026: James's answers (docs/decisions.md): the M1.3 gate covers
   the linear features only (ETL, the DSC lumpy investments and block
   retirements, the discrete unit commitment and TIMES-Micro after it);

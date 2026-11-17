@@ -78,12 +78,8 @@ function untranslated_families(tm::TimesModel)
             note!(fam, gams, "$sym is not empty")
         end
     end
-    # EQ_STGTSS and EQ_STSBAL are translated except for storage flexibility
-    # (%STSFLX%: RP_STL entries other than 'N', with EQ_STSLEV).
-    let k = findfirst(k -> k[4] != "N", gset(tm, "RP_STL").keys)
-        k === nothing || note!("EQ_STSLEV and the STSFLX terms of EQ_STSBAL", "eqstgtss.mod L56-73, L88-93",
-                               "RP_STL$(gset(tm, "RP_STL").keys[k])")
-    end
+    # EQ_STGTSS, EQ_STSBAL and EQ_STSLEV are translated, storage flexibility (%STSFLX%) included
+    # (M1.3 change 52).
     # User constraints (equserco.jl): every attribute and nested UCs are translated (ANNUL with
     # INVCOST, INVTAX, INVSUB: M1.3 change 42; ONLINE: change 44; nested UCs, UC_UCN: change 46).
     return out

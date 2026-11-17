@@ -163,6 +163,12 @@ On 17 Nov 2026 James answered three questions of the list in the chat (below, un
 | 1 | A new crafted case, demo12_mkt, with one public CI fixture (as run, about 4 MB): demo12 with a third internal region REG3, since a marketplace needs a region between two others or an exporter to two regions (ppmain.mod L865-868), which two regions cannot give. REG3 copies demo12's timeslices, year fractions and discount rate and holds only GAS. | Recommended: yes. Built in. | open |
 | 2 | EQ(l)_IREBND's plain export term (eqirebnd.mod L56) now tests NOT RPC_MARKET(R,P,C,'EXP'), as GAMS does; before this change no marketplace could exist, so the test changes no earlier row. | Recommended: yes. Built in. | open |
 
+### #153 M1.3 (52): storage flexibility, %STSFLX% YES (eqstgtss.mod L53-93, EQ_STSLEV; coef_ext.vda L31); crafted case demo12_stsflx (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | A new crafted case, demo12_stsflx, with one public CI fixture (as run, about 4 MB): demo12 with a general timeslice storage STSELC (PRC_MAP STS) and $SET STSFLX YES. demo12_stgccl's battery cannot serve: it is not an STS storage, so it has no RP_STL entries. | Recommended: yes. Built in. | open |
+
 ### #147 M1.3 (46): nested user constraints (equserco.mod L75-76, L98-99; pp_qack.mod L53); crafted case demo12_ucn (open)
 
 Logged here because #147 does not touch this file.
