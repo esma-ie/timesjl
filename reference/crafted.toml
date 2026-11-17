@@ -788,3 +788,19 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_ucbet/demo12_ucbet.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_ucbet"]
+
+# TIMES_Demo demo12 + demo12_scapin/olife.dd (17 Nov 2026): the IN rows of EQL_SCAP (prepret.dsc
+# L105-107, salvage limited by activity) with NCAP_OLIFE on a vintaged process (ELCTNGAS01, both
+# regions) and on a past vintage of a process that is not vintaged (ELCTECOA00 1995, REG1)
+# (M1.3 change 48).
+[[model]]
+name = "TIMES_Demo-demo12_scapin"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_scapin/demo12_scapin.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_scapin"]

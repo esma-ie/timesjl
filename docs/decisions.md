@@ -133,6 +133,13 @@ On 17 Nov 2026 James answered three questions of the list in the chat (below, un
 | 1 | `$IF DEFINED UC_FLOBET` (equ_ext.vda L99, mod_ext.vda L39) is read as "UC_FLOBET has records after init_ext and prep_ext". GAMS also includes ucbet.vda for a UC_FLOBET or UC_ACTBET given with no records; then the file changes nothing that is read later (no UC_GMAX entry, so no row; UC_GMAXR emptied again by L38; only the scratch sets UNCD1 and RXX are cleared). The refusal of UC_ACTBET data at prep_ext.vda L35 goes with it. | Recommended: yes. Built in. | answered by James, 17 Nov 2026: yes |
 | 2 | Keep the crafted case demo12_ucbet (demo12 + ucbet.dd, CC BY 4.0) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | answered by James, 17 Nov 2026: yes |
 
+### #149 M1.3 (48): the IN rows of EQL_SCAP, salvage limited by activity (prepret.dsc L105-107); crafted case demo12_scapin (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | `%IREAUXBAL%` set by the run itself, not by powerflo.vda DECL (L221): GAMS pastes the run's own text into the balance at cal_ire.mod L30, so there is no GAMS code to translate. It stays refused with its message (eqcombal.jl, eqpeak.jl), as a run that supplies its own GAMS code, and leaves the list of features left before the M1.3 gate. | Recommended: yes. Built in (no code change). | open |
+| 2 | Keep the crafted case demo12_scapin (demo12 + olife.dd, CC BY 4.0) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
+
 ### #147 M1.3 (46): nested user constraints (equserco.mod L75-76, L98-99; pp_qack.mod L53); crafted case demo12_ucn (open)
 
 Logged here because #147 does not touch this file.

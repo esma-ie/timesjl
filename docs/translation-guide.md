@@ -1004,6 +1004,12 @@ those checks, their figures and their crafted cases are not published
   at ANNUAL (eqstgtss.mod L78-83). Unreachable in v4.9.7 (RP_STL never has
   ANNUAL: ppmain.mod L23 and L1089), so they are checked on a constructed
   state only, with no GAMS reference; the refusal is removed.
+- 17 Nov 2026: M1.3 change 48: the IN rows of EQL_SCAP, salvage limited
+  by activity (prepret.dsc L105-107, NCAP_OLIFE), refused since change
+  20b-1. New crafted case demo12_scapin: layers 1 to 3 PASS in both
+  variants from the DD files (12 IN rows, 8 binding; objective
+  23,972,884.01 with CPLEX and HiGHS). %IREAUXBAL% set by the run itself
+  (cal_ire.mod L30) stays refused: it is the run's own GAMS text (#149 d1).
 - 17 Nov 2026: James's answers (docs/decisions.md): the M1.3 gate covers
   the linear features only (ETL, the DSC lumpy investments and block
   retirements, the discrete unit commitment and TIMES-Micro after it);
