@@ -29,7 +29,10 @@ large core models (or none of them) reach.
 
 Extension scope (docs/translation-guide.md): core and VDA in Phase 1, DSC next;
 the stochastic extension, ETL, MACRO with MSA and damage costs before the M1.3
-gate (James, 15 Nov 2026); the other extensions after M1.7.
+gate (James, 15 Nov 2026); the other extensions after M1.7. From 17 Nov 2026
+(James) the gate covers the linear features only: the stochastic extension and
+damage costs before it; ETL (a MIP), the DSC lumpy investments, the discrete unit
+commitment, TIMES-Micro and MACRO (checked with IPOPT) after it.
 
 ## Order: the order the features entered TIMES (James, 5 Nov 2026)
 
@@ -47,7 +50,8 @@ gate (James, 15 Nov 2026); the other extensions after M1.7.
 Later, outside Phase 1's core and VDA scope: lumpy investments and early
 retirement (DSC); logit market sharing (ECB), MLF, the Climate Module; the
 Weymouth gas grid (nonlinear). MACRO-MSA, stochastics, ETL and damage costs
-moved before the M1.3 gate (James, 15 Nov 2026).
+moved before the M1.3 gate (James, 15 Nov 2026); ETL and MACRO-MSA moved after
+it again on 17 Nov 2026 (James: the gate covers the linear features only).
 
 Crafted cases outside this list: features older than the ones above, refused
 until a case was made for them (James, 14 Nov 2026: every remaining refused

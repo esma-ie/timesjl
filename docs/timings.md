@@ -1,8 +1,11 @@
 # Model-generation timings, TIMES.jl against GAMS
 
 The translation guide's definition of done asks for timings logged against
-GAMS; the Phase 1 target is model generation (preprocessing to solver
-hand-off) no worse than 5x GAMS, warm, at M1.7, measured on one machine.
+GAMS. The speed target, model generation (preprocessing to solver
+hand-off) no worse than 5x GAMS, warm, measured on one machine, was set for
+M1.7 on 18 Oct 2026 and moved to Phase 2 on 17 Nov 2026 (James;
+docs/phase2-notes.md, P2-6). References to the M1.7 target below date from
+before that.
 Produced with `scripts/m11_timing.jl` (see its header for what each column
 means).
 
