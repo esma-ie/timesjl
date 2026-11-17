@@ -195,6 +195,13 @@ Stacked on #154 (branch m13-capflo).
 | 2 | The DD reader (M1.4 code) changes in this M1.3 change: it reads `(SET.name)` in a record key (resloadc.vda L16) and lists the dump's labels dimension by dimension, as the harness does (G55 refined). The label lists of demo12_rldc, five other demo12 cases, OTNYC, OTCGEN, TIMES-NZ and OTUS9r stay identical to GAMS's. | Recommended: yes. Built in. | open |
 | 3 | 'RL_THMIN' (resloadc.vda L111, L144) is translated as GAMS spells it, a second VAR_RLD column beside 'RL-THMIN' (D45). Report it to ETSAP with the COEF_RCOM note (#155 d2)? | Recommended: yes, in the same note. | open (no default built in) |
 
+### #157 M1.3 (56): damage costs in their linear form (eqdamage.mod); crafted case demo12_dam (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | A new crafted case, demo12_dam, with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
+| 2 | %DAMAGE% NLP (eqdamage.mod NLPDAM, BDNLP) stays refused with a message: it is non-linear, so it goes with the features after the M1.3 gate (q5 of 17 Nov 2026), checked with IPOPT like MACRO. | Recommended: yes. Built in. | open |
+
 ### #147 M1.3 (46): nested user constraints (equserco.mod L75-76, L98-99; pp_qack.mod L53); crafted case demo12_ucn (open)
 
 Logged here because #147 does not touch this file.

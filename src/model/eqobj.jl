@@ -77,7 +77,6 @@ function objective_unported(tm::TimesModel)
     yes("ETL") && throw(UnportedError("ETL terms in the objective (eqobjinv.mod L292, eqobsalv.mod L102-103)"))
     yes("VALIDATE") && throw(UnportedError("VALIDATE branches of the objective"))
     yes("STAGES") && throw(UnportedError("stochastic objective (STAGES)"))
-    isempty(gparam_opt(d, "DAM_COST", 4)) || throw(UnportedError("damage costs (eqdamage.mod via eqmain.mod L262)"))
     isempty(gset_opt(d, "RCJ", 4)) || throw(UnportedError("elastic demand costs (eqobjels.mod, EQ_OBJ L89-90)"))
     return nothing
 end

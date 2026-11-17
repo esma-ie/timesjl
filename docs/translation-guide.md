@@ -1048,6 +1048,10 @@ those checks, their figures and their crafted cases are not published
   23,960,706.31). The DD reader reads `(SET.R)` in a record key and lists
   the dump's labels dimension by dimension (G55); D45 logs GAMS's
   'RL_THMIN' spelling.
+- 17 Nov 2026: M1.3 change 56: damage costs in their linear form
+  (eqdamage.mod: EQ_DAMAGE, EQ_OBJDAM, the VAR_DAM steps). New crafted
+  case demo12_dam: layers 1 to 3 PASS in both variants from the DD files
+  (objective 24,391,292.52). %DAMAGE% NLP stays refused.
 - 17 Nov 2026: James's answers (docs/decisions.md): the M1.3 gate covers
   the linear features only (ETL, the DSC lumpy investments and block
   retirements, the discrete unit commitment and TIMES-Micro after it);

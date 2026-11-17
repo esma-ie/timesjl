@@ -735,3 +735,16 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 3461
 cols = 4755
 nonzeros = 19530
+
+# Crafted case TIMES_Demo-demo12_dam (reference/crafted.toml: demo12 + dam.dd), 17 Nov 2026 (GAMS 54.6.1 + CPLEX
+# and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): damage costs in their linear form (eqdamage.mod), the
+# whole model. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_dam"
+model    = "TIMES_Demo-demo12_dam"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3259
+cols = 4589
+nonzeros = 18643
