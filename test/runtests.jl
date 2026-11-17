@@ -184,6 +184,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "Commodity bounds above the tracked level: eqbndcom.mod on demo12_bndc (M1.3)" begin
         include("unit/test_eqbndcom.jl")
     end
+    @testset "EQ_STSBAL at ANNUAL, PRC_STGIPS charging (constructed state, M1.3)" begin
+        include("unit/test_eqstgtss_ips.jl")
+    end
     @testset "Flow bounds as equations: eqflobnd.mod on demo12_flobnd (M1.3)" begin
         include("unit/test_eqflobnd.jl")
     end

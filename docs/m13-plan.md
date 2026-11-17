@@ -146,6 +146,7 @@ GAMS 54.6.1):
 | 41 | EQ_GR_XBND, refused since M1.3 (27b): with GR_XBND data, the bound on a region's net imports into and exports from each power-flow grid it is part of, as a share of the capacity of its lines to other regions in each of its finest timeslices: the line's own capacity in the region, else its capacity in the other region if that region is internal; past investments are constants | powerflo.vda 341-359 | layers 1 to 3 on the crafted case demo12_pfx (demo12_pfd with GR_XBND in both regions and a past investment in the REG1-REG2 line in REG2 only), both variants, from the DD files: 96 rows in each variant; as run, 48 of REG1's rows take the line's capacity in REG2 (CI: demo12_pfx public fixture) |
 | 42 | The user-constraint attributes ANNUL, INVCOST, INVTAX and INVSUB, refused since M1.3 (22) (James, 15 Nov 2026: yes to #123, decision 4): in the RHS direction of a dynamic constraint the NCAP term adds the annual, undiscounted investment cost, tax and subsidy CST_ANNC of each vintage in the milestone year of the period (eqbndcst.mod L49-77); the term is compiled in only where uc_ncap.mod's %3 and %6 are written differently (equserco.mod L87) | uc_ncap.mod 39 | layers 1 to 3 on the crafted case demo12_ucann (demo12 with investment taxes and subsidies and three user constraints: INVCOST in each region, INVTAX and INVSUB with COST summed over the regions, INVCOST on both sides), both variants, from the DD files; 24 new rows in each variant (18 EQE_UCRSU, 6 EQE_UCSU), every constraint binding somewhere in GAMS's optimum; objective 24,088,144.66 (CI: demo12_ucann public fixture) |
 | 43 | EQL_STGCCL, refused since M1.1: the limit on the number of storage cycles over a storage process's lifetime (STG_MAXCYC), relaxed by the extra on-line capacity VAR_UPS(R,V,T,P,'ANNUAL','UP') at the annualised start-up cost ACT_CSTUP (coef_ext.vda L39; its objective term, eqobjvar.mod L37, and the preparation, init_ext.vda L67, prep_ext.vda L34, eqactups.vda L25, were translated before). %MX% is the capacity macro of L35 without %TMP%, so also for a process in RP_UX | eqactups.vda 121-125 (with 35) | layer 1 at every checkpoint on the crafted case demo12_stgccl (a DAYNITE battery in both regions, REG2 vintaged with a past investment; a lower bound on the annual discharge so the limit binds), both variants, from the DD files, with the PyPI GAMS (17 Nov 2026, cloud); layers 2-3 on James's workstation before merge |
+| 45 | The PRC_STGIPS charging terms of EQ_STSBAL at ANNUAL, refused since M1.1: +1/PRC_ACTFLO*VAR_SIN(C) for an input, -VAR_SOUT(C) for an output of each PRC_STGIPS commodity, in the row at S = ANNUAL. No row of v4.9.7 reaches them: RP_STL's levels are TSL+1 (ppmain.mod L1089: SEASON and below; ppm_ext.vda L141 adds 'UP' at the same levels) and RP_STL is declared after the DD files are read (ppmain.mod L23), so no data and no GAMS run gives a row at ANNUAL. Translated as written so the refusal goes | eqstgtss.mod 78-83 | a constructed state only (CI: test_eqstgtss_ips.jl, demo12_ips with RP_STL(REG1,STKOIL1,ANNUAL,N) added): the three terms and their coefficients. No GAMS reference exists or can be made |
 
 ## Parity (per change)
 
@@ -167,6 +168,13 @@ with the PyPI GAMS (no solve: `make_reference.py --only presolve`); James's
 workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 ## Gate
+
+Scope (James, 14 and 17 Nov 2026): the gate is passed once every remaining
+refused linear feature is translated and tested, with the stochastic extension
+and damage costs. The mixed-integer and nonlinear features (the DSC lumpy
+investments and block retirements, the discrete unit commitment, ETL,
+TIMES-Micro) and MACRO (checked with IPOPT) come after it, refused with a
+message until then (docs/decisions.md, 17 Nov 2026).
 
 - Input dump to `ppm/` at 1e-9 on every core model, reduce_off and as_run
   (TIM-bau locally).

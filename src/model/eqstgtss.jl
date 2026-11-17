@@ -47,8 +47,8 @@
 # - storage flexibility, %STSFLX% = YES (coef_ext.vda L32 keeps RP_STL entries
 #   other than 'N'): the VAR_UDP/VAR_STS and $RP_STL(R,P,TSL,'UP') terms of
 #   EQ_STSBAL (L56, L62-63, L73) and EQ_STSLEV (L88-93);
-# - inter-period storage: the PRC_STGIPS charging terms of EQ_STSBAL at
-#   ANNUAL (L78-81);
+# (The PRC_STGIPS charging terms of EQ_STSBAL at ANNUAL, L78-81, are
+#   translated in M1.3 change 45; no row of v4.9.7 reaches them, see eq_stsbal!.)
 # - dynamic timeslices (NORTS).
 
 """
@@ -223,8 +223,19 @@ that level in PRC_TS,
 
 with STG_LOSS = STG_LOSS(R,V,P,SL). Without %STSFLX% (coef_ext.vda L32)
 RP_STL only has L = 'N' (ppmain.mod L1089), so IPS(L) holds and BD(L) does
-not; the S = ANNUAL term is reached by no such row (RP_STL's levels are below
-ANNUAL), so it is written as GAMS has it but not exercised by a test.
+not; the S = ANNUAL term (L78-83) is reached by no such row: RP_STL's levels
+are TSL+1 (ppmain.mod L1089, SEASON and below; ppm_ext.vda L141 adds 'UP'
+at the same levels) and RP_STL is declared after the DD files are read
+(ppmain.mod L23), so no data can give it ANNUAL. The term, with the
+PRC_STGIPS charging of L80-81 (M1.3 change 45), is written as GAMS has it
+and checked on a constructed state only (test_eqstgtss_ips.jl), with no
+GAMS reference: GAMS cannot reach it either.
+
+    SUM(ANNUAL(S), SUM(TOP(PRC_STGIPS(R,P,C),IO), 1/PRC_ACTFLO(R,V,P,C) *
+        VAR_SIN(R,V,T,P,C,S)\$IPS(IO) - VAR_SOUT(R,V,T,P,C,S)\$(NOT IPS(IO))) -
+        VAR_SOUT(R,V,T,P,%PGPRIM%,S))
+
+The 1/PRC_ACTFLO factor binds to the VAR_SIN term only (GAMS precedence).
 
 GAMS: eqstgtss.mod L53-83, v4.9.7.
 """
@@ -234,6 +245,7 @@ function eq_stsbal!(tm::TimesModel)
     stl_of_rp = indexby(gset(tm, "RP_STL"), (1, 2))         # (r,p) -> RP_STL(r,p,tsl,l)
     group_of = indexby(gset(tm, "TS_GROUP"), (1, 2))        # (r,tsl) -> TS_GROUP(r,tsl,s)
     ips, bd = gset(tm, "IPS"), gset(tm, "BD")
+    top, actflo = gset(tm, "TOP"), gparam_opt(tm.data, "PRC_ACTFLO", 4)
     vx, tx = gset(tm, "MODLYEAR"), eq_periods(tm)                 # %R_V_T%: V, and SUBT in a stepped run (maindrv.mod L38-40)
     n = 0
     for (r, v, t, p) in gset(tm, "RTP_VINTYR")
@@ -261,8 +273,16 @@ function eq_stsbal!(tm::TimesModel)
                 end
             end
             if s == "ANNUAL"                                                                 # L78-83
-                isempty(get(x.stgips_of_rp, (r, p), NTuple{3,String}[])) || throw(UnportedError(
-                    "eqstgtss.mod L80-81: PRC_STGIPS charging terms of EQ_STSBAL for ($r, $p)"))
+                for (_, _, c) in get(x.stgips_of_rp, (r, p), NTuple{3,String}[])            # L80-81
+                    for io in ("IN", "OUT")
+                        (r, p, c, io) in top || continue
+                        if (io,) in ips
+                            addterm!(rhs, one / gv(actflo, (r, v, p, c)), tm, "VAR_SIN", r, v, t, p, c, s)
+                        else
+                            addterm!(rhs, -one, tm, "VAR_SOUT", r, v, t, p, c, s)
+                        end
+                    end
+                end
                 addterm!(rhs, -one, tm, "VAR_SOUT", r, v, t, p, "ACT", s)
             end
             gconstraint!(tm, "EQ_STSBAL", (r, v, t, p, tsl, s, l), "E", lhs, rhs) === nothing || (n += 1)
