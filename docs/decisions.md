@@ -62,6 +62,7 @@ On 17 Nov 2026 James answered three questions of the list in the chat (below, un
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 17 Nov 2026 | q8: James is in Athens until Saturday 21 Nov 2026. Until then the check-ins are at 07:00 and 20:00 Athens time (05:00 and 18:00 on the workstation, GMT), and both dashboards are refreshed before 07:00 Athens. The nightly loop runs without an end time, so its start needs no change. From Sunday 22 Nov the check-ins are again at 9:00 and 16:30. | this log; the workstation's notes |
 | 17 Nov 2026 | q7: "lets stay on times v4.9.7 until the planned update to newer TIMES." No v4.9.8 reference batch before the plan's move (#109 d3: after every remaining feature is translated and tested; then the whole baseline moves at the M1.3 gate); the nightlies stay on v4.9.7. | this log; CLAUDE.md (Baseline) unchanged |
 | 17 Nov 2026 | q6: "bring all work back to local workstation." Every remaining M1.3 change, and its GAMS layer 2-3 run, is made in the Claude Code session on James's workstation; the cloud session that opened #143 to #147 takes no more translation work. | this log; the workstation's notes |
 | 17 Nov 2026 | q5 (asked 16 Nov 2026): yes. The M1.3 gate covers the linear features only. The mixed-integer and nonlinear features move after the gate, as the discrete unit commitment did (#120 d5): the lumpy investments and block retirements of the DSC options (`NCAP_SEMI`, `PRC_DSCNCAP`), the discrete unit commitment (`DUC` YES), TIMES-Micro (`RD_NLP`, `MICRO` YES) and, added by Claude and agreed by James, ETL (`mod_vars.etl` L18 declares binary variables, so an ETL run is a MIP). They stay refused with a message until then. Rule-level (the milestone scope); explicit yes. | `docs/translation-guide.md` (Decisions); `docs/m13-plan.md` (Gate); `docs/demo12-variants.md`; this log |
@@ -129,8 +130,8 @@ On 17 Nov 2026 James answered three questions of the list in the chat (below, un
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | `$IF DEFINED UC_FLOBET` (equ_ext.vda L99, mod_ext.vda L39) is read as "UC_FLOBET has records after init_ext and prep_ext". GAMS also includes ucbet.vda for a UC_FLOBET or UC_ACTBET given with no records; then the file changes nothing that is read later (no UC_GMAX entry, so no row; UC_GMAXR emptied again by L38; only the scratch sets UNCD1 and RXX are cleared). The refusal of UC_ACTBET data at prep_ext.vda L35 goes with it. | Recommended: yes. Built in. | open |
-| 2 | Keep the crafted case demo12_ucbet (demo12 + ucbet.dd, CC BY 4.0) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
+| 1 | `$IF DEFINED UC_FLOBET` (equ_ext.vda L99, mod_ext.vda L39) is read as "UC_FLOBET has records after init_ext and prep_ext". GAMS also includes ucbet.vda for a UC_FLOBET or UC_ACTBET given with no records; then the file changes nothing that is read later (no UC_GMAX entry, so no row; UC_GMAXR emptied again by L38; only the scratch sets UNCD1 and RXX are cleared). The refusal of UC_ACTBET data at prep_ext.vda L35 goes with it. | Recommended: yes. Built in. | answered by James, 17 Nov 2026: yes |
+| 2 | Keep the crafted case demo12_ucbet (demo12 + ucbet.dd, CC BY 4.0) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | answered by James, 17 Nov 2026: yes |
 
 ### #147 M1.3 (46): nested user constraints (equserco.mod L75-76, L98-99; pp_qack.mod L53); crafted case demo12_ucn (open)
 
