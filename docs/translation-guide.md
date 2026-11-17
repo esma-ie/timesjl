@@ -984,3 +984,7 @@ those checks, their figures and their crafted cases are not published
   New crafted case demo12_ucann: layers 1 to 3 PASS in both variants
   from the DD files (objective 24,088,144.66 with CPLEX and HiGHS).
   ONLINE (uc_cap.mod L36-42) stays refused.
+- 17 Nov 2026: M1.3 change 45: the PRC_STGIPS charging terms of EQ_STSBAL
+  at ANNUAL (eqstgtss.mod L78-83). Unreachable in v4.9.7 (RP_STL never has
+  ANNUAL: ppmain.mod L23 and L1089), so they are checked on a constructed
+  state only, with no GAMS reference; the refusal is removed.
