@@ -1,0 +1,78 @@
+* TIMES.jl crafted case demo12_ucn (reference/crafted.toml, 17 Nov 2026): nested user
+* constraints (UC_UCN, UC_GMAP_U; equserco.mod L75-76 and L98-99), added to TIMES_Demo demo12
+* (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0), for M1.3 change 46. The variable of a
+* region-period constraint with an 'N' right-hand side, VAR_UCRT(UCN,R,T), enters a dynamic
+* constraint with the multiplier UC_UCN:
+* - GASCAP (REG1 and REG2, UC_R_EACH): the capacity of the two gas plants, defined by an 'N'
+*   right-hand side (the value 0 is EPS under $ONEPS), so VAR_UCRT(GASCAP,R,T) is that capacity.
+* - GRW_GASN (REG1): dynamic through UC_T_SUCC, in the LHS direction (equserco.mod L56-78): the
+*   nested GASCAP at T on the LHS and at T+1 on the RHS (UC_TMAP 'N'), so the gas capacity may
+*   fall by a bounded amount from one period to the next.
+* - GRW_GASR (REG2): dynamic in the RHS direction (UC_DYNDIR 'RHS' from the GROWTH attribute on
+*   its RHS CAP term, ppmain.mod L1158): the new gas plant's capacity at T against its capacity
+*   at T-1 with GROWTH, plus the nested GASCAP at T-1 with a multiplier interpolated between
+*   2005 and 2030 (preppm.mod L174).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET UC_N
+/
+GASCAP 'Crafted: gas-plant capacity, an N constraint (TIMES.jl demo12_ucn)'
+GRW_GASN 'Crafted: change of the nested gas capacity, LHS direction (TIMES.jl demo12_ucn)'
+GRW_GASR 'Crafted: growth of new gas capacity with the nested gas capacity (TIMES.jl demo12_ucn)'
+/
+SET UC_R_EACH
+/
+REG1.GASCAP
+REG2.GASCAP
+REG1.GRW_GASN
+REG2.GRW_GASR
+/
+SET UC_T_SUCC
+/
+REG1.GRW_GASN.2005
+REG1.GRW_GASN.2010
+REG1.GRW_GASN.2015
+REG1.GRW_GASN.2020
+REG1.GRW_GASN.2030
+REG1.GRW_GASN.2050
+/
+SET UC_ATTR
+/
+REG2.GRW_GASR.RHS.CAP.GROWTH
+/
+PARAMETER
+UC_CAP ' '/
+GASCAP.LHS.REG1.2005.ELCTEGAS00 1
+GASCAP.LHS.REG1.2005.ELCTNGAS01 1
+GASCAP.LHS.REG2.2005.ELCTEGAS00 1
+GASCAP.LHS.REG2.2005.ELCTNGAS01 1
+GRW_GASR.LHS.REG2.2005.ELCTNGAS01 1
+GRW_GASR.RHS.REG2.2005.ELCTNGAS01 1.05
+/
+PARAMETER
+UC_UCN ' '/
+GRW_GASN.LHS.REG1.2005.GASCAP 1
+GRW_GASN.RHS.REG1.2005.GASCAP 1.2
+GRW_GASR.RHS.REG2.2005.GASCAP 0.2
+GRW_GASR.RHS.REG2.2030.GASCAP 0.4
+/
+PARAMETER
+UC_RHSRT ' '/
+REG1.GASCAP.2005.N 0
+REG1.GASCAP.2010.N 0
+REG1.GASCAP.2015.N 0
+REG1.GASCAP.2020.N 0
+REG1.GASCAP.2030.N 0
+REG1.GASCAP.2050.N 0
+REG2.GASCAP.2005.N 0
+REG2.GASCAP.2010.N 0
+REG2.GASCAP.2015.N 0
+REG2.GASCAP.2020.N 0
+REG2.GASCAP.2030.N 0
+REG2.GASCAP.2050.N 0
+REG1.GRW_GASN.0.UP 5
+REG1.GRW_GASN.2005.UP 15
+REG2.GRW_GASR.0.UP 5
+REG2.GRW_GASR.2005.UP 5
+/

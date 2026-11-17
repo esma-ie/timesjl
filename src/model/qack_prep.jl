@@ -11,8 +11,8 @@
 # FLO_SUM, FLO_FUNC, NCAP_AF, NCAP_AFA, NCAP_AFS and the cost attributes to free memory unless
 # MEMCLEAN is NO. The QA log (PUT QLOG, pp_qaput.mod, PUTOUT/PUTGRP/ERRLEV) is written by qack_log.jl (change 25b-2).
 #
-# Not translated (UnportedError): nested user constraints (pp_qack.mod L53, UC_UCN data); %TIMESED%
-# (L97); stochastic or stepped runs.
+# Not translated (UnportedError): %TIMESED% (L97); stochastic or stepped runs. (Nested user
+# constraints, L53 with UC_UCN data: M1.3 change 46.)
 
 """
     qack_prep_symbols(tm) -> Vector{String}
@@ -220,7 +220,6 @@ function pp_qack_data!(tm::TimesModel)
     P(name, n) = gparam_opt(d, name, n)
     nz(x::GNum) = x.v != 0 || x.eps
     uppercase(gswitch(tm, "TIMESED", "")) == "YES" && throw(UnportedError("pp_qack.mod L97: %TIMESED%"))
-    isempty(P("UC_UCN", 5)) || throw(UnportedError("pp_qack.mod L53: nested user constraints (UC_UCN)"))
     qack_open!(tm)                                                             # L37-41
     T = S("MILESTONYR", 1)
     # L45-47
@@ -244,8 +243,11 @@ function pp_qack_data!(tm::TimesModel)
         any(k -> (r, p, k[3]) in trackpc && (r, p, k[3], io) in top, get(gmap_of, (r, cg), NTuple{3,String}[]))
     end
     gput!(tm, "RPG_RED", rpg_red)
-    # L53-54
-    gput!(tm, "UC_GMAP_U", Set{NTuple{3,String}}())
+    # L53-54. $IFI %VAR_UC%==YES OPTION UC_GMAP_U<=UC_UCN: UC_UCN(UC_N,SIDE,ALL_R,ALLYEAR,UC_N) projected
+    # onto (ALL_R,UC_N,UC_N), indices matched by domain left to right (G26): R from position 3, the
+    # first UC_N from position 1, the second from position 5. VAR_UC is YES whenever UC_UCN has data
+    # (eqmain.mod L197, `var_uc`).
+    gput!(tm, "UC_GMAP_U", var_uc(tm) ? Set((k[3], k[1], k[5]) for k in P("UC_UCN", 5).keys) : Set{NTuple{3,String}}())
     no_rvp = S("NO_RVP", 3)
     rtp = filter(k -> !(k in no_rvp), gmembers(tm, "RTP", 3))
     gput!(tm, "RTP", rtp)
