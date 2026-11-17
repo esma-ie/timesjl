@@ -79,8 +79,6 @@ function objective_unported(tm::TimesModel)
     yes("STAGES") && throw(UnportedError("stochastic objective (STAGES)"))
     isempty(gparam_opt(d, "DAM_COST", 4)) || throw(UnportedError("damage costs (eqdamage.mod via eqmain.mod L262)"))
     isempty(gset_opt(d, "RCJ", 4)) || throw(UnportedError("elastic demand costs (eqobjels.mod, EQ_OBJ L89-90)"))
-    isempty(gparam_opt(d, "NCAP_COM", 5)) ||
-        throw(UnportedError("capacity-related flow costs over the lifetime in EQ_OBJVAR (cal_caps.mod L22-26, NCAP_COM)"))
     return nothing
 end
 
@@ -469,6 +467,9 @@ function eq_objvar!(tm::TimesModel)
     coef_icom, coef_ocom = gparam_opt(tm.data, "COEF_ICOM", 5), gparam_opt(tm.data, "COEF_OCOM", 5)
     rs_fr_obj, g_yrfr_obj = gparam(tm, "RS_FR"), gparam(tm, "G_YRFR")
     ncap_pasti_obj, milestonyr_obj = gparam(tm, "NCAP_PASTI"), gset(tm, "MILESTONYR")
+    ncom_obj, coef_cio_obj, coef_cpt_obj = gparam(tm, "NCAP_COM"), gparam(tm, "COEF_CIO"), gparam(tm, "COEF_CPT")
+    cptyr_obj, prc_rcap_obj = gset(tm, "RTP_CPTYR"), gset_opt(tm.data, "PRC_RCAP", 2)
+    vntrt_obj = gset_opt(tm.data, "VNTRT", 2)
     ble, opr = gset_opt(tm.data, "BLE", 1), gset_opt(tm.data, "OPR", 1)
 
     weighted(r, t, cur, f) = (w = GZERO; for (y, wy) in tpulse(tm, r, t, cur); w = w + wy * f(y); end; w)
@@ -589,12 +590,17 @@ function eq_objvar!(tm::TimesModel)
         #     (VAR_NCAP(R,V,P)$MILESTONYR(V) + NCAP_PASTI(R,V,P)) *
         #     SUM(RPCS_VAR(R,P,C,TS), RS_FR(R,TS,S) * SUM(TS_ANN(TS,SL),SUM(%TPULSE%*(OBJ_FCOST+OBJ_FDELV+OBJ_FTAX)(R,Y_EOH,P,C,SL,CUR)))))
         #   $(COEF_ICOM(R,V,T,P,C)+COEF_OCOM(R,V,T,P,C))
-        # NCAP_PASTI is not conditioned on PASTYEAR here, unlike cal_cap.mod.
+        # NCAP_PASTI is not conditioned on PASTYEAR here, unlike cal_cap.mod. Then the flows over the
+        # lifetime (cal_caps.mod L22-26, M1.3 change 54), in the same sum:
+        #   SUM((RTP_CPTYR(R,V,T,P),IO)$NCAP_COM(R,V,P,C,IO), COEF_CPT(R,V,T,P) * NCAP_COM(R,V,P,C,IO) * G_YRFR(R,S) *
+        #     (VAR_NCAP(R,V,P)$T(V) + NCAP_PASTI(R,V,P) - SUM(VNTRT(V,MODLYEAR(T)),VAR_SCAP(R,V,T,P))$PRC_RCAP(R,P)) *
+        #     SUM(RPCS_VAR(R,P,C,TS), RS_FR(R,TS,S) * [the costs]) * (1+COEF_CIO(R,V,T,P,C,IO)))
         for (rr, v, p, c) in capflo
             rr == r || continue
             for (_, t) in get(vnt_of_v, (v,), NTuple{2,String}[])
                 k0 = gv(coef_icom, (r, v, t, p, c)) + gv(coef_ocom, (r, v, t, p, c))
-                iszero(k0) && continue
+                coms = (r, v, t, p) in cptyr_obj ? [io for io in ("IN", "OUT") if haskey(ncom_obj.values, (r, v, p, c, io))] : String[]
+                (iszero(k0) && isempty(coms)) && continue
                 cost = GZERO
                 for (_, _, _, ts) in get(stg_var_of_rpc, (r, p, c), NO4)
                     w = GZERO
@@ -604,9 +610,20 @@ function eq_objvar!(tm::TimesModel)
                     end
                     cost = cost + gv(rs_fr_obj, (r, ts, "ANNUAL")) * w
                 end
-                k = k0 * gv(g_yrfr_obj, (r, "ANNUAL")) * cost
-                (v,) in milestonyr_obj && addterm!(lhs, k, tm, "VAR_NCAP", r, v, p)
-                addconst!(lhs, k * gv(ncap_pasti_obj, (r, v, p)))
+                yrfr = gv(g_yrfr_obj, (r, "ANNUAL"))
+                if !iszero(k0)
+                    k = k0 * yrfr * cost
+                    (v,) in milestonyr_obj && addterm!(lhs, k, tm, "VAR_NCAP", r, v, p)
+                    addconst!(lhs, k * gv(ncap_pasti_obj, (r, v, p)))
+                end
+                for io in coms
+                    k = gv(coef_cpt_obj, (r, v, t, p)) * gv(ncom_obj, (r, v, p, c, io)) * yrfr * cost *
+                        (1 + gv(coef_cio_obj, (r, v, t, p, c, io)))
+                    (v,) in milestonyr_obj && addterm!(lhs, k, tm, "VAR_NCAP", r, v, p)
+                    addconst!(lhs, k * gv(ncap_pasti_obj, (r, v, p)))
+                    ((r, p) in prc_rcap_obj && (v, t) in vntrt_obj && (t,) in x.v) &&
+                        addterm!(lhs, -k, tm, "VAR_SCAP", r, v, t, p)
+                end
             end
         end
         # Commodity blending costs (L105-107).

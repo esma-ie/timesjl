@@ -35,8 +35,6 @@ function combal_unported(tm::TimesModel)
     d = tm.data
     nonempty_set(name, N) = !isempty(gset_opt(d, name, N))
     nonempty_par(name, N) = !isempty(gparam_opt(d, name, N))
-    nonempty_par("NCAP_COM", 5) &&
-        throw(UnportedError("cal_cap.mod L15-19 capacity-related flows over the lifetime in EQ_COMBAL (NCAP_COM)"))
     nonempty_par("COM_ELAST", 5) &&
         throw(UnportedError("eqcombal.mod L67/L101 elastic demand under %TIMESED% (COM_ELAST)"))
     nonempty_par("RD_NLP", 2) && throw(UnportedError("eqcombal.mod L110 non-linear demand VAR_DEM (RD_NLP)"))
@@ -489,7 +487,7 @@ function eq_combal!(tm::TimesModel, eqtype::String, lim::String, kind::String)
                       cond=(p, ts) -> !((r, p, ts) in nstts), f3=(p, v) -> gv(x.stg_eff, (r, v, p)),
                       f4=(p, v) -> one, f6=(p, v) -> one)
             combal_aggregation!(lhs, tm, ie, r, t, c, s)
-            cal_ncom!(lhs, tm, ie, "OUT", r, t, c, s)                                      # L51: cal_cap.mod OUT O
+            cal_cap!(lhs, tm, ie, "OUT", r, t, c, s)                                       # L51: cal_cap.mod OUT O
         end
         # Consumption (L69-93), BAL only.
         if kind == "BAL"
@@ -500,7 +498,7 @@ function eq_combal!(tm::TimesModel, eqtype::String, lim::String, kind::String)
             cal_stgn!(lhs, tm, GNum(-1.0), "IN", r, t, c, s;                              # L87
                       cond=(p, ts) -> !((r, "NST", p) in prc_map) || (r, p, ts) in nstts,
                       f3=(p, v) -> one, f4=(p, v) -> gv(x.stg_eff, (r, v, p)), f6=(p, v) -> one)
-            cal_ncom!(lhs, tm, GNum(-1.0), "IN", r, t, c, s)                               # L91: cal_cap.mod IN I
+            cal_cap!(lhs, tm, GNum(-1.0), "IN", r, t, c, s)                                # L91: cal_cap.mod IN I
         end
 
         rhs = JuMP.AffExpr(0.0)
@@ -526,36 +524,70 @@ function eq_combal!(tm::TimesModel, eqtype::String, lim::String, kind::String)
 end
 
 """
-    cal_ncom!(expr, tm, mult, io, r, t, c, s; pf=p -> GNum(1.0)) -> expr
+    cal_cap!(expr, tm, mult, io, r, t, c, s; pf=p -> GNum(1.0)) -> expr
 
-The second term of cal_cap.mod (CAL_NCOM), the flows tied to investment (`io` = IN: %2 = I,
-COEF_ICOM) or to decommissioning (OUT: %2 = O, COEF_OCOM) in EQ(l)_COMBAL (eqcombal.mod L51, L91)
-and EQ_PEAK (eqpeak.mod L72, with %3 = `1\$(NOT PRC_PKNO(R,P))*`, `pf`):
+cal_cap.mod, the capacity-related flows of commodity C in EQ(l)_COMBAL (eqcombal.mod L51 with
+`OUT O`, L91 with `IN I`) and EQ_PEAK (eqpeak.mod L72, `IN I` with %3 = `1\$(NOT PRC_PKNO(R,P))*`,
+`pf`); `mult` is the caller's factor (COM_IE on the production side, -1 on consumption):
 
+    SUM(RTP_CPTYR(R,V,T,P)\$NCAP_COM(R,V,P,C,'%1'),
+        COEF_CPT(R,V,T,P) * NCAP_COM(R,V,P,C,'%1') * G_YRFR(R,S) * %3
+        (VAR_NCAP(R,V,P)\$T(V) + NCAP_PASTI(R,V,P)\$PYR(V) %RCAPSUB%) * (1 + COEF_CIO(R,V,T,P,C,'%1'))) +
     SUM(RPC_CAPFLO(R,V(LL),P,C)\$COEF_%2COM(R,V,T,P,C), G_YRFR(R,S) * %3
-        (COEF_%2COM(R,V,T,P,C)*(VAR_NCAP(R,V,P)\$T(V)+NCAP_PASTI(R,V,P)\$PYR(V)) + [RCAP_OCAP terms]))
+        (COEF_%2COM(R,V,T,P,C)*(VAR_NCAP(R,V,P)\$T(V)+NCAP_PASTI(R,V,P)\$PYR(V)) +
+         SUM(VNTRT(V,T),COEF_%2COM(R,V,T,P,C)*SUM(TT(LL+MIN(VN2T(V,T),RVPRL(R,V,P))),-VAR_SCAP(R,V,TT,P)) +
+             VAR_RCAP(R,V,T,P)*COEF_RCOM(R,V,T,P,C))\$((IPS('%1')->0)\$RCAP_OCAP(R,V,P,C))))
 
-V(LL) is MODLYEAR; PYR the past years. The early-retirement terms need RCAP_OCAP, refused
-(coef_nio_unported); the first term of cal_cap.mod needs NCAP_COM, refused (`combal_unported`).
-`mult` is the caller's factor (COM_IE on the production side, -1 on consumption).
+The first sum is the flows over the lifetime of the capacity (NCAP_COM, M1.3 change 54), shaped or
+lagged by COEF_CIO; %RCAPSUB% takes off the capacity retired early (`rcapsub!`). The second is the
+flows tied to investment (IN: COEF_ICOM) or decommissioning (OUT: COEF_OCOM; change 53), and, on the
+OUT side only (`IPS('OUT')` is false, so `->0` holds), those of early retirements (RCAP_OCAP): the
+release of the retired capacity in the period it retires, VAR_SCAP at the milestone MIN(VN2T,RVPRL)
+positions after V along ALLYEAR (V(LL) binds LL to V), and VAR_RCAP times COEF_RCOM. V(LL) is
+MODLYEAR; PYR the past years.
 
-GAMS: cal_cap.mod L20-27, v4.9.7.
+GAMS: cal_cap.mod L14-27, v4.9.7.
 """
-function cal_ncom!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, io::String, r, t, c, s; pf=p -> GNum(1.0))
-    x = get!(tm.cache, "CAL_NCOM") do
+function cal_cap!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, io::String, r, t, c, s; pf=p -> GNum(1.0))
+    x = get!(tm.cache, "CAL_CAP") do
+        ncom = gparam(tm, "NCAP_COM")
+        allyear = [k[1] for k in gset(tm, "ALLYEAR").keys]
         (capflo_of_rc = indexby(gset(tm, "RPC_CAPFLO"), (1, 4)),           # (r,c) -> RPC_CAPFLO(r,v,p,c)
-         icom = gparam(tm, "COEF_ICOM"), ocom = gparam(tm, "COEF_OCOM"),
+         ncom = ncom, ncom_of_rc = indexby(ncom, (1, 4)),                  # (r,c) -> NCAP_COM(r,v,p,c,io)
+         cptyr = gset(tm, "RTP_CPTYR"), coef_cpt = gparam(tm, "COEF_CPT"), coef_cio = gparam(tm, "COEF_CIO"),
+         icom = gparam(tm, "COEF_ICOM"), ocom = gparam(tm, "COEF_OCOM"), rcom = gparam(tm, "COEF_RCOM"),
+         rcap_ocap = gparam(tm, "RCAP_OCAP"), vntrt = gset_opt(tm.data, "VNTRT", 2), vn2t = gparam_opt(tm.data, "VN2T", 2),
+         rvprl = gparam_opt(tm.data, "RVPRL", 3), allyear = allyear, ord = Dict(y => i for (i, y) in enumerate(allyear)),
          g_yrfr = gparam(tm, "G_YRFR"), pasti = gparam(tm, "NCAP_PASTI"),
          modlyear = gset(tm, "MODLYEAR"), milestonyr = gset(tm, "MILESTONYR"), pyr = gset(tm, "PYR"))
     end
-    coef = io == "IN" ? x.icom : x.ocom
     yrfr = gv(x.g_yrfr, (r, s))
+    # first term: the flows over the lifetime (NCAP_COM)
+    for (_, v, p, _, i) in get(x.ncom_of_rc, (r, c), NTuple{5,String}[])
+        (i == io && (r, v, t, p) in x.cptyr) || continue
+        k = mult * (gv(x.coef_cpt, (r, v, t, p)) * gv(x.ncom, (r, v, p, c, io)) * yrfr * pf(p)) *
+            (1 + gv(x.coef_cio, (r, v, t, p, c, io)))
+        (v,) in x.milestonyr && addterm!(expr, k, tm, "VAR_NCAP", r, v, p)
+        (v,) in x.pyr && addconst!(expr, k * gv(x.pasti, (r, v, p)))
+        rcapsub!(expr, k, tm, r, v, t, p)                                   # %RCAPSUB%
+    end
+    # second term: the flows tied to investment or decommissioning
+    coef = io == "IN" ? x.icom : x.ocom
     for (_, v, p, _) in get(x.capflo_of_rc, (r, c), NTuple{4,String}[])
         (v,) in x.modlyear || continue
         haskey(coef.values, (r, v, t, p, c)) || continue                    # $COEF_%2COM(R,V,T,P,C)
-        k = mult * (yrfr * pf(p) * gv(coef, (r, v, t, p, c)))
-        (v,) in x.milestonyr && addterm!(expr, k, tm, "VAR_NCAP", r, v, p)
-        (v,) in x.pyr && addconst!(expr, k * gv(x.pasti, (r, v, p)))
+        k = mult * (yrfr * pf(p))
+        kc = k * gv(coef, (r, v, t, p, c))
+        (v,) in x.milestonyr && addterm!(expr, kc, tm, "VAR_NCAP", r, v, p)
+        (v,) in x.pyr && addconst!(expr, kc * gv(x.pasti, (r, v, p)))
+        if io == "OUT" && haskey(x.rcap_ocap.values, (r, v, p, c)) && (v, t) in x.vntrt
+            n = gmin(gv(x.vn2t, (v, t)), gv(x.rvprl, (r, v, p)))
+            i = x.ord[v] + glead(n.v)                                      # TT(LL+MIN(VN2T(V,T),RVPRL(R,V,P)))
+            if 1 <= i <= length(x.allyear) && (x.allyear[i],) in x.milestonyr
+                addterm!(expr, -kc, tm, "VAR_SCAP", r, v, x.allyear[i], p)
+            end
+            addterm!(expr, k * gv(x.rcom, (r, v, t, p, c)), tm, "VAR_RCAP", r, v, t, p)
+        end
     end
     return expr
 end

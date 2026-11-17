@@ -1036,6 +1036,12 @@ those checks, their figures and their crafted cases are not published
   demo12_capflo: layers 1 to 3 PASS in both variants from the DD files
   (objective 23,960,613.42 with CPLEX and HiGHS). The flows over the
   lifetime (NCAP_COM) and of early retirements (RCAP_OCAP) stay refused.
+- 17 Nov 2026: M1.3 change 54: commodity flows over the lifetime of
+  capacity (NCAP_COM, COEF_CIO from shapes and NCAP_CLAG) and of early
+  retirements (RCAP_OCAP). New crafted case demo12_capcom: layers 1 to 3
+  PASS in both variants from the DD files (objective 23,961,596.62).
+  COEF_RCOM is empty outside the capacity transfer, as in GAMS (coef_nio.mod
+  L58 runs before coef_alt.lin L77 fills COEF_CPT).
 - 17 Nov 2026: James's answers (docs/decisions.md): the M1.3 gate covers
   the linear features only (ETL, the DSC lumpy investments and block
   retirements, the discrete unit commitment and TIMES-Micro after it);
