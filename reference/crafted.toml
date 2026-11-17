@@ -804,3 +804,17 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_scapin/demo12_scapin.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_scapin"]
+
+# TIMES_Demo demo12 + demo12_ips/ips.dd under OBJ LIN (17 Nov 2026): EQ_STGIPS and the inter-period
+# terms of EQ_STGAUX as eqstgips.lin and eqstgaux.lin write them (M1.3 change 49). No DD file of its own.
+[[model]]
+name = "TIMES_Demo-demo12_ipslin"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_ipslin/demo12_ipslin.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_ips", "{crafted}/demo12_ipslin"]

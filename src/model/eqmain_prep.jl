@@ -3,7 +3,8 @@
 # of the coef -> pre-solve step.
 #
 # In eqmain.mod order (v4.9.7): eqcapact.mod L18-20 (AFS, in the `L` include, L65), coef_csv.mod
-# L24-74 (L67, when PRC_SIMV is DEFINED: the simulated vintages, `coef_csv!` in coef_csv.jl), eqbndcst.mod
+# L24-74 (L67, when PRC_SIMV is DEFINED: the simulated vintages, `coef_csv!` in coef_csv.jl),
+# eqstgips.lin L12-18 (L169 under OBJ LIN: RTP_EQSTK, `rtp_eqstk!`), eqbndcst.mod
 # L14-77 (L192: SUPERYR, the cost bounds REG_CUMCST, RT_IAN and the annual investment coefficients
 # CST_ANNC, YK1; the equation EQ_BNDCST is in eqbndcst.jl), L199-202 (RVPT, RTP_OFF), L205-226 (the
 # user-constraint maps); then equ_ext.vda L76-79 (RP_PL, AFS), eqactups.vda L9-32 (the dispatching
@@ -47,6 +48,7 @@ eqmain_prep_symbols(tm) = vcat(["AFS", "SUPERYR", "REG_CUMCST", "YK1", "RT_IAN",
                                 "AFUPS", "RPS_UPS", "RP_UX", "RTP_VARP", "COEF_AF", "RP_UPS", "RPC_CUR", "ACT_LOSPL",
                                 "ACT_UPS", "RTP_PL", "RP_UPC"],   # TS_ARRAY (L28) is cleared later (pp_clean)
                                eqactups_dispatching(tm.data) ? ["UNCD7"] : String[],   # eqactups.vda L10, L28
+                               obj_lin(tm) ? ["RTP_EQSTK"] : String[],                 # eqstgips.lin L12-18
                                simv_defined(tm) ? coef_csv_symbols(tm) : String[],
                                ucbet_symbols(tm))   # ucbet.vda L11-40
 
@@ -343,5 +345,41 @@ function eqmain_prep!(tm::TimesModel)
     eqlducs_equ!(tm)
     # ucbet.vda L11-40 (equ_ext.vda L99, when UC_FLOBET is DEFINED): the betting constraints' sets (M1.3 change 47)
     ucbet_prep!(tm)
+    obj_lin(tm) && rtp_eqstk!(tm)
+    return tm
+end
+
+"Whether the run sets OBJ LIN, so eqmain.mod L169-170 include eqstgips.lin and eqstgaux.lin."
+obj_lin(tm) = uppercase(gswitch(tm, "OBJ", "")) == "LIN"
+
+"""
+    rtp_eqstk!(tm) -> tm
+
+The index set of EQ_STGIPS under OBJ LIN, declared and filled where eqmain.mod
+L169 includes eqstgips.lin (M1.3 change 49). Nothing else reads or changes it,
+so its place among the data statements of eqmain.mod does not matter.
+
+    SET RTP_EQSTK(R,ALLYEAR,T,P,ITEM);
+    RTP_EQSTK(R,MIYR_1(T),T,P,'IN')\$(RTP(R,T,P)\$PRC_MAP(R,'STK',P)) = YES;
+    RTP_EQSTK(RTP_VINTYR(R,V,T,P),'N')\$PRC_MAP(R,'STK',P) = YES;
+    RTP_EQSTK(RTP_VINTYR(R,V,T,P),'1')\$((E(T) GT M(T))\$PRC_MAP(R,'STK',P)) = YES;
+
+GAMS: eqstgips.lin L12-18, v4.9.7.
+"""
+function rtp_eqstk!(tm::TimesModel)
+    d = tm.data
+    stk = Set((r, p) for (r, m, p) in gset_opt(d, "PRC_MAP", 3).keys if m == "STK")
+    miyr1 = gset_opt(d, "MIYR_1", 1)
+    pE, pM = gparam(tm, "E"), gparam(tm, "M")
+    out = Set{NTuple{5,String}}()
+    for (r, t, p) in gset(tm, "RTP")                                   # L14
+        ((t,) in miyr1 && (r, p) in stk) && push!(out, (r, t, t, p, "IN"))
+    end
+    for (r, v, t, p) in gset(tm, "RTP_VINTYR")                         # L16, L18
+        (r, p) in stk || continue
+        push!(out, (r, v, t, p, "N"))
+        gv(pE, (t,)).v > gv(pM, (t,)).v && push!(out, (r, v, t, p, "1"))
+    end
+    gput!(tm, "RTP_EQSTK", out)
     return tm
 end

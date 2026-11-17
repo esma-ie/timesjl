@@ -140,6 +140,13 @@ On 17 Nov 2026 James answered three questions of the list in the chat (below, un
 | 1 | `%IREAUXBAL%` set by the run itself, not by powerflo.vda DECL (L221): GAMS pastes the run's own text into the balance at cal_ire.mod L30, so there is no GAMS code to translate. It stays refused with its message (eqcombal.jl, eqpeak.jl), as a run that supplies its own GAMS code, and leaves the list of features left before the M1.3 gate. | Recommended: yes. Built in (no code change). | open |
 | 2 | Keep the crafted case demo12_scapin (demo12 + olife.dd, CC BY 4.0) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
 
+### #150 M1.3 (49): inter-period storage under OBJ LIN (eqstgips.lin L12-66, eqstgaux.lin L25-31); crafted case demo12_ipslin (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the crafted case demo12_ipslin (demo12_ips under OBJ LIN, CC BY 4.0, no DD file of its own) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
+| 2 | Translate eqstgips.lin and the IPS terms of eqstgaux.lin in one change: the second is only reached with the first (both are OBJ LIN's inter-period storage), and one crafted case checks both. | Recommended: yes. Built in. | open |
+
 ### #147 M1.3 (46): nested user constraints (equserco.mod L75-76, L98-99; pp_qack.mod L53); crafted case demo12_ucn (open)
 
 Logged here because #147 does not touch this file.
