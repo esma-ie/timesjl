@@ -122,6 +122,40 @@ On 17 Nov 2026 James answered three questions of the list in the chat (below, un
 
 ## Log by pull request
 
+### #147 M1.3 (46): nested user constraints (equserco.mod L75-76, L98-99; pp_qack.mod L53); crafted case demo12_ucn (open)
+
+Logged here because #147 does not touch this file.
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Merge only after the workstation step: the crafted case's licensed reference (CONVERT, CPLEX, HiGHS), `scripts/m13_gate.jl --from-dd --solve`, the public fixture. Layer 1 passed in the cloud with the PyPI GAMS. | Recommended: yes. Built in. | open |
+
+### #146 M1.3 (44): the UC_ATTR attribute ONLINE (uc_cap.mod L36-43); crafted case demo12_uconl (open)
+
+Logged here because #146 does not touch this file.
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Merge only after the workstation step (as #147). | Recommended: yes. Built in. | open |
+| 2 | The EPS constant of uc_cap.mod L40 adds nothing in TIMES.jl: it creates no column and keeps no row (every RS row has its VAR_UCRTS with VAR_UC YES). | Recommended: yes. Built in. | open |
+
+### #145 M1.3 (43): EQL_STGCCL, the lifetime cycle limit of a storage (eqactups.vda L121-125); crafted case demo12_stgccl (open)
+
+Logged here because #145 does not touch this file.
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Merge only after the workstation step (as #147). | Recommended: yes. Built in. | open |
+| 2 | demo12_stgccl bounds the annual discharge from below (STGOUT_BND), since demo12's electricity has one price in every DAYNITE timeslice and an unbounded storage stays idle, leaving the limit slack. | Recommended: yes. Built in. | open |
+
+### #144 M1.3 (45): the PRC_STGIPS charging terms of EQ_STSBAL at ANNUAL (eqstgtss.mod L78-83) (open)
+
+Logged here because #144 does not touch this file.
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | No row of v4.9.7 reaches the term (RP_STL's levels are TSL+1, ppmain.mod L1089; RP_STL is declared after the DD files, L23), so it has no GAMS reference and is checked on a constructed state only. Translate it so the refusal goes, or leave the refusal as dead code? | Recommended: translate. Built in. | open |
+
 ### #143 Decision log: James's answers of 17 Nov 2026 (open)
 
 | # | Question | Decided | How |
