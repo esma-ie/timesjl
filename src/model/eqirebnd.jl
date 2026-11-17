@@ -26,10 +26,11 @@
 #     S (RS_TREE);
 #   - L35-41, otherwise (from an external region): the import flows of R.
 # - exports ($XPT(IE)):
-#   - L46-51, from a marketplace region (RPC_MARKET(R,P,C,'EXP')): the imports
-#     of the partner region. Refused: RPC_MARKET data raises in `ire_unported`
-#     (eqire.mod L23-38), so this branch cannot be reached;
-#   - L56-62, otherwise: the export flows of R.
+#   - L46-51, from a marketplace region (RPC_MARKET(R,P,C,'EXP'), M1.3 change
+#     51): the imports of the partner region ALL_REG, an internal region,
+#     through the same process, converted by IRE_CCVT and IRE_TSCVT;
+#   - L56-62, for the exports of a process that is not a marketplace there:
+#     the export flows of R.
 # - L30, L39, L60: a flow at a timeslice at or below S counts in full
 #   (TS_MAP(R,S,TS)); a flow at a timeslice above S counts with the share
 #   G_YRFR(R,S) / G_YRFR(R,TS) (RS_BELOW(R,TS,S)).
@@ -66,7 +67,13 @@ LO, E with FX, L with UP). Returns the number of rows.
       )\$IMP(IE)
       +
       (
-       [L46-51: RPC_MARKET(R,P,C,'EXP'), refused]
+       SUM((RPC_MARKET(R,P,C,'EXP'),TOP_IRE(R,C,REG(ALL_REG),COM,P)),
+         SUM((RTP_VNTBYR(REG,T,P,V),RTPCS_VARF(REG,T,P,COM,TS),RS_TREE(REG,ALL_TS,TS))\$IRE_TSCVT(REG,ALL_TS,R,S),
+           (VAR_IRE(REG,V,T,P,COM,TS,'IMP')\$(NOT RPC_AIRE(REG,P,COM))+(VAR_ACT(REG,V,T,P,TS)*PRC_ACTFLO(REG,V,P,COM))\$RPC_AIRE(REG,P,COM))
+                  * IRE_CCVT(REG,COM,R,C) * IRE_TSCVT(REG,ALL_TS,R,S)
+                  * RS_FR(REG,ALL_TS,TS)*(1+RTCS_FR(REG,T,COM,ALL_TS,TS))
+            )
+          )
       +
        SUM(RPC_IRE(R,P,C,IE)\$((NOT RPC_MARKET(R,P,C,'EXP'))*SUM(TOP_IRE(R,C,ALL_REG,COM,P),1)),
          SUM((RTP_VNTBYR(R,T,P,V),RTPCS_VARF(R,T,P,C,TS))\$RS_TREE(R,S,TS),
@@ -78,12 +85,11 @@ LO, E with FX, L with UP). Returns the number of rows.
       =%1=
       IRE_BND(R,T,C,S,ALL_REG,IE,'%2');
 
-GAMS: eqirebnd.mod L18-69 with eqmain.mod L152-154, v4.9.7 (L46-51 refused).
+GAMS: eqirebnd.mod L18-69 with eqmain.mod L152-154, v4.9.7.
 """
 function eq_irebnd!(tm::TimesModel)
     ire_bnd = gparam(tm, "IRE_BND")
     isempty(ire_bnd) && return 0
-    ire_unported(tm)                                                # RPC_MARKET: L46-51 cannot be reached
     reg, rcs_comts = gset(tm, "REG"), gset(tm, "RCS_COMTS")
     tx = eq_periods(tm)   # %R_T%, %TX%: SUBT in a stepped run (maindrv.mod L38-40)
     imp, xpt = gset(tm, "IMP"), gset(tm, "XPT")
@@ -98,6 +104,7 @@ function eq_irebnd!(tm::TimesModel)
     top_into = indexby(gset(tm, "TOP_IRE"), (1, 3, 4))              # (reg,r,c)  -> TOP_IRE(reg,com,r,c,p)
     top_from = indexby(gset(tm, "TOP_IRE"), (1, 2, 3))              # (r,c,reg)  -> TOP_IRE(r,c,reg,com,p)
     tscvt_of = indexby(ire_tscvt, (1, 3, 4))                        # (reg,r,sl) -> IRE_TSCVT(reg,all_ts,r,sl)
+    rpc_market = gset(tm, "RPC_MARKET")
     no4, no5 = NTuple{4,String}[], NTuple{5,String}[]
     # the flow of an exchange process: the variable, or the activity times PRC_ACTFLO (RPC_AIRE)
     function flow!(expr, w, r, v, t, p, c, ts, ie)
@@ -158,8 +165,24 @@ function eq_irebnd!(tm::TimesModel)
                     end
                 end
             end
-            if (ie,) in xpt                                                         # L56-62 (L46-51 refused)
-                for (_, p, _, _) in get(ire_of_rc, (r, c, ie), no4)
+            if (ie,) in xpt
+                if (all_reg,) in reg                                                # L46-51
+                    for (_, _, _, com, p) in get(top_from, (r, c, all_reg), no5)
+                        (r, p, c, "EXP") in rpc_market || continue
+                        ccvt = gv(ire_ccvt, (all_reg, com, r, c))
+                        for (_, all_ts, _, _) in get(tscvt_of, (all_reg, r, s), no4)
+                            tscvt = gv(ire_tscvt, (all_reg, all_ts, r, s))
+                            for (_, _, _, v) in get(vint_of_rtp, (all_reg, t, p), no4),
+                                (_, _, _, _, ts) in get(varf_of_rtpc, (all_reg, t, p, com), no5)
+                                (all_reg, all_ts, ts) in rs_tree || continue
+                                w = ccvt * tscvt * gv(rs_fr, (all_reg, all_ts, ts)) * (1 + gv(rtcs_fr, (all_reg, t, com, all_ts, ts)))
+                                flow!(lhs, w, all_reg, v, t, p, com, ts, "IMP")
+                            end
+                        end
+                    end
+                end
+                for (_, p, _, _) in get(ire_of_rc, (r, c, ie), no4)                 # L56-62
+                    (r, p, c, "EXP") in rpc_market && continue
                     any(k -> k[5] == p, get(top_from, (r, c, all_reg), no5)) || continue
                     for (_, _, _, v) in get(vint_of_rtp, (r, t, p), no4), (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, c), no5)
                         (r, s, ts) in rs_tree || continue

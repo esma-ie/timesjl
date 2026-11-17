@@ -156,6 +156,13 @@ On 17 Nov 2026 James answered three questions of the list in the chat (below, un
 | 1 | Two new crafted cases, each with a public CI fixture (as run, about 4 MB each): demo12_cstbal (demo12 + cstbal.dd, the branches without a grid) and demo12_pfcst (demo12_pfd + pfcst.dd, the grid branches). One case cannot reach both: a commodity that is a grid node allocation is never TRACKC. | Recommended: yes. Built in. | open |
 | 2 | The labels the CSTBAL code names itself (PRD, IMP, EXP, GEN, NTX, NPG, FIN, FX and the empty label) are added to the label order when the dump it starts from lacks them, after every known label (G36). Their place there only orders OBJ_COMBAL's records, which every compare matches by key. | Recommended: yes. Built in. | open |
 
+### #152 M1.3 (51): market-based trade (eqire.mod L23-38, eqirebnd.mod L46-51); crafted case demo12_mkt (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | A new crafted case, demo12_mkt, with one public CI fixture (as run, about 4 MB): demo12 with a third internal region REG3, since a marketplace needs a region between two others or an exporter to two regions (ppmain.mod L865-868), which two regions cannot give. REG3 copies demo12's timeslices, year fractions and discount rate and holds only GAS. | Recommended: yes. Built in. | open |
+| 2 | EQ(l)_IREBND's plain export term (eqirebnd.mod L56) now tests NOT RPC_MARKET(R,P,C,'EXP'), as GAMS does; before this change no marketplace could exist, so the test changes no earlier row. | Recommended: yes. Built in. | open |
+
 ### #147 M1.3 (46): nested user constraints (equserco.mod L75-76, L98-99; pp_qack.mod L53); crafted case demo12_ucn (open)
 
 Logged here because #147 does not touch this file.

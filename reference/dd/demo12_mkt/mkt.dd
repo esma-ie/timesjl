@@ -1,0 +1,125 @@
+* TIMES.jl crafted case demo12_mkt (reference/crafted.toml, 17 Nov 2026): market-based trade
+* (eqire.mod L23-38, eqirebnd.mod L46-51; M1.3 change 51, docs/m13-plan.md), added to TIMES_Demo
+* demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0).
+* A third internal region, REG3, with demo12's timeslices and discount rate, is a gas hub: the
+* exchange process TU_GAS_HUB carries GAS from REG1 to REG3 and from REG3 to REG2. A region that
+* receives through a process what it passes on through the same process to another region is a
+* marketplace (ppmain.mod L868: RPC_MARKET(REG3,TU_GAS_HUB,GAS,'EXP')); with its own imports it is
+* also RPC_MARKET 'IMP' (L909), and its EQ_IRE rows add the imports of REG2 (eqire.mod L23-29).
+* A second process, TU_GAS_FAN, carries GAS from REG2 to both REG1 and REG3. An exporter to several
+* regions is a marketplace too (L866); REG2 imports nothing through TU_GAS_FAN, so its rows are the
+* export-side rows of EQ_IRE (RPC_EQIRE 'EXP', L905-907; eqire.mod L32-38).
+* IRE_BND bounds the exports of both marketplaces, which EQ(l)_IREBND sums as the imports of the
+* partner region (eqirebnd.mod L46-51), and REG2's imports through TU_GAS_HUB.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET ALL_REG
+/
+REG3
+/
+
+SET REG
+/
+ REG3 'REG3'
+/
+
+SET TS_GROUP
+/
+REG3.ANNUAL.ANNUAL
+REG3.DAYNITE.SD
+REG3.DAYNITE.SN
+REG3.DAYNITE.WD
+REG3.DAYNITE.WN
+REG3.SEASON.S
+REG3.SEASON.W
+/
+
+SET TS_MAP
+/
+REG3.S.SD
+REG3.S.SN
+REG3.W.WD
+REG3.W.WN
+/
+
+SET COM_TMAP
+/
+REG3.NRG.GAS
+/
+
+SET COM_UNIT
+/
+REG3.GAS.PJ
+/
+
+SET PRC
+/
+TU_GAS_HUB
+TU_GAS_FAN
+/
+
+SET PRC_MAP
+/
+REG1.IRE.TU_GAS_HUB
+REG2.IRE.TU_GAS_HUB
+REG3.IRE.TU_GAS_HUB
+REG1.IRE.TU_GAS_FAN
+REG2.IRE.TU_GAS_FAN
+REG3.IRE.TU_GAS_FAN
+/
+
+SET PRC_ACTUNT
+/
+REG1.TU_GAS_HUB.NRG.PJ
+REG2.TU_GAS_HUB.NRG.PJ
+REG3.TU_GAS_HUB.NRG.PJ
+REG1.TU_GAS_FAN.NRG.PJ
+REG2.TU_GAS_FAN.NRG.PJ
+REG3.TU_GAS_FAN.NRG.PJ
+/
+
+SET TOP_IRE
+/
+REG1.GAS.REG3.GAS.TU_GAS_HUB
+REG3.GAS.REG2.GAS.TU_GAS_HUB
+REG2.GAS.REG1.GAS.TU_GAS_FAN
+REG2.GAS.REG3.GAS.TU_GAS_FAN
+/
+
+SET PRC_DESC
+/
+ REG1.TU_GAS_HUB 'Crafted: gas export to the REG3 hub (TIMES.jl demo12_mkt)'
+ REG2.TU_GAS_HUB 'Crafted: gas import from the REG3 hub (TIMES.jl demo12_mkt)'
+ REG3.TU_GAS_HUB 'Crafted: gas hub between REG1 and REG2 (TIMES.jl demo12_mkt)'
+ REG1.TU_GAS_FAN 'Crafted: gas import from REG2 (TIMES.jl demo12_mkt)'
+ REG2.TU_GAS_FAN 'Crafted: gas export to REG1 and REG3 (TIMES.jl demo12_mkt)'
+ REG3.TU_GAS_FAN 'Crafted: gas import from REG2 (TIMES.jl demo12_mkt)'
+/
+
+PARAMETER
+ACT_COST ' '/
+REG1.2005.TU_GAS_HUB.MEURO05 0.2
+REG3.2005.TU_GAS_HUB.MEURO05 0.1
+REG2.2005.TU_GAS_FAN.MEURO05 0.3
+/
+
+PARAMETER
+IRE_BND ' '/
+REG3.2010.GAS.ANNUAL.REG2.EXP.UP 40
+REG2.2010.GAS.ANNUAL.REG3.EXP.UP 30
+REG2.2010.GAS.ANNUAL.REG3.IMP.LO 1
+/
+
+PARAMETER
+G_DRATE ' '/
+REG3.2005.MEuro05 0.05
+/
+
+PARAMETER
+G_YRFR ' '/
+REG3.SD 0.249714611872146
+REG3.SN 0.229737442922374
+REG3.WD 0.249429223744292
+REG3.WN 0.271118721461187
+/
