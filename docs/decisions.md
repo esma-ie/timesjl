@@ -157,29 +157,29 @@ Logged here because #146 does not touch this file.
 | 1 | Merge only after the workstation step (as #147). | Recommended: yes. Built in. | open |
 | 2 | The EPS constant of uc_cap.mod L40 adds nothing in TIMES.jl: it creates no column and keeps no row (every RS row has its VAR_UCRTS with VAR_UC YES). | Recommended: yes. Built in. | open |
 
-### #145 M1.3 (43): EQL_STGCCL, the lifetime cycle limit of a storage (eqactups.vda L121-125); crafted case demo12_stgccl (open)
+### #145 M1.3 (43): EQL_STGCCL, the lifetime cycle limit of a storage (eqactups.vda L121-125); crafted case demo12_stgccl (merged 17 Nov 2026)
 
 Logged here because #145 does not touch this file.
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Merge only after the workstation step (as #147). | Recommended: yes. Built in. | open |
-| 2 | demo12_stgccl bounds the annual discharge from below (STGOUT_BND), since demo12's electricity has one price in every DAYNITE timeslice and an unbounded storage stays idle, leaving the limit slack. | Recommended: yes. Built in. | open |
+| 1 | Merge only after the workstation step (as #147). | Recommended: yes. Built in. | accepted by merge, 17 Nov 2026 |
+| 2 | demo12_stgccl bounds the annual discharge from below (STGOUT_BND), since demo12's electricity has one price in every DAYNITE timeslice and an unbounded storage stays idle, leaving the limit slack. | Recommended: yes. Built in. | accepted by merge, 17 Nov 2026 |
 
-### #144 M1.3 (45): the PRC_STGIPS charging terms of EQ_STSBAL at ANNUAL (eqstgtss.mod L78-83) (open)
+### #144 M1.3 (45): the PRC_STGIPS charging terms of EQ_STSBAL at ANNUAL (eqstgtss.mod L78-83) (merged 17 Nov 2026)
 
 Logged here because #144 does not touch this file.
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | No row of v4.9.7 reaches the term (RP_STL's levels are TSL+1, ppmain.mod L1089; RP_STL is declared after the DD files, L23), so it has no GAMS reference and is checked on a constructed state only. Translate it so the refusal goes, or leave the refusal as dead code? | Recommended: translate. Built in. | open |
+| 1 | No row of v4.9.7 reaches the term (RP_STL's levels are TSL+1, ppmain.mod L1089; RP_STL is declared after the DD files, L23), so it has no GAMS reference and is checked on a constructed state only. Translate it so the refusal goes, or leave the refusal as dead code? | Recommended: translate. Built in. | accepted by merge, 17 Nov 2026 |
 
-### #143 Decision log: James's answers of 17 Nov 2026 (open)
+### #143 Decision log: James's answers of 17 Nov 2026 (merged 17 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | The three answers are recorded where they apply: the gate scope in `docs/m13-plan.md` (Gate) and the translation guide; MACRO's solver in the translation guide; the speed target in the translation guide, `docs/timings.md` and `docs/phase2-notes.md` (P2-6). Dashboard slide 10 keeps its 5x line, now read as the Phase 2 target, until the next dashboard refresh relabels it. | Recommended: yes. Built in. | open |
-| 2 | With the MIP and nonlinear features, ETL and MACRO out of the gate's scope, the extensions still to translate before the M1.3 gate are the stochastic extension and damage costs (`eqdamage.mod`), each checked first from the source to be linear. | Recommended: yes. Built in. | open |
+| 1 | The three answers are recorded where they apply: the gate scope in `docs/m13-plan.md` (Gate) and the translation guide; MACRO's solver in the translation guide; the speed target in the translation guide, `docs/timings.md` and `docs/phase2-notes.md` (P2-6). Dashboard slide 10 keeps its 5x line, now read as the Phase 2 target, until the next dashboard refresh relabels it. | Recommended: yes. Built in. | accepted by merge, 17 Nov 2026 |
+| 2 | With the MIP and nonlinear features, ETL and MACRO out of the gate's scope, the extensions still to translate before the M1.3 gate are the stochastic extension and damage costs (`eqdamage.mod`), each checked first from the source to be linear. | Recommended: yes. Built in. | accepted by merge, 17 Nov 2026 |
 
 ### #142 Dashboard 16 Nov: the pass of 15 Nov, M1.3 changes 41 and 42 (open)
 
