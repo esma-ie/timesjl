@@ -168,6 +168,13 @@ workstation stays the reference of record (`run_references.ps1 -Checkpoints`).
 
 ## Gate
 
+Scope (James, 14 and 17 Nov 2026): the gate is passed once every remaining
+refused linear feature is translated and tested, with the stochastic extension
+and damage costs. The mixed-integer and nonlinear features (the DSC lumpy
+investments and block retirements, the discrete unit commitment, ETL,
+TIMES-Micro) and MACRO (checked with IPOPT) come after it, refused with a
+message until then (docs/decisions.md, 17 Nov 2026).
+
 - Input dump to `ppm/` at 1e-9 on every core model, reduce_off and as_run
   (TIM-bau locally).
 - In CI on demo12: input, preprocessing, coefficients and the model, with the

@@ -75,9 +75,15 @@ Any mismatch blocks the merge. Record known, justified differences in
 - Extension scope: core + VDA in Phase 1; DSC next. Changed by James on
   15 Nov 2026 (docs/decisions.md): the stochastic extension, ETL, MACRO
   with MSA and damage costs are translated before the M1.3 gate, the
-  smaller ones first (MACRO waits while CONOPT is not licensed); the other
-  extensions (ECB, CLI, ABS, IER, MLF, MCA, ...) after M1.7. Until
-  15 Nov 2026: MACRO, stochastic, ETL, climate, damage after M1.7.
+  smaller ones first; the other extensions (ECB, CLI, ABS, IER, MLF, MCA,
+  ...) after M1.7. Until 15 Nov 2026: MACRO, stochastic, ETL, climate,
+  damage after M1.7. Narrowed by James on 17 Nov 2026: the M1.3 gate
+  covers the linear features only. The stochastic extension and damage
+  costs stay before the gate; ETL (a MIP: binary variables), the DSC
+  lumpy investments and block retirements, the discrete unit commitment
+  and TIMES-Micro (nonlinear) come after it, still in Phase 1. MACRO with
+  MSA comes after the gate too, checked with IPOPT on both sides while
+  CONOPT is not licensed (layer 3 at 1e-6 with IPOPT).
 - Reference solver: CPLEX via James's GAMS licence for reference runs;
   HiGHS on both sides for open-source parity and CI; Gurobi trial
   possible later for benchmarks. Confirmed.
@@ -86,9 +92,12 @@ Any mismatch blocks the merge. Record known, justified differences in
   public before the MVP as an open experiment in AI-assisted translation.
   Olexandr Balyk and ETSAP members consulted. Confirmed.
 - Veda .vd output: in Phase 1 (M1.6). Default unless changed.
-- Phase 1 performance target (confirmed 18 Oct 2026): model generation
-  (preprocessing to solver hand-off) no worse than 5x GAMS, warm, at M1.7.
-  Correctness comes first; speed is Phase 2's job.
+- Performance target: model generation (preprocessing to solver
+  hand-off) no worse than 5x GAMS, warm. Set for M1.7 on 18 Oct 2026;
+  moved to Phase 2 by James on 17 Nov 2026 (docs/phase2-notes.md, P2-6).
+  Phase 1 still times each stage against GAMS and logs it, and M1.7's
+  baseline benchmarks record where TIMES.jl stands, with no target to
+  meet. Correctness comes first; speed is Phase 2's job.
 
 ## Status
 Entries up to 22 Oct 2026 summarise the pre-publication work. Until 27 Oct
@@ -988,3 +997,8 @@ those checks, their figures and their crafted cases are not published
   at ANNUAL (eqstgtss.mod L78-83). Unreachable in v4.9.7 (RP_STL never has
   ANNUAL: ppmain.mod L23 and L1089), so they are checked on a constructed
   state only, with no GAMS reference; the refusal is removed.
+- 17 Nov 2026: James's answers (docs/decisions.md): the M1.3 gate covers
+  the linear features only (ETL, the DSC lumpy investments and block
+  retirements, the discrete unit commitment and TIMES-Micro after it);
+  MACRO after the gate, checked with IPOPT on both sides; the 5x speed
+  target moves to Phase 2.
