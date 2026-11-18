@@ -46,44 +46,53 @@ const M13_SEGMENTS = [("input", "init"), ("init", "prep"), ("prep", "prelv"), ("
 "Every set and parameter of the dump `tm` started from."
 all_symbols(tm) = sort([i.name for i in values(tm.data.dump.symbols) if i.kind in (:set, :parameter) && i.name != "TJL_SOLVEINFO"])
 
-"Translated steps in execution order: (segment start, name, function, symbols, symbols by model)."
+"""
+What each step is compared on (`symbols(tm)`: the symbols it settles that nothing later in its segment
+changes; `all_symbols` for a step that ends its segment). The steps themselves and their order are
+`TIMES.PRESOLVE_STEPS` (src/run.jl), the list `run_model` runs; a step with no entry here stops this
+script with a KeyError.
+"""
+const STEP_SYMBOLS = Dict{String,Function}(
+    "init_ext" => all_symbols,
+    "ppmain_head" => ppmain_head_symbols,
+    "ppmain_years" => ppmain_years_symbols,
+    "timslice" => timslice_symbols,
+    "ppmain_rtp" => ppmain_rtp_symbols,
+    "preppm" => preppm_symbols,
+    "prep_ext" => prep_ext_symbols,
+    "preppm_shape" => preppm_shape_symbols,
+    "ppmain_topo" => ppmain_topo_symbols,
+    "ppmain_tslvl" => ppmain_tslvl_symbols,
+    "ppmain_life" => ppmain_life_symbols,
+    "pp_prelv" => pp_prelv_symbols,
+    "pp_qafs" => pp_qafs_symbols,
+    "ppmain_dflt" => ppmain_dflt_symbols,
+    "ppmain_tsattr" => ppmain_tsattr_symbols,
+    "ppmain_flo" => ppmain_flo_symbols,
+    "ppmain_flofs" => ppmain_flofs_symbols,
+    "ppmain_ire" => ppmain_ire_symbols,
+    "ppmain_bnd" => ppmain_bnd_symbols,
+    "ppmain_cum" => ppmain_cum_symbols,
+    "ppmain_stg" => ppmain_stg_symbols,
+    "ppmain_uc" => ppmain_uc_symbols,
+    "ppmain_ucmap" => ppmain_ucmap_symbols,
+    "ppmain_blend" => ppmain_blend_symbols,
+    "ppmain_reduce" => ppmain_reduce_symbols,
+    "ppm_ext_actef" => ppm_ext_actef_symbols,
+    "ppm_ext" => ppm_ext_symbols,
+    "prepret_decl" => prepret_decl_symbols,
+    "eqobjinv_prep" => eqobjinv_prep_symbols,
+    "eqobjfix_prep" => eqobjfix_prep_symbols,
+    "eqobsalv_prep" => eqobsalv_prep_symbols,
+    "eqmain_prep" => eqmain_prep_symbols,
+    "bnd_data" => (tm -> String[]),
+    "pp_qack_data" => (tm -> String[]),
+    "pp_clean" => all_symbols,
+)
+
+"Translated steps in execution order: (segment start, name, function, symbols, symbols by model); the M1.2 coefficient stage (ppm -> coef) is left out."
 const M13_STEPS = Tuple{String,String,Function,Vector{String},Function}[
-    ("input", "init_ext", init_ext!, String[], all_symbols),          # maindrv.mod L55: the whole input -> init segment
-    ("init", "ppmain_head", ppmain_head!, String[], ppmain_head_symbols),   # ppmain.mod L1-137
-    ("init", "ppmain_years", ppmain_years!, String[], ppmain_years_symbols),   # ppmain.mod L138-191
-    ("init", "timslice", timslice!, String[], timslice_symbols),       # ppmain.mod L196: timslice.mod with pp_off.mod
-    ("init", "ppmain_rtp", ppmain_rtp!, String[], ppmain_rtp_symbols),   # ppmain.mod L199-247
-    ("init", "preppm", preppm!, String[], preppm_symbols),            # ppmain.mod L248: preppm.mod L1-212
-    ("init", "prep_ext", prep_ext!, String[], prep_ext_symbols),      # preppm.mod L213-217: the whole init -> prep segment
-    ("prep", "preppm_shape", preppm_shape!, String[], preppm_shape_symbols),   # preppm.mod L218-252: preshape.gms
-    ("prep", "ppmain_topo", ppmain_topo!, String[], ppmain_topo_symbols),     # ppmain.mod L249-328
-    ("prep", "ppmain_tslvl", ppmain_tslvl!, String[], ppmain_tslvl_symbols),   # ppmain.mod L329-460
-    ("prep", "ppmain_life", ppmain_life!, String[], ppmain_life_symbols),     # ppmain.mod L461-611
-    ("prep", "pp_prelv", pp_prelv!, String[], pp_prelv_symbols),            # ppmain.mod L615: pp_prelv.vda, the whole prep -> prelv segment
-    ("prelv", "pp_qafs", pp_qafs!, String[], pp_qafs_symbols),               # ppmain.mod L617: pp_qafs.mod
-    ("prelv", "ppmain_dflt", ppmain_dflt!, String[], ppmain_dflt_symbols),   # ppmain.mod L619-682
-    ("prelv", "ppmain_tsattr", ppmain_tsattr!, String[], ppmain_tsattr_symbols),   # ppmain.mod L683-797
-    ("prelv", "ppmain_flo", ppmain_flo!, String[], ppmain_flo_symbols),   # ppmain.mod L800-821
-    ("prelv", "ppmain_flofs", ppmain_flofs!, String[], ppmain_flofs_symbols),   # ppmain.mod L823-843
-    ("prelv", "ppmain_ire", ppmain_ire!, String[], ppmain_ire_symbols),   # ppmain.mod L846-933
-    ("prelv", "ppmain_bnd", ppmain_bnd!, String[], ppmain_bnd_symbols),   # ppmain.mod L936-1001
-    ("prelv", "ppmain_cum", ppmain_cum!, String[], ppmain_cum_symbols),   # ppmain.mod L1003-1056
-    ("prelv", "ppmain_stg", ppmain_stg!, String[], ppmain_stg_symbols),   # ppmain.mod L1058-1099
-    ("prelv", "ppmain_uc", ppmain_uc!, String[], ppmain_uc_symbols),   # ppmain.mod L1101-1179
-    ("prelv", "ppmain_ucmap", ppmain_ucmap!, String[], ppmain_ucmap_symbols),   # ppmain.mod L1181-1226
-    ("prelv", "ppmain_blend", ppmain_blend!, String[], ppmain_blend_symbols),   # ppmain.mod L1228-1333
-    ("prelv", "ppmain_reduce", ppmain_reduce!, String[], ppmain_reduce_symbols),   # ppmain.mod L1336-1357, pp_reduce.red
-    ("prelv", "ppm_ext_actef", ppm_ext_actef!, String[], ppm_ext_actef_symbols),   # maindrv.mod L58: ppm_ext.dsc, ppm_ext.vda L11-58 with pp_actef.vda
-    ("prelv", "ppm_ext", ppm_ext!, String[], ppm_ext_symbols),   # ppm_ext.vda L59-169 with equcrtp.vda PPM_EXT: the whole prelv -> ppm segment
-    ("coef", "prepret_decl", prepret_decl!, String[], prepret_decl_symbols),   # mod_vars.mod L94: prepret.dsc DECL (data)
-    ("coef", "eqobjinv_prep", eqobjinv_prep!, String[], eqobjinv_prep_symbols),   # eqmain.mod L34: eqobj.mod L14-39, eqobjinv.mod L18-274
-    ("coef", "eqobjfix_prep", eqobjfix_prep!, String[], eqobjfix_prep_symbols),   # eqobj.mod L54: eqobjfix.mod L19-175 (coef_alt.lin FIX)
-    ("coef", "eqobsalv_prep", eqobsalv_prep!, String[], eqobsalv_prep_symbols),   # eqobj.mod L65: eqobsalv.mod L11-82
-    ("coef", "eqmain_prep", eqmain_prep!, String[], eqmain_prep_symbols),   # eqmain.mod L65-226, equ_ext.vda L76-90
-    ("coef", "bnd_data", bnd_data!, String[], tm -> String[]),          # maindrv.mod L92: bndmain.mod data statements
-    ("coef", "pp_qack_data", pp_qack_data!, String[], tm -> String[]),  # L98: pp_qack.mod data statements
-    ("coef", "pp_clean", pp_clean!, String[], all_symbols),            # L111: solve.mod L1, pp_clean.mod: the whole coef -> presolve segment
-]
+    (a, n, f, String[], STEP_SYMBOLS[n]) for (a, n, f) in TIMES.PRESOLVE_STEPS if a != "ppm"]
 
 function probe13(refdir, model; roots=Dict{String,String}(), variant="reduce_off", steps=M13_STEPS)
     dir = joinpath(refdir, model, variant)

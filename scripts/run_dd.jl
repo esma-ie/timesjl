@@ -22,11 +22,14 @@
 # The QA log TIMES writes (QA_CHECK.LOG) goes to the --out folder. A TIMES feature that TIMES.jl does
 # not translate yet stops the run with "not translated" and the GAMS lines it would need.
 #
+# Since 18 Nov 2026 the run itself is `TIMES.run_model` (src/run.jl), so it can be used without this
+# script: `using TIMES; run_model("<run file>")`. This script reads the arguments and calls it.
+#
 # Results come with no comparison: to check them against GAMS, use scripts/m13_gate.jl --from-dd on a
 # suite reference. Licences: CLAUDE.md, "Test-model licences" (this script runs any model, but what it
 # shows about a model without an open licence must not enter the repository).
 
-include(joinpath(@__DIR__, "m13_gate.jl"))     # compile_run, write_dump, GATE_SEGMENTS, gate_steps, run_switches, ...
+using TIMES
 
 function run_dd(args)
     args = collect(args)
@@ -35,91 +38,11 @@ function run_dd(args)
     dd, out, level = String[], nothing, 0
     while (i = findfirst(a -> a in ("--dd", "--out", "--licence-level"), args)) !== nothing
         a, v = args[i], args[i+1]
-        a == "--dd" ? push!(dd, abspath(v)) : a == "--out" ? (out = abspath(v)) : (level = parse(Int, v))
+        a == "--dd" ? push!(dd, v) : a == "--out" ? (out = v) : (level = parse(Int, v))
         deleteat!(args, i:i+1)
     end
     length(args) == 1 || error("usage: julia --project=test scripts/run_dd.jl <run file> [--dd <folder> ...] [--solve] [--out <folder>] [--licence-level n]")
-    run = abspath(args[1])
-    isfile(run) || error("no run file $run")
-    isempty(dd) && push!(dd, dirname(run))
-    out = something(out, mktempdir())
-    name = splitext(basename(run))[1]
-
-    # As the reference harness does (make_reference.py, runfile.py): a copy of the run file with
-    # SOLVE_NOW NO just before maindrv.mod, so that GAMS's solve and report files (solve.mod L22,
-    # maindrv.mod L114) are not compiled; TIMES.jl solves the model itself. The original is untouched.
-    lines = readlines(run)
-    i = findlast(l -> occursin(r"^\s*\$\s*batinclude\s+maindrv\.mod"i, l), lines)
-    i === nothing && error("$run has no \$BATINCLUDE maindrv.mod line")
-    insert!(lines, i, "\$SET SOLVE_NOW NO")
-    mkpath(out)
-    run2 = joinpath(out, basename(run))
-    write(run2, join(lines, "\n") * "\n")
-    t = @elapsed g = compile_run(run2; dirs=dd, licencelevel=level, globals=Dict("RUN_NAME" => name))
-    tw = @elapsed write_dump(g, out; source="$name: compiled from its DD files by TIMES.jl")
-    println("== $name: compiled in $(round(t; digits=1)) s ($(g.warnings) compile warnings), input written to $out in ",
-            round(tw; digits=1), " s")
-    sw = run_switches(run)
-    tm = TimesModel(out; switches=sw, reduce=uppercase(get(sw, "REDUCE", "NO")) == "YES")
-    qa_warnings!(tm, g.warnings)                  # $IF WARNINGS (ppmain.mod L35)
-
-    tp = 0.0
-    stp = TIMES.stepped(tm)
-    for (a, b) in GATE_SEGMENTS
-        try
-            # a stepped run: pp_clean.mod runs inside each step (solve.mod L12), not before the loop
-            tp += @elapsed foreach(f -> f(tm), filter(f -> !(stp && f === TIMES.pp_clean!), gate_steps(a)))
-        catch e
-            e isa TIMES.UnportedError || rethrow()
-            println("== $name: not translated, in $a -> $b: ", sprint(showerror, e))
-            return false
-        end
-    end
-    write(joinpath(out, "QA_CHECK.LOG"), qa_text(tm))
-    println("== $name: preprocessed in $(round(tp; digits=1)) s; QA log in ", joinpath(out, "QA_CHECK.LOG"))
-
-    if stp          # M1.5: one model per step (solve.stp), generated as each step is solved
-        if !solve
-            println("== $name: stepped run (TIMESTEP ", TIMES.gswitch(tm, "TIMESTEP", ""),
-                    "): one model per step, generated as each step is solved; run with --solve")
-            return true
-        end
-        hook = (tm, st, info) -> println("== $name: step ", info.step, " (periods ", join(info.periods, ", "), "): ", info.rows, " rows, ",
-                                         info.columns, " columns; HiGHS ", info.status, ", objective ", info.objective,
-                                         "; prepared, generated, solved in ", round(info.prepare_s; digits=1), ", ",
-                                         round(info.generate_s; digits=1), ", ", round(info.solve_s; digits=1), " s")
-        steps = try
-            TIMES.solve_stepped!(tm, HiGHS.Optimizer; attributes=("threads" => parse(Int, get(ENV, "TIMESJL_THREADS", "12")),),
-                                 step_hook=hook)
-        catch e
-            e isa Union{TIMES.UnportedError,ErrorException} || rethrow()
-            println("== $name: ", e isa TIMES.UnportedError ? "not translated, in the stepped solve: " : "", sprint(showerror, e))
-            return false
-        end
-        println("== $name: stepped run solved in ", length(steps), " steps; objective of the last step ", steps[end].objective,
-                "; the solution of a stepped run is not written yet (M1.6)")
-        return true
-    end
-
-    tg = @elapsed generate!(tm)
-    m = tm.model
-    println("== $name: model generated in $(round(tg; digits=1)) s: ", JuMP.num_constraints(m; count_variable_in_set_constraints=false),
-            " rows, ", JuMP.num_variables(m), " columns")
-    solve || return true
-    JuMP.set_optimizer(m, HiGHS.Optimizer)
-    JuMP.set_silent(m)
-    JuMP.set_attribute(m, "threads", parse(Int, get(ENV, "TIMESJL_THREADS", "12")))
-    ts = @elapsed JuMP.optimize!(m)
-    st = JuMP.termination_status(m)
-    println("== $name: HiGHS ", st, " in ", round(ts; digits=1), " s",
-            st == JuMP.OPTIMAL ? ", objective $(JuMP.objective_value(m))" : "")
-    if JuMP.has_values(m)
-        sdir = joinpath(out, "solution")
-        tw = @elapsed TIMES.write_solution(tm, sdir; source="$name: solved by TIMES.jl from its DD files",
-                                           solver="HiGHS.jl $(pkgversion(HiGHS))")
-        println("== $name: solution written to $sdir in ", round(tw; digits=1), " s")
-    end
-    return st == JuMP.OPTIMAL
+    return run_model(args[1]; dd=dd, out=out, solve=solve, licence_level=level).ok
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__

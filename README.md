@@ -23,12 +23,11 @@ solves it with the open-source solver HiGHS. No GAMS, no solver licence.
 
 | | |
 | --- | --- |
-| Julia | 1.11 or later, installed with juliaup (below); for 1.10, see step 2 |
-| Git | optional: you can download the repository as a ZIP instead |
+| Julia | 1.10 or later, installed with juliaup (below) |
 | Internet | on the first run, to download the Julia packages, the TIMES v4.9.7 source and the demo models from GitHub |
 | Operating system | Windows or Linux (tested); macOS should work (every dependency, HiGHS included, has macOS builds) but is not tested yet |
 
-You do not need GAMS, CPLEX, Python or VEDA. HiGHS and every other
+You do not need GAMS, CPLEX, Python, VEDA or Git. HiGHS and every other
 dependency are Julia packages that Julia installs for you.
 
 ### 1. Install Julia
@@ -39,45 +38,34 @@ Use juliaup, Julia's official installer, which also keeps Julia up to date:
   (or install "Julia" from the Microsoft Store)
 - **macOS and Linux** (terminal): `curl -fsSL https://install.julialang.org | sh`
 
-Open a new terminal afterwards and check that `julia --version` prints 1.11
+Open a new terminal afterwards and check that `julia --version` prints 1.10
 or later.
 
-### 2. Get TIMES.jl and its packages
+### 2. Install TIMES.jl
 
+Start Julia (type `julia` in a terminal), then at the `julia>` prompt:
+
+```julia
+using Pkg
+Pkg.add(url="https://github.com/esma-ie/TIMESjl")
 ```
-git clone https://github.com/esma-ie/TIMESjl.git
-cd TIMESjl
-julia --project=test -e "using Pkg; Pkg.instantiate()"
-```
 
-Without Git: on GitHub, choose **Code > Download ZIP**, unzip it, and `cd`
-into the unzipped folder (`TIMESjl-main`) before the last command.
-
-The last command installs TIMES.jl's dependencies (JuMP, HiGHS, Arrow, ...)
-into the `test` environment and precompiles them. It takes a minute or two
-the first time. The commands above work the same in PowerShell, Command
-Prompt, macOS Terminal and Linux shells.
-
-On Julia 1.10 the last command stops with "expected package `TIMES` to be
-registered", because 1.10 does not read the `[sources]` entry in
-`test/Project.toml`. Start `julia --project=test` and run
-`using Pkg; Pkg.develop(path="."); Pkg.instantiate()` instead.
+This installs TIMES.jl and its dependencies (JuMP, HiGHS, Arrow, ...) and
+precompiles them, which takes a few minutes the first time. TIMES.jl is not
+in Julia's package registry yet, so it is added from its GitHub address.
 
 ### 3. Run the demo model
 
-Start Julia in the same folder, then run demo12:
+In Julia:
 
-```
-julia --project=test
-```
 ```julia
-include("scripts/run_dd.jl")
-run_dd([joinpath(TIMES.times_demo_dir(), "demo12.run"), "--solve", "--out", "demo12_out"])
+using TIMES
+r = run_model(joinpath(TIMES.times_demo_dir(), "demo12.run"); out="demo12_out")
 ```
 
 The first call downloads the TIMES v4.9.7 source and the TIMES_Demo models
-(each checked by hash; see [Baseline](#baseline)). It prints one line per
-step:
+(each checked by hash; see [Baseline](#baseline)). `run_model` prints one
+line per step:
 
 ```
 == demo12: compiled in 0.9 s (0 compile warnings), input written to ...\demo12_out in 9.3 s
@@ -91,35 +79,41 @@ The rows, columns and objective are the ones GAMS gives for the same model
 (objective 23960685.737007827 with CPLEX in the reference run). The first
 run in a Julia session is slow, about 3 minutes in all, because Julia
 compiles TIMES.jl's code as it first uses it. Further runs in the same
-session reuse that compiled code: run the `run_dd(...)` line again and
+session reuse that compiled code: run the `run_model(...)` line again and
 demo12 takes about 2 seconds. So keep the Julia session open between runs.
 (Timings on a Windows workstation, 18 Nov 2026.)
 
-What is in `demo12_out`:
+`demo12_out` is made in the folder Julia was started in (`pwd()` shows it).
+It holds:
 
 - the model's input data as compiled from its DD files (Arrow files);
 - `QA_CHECK.LOG`, the QA log TIMES writes;
 - `solution/`: the level and marginal of every variable and equation, as
   Arrow files (readable from Julia, Python with `pyarrow`, R with `arrow`).
 
+In Julia, `r.objective` is the objective and `r.model.model` the JuMP model,
+for example to inspect it or solve it again with another solver.
+`?run_model` at the `julia>` prompt lists every option.
+
 TIMES.jl does not write TIMES's report parameters or VEDA `.vd` files yet
 (milestone M1.6), so the results cannot be opened in VEDA.
 
 ### 4. Run your own model
 
-From the terminal, in the TIMESjl folder:
-
-```
-julia --project=test scripts/run_dd.jl path/to/scenario.run --dd path/to/dd/folder --solve --out results
+```julia
+using TIMES
+run_model(raw"C:\VEDA\GAMS_WrkTIMES\scenario.run"; dd=[raw"C:\VEDA\GAMS_WrkTIMES"], out="results")
 ```
 
 - The `.run` file is the one VEDA writes for a scenario (in VEDA's GAMS
   working folder, `GAMS_WrkTIMES` or similar), or one edited by hand.
-- `--dd` gives the folders that hold the scenario's DD files, searched in
-  order; it can be given more than once. Without it, the `.run` file's own
-  folder is used.
-- On Windows you can also drag a `.run` file onto `scripts\run_dd.cmd` in
-  File Explorer (DD files in the same folder as the `.run` file).
+- `dd` lists the folders that hold the scenario's DD files, searched in
+  order. Without it, the `.run` file's own folder is used.
+- On Windows, write paths as `raw"C:\..."` (or with forward slashes,
+  `"C:/..."`): in a plain Julia string a backslash starts an escape.
+- `solve=false` stops after building the model; `optimizer=` takes another
+  JuMP solver, such as `Gurobi.Optimizer` if you have it installed and
+  licensed.
 
 If the model uses a TIMES feature that TIMES.jl does not translate yet, the
 run stops with `not translated` and names the GAMS file it would need (see
@@ -128,20 +122,39 @@ check a model against GAMS, see [`reference/README.md`](reference/README.md).
 
 ### Tips
 
-- **Threads.** HiGHS uses up to 12 threads by default. To use fewer, set
-  `TIMESJL_THREADS` before starting Julia: `$env:TIMESJL_THREADS = "4"` in
-  PowerShell, `set TIMESJL_THREADS=4` in Command Prompt,
-  `export TIMESJL_THREADS=4` on macOS and Linux.
+- **Threads.** HiGHS uses up to 12 threads by default. Pass `threads=4` to
+  `run_model`, or set `TIMESJL_THREADS` before starting Julia:
+  `$env:TIMESJL_THREADS = "4"` in PowerShell, `set TIMESJL_THREADS=4` in
+  Command Prompt, `export TIMESJL_THREADS=4` on macOS and Linux.
+- **Updating.** `using Pkg; Pkg.update("TIMES")` fetches the latest `main`.
 - **Offline or behind a firewall.** Clone
   [etsap-TIMES/TIMES_model](https://github.com/etsap-TIMES/TIMES_model) at
   commit `d9a6a25` and set `TIMESJL_TIMES_SOURCE` to that folder, so the
   TIMES source is not downloaded. Julia uses the usual `HTTPS_PROXY`
   setting for its downloads.
-- **Tests.** `julia --project=. -e "using Pkg; Pkg.test()"` runs the test
-  set that CI runs on every pull request: unit tests and the parity checks
-  on demo12 and its crafted variants.
-- **Updating.** `git pull`, then the `Pkg.instantiate()` command of step 2
-  again.
+
+### Working on TIMES.jl itself
+
+To run the tests and the scripts, clone the repository (Julia 1.11 or later
+for the `test` environment):
+
+```
+git clone https://github.com/esma-ie/TIMESjl.git
+cd TIMESjl
+julia --project=test -e "using Pkg; Pkg.instantiate()"
+julia --project=. -e "using Pkg; Pkg.test()"
+```
+
+The last command runs the test set that CI runs on every pull request: unit
+tests and the parity checks on demo12 and its crafted variants. From the
+clone, `julia --project=test scripts/run_dd.jl <run file> [--dd <folder>]
+--solve --out <folder>` runs a model from the terminal, and on Windows you
+can drag a `.run` file onto `scripts\run_dd.cmd` in File Explorer.
+
+On Julia 1.10 the `instantiate` command stops with "expected package `TIMES`
+to be registered", because 1.10 does not read the `[sources]` entry in
+`test/Project.toml`. Start `julia --project=test` and run
+`using Pkg; Pkg.develop(path="."); Pkg.instantiate()` instead.
 
 ## An experiment in AI-assisted translation
 
@@ -219,10 +232,10 @@ hand-off, each change held to parity with GAMS.
 
 As of 15 Nov 2026 (`main`):
 
-- **Runs without GAMS.** [`scripts/run_dd.jl`](scripts/run_dd.jl) takes a
-  model's `.run` file and DD files, compiles them as GAMS's compile phase
-  does, runs TIMES's preprocessing and coefficients, builds the model and,
-  with `--solve`, solves it with HiGHS.
+- **Runs without GAMS.** `run_model` ([`src/run.jl`](src/run.jl); see
+  [Quick start](#quick-start)) takes a model's `.run` file and DD files,
+  compiles them as GAMS's compile phase does, runs TIMES's preprocessing
+  and coefficients, builds the model and solves it with HiGHS.
 - **Open test models.** Seven runs of five open models (TIMES_Demo demo12;
   TIMES-NZ steady and shift; OTCGEN; OTNYC; OTUS9r reference and tax1)
   match GAMS, with REDUCE off and as run, in the workstation batch of
@@ -280,6 +293,7 @@ learn from closed or proprietary models.
 
 ```
 src/            TIMES module (one Julia file per GAMS file, same stems)
+  run.jl        run_model and PRESOLVE_STEPS: a model from its run and DD files
   dd/           the reader of .run and DD files (M1.4)
   prep/         preprocessing (M1.3)
   coef/         coefficients (M1.2)

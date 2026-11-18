@@ -18,16 +18,8 @@ using TIMES.Reference: canonical_from_dump, canonical_from_jump, compare_lp, isp
                        solution_levels, jump_name_key
 import JSON, JuMP, HiGHS, TOML
 
-"Values of `\$SET` switches in a TIMES run file (last assignment wins; comments skipped)."
-function run_switches(path)
-    sw = Dict{String,String}()
-    for ln in eachline(path)
-        startswith(lstrip(ln), "*") && continue
-        m = match(r"^\s*\$\s*set(?:global|local)?\s+(\w+)\s+'?([^'\s]*)'?"i, ln)
-        m === nothing || (sw[uppercase(m[1])] = m[2])
-    end
-    return sw
-end
+"Values of `\$SET` switches in a TIMES run file: `TIMES.run_switches` (src/run.jl)."
+run_switches(path) = TIMES.run_switches(path)
 
 function runfile_of(refdir, model, variant)
     for p in (joinpath(refdir, model, variant, "raw", "tjl_convert.run"),        # harness >= 0.2.2
