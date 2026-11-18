@@ -4,11 +4,14 @@ A Julia/JuMP translation of the IEA-ETSAP TIMES model generator, validated
 against the GAMS code for numerical parity.
 
 > **Status: early experiment, pre-MVP (Phase 1; M1.0 to M1.2 passed; M1.3,
-> M1.4 and M1.5 under way).** Not ready for modelling use. TIMES.jl can now
-> read a TIMES model from its own `.run` and DD files, preprocess it, build it
-> and solve it without GAMS, but several TIMES features are not translated
-> yet, it has no release, and its interfaces will change. For analysis, use
-> TIMES in GAMS. See [Progress](#progress).
+> M1.4 and M1.5 under way).** Not ready for modelling use. TIMES.jl now
+> reads a TIMES model from its own `.run` and DD files, preprocesses it,
+> builds it and solves it without GAMS. On every open test model, from the
+> TIMES demo to national and multi-region models of up to 2.5 million rows,
+> it builds the same matrix as GAMS, and its optimum agrees with GAMS's
+> ([Probes against GAMS](#probes-against-gams)). Several TIMES features are
+> not translated yet, it has no release, and its interfaces will change. For
+> analysis, use TIMES in GAMS. See [Progress](#progress).
 >
 > TIMES.jl is an independent project of ESMA Ltd. It is not an official
 > IEA-ETSAP product and is not endorsed by IEA-ETSAP or the TIMES maintainers.
@@ -214,14 +217,14 @@ CC BY 4.0, IEA-ETSAP) come the same way (`TIMES.times_demo_dir()`).
 equations and coefficients as GAMS, with GAMS names kept. Ported from the
 equations outwards:
 
-| Milestone | Scope | Status (15 Nov 2026) |
+| Milestone | Scope | Status (18 Nov 2026) |
 | --- | --- | --- |
 | M1.0 | Repository, CI, GAMS reference harness, comparison tool | passed 18 Oct |
 | M1.1 | Variables, core + VDA equations, bounds, objective, built from GAMS-dumped data | passed 21 Oct |
 | M1.2 | Coefficients (`coefmain.mod`, `coef_*.mod`) | passed 31 Oct |
 | M1.3 | Preprocessing (`ppmain.mod`, `pp_*.mod`, VDA prep, REDUCE) | translated and matching GAMS on the open test models; the gate waits until the TIMES features still refused are translated |
 | M1.4 | GAMS-free DD and `.run` reader | built and matching GAMS; the gate follows M1.3's |
-| M1.5 | Run options (OBJ variants, MID_YEAR, DSCAUTO, VAR_UC, FIXBOH, ...) | started 14 Nov: stepped (myopic) runs in review |
+| M1.5 | Run options (OBJ variants, MID_YEAR, DSCAUTO, VAR_UC, FIXBOH, ...) | started 14 Nov: stepped (myopic) runs merged 15 Nov |
 | M1.6 | Reporting and Veda `.vd` output | not started |
 | M1.7 | Phase 1 release and baseline benchmarks | not started |
 
@@ -230,39 +233,39 @@ hand-off, each change held to parity with GAMS.
 
 ## Progress
 
-As of 15 Nov 2026 (`main`):
+As of 18 Nov 2026 (`main`):
 
 - **Runs without GAMS.** `run_model` ([`src/run.jl`](src/run.jl); see
   [Quick start](#quick-start)) takes a model's `.run` file and DD files,
   compiles them as GAMS's compile phase does, runs TIMES's preprocessing
-  and coefficients, builds the model and solves it with HiGHS.
-- **Open test models.** Seven runs of five open models (TIMES_Demo demo12;
-  TIMES-NZ steady and shift; OTCGEN; OTNYC; OTUS9r reference and tax1)
-  match GAMS, with REDUCE off and as run, in the workstation batch of
-  14 Nov 2026:
-  - every preprocessing step against GAMS's dump before and after it (490 of
-    490 steps);
-  - the whole chain from the raw input to the point where GAMS builds the
-    model (14 of 14 runs);
-  - the matrix and the objective (281 of 281 checks). The largest model is
-    OTUS9r: 2.2 million rows, 2.8 million columns and 9.9 million nonzeros
-    with REDUCE off.
-- **CI.** Every pull request checks 35 runs: demo12 and crafted variants of
-  it that add features demo12 itself does not use (992 checks, all pass).
-- **Features.** The core and VDA formulations are translated. Changes 28
-  to 40 of the M1.3 plan (merged 14 Nov) added features that had been
-  refused, each checked on a crafted demo12 case: trade and storage in
-  ASHAR, ANNCOST LEV, the data of stepped (myopic) runs, exchange bounds
-  (IREBND, XBND), commodity and flow bounds as equations (BNDNET, BNDPRD,
-  FLOBND, FLOFR), linear dispatching, unit commitment by start-up type,
+  and coefficients, builds the model and solves it with HiGHS. Stepped
+  (myopic) runs are solved step by step, as GAMS does.
+- **From the demo to large multi-region models.** Every open test model
+  runs from its own DD files to the same matrix and optimum as GAMS: from
+  TIMES_Demo demo12 (3,233 rows) to OTUS9r, the United States in nine
+  regions (2.5 million rows). See [Probes against GAMS](#probes-against-gams)
+  below. TIMES.jl has not been run on a global model yet: the test suite
+  has none, because a test model needs an open licence
+  ([`docs/test-models.md`](docs/test-models.md)).
+- **CI.** Every pull request runs 35,350 tests (all pass on 18 Nov): demo12
+  and crafted variants of it that add features demo12 itself does not use,
+  each against fixtures from GAMS.
+- **Features.** The core and VDA formulations are translated. The M1.3
+  changes merged up to 17 Nov added features that had been refused, each
+  checked on a crafted demo12 case: trade and storage in ASHAR, ANNCOST LEV,
+  stepped (myopic) runs, exchange bounds (IREBND, XBND, grid bounds
+  EQ_GR_XBND), commodity and flow bounds as equations (BNDNET, BNDPRD,
+  FLOBND, FLOFR), linear dispatching, unit commitment by start-up type and
+  its ANNUL, INVCOST and ONLINE attributes, storage cycle limits (STGCCL),
   refinery blending, simulated vintages (CAPVAC) and bounds on costs
   (BNDCST).
 - **Not translated yet.** These features stop generation with an error
   that names the GAMS file: MACRO; the extensions (stochastic, ETL,
   climate, ABS, ECB, IER); elastic demand; damage costs; dynamic timeslices
-  (TS_OFF); PTDF and gas grids; market-based trade; discrete unit commitment
-  (a MIP); and a few smaller ones ([`docs/m13-plan.md`](docs/m13-plan.md)).
-- **Discrepancies.** 40 places where the GAMS code and the documentation
+  (TS_OFF); PTDF (in review) and gas grids; market-based trade; discrete
+  unit commitment (a MIP); and a few smaller ones
+  ([`docs/m13-plan.md`](docs/m13-plan.md)).
+- **Discrepancies.** 44 places where the GAMS code and the documentation
   disagree are logged in [`docs/discrepancies.md`](docs/discrepancies.md).
   Three known differences between TIMES.jl
   and GAMS are listed in [`docs/known-differences.md`](docs/known-differences.md).
@@ -272,6 +275,50 @@ As of 15 Nov 2026 (`main`):
 
 Speed is not a Phase 1 aim; timings are recorded and compared with GAMS for
 Phase 2.
+
+### Probes against GAMS
+
+The probes run TIMES.jl beside GAMS on the same model and compare the
+two at each stage, from the DD files to the optimum. Each open model is
+run twice, with REDUCE off and as its run file sets it. Results of the
+workstation batches of 17 and 18 Nov 2026 (GAMS 54.6.1, CPLEX; TIMES.jl
+with HiGHS):
+
+| Model | Based on | Rows (REDUCE off) | Preprocessing steps | Matrix | Optimum vs GAMS/CPLEX |
+| --- | --- | ---: | --- | --- | --- |
+| TIMES_Demo demo12 | the IEA-ETSAP demo | 8,695 | match | identical | 4e-15 |
+| OTNYC | US EPA COMET-NYC | 504,698 | match | identical | 1e-15 |
+| OTCGEN | US EPA Generative COMET | 1,257,132 | match | identical | 2e-15 |
+| TIMES-NZ steady | New Zealand's TIMES-NZ | 1,408,361 | match | identical | 4e-11 |
+| TIMES-NZ shift | New Zealand's TIMES-NZ | 1,483,415 | match | identical | 3e-9 |
+| OTUS9r reference | US EPA EPAUS9rT, 9 US regions | 2,174,010 | match | identical | GAMS's optimum checked in TIMES.jl |
+| OTUS9r tax1 | US EPA EPAUS9rT, 9 US regions | 2,528,996 | match | identical | GAMS's optimum checked in TIMES.jl |
+
+What each column checks:
+
+- **Preprocessing steps** ([`scripts/m13_probe.jl`](scripts/m13_probe.jl)):
+  each of TIMES's 35 preprocessing steps, run from GAMS's own data before
+  the step and compared with GAMS's data after it, at 1e-9. 490 of 490
+  steps match (batch of 17 Nov).
+- **Matrix** ([`scripts/m13_gate.jl`](scripts/m13_gate.jl) `--from-dd`):
+  the whole run from the model's DD files, with every set and parameter
+  compared with GAMS at six checkpoints along the way, then every row,
+  column, coefficient, right-hand side and bound of the LP against GAMS's
+  CONVERT export, at 1e-9. All 14 runs match.
+- **Optimum:** the relative difference between HiGHS's objective in
+  TIMES.jl and CPLEX's in GAMS, the larger of the model's two runs (the
+  tolerance is 1e-6). For OTUS9r, CPLEX's optimum from GAMS is put into
+  the TIMES.jl model and checked against every constraint and the
+  objective; HiGHS's own solve of OTUS9r is followed separately.
+- Altogether the batch of 18 Nov makes 281 checks on these models, and
+  all pass ([dashboard](docs/dashboard/index.html)).
+
+Not yet matching to the end: JRC-EU-TIMES, a model of the European
+energy system, whose licence lets us publish summary results only. Run
+from GAMS's input dump, TIMES.jl matches GAMS for every set and parameter
+up to the coefficients, which covers what the M1.3 gate asks of this
+model. At the end of preprocessing, 3 of its 850 sets and parameters still
+differ; the cause is not found yet.
 
 ## Validation
 
