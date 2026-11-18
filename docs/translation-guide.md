@@ -84,6 +84,11 @@ Any mismatch blocks the merge. Record known, justified differences in
   and TIMES-Micro (nonlinear) come after it, still in Phase 1. MACRO with
   MSA comes after the gate too, checked with IPOPT on both sides while
   CONOPT is not licensed (layer 3 at 1e-6 with IPOPT).
+  James, 18 Nov 2026 (gate audit, q1 and q2): shaped availability, the rest
+  of dynamic timeslices, GR_DEMFR data and %IREAUXBAL% without %POWERFLO%
+  are in the M1.3 gate; %OBJANN%, %VALIDATE%, %VINTOPT% 1, %WAVER%,
+  %INTEXT_ONLY%, %PREP_ANS%, VAR_UC not YES and the trade bounds of an
+  earlier run (bnd_ire.vda) move to M1.5 (docs/m13-plan.md, Gate audit).
 - Reference solver: CPLEX via James's GAMS licence for reference runs;
   HiGHS on both sides for open-source parity and CI; Gurobi trial
   possible later for benchmarks. Confirmed.

@@ -50,8 +50,6 @@ answer yet.
 | 15 Nov 2026 | #139 | The colours James chose on 15 Nov 2026 (#127 d2), as hex values (#139 d1): TIMES.jl in ESMA Dark yellow `#eaaa00` ("sunshine yellow"; the brand book's one yellow, Pantone 124 C) on dark slides and in Dark green `#004539` (Pantone 3308 C) on light slides; GAMS stays `#e06000`, since the brand book has no orange and the ESMA palette's orange `#ff6a1f` (geothermal) falls under the normal-vision floor beside the yellow on dark slides (14.6 against 15; deuteranopia 7.3), where `#e06000` gives 17.2 and 13.5. Are these the colours meant? | as used | Open; a choice #139 made for James, so it stays here until he answers. |
 | 15 Nov 2026 | chat | Discrepancies are "dp" in the chat (James, 15 Nov 2026), while docs/discrepancies.md and the code comments write D1 to D44. Rename them to DP1 to DP44 in the repository too, in one pull request, so the chat and the files agree? | yes | Open; nothing is renamed until James answers. |
 | 15 Nov 2026 | chat | The workstation batch's DD-file stage: the HiGHS solve of TIMES-NZ shift with REDUCE off hit its one-hour limit on 14 Nov 2026 (3,625.7 s; with REDUCE on it solved in 2,658 s). Solve TIMES-NZ in that stage with REDUCE on only, its REDUCE-off model still compared with GAMS's matrix and cross-evaluated? | yes | Open; the batch keeps its one-hour limit meanwhile. |
-| 17 Nov 2026 | chat | User constraints with VAR_UC not YES (eqmain.mod L229-232, equcwrap.mod L13, equserco.mod L112-114) are refused, and no open model sets VAR_UC NO. Translating them is the M1.5 run option VAR_UC (docs/translation-guide.md, M1.5): with VAR_UC NO, UC_RHSMAP, UC_UT, UC_UTS and RUCTS take an extra bound index (eqmain.mod L204-207), the rows become EQE_/EQG_/EQL_ families with the UC_RHS* value as a constant right-hand side and no VAR_UC* variables. Count it in the M1.3 gate's scope, or leave it with M1.5 (the gate closes without it, refused with its message)? Rule-level (the milestone scope). | leave it with M1.5 | Open; asked on 17 Nov 2026. Nothing is built for it. |
-| 17 Nov 2026 | #150 | The VDA trade bounds and prices from an earlier run (`bnd_ire.vda`, equ_ext.vda L67; PREMILE, PAR_IRE and PAR_IPRIC loaded from the GDX files named by the run options GDX_IREBND and GDX_IPRIC, init_ext.vda L137-151) are refused, and no open model sets them. Count them in the M1.3 gate's scope, or move them to M1.5 with the other run options (the gate closes without them, refused with their message)? Rule-level (the milestone scope). | move to M1.5 | Open (#150, decision 3). Nothing is built for it. |
 | 17 Nov 2026 | #155 | coef_nio.mod L58 computes COEF_RCOM from COEF_CPT before coef_alt.lin L77 fills COEF_CPT (coefmain.mod order), so COEF_RCOM is empty outside the capacity transfer and the VAR_RCAP term of cal_cap.mod is never reached; TIMES.jl does the same. Report it to the TIMES maintainers (ETSAP) as a possible ordering issue? | yes, as a note to ETSAP | Open (#155, decision 2). Nothing in TIMES.jl depends on it. |
 | 17 Nov 2026 | #156 | resloadc.vda L111 and L144 read VAR_RLD at 'RL_THMIN' (an underscore) beside 'RL-THMIN': two columns, likely a typo (D45). TIMES.jl follows the code. Report it to ETSAP, in one note with #155 d2 (COEF_RCOM)? | yes, in the same note | Open (#156, decision 3). Nothing in TIMES.jl depends on it. |
 
@@ -61,10 +59,14 @@ On 15 Nov 2026 James merged #126 to #137 (twelve pull requests): their built-in 
 
 On 17 Nov 2026 James answered three questions of the list in the chat (below, under Decisions in the chat): the scope of the M1.3 gate (q5, with ETL added), MACRO with IPOPT, and the 5x speed target. Those rows left this list.
 
+On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defaults are accepted by merge. The same evening he answered q1 and q2 of the M1.3 gate audit (below, under Decisions in the chat): the VAR_UC question of 17 Nov and #150 decision 3 left this list.
+
 ## Decisions in the chat (not in a PR list)
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 18 Nov 2026 | q1 of the M1.3 gate audit: yes, as recommended. Still refused linear features count for the M1.3 gate: shaped availability (NCAP_AFM, NCAP_AFX, NCAP_AFSM, NCAP_AFSX; coef_cpt.mod L42-58, pp_shapr.mod L19-40); the rest of dynamic timeslices (the re-interpolation of dynslite.vda L94-102, and the RTS(S) rows of the storage, dispatching, EQ(l)_ASHAR, EQL_CAPFLO, unit commitment, residual load curve and power-flow families); GR_DEMFR as input data (powerflo.vda L107, L131); %IREAUXBAL% set by the run without %POWERFLO% (cal_ire.mod L30). Moved to M1.5 as run options: %OBJANN% YES (eqobjann.tm), %VALIDATE% YES, %VINTOPT% 1 (fillvint.gms), %WAVER% YES (fillwave.gms), %INTEXT_ONLY% YES and %PREP_ANS% YES. Elastic demand (%TIMESED%, its linear form) and the stochastic extension stay in the gate. Rule-level (the milestone scope); explicit yes. | this log; `docs/m13-plan.md` (Gate, and Gate audit, 18 Nov 2026); `docs/m15-plan.md`; `docs/translation-guide.md` (Decisions) |
+| 18 Nov 2026 | q2 of the M1.3 gate audit: move both to M1.5: user constraints with VAR_UC not YES (eqmain.mod L204-207, L229-232; equcwrap.mod L13), and the VDA trade bounds and prices from an earlier run (bnd_ire.vda, equ_ext.vda L67; GDX_IREBND and GDX_IPRIC, init_ext.vda L137-151). The M1.3 gate closes without them; they stay refused with their message until M1.5. Answers the VAR_UC question of 17 Nov 2026 and #150 decision 3. Rule-level (the milestone scope); explicit yes. | this log; `docs/m13-plan.md` (Gate); `docs/m15-plan.md` |
 | 17 Nov 2026 | q8: James is in Athens until Saturday 21 Nov 2026. Until then the check-ins are at 07:00 and 20:00 Athens time (05:00 and 18:00 on the workstation, GMT), and both dashboards are refreshed before 07:00 Athens. The nightly loop runs without an end time, so its start needs no change. From Sunday 22 Nov the check-ins are again at 9:00 and 16:30. | this log; the workstation's notes |
 | 17 Nov 2026 | q7: "lets stay on times v4.9.7 until the planned update to newer TIMES." No v4.9.8 reference batch before the plan's move (#109 d3: after every remaining feature is translated and tested; then the whole baseline moves at the M1.3 gate); the nightlies stay on v4.9.7. | this log; CLAUDE.md (Baseline) unchanged |
 | 17 Nov 2026 | q6: "bring all work back to local workstation." Every remaining M1.3 change, and its GAMS layer 2-3 run, is made in the Claude Code session on James's workstation; the cloud session that opened #143 to #147 takes no more translation work. | this log; the workstation's notes |
@@ -132,182 +134,182 @@ On 17 Nov 2026 James answered three questions of the list in the chat (below, un
 
 ## Log by pull request
 
-### #148 M1.3 (47): the VDA betting constraints EQG_UCMAX, EQG_UCSUMAX (ucbet.vda L11-125); crafted case demo12_ucbet (open)
+### #148 M1.3 (47): the VDA betting constraints EQG_UCMAX, EQG_UCSUMAX (ucbet.vda L11-125); crafted case demo12_ucbet (merged 18 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
 | 1 | `$IF DEFINED UC_FLOBET` (equ_ext.vda L99, mod_ext.vda L39) is read as "UC_FLOBET has records after init_ext and prep_ext". GAMS also includes ucbet.vda for a UC_FLOBET or UC_ACTBET given with no records; then the file changes nothing that is read later (no UC_GMAX entry, so no row; UC_GMAXR emptied again by L38; only the scratch sets UNCD1 and RXX are cleared). The refusal of UC_ACTBET data at prep_ext.vda L35 goes with it. | Recommended: yes. Built in. | answered by James, 17 Nov 2026: yes |
 | 2 | Keep the crafted case demo12_ucbet (demo12 + ucbet.dd, CC BY 4.0) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | answered by James, 17 Nov 2026: yes |
 
-### #149 M1.3 (48): the IN rows of EQL_SCAP, salvage limited by activity (prepret.dsc L105-107); crafted case demo12_scapin (open)
+### #149 M1.3 (48): the IN rows of EQL_SCAP, salvage limited by activity (prepret.dsc L105-107); crafted case demo12_scapin (merged 18 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | `%IREAUXBAL%` set by the run itself, not by powerflo.vda DECL (L221): GAMS pastes the run's own text into the balance at cal_ire.mod L30, so there is no GAMS code to translate. It stays refused with its message (eqcombal.jl, eqpeak.jl), as a run that supplies its own GAMS code, and leaves the list of features left before the M1.3 gate. | Recommended: yes. Built in (no code change). | open |
-| 2 | Keep the crafted case demo12_scapin (demo12 + olife.dd, CC BY 4.0) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
+| 1 | `%IREAUXBAL%` set by the run itself, not by powerflo.vda DECL (L221): GAMS pastes the run's own text into the balance at cal_ire.mod L30, so there is no GAMS code to translate. It stays refused with its message (eqcombal.jl, eqpeak.jl), as a run that supplies its own GAMS code, and leaves the list of features left before the M1.3 gate. | Recommended: yes. Built in (no code change). | accepted by merge, 18 Nov 2026 |
+| 2 | Keep the crafted case demo12_scapin (demo12 + olife.dd, CC BY 4.0) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
 
-### #150 M1.3 (49): inter-period storage under OBJ LIN (eqstgips.lin L12-66, eqstgaux.lin L25-31); crafted case demo12_ipslin (open)
-
-| # | Question | Decided | How |
-| --- | --- | --- | --- |
-| 1 | Keep the crafted case demo12_ipslin (demo12_ips under OBJ LIN, CC BY 4.0, no DD file of its own) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
-| 2 | Translate eqstgips.lin and the IPS terms of eqstgaux.lin in one change: the second is only reached with the first (both are OBJ LIN's inter-period storage), and one crafted case checks both. | Recommended: yes. Built in. | open |
-| 3 | `bnd_ire.vda` (item (f) of 17 Nov 2026) is a run option: it acts only when GDX_IREBND or GDX_IPRIC load an earlier run's trade flows and prices (init_ext.vda L137-151). Move it to M1.5, out of the M1.3 gate? Rule-level (the milestone scope). | Recommended: move to M1.5. Not built in: the refusal stays either way. | open (on the Open decisions list) |
-
-### #151 M1.3 (50): costs on the components of a commodity's balance, COM_CSTBAL (powerflo.vda L372-434); crafted cases demo12_cstbal and demo12_pfcst (open)
+### #150 M1.3 (49): inter-period storage under OBJ LIN (eqstgips.lin L12-66, eqstgaux.lin L25-31); crafted case demo12_ipslin (merged 18 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Two new crafted cases, each with a public CI fixture (as run, about 4 MB each): demo12_cstbal (demo12 + cstbal.dd, the branches without a grid) and demo12_pfcst (demo12_pfd + pfcst.dd, the grid branches). One case cannot reach both: a commodity that is a grid node allocation is never TRACKC. | Recommended: yes. Built in. | open |
-| 2 | The labels the CSTBAL code names itself (PRD, IMP, EXP, GEN, NTX, NPG, FIN, FX and the empty label) are added to the label order when the dump it starts from lacks them, after every known label (G36). Their place there only orders OBJ_COMBAL's records, which every compare matches by key. | Recommended: yes. Built in. | open |
+| 1 | Keep the crafted case demo12_ipslin (demo12_ips under OBJ LIN, CC BY 4.0, no DD file of its own) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 2 | Translate eqstgips.lin and the IPS terms of eqstgaux.lin in one change: the second is only reached with the first (both are OBJ LIN's inter-period storage), and one crafted case checks both. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 3 | `bnd_ire.vda` (item (f) of 17 Nov 2026) is a run option: it acts only when GDX_IREBND or GDX_IPRIC load an earlier run's trade flows and prices (init_ext.vda L137-151). Move it to M1.5, out of the M1.3 gate? Rule-level (the milestone scope). | Recommended: move to M1.5. Not built in: the refusal stays either way. | James, 18 Nov 2026: moved to M1.5 (q2 of the gate audit) |
 
-### #152 M1.3 (51): market-based trade (eqire.mod L23-38, eqirebnd.mod L46-51); crafted case demo12_mkt (open)
-
-| # | Question | Decided | How |
-| --- | --- | --- | --- |
-| 1 | A new crafted case, demo12_mkt, with one public CI fixture (as run, about 4 MB): demo12 with a third internal region REG3, since a marketplace needs a region between two others or an exporter to two regions (ppmain.mod L865-868), which two regions cannot give. REG3 copies demo12's timeslices, year fractions and discount rate and holds only GAS. | Recommended: yes. Built in. | open |
-| 2 | EQ(l)_IREBND's plain export term (eqirebnd.mod L56) now tests NOT RPC_MARKET(R,P,C,'EXP'), as GAMS does; before this change no marketplace could exist, so the test changes no earlier row. | Recommended: yes. Built in. | open |
-
-### #153 M1.3 (52): storage flexibility, %STSFLX% YES (eqstgtss.mod L53-93, EQ_STSLEV; coef_ext.vda L31); crafted case demo12_stsflx (open)
+### #151 M1.3 (50): costs on the components of a commodity's balance, COM_CSTBAL (powerflo.vda L372-434); crafted cases demo12_cstbal and demo12_pfcst (merged 18 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | A new crafted case, demo12_stsflx, with one public CI fixture (as run, about 4 MB): demo12 with a general timeslice storage STSELC (PRC_MAP STS) and $SET STSFLX YES. demo12_stgccl's battery cannot serve: it is not an STS storage, so it has no RP_STL entries. | Recommended: yes. Built in. | open |
+| 1 | Two new crafted cases, each with a public CI fixture (as run, about 4 MB each): demo12_cstbal (demo12 + cstbal.dd, the branches without a grid) and demo12_pfcst (demo12_pfd + pfcst.dd, the grid branches). One case cannot reach both: a commodity that is a grid node allocation is never TRACKC. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 2 | The labels the CSTBAL code names itself (PRD, IMP, EXP, GEN, NTX, NPG, FIN, FX and the empty label) are added to the label order when the dump it starts from lacks them, after every known label (G36). Their place there only orders OBJ_COMBAL's records, which every compare matches by key. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
 
-### #159 M1.3 (58): capacity-related flows in user constraints (UC_CAPFLO, cal_caps.mod); crafted case demo12_uccf (open)
-
-| # | Question | Decided | How |
-| --- | --- | --- | --- |
-| 1 | A new crafted case, demo12_uccf (demo12 plus `capflo.dd`, `capcom.dd` and `uccf.dd`, CC BY 4.0), with one public CI fixture. | Recommended: yes. Built in. | open |
-| 2 | Stacked on #155 (base `m13-capcom`), as it needs the coefficients of changes 53 and 54; retargeted to `main` once #154 and #155 merge. | Recommended: yes. Built in. | open |
-
-### #160 M1.3 (59): the capacity transfer of decommissioning flows (coef_shp.mod L77-94); crafted case demo12_ctrn (open)
+### #152 M1.3 (51): market-based trade (eqire.mod L23-38, eqirebnd.mod L46-51); crafted case demo12_mkt (merged 18 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | A new crafted case, demo12_ctrn (demo12 plus `capcom.dd` and `ctrn.dd`, CC BY 4.0), with one public CI fixture. | Recommended: yes. Built in. | open |
-| 2 | Stacked on #155 (base `m13-capcom`), like #159; retargeted to `main` once #154 and #155 merge. | Recommended: yes. Built in. | open |
+| 1 | A new crafted case, demo12_mkt, with one public CI fixture (as run, about 4 MB): demo12 with a third internal region REG3, since a marketplace needs a region between two others or an exporter to two regions (ppmain.mod L865-868), which two regions cannot give. REG3 copies demo12's timeslices, year fractions and discount rate and holds only GAS. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 2 | EQ(l)_IREBND's plain export term (eqirebnd.mod L56) now tests NOT RPC_MARKET(R,P,C,'EXP'), as GAMS does; before this change no marketplace could exist, so the test changes no earlier row. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
 
-### #155 M1.3 (54): commodity flows over the lifetime of capacity and of early retirements (NCAP_COM, COEF_CIO, RCAP_OCAP); crafted case demo12_capcom (open)
+### #153 M1.3 (52): storage flexibility, %STSFLX% YES (eqstgtss.mod L53-93, EQ_STSLEV; coef_ext.vda L31); crafted case demo12_stsflx (merged 18 Nov 2026)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | A new crafted case, demo12_stsflx, with one public CI fixture (as run, about 4 MB): demo12 with a general timeslice storage STSELC (PRC_MAP STS) and $SET STSFLX YES. demo12_stgccl's battery cannot serve: it is not an STS storage, so it has no RP_STL entries. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+
+### #159 M1.3 (58): capacity-related flows in user constraints (UC_CAPFLO, cal_caps.mod); crafted case demo12_uccf (merged 18 Nov 2026)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | A new crafted case, demo12_uccf (demo12 plus `capflo.dd`, `capcom.dd` and `uccf.dd`, CC BY 4.0), with one public CI fixture. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 2 | Stacked on #155 (base `m13-capcom`), as it needs the coefficients of changes 53 and 54; retargeted to `main` once #154 and #155 merge. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+
+### #160 M1.3 (59): the capacity transfer of decommissioning flows (coef_shp.mod L77-94); crafted case demo12_ctrn (merged 18 Nov 2026)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | A new crafted case, demo12_ctrn (demo12 plus `capcom.dd` and `ctrn.dd`, CC BY 4.0), with one public CI fixture. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 2 | Stacked on #155 (base `m13-capcom`), like #159; retargeted to `main` once #154 and #155 merge. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+
+### #155 M1.3 (54): commodity flows over the lifetime of capacity and of early retirements (NCAP_COM, COEF_CIO, RCAP_OCAP); crafted case demo12_capcom (merged 18 Nov 2026)
 
 Stacked on #154 (branch m13-capflo).
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | A new crafted case, demo12_capcom, with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
+| 1 | A new crafted case, demo12_capcom, with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
 | 2 | COEF_RCOM (coef_nio.mod L58) is empty in every run without the capacity transfer: it reads COEF_CPT, which coef_alt.lin L77 fills only later (coefmain.mod order), so the VAR_RCAP term of cal_cap.mod is never reached. TIMES.jl does the same. Report it to the TIMES maintainers as a possible ordering issue? | Recommended: yes, as a note to ETSAP; nothing changes here. | open (no default built in) |
 
-### #154 M1.3 (53): commodity flows tied to investment and decommissioning (coef_nio.mod L13-71, cal_cap.mod, cal_caps.mod); crafted case demo12_capflo (open)
+### #154 M1.3 (53): commodity flows tied to investment and decommissioning (coef_nio.mod L13-71, cal_cap.mod, cal_caps.mod); crafted case demo12_capflo (merged 18 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | A new crafted case, demo12_capflo, with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
-| 2 | Capacity-related flows are split into two changes: this one (investment and decommissioning, NCAP_ICOM, NCAP_CLED, NCAP_OCOM) and a second for the flows over the lifetime (NCAP_COM, NCAP_CLAG, COEF_CIO), early retirements (RCAP_OCAP), the capacity transfer (FLO_FUNCX CAPFLO = 3) and UC_CAPFLO. Each part stays refused with its own message until then. | Recommended: yes. Built in. | open |
+| 1 | A new crafted case, demo12_capflo, with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 2 | Capacity-related flows are split into two changes: this one (investment and decommissioning, NCAP_ICOM, NCAP_CLED, NCAP_OCOM) and a second for the flows over the lifetime (NCAP_COM, NCAP_CLAG, COEF_CIO), early retirements (RCAP_OCAP), the capacity transfer (FLO_FUNCX CAPFLO = 3) and UC_CAPFLO. Each part stays refused with its own message until then. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
 
-### #156 M1.3 (55): the residual load curve constraints (resloadc.vda, EQ_RL_*); crafted case demo12_rldc (open)
+### #156 M1.3 (55): the residual load curve constraints (resloadc.vda, EQ_RL_*); crafted case demo12_rldc (merged 18 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | A new crafted case, demo12_rldc, with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
-| 2 | The DD reader (M1.4 code) changes in this M1.3 change: it reads `(SET.name)` in a record key (resloadc.vda L16) and lists the dump's labels dimension by dimension, as the harness does (G55 refined). The label lists of demo12_rldc, five other demo12 cases, OTNYC, OTCGEN, TIMES-NZ and OTUS9r stay identical to GAMS's. | Recommended: yes. Built in. | open |
+| 1 | A new crafted case, demo12_rldc, with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 2 | The DD reader (M1.4 code) changes in this M1.3 change: it reads `(SET.name)` in a record key (resloadc.vda L16) and lists the dump's labels dimension by dimension, as the harness does (G55 refined). The label lists of demo12_rldc, five other demo12 cases, OTNYC, OTCGEN, TIMES-NZ and OTUS9r stay identical to GAMS's. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
 | 3 | 'RL_THMIN' (resloadc.vda L111, L144) is translated as GAMS spells it, a second VAR_RLD column beside 'RL-THMIN' (D45). Report it to ETSAP with the COEF_RCOM note (#155 d2)? | Recommended: yes, in the same note. | open (no default built in) |
 
-### #157 M1.3 (56): damage costs in their linear form (eqdamage.mod); crafted case demo12_dam (open)
+### #157 M1.3 (56): damage costs in their linear form (eqdamage.mod); crafted case demo12_dam (merged 18 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | A new crafted case, demo12_dam, with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
-| 2 | %DAMAGE% NLP (eqdamage.mod NLPDAM, BDNLP) stays refused with a message: it is non-linear, so it goes with the features after the M1.3 gate (q5 of 17 Nov 2026), checked with IPOPT like MACRO. | Recommended: yes. Built in. | open |
+| 1 | A new crafted case, demo12_dam, with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 2 | %DAMAGE% NLP (eqdamage.mod NLPDAM, BDNLP) stays refused with a message: it is non-linear, so it goes with the features after the M1.3 gate (q5 of 17 Nov 2026), checked with IPOPT like MACRO. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
 
-### #162 M1.3 (62): two-way gas pipelines (gasgrids.vda); crafted case demo12_gg2 (open)
-
-| # | Question | Decided | How |
-| --- | --- | --- | --- |
-| 1 | A new crafted case, demo12_gg2 (demo12 plus `gg.dd` and `gg2.dd`, CC BY 4.0), with one public CI fixture. | Recommended: yes. Built in. | open |
-| 2 | Stacked on #161 (base `m13-gasgrid`), which is stacked on #158. | Recommended: yes. Built in. | open |
-
-### #161 M1.3 (61): the gas grids (gasgrids.vda) in the LP formulation; crafted case demo12_gg (open)
+### #162 M1.3 (62): two-way gas pipelines (gasgrids.vda); crafted case demo12_gg2 (merged 18 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | A new crafted case, demo12_gg (demo12 plus `gg.dd`, CC BY 4.0), with one public CI fixture. | Recommended: yes. Built in. | open |
-| 2 | Two-way gas pipelines (EQ_GG_PDIF1, EQ_GG_PDIF2, EQ_GG_STEP, the FX rows of EQ_GG_MBND) stay refused with a message until a crafted case has one; pressure points (GG_PP) and %SOLMIP% YES are MIP features, after the gate (q5 of 17 Nov 2026). | Recommended: yes. Built in. | open |
-| 3 | gasgrids.vda L35 (`LOOP(GR_GRID(J,TRACKC), GG_DENS(R,C)$(...) = GG_DENS(TRACKC))`) changes nothing as written: TRACKC in the loop domain controls R and C, so each node gets its own density. It reads as meant to give nodes without a density that of their grid. Translated as written; report to ETSAP? | Recommended: translate as written; send the note with the other ETSAP notes. Built in. | open |
-| 4 | Stacked on #158 (base `m13-ptdf`): both change powerflo.vda's code. | Recommended: yes. Built in. | open |
+| 1 | A new crafted case, demo12_gg2 (demo12 plus `gg.dd` and `gg2.dd`, CC BY 4.0), with one public CI fixture. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 2 | Stacked on #161 (base `m13-gasgrid`), which is stacked on #158. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
 
-### #158 M1.3 (57): the PTDF formulation of powerflo.vda; crafted case demo12_ptdf (open)
+### #161 M1.3 (61): the gas grids (gasgrids.vda) in the LP formulation; crafted case demo12_gg (merged 18 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | A new crafted case, demo12_ptdf (demo12_pfd plus `ptdf.dd`, CC BY 4.0), with one public CI fixture. | Recommended: yes. Built in. | open |
-| 2 | The discrete candidate lines (GR_PTDF with %DSC% and %SOLMIP% YES: GR_DUNIT, GR_DNCAP, VAR_PTDNCAP, a MIP) stay refused with a message, with the other MIP features after the M1.3 gate (q5 of 17 Nov 2026). | Recommended: yes. Built in. | open |
-| 3 | At a node of a PTDF grid, VAR_COMAUX appears only in EQ_GR_PTDFLO in v4.9.7: no GAMS statement ties it to the node's net injection. Translated as written; to be checked against the TIMES grid user note, and logged as a discrepancy or asked of ETSAP if the note says otherwise. | Recommended: translate as written; check the note. Built in. | open |
+| 1 | A new crafted case, demo12_gg (demo12 plus `gg.dd`, CC BY 4.0), with one public CI fixture. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 2 | Two-way gas pipelines (EQ_GG_PDIF1, EQ_GG_PDIF2, EQ_GG_STEP, the FX rows of EQ_GG_MBND) stay refused with a message until a crafted case has one; pressure points (GG_PP) and %SOLMIP% YES are MIP features, after the gate (q5 of 17 Nov 2026). | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 3 | gasgrids.vda L35 (`LOOP(GR_GRID(J,TRACKC), GG_DENS(R,C)$(...) = GG_DENS(TRACKC))`) changes nothing as written: TRACKC in the loop domain controls R and C, so each node gets its own density. It reads as meant to give nodes without a density that of their grid. Translated as written; report to ETSAP? | Recommended: translate as written; send the note with the other ETSAP notes. Built in. | accepted by merge, 18 Nov 2026 |
+| 4 | Stacked on #158 (base `m13-ptdf`): both change powerflo.vda's code. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
 
-### #163 M1.3 (63): dynamic timeslice trees (dynslite.vda); crafted case demo12_tsoff (open)
-
-| # | Question | Decided | How |
-| --- | --- | --- | --- |
-| 1 | A new crafted case, demo12_tsoff (demo12 plus `tsoff.dd`, CC BY 4.0), with one public CI fixture. GAMS only accepts complementary trees (timslice.mod L70-75; dynslite.vda L25-27; ppmain.mod L729 divides by a demand's annual share), so the case gives REG1 a second tree (season A) rather than turning one season off. | Recommended: yes. Built in. | open |
-| 2 | With timeslices turned off, the RTS(S) families the case does not reach (storage, dispatching, ASHAR, CAFLAC, unit commitment by start-up type, residual load, power-flow grids) stay refused with a message, though the change in each is the same skip as in EQ_PEAK. | Recommended: yes; extend the case when a model needs one. Built in. | open |
-| 3 | The bound table now records which bounds are EPS (internal; the LP of every other model is unchanged), as GAMS's HOLDFIXED does not count a variable between 0 and EPS as fixed. | Recommended: yes. Built in. | open |
-
-### #165 M1.3 (64): PRC_RCAP outside RP and interest during construction for an EPS lead time; crafted case demo12_iled (open)
+### #158 M1.3 (57): the PTDF formulation of powerflo.vda; crafted case demo12_ptdf (merged 18 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | A new crafted case, demo12_iled (demo12 plus `iled.dd`, CC BY 4.0), with one public CI fixture; it declares TJL_NOPRC, a process of no region, to hold a PRC_RCAP record outside RP. | Recommended: yes. Built in. | open |
+| 1 | A new crafted case, demo12_ptdf (demo12_pfd plus `ptdf.dd`, CC BY 4.0), with one public CI fixture. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 2 | The discrete candidate lines (GR_PTDF with %DSC% and %SOLMIP% YES: GR_DUNIT, GR_DNCAP, VAR_PTDNCAP, a MIP) stay refused with a message, with the other MIP features after the M1.3 gate (q5 of 17 Nov 2026). | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 3 | At a node of a PTDF grid, VAR_COMAUX appears only in EQ_GR_PTDFLO in v4.9.7: no GAMS statement ties it to the node's net injection. Translated as written; to be checked against the TIMES grid user note, and logged as a discrepancy or asked of ETSAP if the note says otherwise. | Recommended: translate as written; check the note. Built in. | accepted by merge, 18 Nov 2026 |
+
+### #163 M1.3 (63): dynamic timeslice trees (dynslite.vda); crafted case demo12_tsoff (merged 18 Nov 2026)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | A new crafted case, demo12_tsoff (demo12 plus `tsoff.dd`, CC BY 4.0), with one public CI fixture. GAMS only accepts complementary trees (timslice.mod L70-75; dynslite.vda L25-27; ppmain.mod L729 divides by a demand's annual share), so the case gives REG1 a second tree (season A) rather than turning one season off. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 2 | With timeslices turned off, the RTS(S) families the case does not reach (storage, dispatching, ASHAR, CAFLAC, unit commitment by start-up type, residual load, power-flow grids) stay refused with a message, though the change in each is the same skip as in EQ_PEAK. | Recommended: yes; extend the case when a model needs one. Built in. | accepted by merge, 18 Nov 2026 |
+| 3 | The bound table now records which bounds are EPS (internal; the LP of every other model is unchanged), as GAMS's HOLDFIXED does not count a variable between 0 and EPS as fixed. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+
+### #165 M1.3 (64): PRC_RCAP outside RP and interest during construction for an EPS lead time; crafted case demo12_iled (merged 18 Nov 2026)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | A new crafted case, demo12_iled (demo12 plus `iled.dd`, CC BY 4.0), with one public CI fixture; it declares TJL_NOPRC, a process of no region, to hold a PRC_RCAP record outside RP. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
 | 2 | Registering TIMES.jl in the Julia General registry (and renaming the repository to `<Name>.jl`) waits until after the December 2026 ETSAP ExCo in Paris, which decides the package name. | Waits for the ExCo. | James, 18 Nov 2026 |
 | 3 | Elastic demand is checked with a two-run case: demo12 reference as the base run (its prices), and demo12 with an additional constraint as the variant run with elastic demand. | Yes. | James, 18 Nov 2026 |
 
-### #168 README: the probes against GAMS, model by model (open)
+### #168 README: the probes against GAMS, model by model (merged 18 Nov 2026)
 
 Asked for by James on 18 Nov 2026 ("describe the status of the probes and that TIMES.jl is now capable to solve TIMES models from demo to global models"). Stacked on #167.
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | The README does not say TIMES.jl solves global models: no global model is in the test suite (none has an open licence), so no probe has run one. It says "from the demo to national and multi-region models of up to 2.5 million rows" (OTUS9r) and that no global model has been run yet. | Recommended: yes. Built in. | open |
-| 2 | JRC-EU-TIMES named in the README with its verdicts only (matches up to the coefficients; 3 of 850 sets and parameters differ at the end of preprocessing), as its `redistribute = "summary"` allows. | Recommended: yes. Built in. | open |
+| 1 | The README does not say TIMES.jl solves global models: no global model is in the test suite (none has an open licence), so no probe has run one. It says "from the demo to national and multi-region models of up to 2.5 million rows" (OTUS9r) and that no global model has been run yet. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 2 | JRC-EU-TIMES named in the README with its verdicts only (matches up to the coefficients; 3 of 850 sets and parameters differ at the end of preprocessing), as its `redistribute = "summary"` allows. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
 | 3 | The figures are from the workstation batches of 17 and 18 Nov 2026 and are updated by hand with each README status update. | Nothing to answer. | logged |
 
-### #167 run_model: run a TIMES model with the package alone, no clone needed (open)
+### #167 run_model: run a TIMES model with the package alone, no clone needed (merged 18 Nov 2026)
 
 Asked for by James on 18 Nov 2026 ("sure, do step 1"). Stacked on #166.
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | HiGHS a dependency of the package (not optional), the default solver of `run_model`. | Recommended: yes. Built in. | open |
-| 2 | `run_model` the package's first exported name; `PRESOLVE_STEPS` and `run_switches` not exported. | Recommended: yes. Built in. | open |
-| 3 | One list of the steps (`TIMES.PRESOLVE_STEPS`); the probe and the gate take their steps from it; new steps go there, with their symbols in `STEP_SYMBOLS`. | Recommended: yes. Built in. | open |
-| 4 | `run_model`'s return value may change before the release. | Recommended: yes. Built in. | open |
+| 1 | HiGHS a dependency of the package (not optional), the default solver of `run_model`. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 2 | `run_model` the package's first exported name; `PRESOLVE_STEPS` and `run_switches` not exported. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 3 | One list of the steps (`TIMES.PRESOLVE_STEPS`); the probe and the gate take their steps from it; new steps go there, with their symbols in `STEP_SYMBOLS`. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 4 | `run_model`'s return value may change before the release. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
 | 5 | Two line references corrected in the step comments (pp_qack.mod at maindrv.mod L97, solve.mod at L113). | Nothing to answer. | logged |
 
-### #166 README: a quick start for new users; log the 18 Nov TIAM outcomes (open)
+### #166 README: a quick start for new users; log the 18 Nov TIAM outcomes (merged 18 Nov 2026)
 
 Asked for by James on 18 Nov 2026.
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | The quick start runs from a clone, in the `test` environment (where HiGHS is a dependency). | Recommended: yes. Built in. | open |
-| 2 | Julia 1.11 or later for the quick start; a one-line workaround for 1.10 (`[sources]` in `test/Project.toml`). | Recommended: yes. Built in. | open |
-| 3 | macOS described as "should work, not tested yet". | Recommended: yes. Built in. | open |
+| 1 | The quick start runs from a clone, in the `test` environment (where HiGHS is a dependency). | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 2 | Julia 1.11 or later for the quick start; a one-line workaround for 1.10 (`[sources]` in `test/Project.toml`). | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
+| 3 | macOS described as "should work, not tested yet". | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
 | 4 | The two TIAM outcomes of 18 Nov 2026 logged under Decisions in the chat. | Nothing to answer. | logged |
 
-### #147 M1.3 (46): nested user constraints (equserco.mod L75-76, L98-99; pp_qack.mod L53); crafted case demo12_ucn (open)
+### #147 M1.3 (46): nested user constraints (equserco.mod L75-76, L98-99; pp_qack.mod L53); crafted case demo12_ucn (merged 18 Nov 2026)
 
 Logged here because #147 does not touch this file.
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Merge only after the workstation step: the crafted case's licensed reference (CONVERT, CPLEX, HiGHS), `scripts/m13_gate.jl --from-dd --solve`, the public fixture. Layer 1 passed in the cloud with the PyPI GAMS. | Recommended: yes. Built in. | open |
+| 1 | Merge only after the workstation step: the crafted case's licensed reference (CONVERT, CPLEX, HiGHS), `scripts/m13_gate.jl --from-dd --solve`, the public fixture. Layer 1 passed in the cloud with the PyPI GAMS. | Recommended: yes. Built in. | accepted by merge, 18 Nov 2026 |
 
-### #146 M1.3 (44): the UC_ATTR attribute ONLINE (uc_cap.mod L36-43); crafted case demo12_uconl (open)
+### #146 M1.3 (44): the UC_ATTR attribute ONLINE (uc_cap.mod L36-43); crafted case demo12_uconl (merged 17 Nov 2026)
 
 Logged here because #146 does not touch this file.
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Merge only after the workstation step (as #147). | Recommended: yes. Built in. | open |
-| 2 | The EPS constant of uc_cap.mod L40 adds nothing in TIMES.jl: it creates no column and keeps no row (every RS row has its VAR_UCRTS with VAR_UC YES). | Recommended: yes. Built in. | open |
+| 1 | Merge only after the workstation step (as #147). | Recommended: yes. Built in. | accepted by merge, 17 Nov 2026 |
+| 2 | The EPS constant of uc_cap.mod L40 adds nothing in TIMES.jl: it creates no column and keeps no row (every RS row has its VAR_UCRTS with VAR_UC YES). | Recommended: yes. Built in. | accepted by merge, 17 Nov 2026 |
 
 ### #145 M1.3 (43): EQL_STGCCL, the lifetime cycle limit of a storage (eqactups.vda L121-125); crafted case demo12_stgccl (merged 17 Nov 2026)
 
@@ -333,13 +335,13 @@ Logged here because #144 does not touch this file.
 | 1 | The three answers are recorded where they apply: the gate scope in `docs/m13-plan.md` (Gate) and the translation guide; MACRO's solver in the translation guide; the speed target in the translation guide, `docs/timings.md` and `docs/phase2-notes.md` (P2-6). Dashboard slide 10 keeps its 5x line, now read as the Phase 2 target, until the next dashboard refresh relabels it. | Recommended: yes. Built in. | accepted by merge, 17 Nov 2026 |
 | 2 | With the MIP and nonlinear features, ETL and MACRO out of the gate's scope, the extensions still to translate before the M1.3 gate are the stochastic extension and damage costs (`eqdamage.mod`), each checked first from the source to be linear. | Recommended: yes. Built in. | accepted by merge, 17 Nov 2026 |
 
-### #142 Dashboard 16 Nov: the pass of 15 Nov, M1.3 changes 41 and 42 (open)
+### #142 Dashboard 16 Nov: the pass of 15 Nov, M1.3 changes 41 and 42 (merged 16 Nov 2026)
 
 The morning refresh before the 9:00 check-in (James, 11 and 14 Nov 2026), made at 06:10 before the workstation was switched off for the day.
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | The batch was stopped at 06:07 for the shutdown, before the M1.3 probe of demo12 ran; slide 5 shows the other six runs from the pass of 15 Nov (420 of 420 steps) and demo12 from the pass before (15 Nov, main 5b0e1c2, 70 of 70), and says so in its note. | Recommended: yes. Built in. | open |
+| 1 | The batch was stopped at 06:07 for the shutdown, before the M1.3 probe of demo12 ran; slide 5 shows the other six runs from the pass of 15 Nov (420 of 420 steps) and demo12 from the pass before (15 Nov, main 5b0e1c2, 70 of 70), and says so in its note. | Recommended: yes. Built in. | accepted by merge, 16 Nov 2026 |
 
 ### #141 Dashboard: callout labels on slide 11 (merged 2026-11-15)
 
