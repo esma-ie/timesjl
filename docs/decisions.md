@@ -259,6 +259,16 @@ Stacked on #154 (branch m13-capflo).
 | 2 | Registering TIMES.jl in the Julia General registry (and renaming the repository to `<Name>.jl`) waits until after the December 2026 ETSAP ExCo in Paris, which decides the package name. | Waits for the ExCo. | James, 18 Nov 2026 |
 | 3 | Elastic demand is checked with a two-run case: demo12 reference as the base run (its prices), and demo12 with an additional constraint as the variant run with elastic demand. | Yes. | James, 18 Nov 2026 |
 
+### #168 README: the probes against GAMS, model by model (open)
+
+Asked for by James on 18 Nov 2026 ("describe the status of the probes and that TIMES.jl is now capable to solve TIMES models from demo to global models"). Stacked on #167.
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | The README does not say TIMES.jl solves global models: no global model is in the test suite (none has an open licence), so no probe has run one. It says "from the demo to national and multi-region models of up to 2.5 million rows" (OTUS9r) and that no global model has been run yet. | Recommended: yes. Built in. | open |
+| 2 | JRC-EU-TIMES named in the README with its verdicts only (matches up to the coefficients; 3 of 850 sets and parameters differ at the end of preprocessing), as its `redistribute = "summary"` allows. | Recommended: yes. Built in. | open |
+| 3 | The figures are from the workstation batches of 17 and 18 Nov 2026 and are updated by hand with each README status update. | Nothing to answer. | logged |
+
 ### #167 run_model: run a TIMES model with the package alone, no clone needed (open)
 
 Asked for by James on 18 Nov 2026 ("sure, do step 1"). Stacked on #166.
