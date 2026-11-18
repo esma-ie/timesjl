@@ -1020,6 +1020,11 @@ those checks, their figures and their crafted cases are not published
   EQ_OBJBAL), refused since change 27b, with and without a power-flow grid.
   New crafted cases demo12_cstbal (no grid) and demo12_pfcst (grid nodes):
   layers 1 to 3 PASS in both variants of both from the DD files.
+- 17 Nov 2026: M1.3 change 51: market-based trade (eqire.mod L23-38,
+  eqirebnd.mod L46-51), refused since M1.1. New crafted case demo12_mkt,
+  demo12 with a third internal region REG3 (a gas hub and a fan-out
+  exporter, both marketplaces): layers 1 to 3 PASS in both variants from
+  the DD files (objective 23,960,686.52 with CPLEX and HiGHS).
 - 17 Nov 2026: James's answers (docs/decisions.md): the M1.3 gate covers
   the linear features only (ETL, the DSC lumpy investments and block
   retirements, the discrete unit commitment and TIMES-Micro after it);
