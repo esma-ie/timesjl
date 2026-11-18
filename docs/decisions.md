@@ -68,7 +68,7 @@ On 17 Nov 2026 James answered three questions of the list in the chat (below, un
 | 17 Nov 2026 | q8: James is in Athens until Saturday 21 Nov 2026. Until then the check-ins are at 07:00 and 20:00 Athens time (05:00 and 18:00 on the workstation, GMT), and both dashboards are refreshed before 07:00 Athens. The nightly loop runs without an end time, so its start needs no change. From Sunday 22 Nov the check-ins are again at 9:00 and 16:30. | this log; the workstation's notes |
 | 17 Nov 2026 | q7: "lets stay on times v4.9.7 until the planned update to newer TIMES." No v4.9.8 reference batch before the plan's move (#109 d3: after every remaining feature is translated and tested; then the whole baseline moves at the M1.3 gate); the nightlies stay on v4.9.7. | this log; CLAUDE.md (Baseline) unchanged |
 | 17 Nov 2026 | q6: "bring all work back to local workstation." Every remaining M1.3 change, and its GAMS layer 2-3 run, is made in the Claude Code session on James's workstation; the cloud session that opened #143 to #147 takes no more translation work. | this log; the workstation's notes |
-| 18 Nov 2026 | "sure, do step 1": the run from a run file and DD files becomes a function of the package, `run_model`, so TIMES.jl can be added with `Pkg.add(url=...)` and used without cloning the repository (step 1 of the ways to make TIMES.jl easy to use on any platform, asked in the chat after #166). The later steps (precompiling a demo12 run, registration after the Dec 2026 ExCo, standalone apps at M1.7) are not decided. | `src/run.jl`; README (Quick start); the `run_model` PR |
+| 18 Nov 2026 | "sure, do step 1": the run from a run file and DD files becomes a function of the package, `run_model`, so TIMES.jl can be added with `Pkg.add(url=...)` and used without cloning the repository (step 1 of the ways to make TIMES.jl easy to use on any platform, asked in the chat after #166). The later steps (precompiling a demo12 run, registration after the Dec 2026 ExCo, standalone apps at M1.7) are not decided. | `src/run.jl`; README (Quick start); #167 |
 | 18 Nov 2026 | ETSAP-TIAM stays out of the nightly probes and the TIMES.jl reference harness. It confirms the rule in `CLAUDE.md` (Test-model licences: TIAM is removed and is not re-added without a stated open licence); the rule is unchanged. | this log; `CLAUDE.md`; `docs/test-models.md` |
 | 18 Nov 2026 | ETSAP-TIAM is not used in the 23 Nov 2026 webinar demo. It confirms the same rule; the rule is unchanged. | this log |
 | 17 Nov 2026 | q5 (asked 16 Nov 2026): yes. The M1.3 gate covers the linear features only. The mixed-integer and nonlinear features move after the gate, as the discrete unit commitment did (#120 d5): the lumpy investments and block retirements of the DSC options (`NCAP_SEMI`, `PRC_DSCNCAP`), the discrete unit commitment (`DUC` YES), TIMES-Micro (`RD_NLP`, `MICRO` YES) and, added by Claude and agreed by James, ETL (`mod_vars.etl` L18 declares binary variables, so an ETL run is a MIP). They stay refused with a message until then. Rule-level (the milestone scope); explicit yes. | `docs/translation-guide.md` (Decisions); `docs/m13-plan.md` (Gate); `docs/demo12-variants.md`; this log |
@@ -258,6 +258,18 @@ Stacked on #154 (branch m13-capflo).
 | 1 | A new crafted case, demo12_iled (demo12 plus `iled.dd`, CC BY 4.0), with one public CI fixture; it declares TJL_NOPRC, a process of no region, to hold a PRC_RCAP record outside RP. | Recommended: yes. Built in. | open |
 | 2 | Registering TIMES.jl in the Julia General registry (and renaming the repository to `<Name>.jl`) waits until after the December 2026 ETSAP ExCo in Paris, which decides the package name. | Waits for the ExCo. | James, 18 Nov 2026 |
 | 3 | Elastic demand is checked with a two-run case: demo12 reference as the base run (its prices), and demo12 with an additional constraint as the variant run with elastic demand. | Yes. | James, 18 Nov 2026 |
+
+### #167 run_model: run a TIMES model with the package alone, no clone needed (open)
+
+Asked for by James on 18 Nov 2026 ("sure, do step 1"). Stacked on #166.
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | HiGHS a dependency of the package (not optional), the default solver of `run_model`. | Recommended: yes. Built in. | open |
+| 2 | `run_model` the package's first exported name; `PRESOLVE_STEPS` and `run_switches` not exported. | Recommended: yes. Built in. | open |
+| 3 | One list of the steps (`TIMES.PRESOLVE_STEPS`); the probe and the gate take their steps from it; new steps go there, with their symbols in `STEP_SYMBOLS`. | Recommended: yes. Built in. | open |
+| 4 | `run_model`'s return value may change before the release. | Recommended: yes. Built in. | open |
+| 5 | Two line references corrected in the step comments (pp_qack.mod at maindrv.mod L97, solve.mod at L113). | Nothing to answer. | logged |
 
 ### #166 README: a quick start for new users; log the 18 Nov TIAM outcomes (open)
 
