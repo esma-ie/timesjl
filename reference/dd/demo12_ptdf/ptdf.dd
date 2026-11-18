@@ -1,0 +1,32 @@
+* TIMES.jl crafted case demo12_ptdf (reference/crafted.toml, 17 Nov 2026): demo12_pfd (the
+* power-flow grid of nodes ELC in REG1 and REG2 and TRAELC in REG1, with the allocation of
+* generation and demand to grid nodes) in the PTDF formulation (powerflo.vda L43-44, L59-64,
+* L70, L86, L98-99, L172-178, L229-249, L262-287; M1.3 change 57), which no open model reaches:
+* - PTDF factors for the REG1-REG2 line and for the line from ELC to TRAELC in REG1. Those of
+*   REG2's end of the REG1-REG2 line are cleared (L174); one factor falls below the tolerance
+*   1E-5 from 2030 (L175); those of the TRAELC end are made the opposite of the ELC end's (L59-64);
+* - the REG1-REG2 line, with no past capacity, is a candidate line: CAP_BND UP in 2010 and 2030
+*   gives its virtual capacity GR_CAPUP (L238-239), and the rows EQ_GR_VIRTCAP and EQ_GR_VIRTBND;
+* - the ELC-TRAELC line has a past investment (NCAP_PASTI 2000): no new capacity (L177), and it
+*   stops being a candidate while its past capacity lasts (L234-235).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER GR_PTDF /
+REG1.2005.TB_ELC_REG1_REG2_01.ELC.REG1.ELC 0.3
+REG1.2005.TB_ELC_REG1_REG2_01.ELC.REG2.ELC -0.7
+REG1.2030.TB_ELC_REG1_REG2_01.ELC.REG2.ELC 4E-6
+REG2.2005.TB_ELC_REG1_REG2_01.ELC.REG1.ELC 0.5
+REG1.2005.TU_ELC_TRA1.ELC.REG1.ELC 0.6
+REG1.2005.TU_ELC_TRA1.ELC.REG2.ELC 0.2
+REG1.2005.TU_ELC_TRA1.TRAELC.REG1.ELC -0.4
+/;
+
+PARAMETER CAP_BND /
+REG1.2010.TB_ELC_REG1_REG2_01.UP 5
+REG1.2030.TB_ELC_REG1_REG2_01.UP 8
+/;
+
+PARAMETER NCAP_PASTI /
+REG1.2000.TU_ELC_TRA1 3
+/;

@@ -7,6 +7,10 @@
 #
 # Refused: GG_KGF data (the gas grids of gasgrids.vda and the GG_* parameters
 # of PREP L213-218; no test model has any).
+#
+# M1.3 (57): the PTDF formulation (GR_PTDF data): main block L43-44, L59-64,
+# L70, L86, L98-99, L172-177; DECL L229-247; EQ_GR_PTDFLO, EQ_GR_VIRTCAP,
+# EQ_GR_VIRTBND (L262-287). Its discrete path (%DSC% and %SOLMIP% YES) is refused.
 
 "The powerflo.vda paths this model would take that are not translated."
 function powerflo_unported(tm)
@@ -45,18 +49,29 @@ function powerflo_prep!(st)
 end
 
 """
+    ptdf_mip(tm) -> Bool
+
+Whether the PTDF formulation would take its discrete-capacity path: with
+%DSC% and %SOLMIP% both YES, powerflo.vda L165-170 define GR_DUNIT and
+GR_DNCAP from NCAP_DISC and PRC_DSCNCAP (a MIP), which is not translated.
+"""
+ptdf_mip(tm) = hasdata(tm, "GR_PTDF", 6) &&
+               uppercase(gswitch(tm, "DSC", "")) == "YES" && uppercase(gswitch(tm, "SOLMIP", "")) == "YES"
+
+"""
     powerflo_main_unported(tm) -> Vector{String}
 
 The powerflo.vda main-block paths this model would take that are not
-translated: the PTDF formulation (GR_PTDF data: L59-64, L172-180) and total
-demand fractions given as data (GR_DEMFR: the levelization of L107 and L131),
-besides the gas grids. The allocation of generation and sectoral demand to
-grid nodes (GR_ENDFR, GR_GENFR, GR_GENMAP, GR_GENLEV: L40-47, L109-162) is
-translated (M1.3 change 27a-2).
+translated: total demand fractions given as data (GR_DEMFR: the levelization
+of L107 and L131) and the PTDF formulation's discrete-capacity path
+(`ptdf_mip`), besides the gas grids. The allocation of generation and
+sectoral demand to grid nodes (GR_ENDFR, GR_GENFR, GR_GENMAP, GR_GENLEV:
+L40-47, L109-162) is translated (M1.3 change 27a-2), and so is the PTDF
+formulation (GR_PTDF: L43-44, L59-64, L70, L86, L98-99, L172-177; change 57).
 """
 function powerflo_main_unported(tm)
     out = powerflo_unported(tm)
-    hasdata(tm, "GR_PTDF", 6) && push!(out, "powerflo.vda L59-64, L172-180 (GR_PTDF has data: the PTDF formulation)")
+    ptdf_mip(tm) && push!(out, "powerflo.vda L165-170, L177 (GR_PTDF with %DSC% and %SOLMIP% YES: discrete candidate lines)")
     hasdata(tm, "GR_DEMFR", 4) && push!(out, "powerflo.vda L107, L131 (GR_DEMFR has data: levelization of total demand fractions)")
     return out
 end
@@ -65,16 +80,99 @@ end
     powerflo_model_unported(tm) -> Vector{String}
 
 The powerflo.vda paths of the model (DECL and the equations) this model would take that are not
-translated: the PTDF formulation (GR_PTDF data) and the gas grids. The allocation of supply and
-demand to grid nodes (EQ_GR_GENALL, EQ_GR_DEMALL and the IREAUX terms of the balance and peak
-rows) is translated since M1.3 change 27b-2. GR_DEMFR is not tested here: at this stage it holds
-the fractions the main block computed from the sectoral ones (L133-162), which the equations
-read; GR_DEMFR given as input data is refused by the main block (`powerflo_main_unported`).
+translated: the gas grids, and the PTDF formulation's discrete-capacity path (`ptdf_mip`: the
+macros GR_DUNIT, GR_DNCAP and VAR_PTDNCAP, L165-170, L227). The allocation of supply and demand
+to grid nodes (EQ_GR_GENALL, EQ_GR_DEMALL and the IREAUX terms of the balance and peak rows) is
+translated since M1.3 change 27b-2, and the PTDF formulation (the candidate lines of L229-247,
+EQ_GR_PTDFLO, EQ_GR_VIRTCAP, EQ_GR_VIRTBND) since change 57. GR_DEMFR is not tested here: at
+this stage it holds the fractions the main block computed from the sectoral ones (L133-162),
+which the equations read; GR_DEMFR given as input data is refused by the main block
+(`powerflo_main_unported`).
 """
 function powerflo_model_unported(tm)
     out = powerflo_unported(tm)
-    hasdata(tm, "GR_PTDF", 6) && push!(out, "powerflo.vda L59-64, L172-180 (GR_PTDF has data: the PTDF formulation)")
+    ptdf_mip(tm) && push!(out, "powerflo.vda L227, L230-246, L281-286 (GR_PTDF with %DSC% and %SOLMIP% YES: discrete candidate lines)")
     return out
+end
+
+"""
+    ptdf_sync!(ptdf, r, c, reg, com, p, tset)
+
+powerflo.vda L59-64, for a line P from node C of region R to node COM of
+region REG (GR_TOP(R,C,REG,COM,P)), unless R and REG are the same and so are
+C and COM (`IF(NOT SAMEAS(C,COM)\$F, ...)`: `\$` binds before NOT, G46; F is 0
+for a line between regions): in each period T, where the COM end has a PTDF
+for a node, the C end gets the larger of the two in absolute value, with the
+sign of `GR_PTDF(C) - SIGN(GR_PTDF(COM))`; then the COM end's PTDF become
+the opposite of the C end's, for every node:
+
+    GR_PTDF(R,T,P,C,ALL_R,COM2)\$GR_PTDF(REG,T,P,COM,ALL_R,COM2) =
+      MAX(ABS(GR_PTDF(R,T,P,C,ALL_R,COM2)),ABS(GR_PTDF(REG,T,P,COM,ALL_R,COM2)))*
+      SIGN(2*SIGN(GR_PTDF(R,T,P,C,ALL_R,COM2)-SIGN(GR_PTDF(REG,T,P,COM,ALL_R,COM2))));
+    GR_PTDF(REG,T,P,COM,ALL_R,COM2) = -GR_PTDF(R,T,P,C,ALL_R,COM2)
+
+GAMS: powerflo.vda L59-64, v4.9.7.
+"""
+function ptdf_sync!(ptdf, r, c, reg, com, p, tset)
+    for t in tset
+        ends2 = [(k[5], k[6]) for k in keys(ptdf) if k[1] == reg && k[2] == t && k[3] == p && k[4] == com]
+        for (ar, c3) in ends2                                            # L60-62 (independent entries)
+            a, b = get(ptdf, (r, t, p, c, ar, c3), 0.0), ptdf[(reg, t, p, com, ar, c3)]
+            x = max(abs(a), abs(b)) * sign(2 * sign(a - sign(b)))
+            x == 0 ? delete!(ptdf, (r, t, p, c, ar, c3)) : (ptdf[(r, t, p, c, ar, c3)] = x)
+        end
+        foreach(ac -> delete!(ptdf, (reg, t, p, com, ac...)), ends2)    # L63, for every node: first clear
+        for k in [k for k in keys(ptdf) if k[1] == r && k[2] == t && k[3] == p && k[4] == c]
+            x = -ptdf[k]
+            x == 0 || (ptdf[(reg, t, p, com, k[5], k[6])] = x)
+        end
+    end
+    return ptdf
+end
+
+"""
+    ptdf_complete!(tm, ptdf, rp_grid, rp_prc, algmap, tset) -> (trackc, dfunc)
+
+powerflo.vda L172-177, the PTDF branch of the main block (`IF(DFUNC, ...)`,
+GR_PTDF has data): GR_PTDF cleared at the importing end of lines between
+regions (RP_PRC, L174), below the tolerance %PDTOL% 1E-5 (L175), and rounded
+to multiples of 2^-32 in regions without GR_ALGMAP(R,'NRG','NRG') (L176);
+every PTDF line of RP_GRID is a candidate line GR_CANDID in every period
+(L179), and a line with past investments (NCAP_PASTI) gets NCAP_BND UP of at
+most EPS (L181). Returns TRACKC (`OPTION TRACKC < GR_PTDF`, which L184 reads)
+and DFUNC, set to %TMP%: 0, as %DSC%%SOLMIP% is not YESYES (refused,
+`powerflo_main_unported`).
+
+GAMS: powerflo.vda L172-177, v4.9.7.
+"""
+function ptdf_complete!(tm, ptdf, rp_grid, rp_prc, algmap, tset)
+    # L173: OPTION GR_ARC <= GR_TOP (GR_ARC already holds GR_TOP's arcs, L66), CLEAR=GR_CANDID
+    candid = Set{NTuple{3,String}}()
+    # L174: GR_PTDF(R,T,P,C,ALL_R,COM)$RP_PRC(R,P)=0
+    filter!(((k, _),) -> !(k[2] in tset && (k[1], k[3]) in rp_prc), ptdf)
+    # L175: GR_PTDF(R,T,P,C,ALL_R,COM)$((ABS(GR_PTDF(R,T,P,C,ALL_R,COM))<%PDTOL%)$GR_PTDF(R,T,P,C,ALL_R,COM)) = 0
+    filter!(((k, x),) -> !(k[2] in tset && abs(x) < 1e-5), ptdf)
+    # L176: GR_PTDF(...)$((NOT GR_ALGMAP(R,'NRG','NRG'))$GR_PTDF(...)) = ROUND(GR_PTDF(...)/POWER(2,-32))*POWER(2,-32)
+    for (k, x) in collect(ptdf)
+        (k[2] in tset && x != 0 && !((k[1], "NRG", "NRG") in algmap)) || continue
+        y = round(x / 2.0^-32, RoundNearestTiesAway) * 2.0^-32
+        y == 0 ? delete!(ptdf, k) : (ptdf[k] = y)
+    end
+    # L177: OPTION TRACKP < GR_PTDF, PRC_YMAX < NCAP_PASTI, TRACKC < GR_PTDF (C from the right: position 6)
+    trackp = Set((k[1], k[3]) for k in keys(ptdf))
+    ymax = Set((k[1], k[3]) for k in keys(gvalues(tm, "NCAP_PASTI", 3)))
+    trackc = Set{NTuple{2,String}}((k[1], k[6]) for k in keys(ptdf))
+    # L179: GR_CANDID(R,T,P)$(RP_GRID(R,P)$TRACKP(R,P)) = YES
+    foreach(((r, p),) -> (r, p) in trackp && foreach(t -> push!(candid, (r, t, p)), tset), rp_grid)
+    # L181: NCAP_BND(GR_CANDID(R,T,P),'UP')$PRC_YMAX(R,P) = MAX(EPS,NCAP_BND(R,T,P,'UP'))   (a stored 0 is EPS)
+    nbnd = gvalues(tm, "NCAP_BND", 4)
+    for (r, t, p) in candid
+        (r, p) in ymax && (nbnd[(r, t, p, "UP")] = max(0.0, get(nbnd, (r, t, p, "UP"), 0.0)))
+    end
+    gput!(tm, "NCAP_BND", nbnd)
+    gput!(tm, "GR_CANDID", candid)
+    # L182: DFUNC = %TMP% (0); OPTION CLEAR=PRC_YMAX (already empty, L148), CLEAR=TRACKP
+    return trackc, 0.0
 end
 
 """
@@ -93,7 +191,14 @@ GR_DEMFR from the sectoral fractions: change 27a-2), the reference nodes
 GR_ADO, and COM_LIM FX on the grid nodes. Loops run in GAMS order; the scratch (F, Z, CNT, DFUNC,
 MY_F, DONE) is left as GAMS leaves it.
 
-GAMS: powerflo.vda L11-204 (without GR_PTDF or GR_DEMFR data), v4.9.7.
+With GR_PTDF data (the PTDF formulation, M1.3 change 57), RP_PRC and DFUNC
+come from GR_PTDF (L43-44), the PTDF of a line within a region are made
+opposite at its two ends (L59-64, `ptdf_sync!`), the lines at PTDF nodes lose
+their reactance (L70), the reactance nodes are the grid nodes without PTDF
+(L86), RP_GRID holds the lines of the PTDF grids (L98-99) and the PTDF branch
+L172-177 runs (`ptdf_complete!`).
+
+GAMS: powerflo.vda L11-204 (without GR_DEMFR data), v4.9.7.
 """
 function powerflo_main!(tm)
     u = powerflo_main_unported(tm)
@@ -127,8 +232,10 @@ function powerflo_main!(tm)
     foreach(k -> push!(gid_add, (k[1], k[3])), keys(gvalues(tm, "GR_GENFR", 4)))
     # L43-44: OPTION CLEAR=TRACKC, TRACKP < PRC_REACT, RP_PRC < GR_PTDF; DFUNC=CARD(RP_PRC); TRACKP(RP_PRC)=YES
     trackp = Set{NTuple{2,String}}((k[1], k[3]) for k in keys(react))
-    rp_prc = Set{NTuple{2,String}}()
-    dfunc = 0.0
+    ptdf = gvalues(tm, "GR_PTDF", 6)                                     # GR_PTDF(R,YEAR,P,C,ALL_R,C)
+    rp_prc = Set{NTuple{2,String}}((k[1], k[3]) for k in keys(ptdf))
+    dfunc = Float64(length(rp_prc))
+    union!(trackp, rp_prc)
     # L45: TRACKC(R,C) $= SUM(NRG_GMAP(R,NRG_GRID,C),1)
     grids = S("NRG_GRID", 1)
     trackc = Set{NTuple{2,String}}((k[1], k[3]) for k in Sk("NRG_GMAP", 3) if k[1] in reg && (k[2],) in grids)
@@ -162,20 +269,24 @@ function powerflo_main!(tm)
     end
     gput!(tm, "PRC_MAP", prc_map)
     # L56-64: lines between regions: RP_PRC, RTP_VARA only where both ends have it, the larger reactance at both
-    #   ends (the PTDF statements L59-64 within a region run on an empty GR_PTDF)
+    #   ends; then the PTDF of the line's two end nodes made opposite
     vara = gmembers(tm, "RTP_VARA", 3)
     rtp = S("RTP", 3)
     F = nothing
     for (r, c, r2, c2, p) in sorted(gr_top)
         F = 1.0
-        r == r2 && continue
-        push!(rp_prc, (r2, p))
-        F = 0.0
-        for t in T
-            ((r, t, p) in rtp && !((r2, t, p) in vara)) && delete!(vara, (r, t, p))
-            x = max(get(react, (r, t, p), 0.0), get(react, (r2, t, p), 0.0))
-            x == 0 ? delete!(react, (r, t, p)) : (react[(r, t, p)] = x)
+        if r != r2
+            push!(rp_prc, (r2, p))
+            F = 0.0
+            for t in T
+                ((r, t, p) in rtp && !((r2, t, p) in vara)) && delete!(vara, (r, t, p))
+                x = max(get(react, (r, t, p), 0.0), get(react, (r2, t, p), 0.0))
+                x == 0 ? delete!(react, (r, t, p)) : (react[(r, t, p)] = x)
+            end
         end
+        # L59: IF(NOT SAMEAS(C,COM)$F, ...): `$` binds before NOT (G46), so all but a line within a region
+        #   between nodes of one commodity
+        (c == c2 && F != 0) || ptdf_sync!(ptdf, r, c, r2, c2, p, tset)
     end
     gput!(tm, "RTP_VARA", vara)
     # L65: PRC_REACT(R,T,P)$((PRC_REACT(R,T,P) LE 0)$PRC_REACT(R,T,P)) = 0
@@ -184,7 +295,13 @@ function powerflo_main!(tm)
     # L66-67: GR_ARC from GR_TOP; OPTION TRACKC < GR_FLOW
     gr_arc = Set{NTuple{4,String}}((k[1], k[2], k[3], k[4]) for k in gr_top)
     trackc = Set{NTuple{2,String}}((k[1], k[3]) for k in keys(flow))
-    # L70: OPTION GR_GID <= GR_PTDF (empty); L71: GR_ADMIT(R,T,C,REG,COM)$GR_ARC = SUM(GR_TOP$(PRC_REACT$RTP_VARA),1/PRC_REACT)
+    # L70: OPTION GR_GID <= GR_PTDF (R and C from the left: positions 1 and 4, the PTDF nodes);
+    #   LOOP(RPC_IRE(R,P,C,IE)$GR_GID(R,C),PRC_REACT(R,T,P) = 0): no reactance on a line at a PTDF node
+    ptdf_nodes = Set{NTuple{2,String}}((k[1], k[4]) for k in keys(ptdf))
+    noreact = Set((k[1], k[2]) for k in rpc_ire if (k[1], k[3]) in ptdf_nodes)
+    filter!(((k, _),) -> !(k[2] in tset && (k[1], k[3]) in noreact), react)
+    gput!(tm, "PRC_REACT", react)
+    # L71: GR_ADMIT(R,T,C,REG,COM)$GR_ARC = SUM(GR_TOP$(PRC_REACT$RTP_VARA),1/PRC_REACT)
     admit = gvalues(tm, "GR_ADMIT", 5)
     for (r, c, r2, c2) in gr_arc, t in T
         x = 0.0
@@ -232,8 +349,9 @@ function powerflo_main!(tm)
         1 <= i <= length(js) && push!(gr_grid, (js[i], r, c))
     end
     gput!(tm, "GR_GRID", gr_grid)
-    # L86: OPTION GR_GID <= GR_PTDF; GR_GID(TRACKC) = NOT GR_GID(TRACKC)   (the reactance nodes: 1)
-    gid = Dict{NTuple{2,String},GNum}(k => GNum(1.0) for k in trackc)
+    # L86: OPTION GR_GID <= GR_PTDF; GR_GID(TRACKC) = NOT GR_GID(TRACKC): the reactance nodes of the grids, and any
+    #   PTDF node outside them, are 1
+    gid = Dict{NTuple{2,String},GNum}(k => GNum(1.0) for k in symdiff(ptdf_nodes, trackc))
     # L89: TRACKPC(RP_GRID(R,P),C)$GR_FLOW(R,P,C) $= GR_GID(R,C)
     trackpc = gmembers(tm, "TRACKPC", 3)
     foreach(k -> ((k[1], k[2]) in rp_grid && haskey(gid, (k[1], k[3]))) && push!(trackpc, k), keys(flow))
@@ -258,8 +376,10 @@ function powerflo_main!(tm)
     rc_grid = gmembers(tm, "RC_GRID", 3)
     foreach(k -> (k[2] in tset && (k[1], k[3]) in trackc) && push!(rc_grid, k), Sk("RTC", 3))
     gput!(tm, "RC_GRID", rc_grid)
-    # L98-99: OPTION TRACKPC <= GR_PTDF (empty); RP_GRID < TRACKPC; CLEAR=TRACKPC, CLEAR=TRACKP
-    empty!(trackpc); empty!(rp_grid); empty!(trackp)
+    # L98-99: OPTION TRACKPC <= GR_PTDF (R, P and C from the left: positions 1, 3 and 4); TRACKPC(R,P,C)$GR_GID(R,C) = NO;
+    #   OPTION RP_GRID < TRACKPC, CLEAR=TRACKPC, CLEAR=TRACKP: RP_GRID holds the lines of the PTDF grids
+    rp_grid = Set{NTuple{2,String}}((k[1], k[3]) for k in keys(ptdf) if !haskey(gid, (k[1], k[4])))
+    empty!(trackpc); empty!(trackp)
     # L102: option gr_sus < gr_admit: the same domains twice, filled from the right (G52), so the transpose
     sus = Dict{NTuple{5,String},Float64}((k[4], k[2], k[5], k[1], k[3]) => x for (k, x) in admit)
     # L103: gr_sus(rc_grid,rc) $= gr_admit(rc_grid,rc)*(-1)   (the two index groups run independently)
@@ -509,7 +629,14 @@ function powerflo_main!(tm)
     end
     gput!(tm, "GR_CMAP", Set{NTuple{3,String}}())
     # L172-178: IF(DFUNC, ... (PTDF) ELSE OPTION CLEAR=RP_GRID)
-    gput!(tm, "RP_GRID", Set{NTuple{2,String}}())
+    if dfunc != 0
+        trackc, dfunc = ptdf_complete!(tm, ptdf, rp_grid, rp_prc, algmap, tset)
+        empty!(trackp)                                                   # L177: OPTION CLEAR=TRACKP
+    else
+        empty!(rp_grid)
+    end
+    gput!(tm, "RP_GRID", rp_grid)
+    gput!(tm, "GR_PTDF", ptdf)
     # L181: COM_LIM(TRACKC(RC),'FX')$((NOT SUM(COM_LIM(RC,L),1))$GR_GID(RC)) = YES
     lim = gmembers(tm, "COM_LIM", 3)
     for (r, c) in sorted(trackc)
@@ -522,7 +649,7 @@ function powerflo_main!(tm)
     # L182: OPTION CLEAR=TRACKC,CLEAR=RP_PRC,CLEAR=TRACKPC; L183: gasgrids.vda exits without GG_KGF
     gput!(tm, "TRACKC", Set{NTuple{2,String}}()); gput!(tm, "RP_PRC", Set{NTuple{2,String}}())
     gput!(tm, "TRACKPC", Set{NTuple{3,String}}())
-    gput!(tm, "TRACKP", trackp)                      # L112's: cleared only in the PTDF branch (L177)
+    gput!(tm, "TRACKP", trackp)                      # L112's, unless the PTDF branch cleared it (L177)
     # the scratch as the block leaves it
     F === nothing || gput_scalar!(tm, "F", F isa GNum ? F : GNum(F))
     Z === nothing || gput_scalar!(tm, "Z", Z)
@@ -590,9 +717,9 @@ powerflo.vda DECL (mod_vars.mod L95) on the state after the coefficient
 stage: the variables (`powerflo_vars!`), the scratch Z of the reference-node
 loop (L222-223; the fixed phase angles are bounds, `bnd_powerflo!`) and
 GR_GRID(J,R,'ACT') for every grid with an electricity node (L224). The
-candidate lines (L229-249) come only with the PTDF formulation, refused.
+candidate lines of the PTDF formulation (L229-247, `ptdf_candidates!`).
 
-GAMS: powerflo.vda L194-226, v4.9.7.
+GAMS: powerflo.vda L194-247, v4.9.7.
 """
 function powerflo_decl!(tm)
     u = powerflo_model_unported(tm)
@@ -608,6 +735,108 @@ function powerflo_decl!(tm)
     g = gmembers(tm, "GR_GRID", 3)
     foreach(k -> (k[2], k[3]) in nrgelc && push!(g, (k[1], k[2], "ACT")), collect(g))
     gput!(tm, "GR_GRID", g)
+    # L225: $IF DEFINED VAR_GRVIRT $EXIT (the macro is defined below, so not on this first and only pass)
+    ptdf_candidates!(tm)
+    return tm
+end
+
+"""
+    ptdf_candidates!(tm) -> tm
+
+powerflo.vda DECL L229-247, `IF(CARD(GR_CANDID), ...)`: the candidate lines
+of the PTDF grids (GR_CANDID, from the main block's L179).
+
+    GR_CAPUP(GR_CANDID(R,T,P)) = SUM(PYR(V)\$COEF_CPT(R,V,T,P),NCAP_PASTI(R,V,P)*ROUND(COEF_CPT(R,V,T,P)));
+    GR_CANDID(R,T,P)\$SUM(RP_GRID(REG,P)\$GR_CAPUP(REG,T,P),1) = NO;
+    RVP(GR_CANDID) = YES;
+    GR_CAPUP(RVP(R,T,P))\$GR_DNCAP(R,P) = ...                     (GR_DNCAP is 0: %DSC%%SOLMIP% not YESYES)
+    LOOP(T,GR_CAPUP(RVP(R,TT(MIYR_1),P))\$(NOT GR_CAPUP(RVP)) = MAX(CAP_BND(R,T,P,'UP'),GR_CAPUP(R,T,P))+1-1);
+    LOOP(TT(T+1),GR_CAPUP(RVP(R,TT,P))\$(NOT GR_CAPUP(RVP)) =
+      GR_CAPUP(R,T,P)+(CAP_BND(RVP,'UP')-GR_CAPUP(R,T,P))\$(CAP_BND(RVP,'UP')>0));
+    LOOP(GR_TOP(R,C,REG,COM,P),GR_CAPUP(R,T,P)\$GR_CAPUP(REG,T,P)=MIN(GR_CAPUP(REG,T,P),GR_CAPUP(R,T,P)+INF\$(NOT GR_CAPUP(R,T,P)));
+         IF(NOT SAMEAS(R,REG),GR_CAPUP(REG,T,P) = 0));
+    GR_CANDID(RVP)\$(NOT GR_CAPUP(RVP)) = NO;
+    CAP_BND(GR_CANDID(R,T,P),'UP')\$((NOT CAP_BND(R,T,P,'UP'))\$(NOT GR_DNCAP(R,P))) = GR_CAPUP(R,T,P);
+    RTP_VARP(GR_CANDID(R,T,P))\$(NOT GR_DNCAP(R,P)) = YES;
+    %VAR%_IRE.LO(R,T,T,P,C(ACTCG),S,'EXP')\$(PRC_TS(R,P,S)\$RVP(R,T,P)) = -INF;     (`bnd_powerflo!`)
+    OPTION CLEAR=RVP;
+
+A line with past investments that last is not a candidate in those periods;
+the virtual capacity GR_CAPUP of the others comes from CAP_BND UP, carried
+forward over the periods, and becomes the line's CAP_BND UP where it has
+none. The candidate lines get a capacity variable (RTP_VARP). The bound on
+the virtual flow VAR_IRE(R,T,T,P,'ACT',S,'EXP') is set where the columns
+are made, by `bnd_powerflo!`: it needs only the final GR_CANDID, as no other
+RVP line has the column.
+
+GAMS: powerflo.vda L229-247, v4.9.7.
+"""
+function ptdf_candidates!(tm)
+    d = tm.data
+    candid = gmembers(tm, "GR_CANDID", 3)
+    isempty(candid) && return tm
+    T = [k[1] for k in gset(tm, "MILESTONYR").keys]
+    pyr = Set(k[1] for k in gset(tm, "PYR").keys)
+    coef_cpt = gparam(tm, "COEF_CPT")
+    cpt_of = indexby(coef_cpt, (1, 3, 4))                               # (r,t,p) -> COEF_CPT(r,v,t,p)
+    pasti = gparam_opt(d, "NCAP_PASTI", 3)
+    capup = gvalues(tm, "GR_CAPUP", 3)
+    put!(k, x) = x == 0 ? delete!(capup, k) : (capup[k] = x)
+    # L234: GR_CAPUP(GR_CANDID(R,T,P)) = SUM(PYR(V)$COEF_CPT(R,V,T,P),NCAP_PASTI(R,V,P)*ROUND(COEF_CPT(R,V,T,P)))
+    for (r, t, p) in gams_sort!(collect(candid), d)
+        x = 0.0
+        for k in get(cpt_of, (r, t, p), NTuple{4,String}[])
+            k[2] in pyr || continue
+            x += get(pasti.values, (r, k[2], p), 0.0) * round(coef_cpt.values[k], RoundNearestTiesAway)
+        end
+        put!((r, t, p), x)
+    end
+    # L235: GR_CANDID(R,T,P)$SUM(RP_GRID(REG,P)$GR_CAPUP(REG,T,P),1) = NO
+    rp_grid = gset(tm, "RP_GRID").members
+    filter!(((r, t, p),) -> !any(k -> k[3] == p && k[2] == t && (k[1], p) in rp_grid, keys(capup)), candid)
+    # L236: RVP(GR_CANDID) = YES
+    rvp = gmembers(tm, "RVP", 3)
+    union!(rvp, candid)
+    cbnd = gvalues(tm, "CAP_BND", 4)
+    cup(r, t, p) = get(cbnd, (r, t, p, "UP"), 0.0)
+    # L238: LOOP(T,GR_CAPUP(RVP(R,TT(MIYR_1),P))$(NOT GR_CAPUP(RVP)) = MAX(CAP_BND(R,T,P,'UP'),GR_CAPUP(R,T,P))+1-1)
+    miyr1 = Set(k[1] for k in gset(tm, "MIYR_1").keys)
+    first = [k for k in gams_sort!(collect(rvp), d) if k[2] in miyr1]
+    for t in T, (r, tt, p) in first
+        haskey(capup, (r, tt, p)) && continue
+        put!((r, tt, p), max(cup(r, t, p), get(capup, (r, t, p), 0.0)) + 1 - 1)
+    end
+    # L239: LOOP(TT(T+1),GR_CAPUP(RVP(R,TT,P))$(NOT GR_CAPUP(RVP)) =
+    #   GR_CAPUP(R,T,P)+(CAP_BND(RVP,'UP')-GR_CAPUP(R,T,P))$(CAP_BND(RVP,'UP')>0))
+    rvp_of = Dict{String,Vector{NTuple{3,String}}}()
+    foreach(k -> push!(get!(() -> NTuple{3,String}[], rvp_of, k[2]), k), gams_sort!(collect(rvp), d))
+    for i in 1:length(T)-1
+        t, tt = T[i], T[i+1]
+        for (r, _, p) in get(rvp_of, tt, NTuple{3,String}[])
+            haskey(capup, (r, tt, p)) && continue
+            prev, cb = get(capup, (r, t, p), 0.0), cup(r, tt, p)
+            put!((r, tt, p), prev + (cb > 0 ? cb - prev : 0.0))
+        end
+    end
+    # L241-242: LOOP(GR_TOP(R,C,REG,COM,P), the importing end's GR_CAPUP caps the exporting end's, then is cleared)
+    for (r, c, reg, com, p) in gams_sort!(collect(gset(tm, "GR_TOP").keys), d), t in T
+        x2 = get(capup, (reg, t, p), 0.0)
+        x2 == 0 || put!((r, t, p), min(x2, haskey(capup, (r, t, p)) ? capup[(r, t, p)] : Inf))
+        r == reg || delete!(capup, (reg, t, p))
+    end
+    # L244: GR_CANDID(RVP)$(NOT GR_CAPUP(RVP)) = NO
+    filter!(k -> !(k in rvp && !haskey(capup, k)), candid)
+    # L245: CAP_BND(GR_CANDID(R,T,P),'UP')$(NOT CAP_BND(R,T,P,'UP')) = GR_CAPUP(R,T,P)   (a stored 0 is EPS: not NOT)
+    for (r, t, p) in candid
+        haskey(cbnd, (r, t, p, "UP")) || (cbnd[(r, t, p, "UP")] = capup[(r, t, p)])
+    end
+    # L246: RTP_VARP(GR_CANDID(R,T,P)) = YES
+    varp = gmembers(tm, "RTP_VARP", 3)
+    union!(varp, candid)
+    gput!(tm, "GR_CAPUP", capup); gput!(tm, "GR_CANDID", candid); gput!(tm, "CAP_BND", cbnd)
+    gput!(tm, "RTP_VARP", varp)
+    # L248: OPTION CLEAR=RVP
+    gput!(tm, "RVP", Set{NTuple{3,String}}())
     return tm
 end
 
@@ -625,6 +854,16 @@ function bnd_powerflo!(bt, tm)
     recs = get!(() -> Dict{Tuple,Tuple{Float64,Float64}}(), bt.recs, "VAR_COMAUX")
     for k in tm.vars.families["VAR_COMAUX"].keys
         (k[1], k[3]) in ref && (recs[k] = (0.0, 0.0))
+    end
+    # L247: %VAR%_IRE.LO(R,T,T,P,C(ACTCG),S,'EXP')$(PRC_TS(R,P,S)$RVP(R,T,P)) = -INF, the virtual flow of the
+    #   candidate lines (`ptdf_candidates!`), on the columns the PTDF rows made
+    candid = gset_opt(tm.data, "GR_CANDID", 3).members
+    (isempty(candid) || !haskey(tm.vars.families, "VAR_IRE")) && return bt
+    prc_ts = gset(tm, "PRC_TS").members
+    ire = get!(() -> Dict{Tuple,Tuple{Float64,Float64}}(), bt.recs, "VAR_IRE")
+    for k in tm.vars.families["VAR_IRE"].keys
+        (k[5] == "ACT" && k[7] == "EXP" && k[2] == k[3] && (k[1], k[3], k[4]) in candid && (k[1], k[4], k[6]) in prc_ts) || continue
+        ire[k] = (-Inf, last(get(ire, k, (0.0, Inf))))
     end
     return bt
 end
@@ -674,6 +913,167 @@ function eq_gr_powflo!(tm)
             addterm!(rhs, GNum(-a), tm, "VAR_COMAUX", reg, t, com, s)
             gconstraint!(tm, "EQ_GR_POWFLO", (r, t, c, s, reg, com), "E", lhs, rhs) === nothing || (n += 1)
         end
+    end
+    return n
+end
+
+# --- M1.3 (57): the PTDF formulation (POWFLO L262-287) ------------------------------------------------
+
+"VAR_GRVIRT(r,t,p,n,s), the virtual flow over a candidate line (powerflo.vda L228): VAR_IRE of the
+commodity %PGPRIM% ('ACT') exported, SUM(IE(XPT),%VAR%_IRE(r,t,t,p,%PGPRIM%,s,ie))."
+grvirt!(expr, k::GNum, tm, r, t, p, s) = addterm!(expr, k, tm, "VAR_IRE", r, t, t, p, "ACT", s, "EXP")
+
+"""
+    eq_gr_ptdflo!(tm) -> Int
+
+EQ_GR_PTDFLO, the DC power flow in the PTDF formulation: for each line P of
+a PTDF grid (RP_GRID) at its exporting node C (GR_FLOW > 0) and process
+timeslices S (RPS_S1), the net export over the line, plus the virtual flow
+VAR_GRVIRT if the line is a candidate (GR_CANDID) and C a grid node, equals
+the PTDF-weighted sum of VAR_COMAUX at the grid nodes:
+
+    EQ_GR_PTDFLO(R,T,P,C,RTS(S))\$(RPS_S1(R,P,S)\$(GR_FLOW(R,P,C)>0)\$RP_GRID(R,P))..
+      SUM((RTP_VINTYR(R,V,T,P),RTPCS_VARF(R,T,P,C,TS))\$RS_FR(R,S,TS),
+          RS_FR(R,S,TS)*SUM(RPC_IRE(R,P,C,IE),VAR_IRE(R,V,T,P,C,S,IE)*(2*XPT(IE)-1))) +
+      SUM(RC_GRID(R,T,C),VAR_GRVIRT(R,T,P,C,S))\$GR_CANDID(R,T,P)
+      =E= SUM(RC_GRID(REG,T,COM)\$(COM_TS(REG,COM,S)\$GR_PTDF(R,T,P,C,REG,COM)),GR_PTDF(R,T,P,C,REG,COM)*VAR_COMAUX(REG,T,COM,S));
+
+VAR_IRE is taken at S, as written, for every flow timeslice TS that RS_FR
+links to S. Returns the number of rows.
+
+GAMS: powerflo.vda L262-274, v4.9.7.
+"""
+function eq_gr_ptdflo!(tm)
+    powerflo_on(tm) || return 0
+    rp_grid = gset(tm, "RP_GRID")
+    isempty(rp_grid) && return 0
+    powerflo_vars!(tm)
+    d = tm.data
+    flow = gparam(tm, "GR_FLOW")
+    c_of = Dict{NTuple{2,String},Vector{String}}()                    # (r,p) -> C with GR_FLOW(r,p,c) > 0
+    foreach(((k, x),) -> x > 0 && push!(get!(() -> String[], c_of, (k[1], k[2])), k[3]), flow.values)
+    s1_of = indexby(gset(tm, "RPS_S1"), (1, 2))                       # (r,p) -> RPS_S1(r,p,s)
+    vint_of = indexby(gset(tm, "RTP_VINTYR"), (1, 3, 4))              # (r,t,p) -> RTP_VINTYR(r,v,t,p)
+    varf_of = indexby(gset(tm, "RTPCS_VARF"), (1, 2, 3, 4))           # (r,t,p,c) -> RTPCS_VARF(r,t,p,c,ts)
+    ire_of = indexby(gset(tm, "RPC_IRE"), (1, 2, 3))                  # (r,p,c) -> RPC_IRE(r,p,c,ie)
+    rs_fr = gparam(tm, "RS_FR")
+    rc_grid = gset(tm, "RC_GRID").members
+    comts = gset(tm, "COM_TS").members
+    candid = gset_opt(d, "GR_CANDID", 3).members
+    ptdf = gparam(tm, "GR_PTDF")
+    ptdf_of = indexby(ptdf, (1, 2, 3, 4))                             # (r,t,p,c) -> GR_PTDF(r,t,p,c,reg,com)
+    nok = NTuple{4,String}[]
+    n = 0
+    tx = eq_periods(tm)
+    for (r, p) in gams_sort!(collect(rp_grid.keys), d), t in (k[1] for k in gset(tm, "MILESTONYR").keys)
+        (t,) in tx || continue
+        for (c,) in gams_sort!([(c,) for c in get(c_of, (r, p), String[])], d), (_, _, s) in get(s1_of, (r, p), NTuple{3,String}[])
+            lhs = JuMP.AffExpr(0.0)
+            for (_, v, _, _) in get(vint_of, (r, t, p), nok), (_, _, _, _, ts) in get(varf_of, (r, t, p, c), NTuple{5,String}[])
+                fr = gv(rs_fr, (r, s, ts))
+                iszero(fr) && continue
+                for (_, _, _, ie) in get(ire_of, (r, p, c), nok)
+                    addterm!(lhs, fr * GNum(ie == "EXP" ? 1.0 : -1.0), tm, "VAR_IRE", r, v, t, p, c, s, ie)
+                end
+            end
+            ((r, t, p) in candid && (r, t, c) in rc_grid) && grvirt!(lhs, GNum(1.0), tm, r, t, p, s)
+            rhs = JuMP.AffExpr(0.0)
+            for k in get(ptdf_of, (r, t, p, c), NTuple{6,String}[])
+                ((k[5], t, k[6]) in rc_grid && (k[5], k[6], s) in comts) || continue
+                addterm!(rhs, gv(ptdf, k), tm, "VAR_COMAUX", k[5], t, k[6], s)
+            end
+            gconstraint!(tm, "EQ_GR_PTDFLO", (r, t, p, c, s), "E", lhs, rhs) === nothing || (n += 1)
+        end
+    end
+    return n
+end
+
+"""
+    eq_gr_virtcap!(tm) -> Int
+
+EQ_GR_VIRTCAP, the virtual capacity of a candidate line: for each candidate
+line (GR_CANDID) at its exporting node C and process timeslices S, the
+virtual flow, once per line of GR_TOP(R,C,*,*,P), lies within plus and
+minus the line's virtual capacity VAR_XCAP:
+
+    EQ_GR_VIRTCAP(GR_CANDID(R,T,P),C,RTS(S),BDNEQ(BD))\$((GR_FLOW(R,P,C)>0)\$RPS_S1(R,P,S))..
+      SUM(GR_TOP(R,C,RC,P),VAR_GRVIRT(R,T,P,C,S))*BDSIG(BD) =L= VAR_XCAP(R,T,P)*PRC_CAPACT(R,P)*G_YRFR(R,S);
+
+Returns the number of rows.
+
+GAMS: powerflo.vda L276-279, v4.9.7.
+"""
+function eq_gr_virtcap!(tm)
+    powerflo_on(tm) || return 0
+    d = tm.data
+    candid = gset_opt(d, "GR_CANDID", 3)
+    isempty(candid) && return 0
+    powerflo_vars!(tm)
+    flow = gparam(tm, "GR_FLOW")
+    s1_of = indexby(gset(tm, "RPS_S1"), (1, 2))
+    ntop = Dict{NTuple{3,String},Int}()                                # (r,c,p) -> lines of GR_TOP(r,c,*,*,p)
+    foreach(k -> (ntop[(k[1], k[2], k[5])] = get(ntop, (k[1], k[2], k[5]), 0) + 1), gset(tm, "GR_TOP").keys)
+    capact, yrfr = gparam(tm, "PRC_CAPACT"), gparam(tm, "G_YRFR")
+    cs_of = Dict{NTuple{2,String},Vector{String}}()
+    foreach(((k, x),) -> x > 0 && push!(get!(() -> String[], cs_of, (k[1], k[2])), k[3]), flow.values)
+    n = 0
+    tx = eq_periods(tm)
+    for (r, t, p) in gams_sort!(collect(candid.keys), d)
+        (t,) in tx || continue
+        for (c,) in gams_sort!([(c,) for c in get(cs_of, (r, p), String[])], d), (_, _, s) in get(s1_of, (r, p), NTuple{3,String}[]),
+                (bd, sig) in (("LO", 1.0), ("UP", -1.0))                     # BDSIG: LO 1, UP -1 (setglobs.gms L248)
+            lhs = JuMP.AffExpr(0.0)
+            m = get(ntop, (r, c, p), 0)
+            m == 0 || grvirt!(lhs, GNum(Float64(m)) * GNum(sig), tm, r, t, p, s)
+            rhs = JuMP.AffExpr(0.0)
+            addterm!(rhs, gv(capact, (r, p)) * gv(yrfr, (r, s)), tm, "VAR_XCAP", r, t, p)
+            gconstraint!(tm, "EQ_GR_VIRTCAP", (r, t, p, c, s, bd), "L", lhs, rhs) === nothing || (n += 1)
+        end
+    end
+    return n
+end
+
+"""
+    eq_gr_virtbnd!(tm) -> Int
+
+EQ_GR_VIRTBND, the bound on the virtual capacity of a candidate line: zero
+once the line is built to its virtual capacity GR_CAPUP, which it is at most
+(BIGM 10; GR_DNCAP is 0, as %DSC%%SOLMIP% is not YESYES):
+
+    EQ_GR_VIRTBND(GR_CANDID(R,T,P)).. VAR_XCAP(R,T,P) =E= %BIGM%*GR_CAPUP(R,T,P) *
+      (1 - (VAR_PTDNCAP(r,t,p)\$GR_DNCAP(R,P) + (1-(1-SUM(RTP(R,T,P),VAR_CAP(R,T,P))/GR_CAPUP(R,T,P))/%BIGM%)\$(NOT GR_DNCAP(R,P))));
+
+The constant and the coefficient of VAR_CAP are evaluated in GAMS's order,
+from the innermost bracket out. Returns the number of rows.
+
+GAMS: powerflo.vda L281-287, v4.9.7.
+"""
+function eq_gr_virtbnd!(tm)
+    powerflo_on(tm) || return 0
+    d = tm.data
+    candid = gset_opt(d, "GR_CANDID", 3)
+    isempty(candid) && return 0
+    powerflo_vars!(tm)
+    capup = gparam(tm, "GR_CAPUP")
+    rtp = gset(tm, "RTP").members
+    bigm = 10.0
+    n = 0
+    tx = eq_periods(tm)
+    for (r, t, p) in gams_sort!(collect(candid.keys), d)
+        (t,) in tx || continue
+        g = nonzero(capup, (r, t, p))
+        # (1 - SUM/G): 1, -1/G; /BIGM; 1 - (...); 1 - (...); times BIGM*G
+        c0, c1 = 1.0, -(1.0 / g)
+        c0, c1 = c0 / bigm, c1 / bigm
+        c0, c1 = 1.0 - c0, -c1
+        c0, c1 = 1.0 - c0, -c1
+        m = bigm * g
+        c0, c1 = m * c0, m * c1
+        lhs = JuMP.AffExpr(0.0)
+        addterm!(lhs, GNum(1.0), tm, "VAR_XCAP", r, t, p)
+        rhs = JuMP.AffExpr(c0)
+        (r, t, p) in rtp && addterm!(rhs, GNum(c1), tm, "VAR_CAP", r, t, p)
+        gconstraint!(tm, "EQ_GR_VIRTBND", (r, t, p), "E", lhs, rhs) === nothing || (n += 1)
     end
     return n
 end

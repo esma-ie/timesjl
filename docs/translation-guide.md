@@ -1072,3 +1072,9 @@ those checks, their figures and their crafted cases are not published
   follow EQ(l)_ASHAR. UC_ACTBET data is no longer refused at prep_ext.vda
   L35. New crafted case demo12_ucbet: layers 1 to 3 PASS in both variants
   from the DD files (objective 24,004,875.70 with CPLEX and HiGHS).
+- 17 Nov 2026: M1.3 change 57: the PTDF formulation of powerflo.vda
+  (GR_PTDF data): the main-block statements, the candidate lines of
+  DECL, EQ_GR_PTDFLO, EQ_GR_VIRTCAP and EQ_GR_VIRTBND. New crafted case
+  demo12_ptdf: layers 1 to 3 PASS in both variants from the DD files
+  (objective 23,941,260.27). The discrete candidate lines (%DSC% and
+  %SOLMIP% YES) stay refused.
