@@ -138,7 +138,9 @@ function eq_peak!(tm::TimesModel)
 
     # The domain, in GAMS order (R, T, CG2, SL).
     rows = NTuple{4,String}[]
+    off = rts_off(tm)                                                  # RTS(SL): S+NORTS(R,T,SL), dynamic timeslices
     for (r, cg2, sl) in com_pkts, (t,) in eq_periods(tm)             # %R_T%: SUBT in a stepped run (maindrv.mod L38-40)
+        off(r, t, sl) && continue
         (r,) in reg || continue
         any(k -> (r, t, k[3]) in rtc, get(gmap_of_rcg, (r, cg2), no3)) || continue
         push!(rows, (r, t, cg2, sl))

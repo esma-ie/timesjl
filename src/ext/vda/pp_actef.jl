@@ -68,9 +68,11 @@ function eq_acteff!(tm::TimesModel)
     aeff(k) = 1 + gif(gv(act_eff, k) - 1, haskey(act_eff, k))
 
     rows = NTuple{7,String}[]
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 63)
     for (r, p, cg, io) in rpg_ace, (_, v, t, _) in get(vt_of_rp, (r, p), no4)
         ((v,) in modlyear && (t,) in tx) || continue
         for (_, _, s) in get(s1_of_rp, (r, p), no3)
+            off(r, t, s) && continue
             push!(rows, (r, v, t, p, cg, io, s))
         end
     end

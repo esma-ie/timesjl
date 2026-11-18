@@ -125,6 +125,8 @@ function bnd_data!(tm::TimesModel; cum::Bool=true)
     # L73: UC_TS_SUM(R,UC_N(OBV),S) = NO
     obv = Set(k[1] for k in S("OBV", 1))
     gput!(tm, "UC_TS_SUM", filter(k -> !(k[2] in obv), gmembers(tm, "UC_TS_SUM", 3)))
+    # L87:  NOT %RTS%==S  dynslite.vda BOUNDS (its data statements; M1.3 change 63)
+    dynslite_bounds_data!(tm)
     return tm
 end
 

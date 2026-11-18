@@ -418,7 +418,6 @@ GAMS: ppm_ext.vda L59-169, equcrtp.vda L64-71, v4.9.7.
 function ppm_ext!(tm)
     u = ppm_ext_unported(tm)
     yes(n) = uppercase(strip(gswitch(tm, n, ""))) == "YES"
-    (yes("DYNTS") && !isempty(gset_opt(tm.data, "TS_OFF", 4).keys)) && push!(u, "ppm_ext.vda L169 (dynslite.vda POSTLEV)")
     isempty(gset_opt(tm.data, "RP_FFSGG", 4).keys) || push!(u, "ppm_ext.vda L76-83 (RP_FFSGG: stochastic extension)")
     isempty(u) || throw(UnportedError(join(u, "; ")))
     S2 = Dict{NTuple{2,String},Vector{String}}
@@ -739,7 +738,7 @@ function ppm_ext!(tm)
     for s in (uc_on, uc_rs, uc_re)
         filter!(k -> !(k[1] in reg && k[2] in dyn), s)
     end
-    # L169: $IF NOT %RTS%==S $BATINCLUDE dynslite.vda POSTLEV   (%RTS% is S: ppm_ext! refuses DYNTS with TS_OFF)
+    # L169: dynslite.vda POSTLEV, at the end of this function (`dynslite_postlev!`)
 
     gput!(tm, "FLO_FUNCX", ffx)
     for (n, x) in (("TRACKP", trackp), ("RPCC_FFUNC", ccffunc), ("RPCG_PTRAN", ptran), ("RPC_FFUNC", ffunc), ("RPC_NOFLO", noflo),
@@ -753,5 +752,7 @@ function ppm_ext!(tm)
                    ("PRC_YMIN", ymin), ("NCAP_AFSX", afsx), ("RP_AFB", rp_afb), ("NCAP_AFSM", afsm), ("NCAP_AFM", afm))
         gput!(tm, n, x)
     end
+    # L169: $IF NOT %RTS%==S $BATINCLUDE dynslite.vda POSTLEV (M1.3 change 63), the file's last statement
+    dynslite_postlev!(tm)
     return tm
 end
