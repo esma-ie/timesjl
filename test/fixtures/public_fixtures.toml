@@ -826,3 +826,16 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 3085
 cols = 4323
 nonzeros = 17405
+
+# Crafted case TIMES_Demo-demo12_iled (reference/crafted.toml: demo12 + iled.dd), 18 Nov 2026 (GAMS 54.6.1 + CPLEX
+# and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): interest during construction for an EPS lead time and
+# PRC_RCAP outside RP, the whole model. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_iled"
+model    = "TIMES_Demo-demo12_iled"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3244
+cols = 4505
+nonzeros = 18511

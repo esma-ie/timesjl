@@ -1,0 +1,23 @@
+* TIMES.jl crafted case demo12_iled (reference/crafted.toml, 18 Nov 2026): two defects found on a local
+* model and fixed in M1.3 change 64, reproduced on open data:
+* - an EPS lead time (NCAP_ILED 0 under $ONEPS) on the new gas plant ELCTNGAS01 in REG1: its interest
+*   during construction is half a year's (eqobjinv.mod L219-229: IF(Z, ...) is true for EPS);
+* - early retirement allowed (PRC_RCAP) for the gas plant in REG1, and for TJL_NOPRC, a process of no
+*   region, in REG2: prepret.dsc L49, PRC_RCAP(PRC_RCAP(RP)) = PRC_CAP(RP), leaves a record outside RP.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET PRC
+/
+TJL_NOPRC 'Crafted: a process of no region (TIMES.jl demo12_iled)'
+/
+
+SET PRC_RCAP
+/
+REG1.ELCTNGAS01
+REG2.TJL_NOPRC
+/
+
+PARAMETER NCAP_ILED /
+REG1.2006.ELCTNGAS01 0
+/;
