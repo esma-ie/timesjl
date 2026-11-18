@@ -713,6 +713,7 @@ function bndmain(tm::TimesModel)
         bt = BoundTable()
         ret_bounds!(bt, tm)       # mod_vars.mod L94: prepret.dsc DECL (early retirement), before bndmain
         bnd_powerflo!(bt, tm)     # mod_vars.mod L95: powerflo.vda DECL L223 (reference phase angles)
+        bnd_gasgrids!(bt, tm)     #   powerflo.vda L249: gasgrids.vda DECL L115-126
         bnd_rld!(bt, tm)          # equ_ext.vda L102: resloadc.vda L69 (VAR_RLD at RL-DISP is free)
         bnd_dam!(bt, tm)          # eqmain.mod L262: eqdamage.mod L138-142 (damage steps)
         bnd_act!(bt, tm)          # L26

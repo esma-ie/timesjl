@@ -216,6 +216,15 @@ Stacked on #154 (branch m13-capflo).
 | 1 | A new crafted case, demo12_dam, with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
 | 2 | %DAMAGE% NLP (eqdamage.mod NLPDAM, BDNLP) stays refused with a message: it is non-linear, so it goes with the features after the M1.3 gate (q5 of 17 Nov 2026), checked with IPOPT like MACRO. | Recommended: yes. Built in. | open |
 
+### #161 M1.3 (61): the gas grids (gasgrids.vda) in the LP formulation; crafted case demo12_gg (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | A new crafted case, demo12_gg (demo12 plus `gg.dd`, CC BY 4.0), with one public CI fixture. | Recommended: yes. Built in. | open |
+| 2 | Two-way gas pipelines (EQ_GG_PDIF1, EQ_GG_PDIF2, EQ_GG_STEP, the FX rows of EQ_GG_MBND) stay refused with a message until a crafted case has one; pressure points (GG_PP) and %SOLMIP% YES are MIP features, after the gate (q5 of 17 Nov 2026). | Recommended: yes. Built in. | open |
+| 3 | gasgrids.vda L35 (`LOOP(GR_GRID(J,TRACKC), GG_DENS(R,C)$(...) = GG_DENS(TRACKC))`) changes nothing as written: TRACKC in the loop domain controls R and C, so each node gets its own density. It reads as meant to give nodes without a density that of their grid. Translated as written; report to ETSAP? | Recommended: translate as written; send the note with the other ETSAP notes. Built in. | open |
+| 4 | Stacked on #158 (base `m13-ptdf`): both change powerflo.vda's code. | Recommended: yes. Built in. | open |
+
 ### #158 M1.3 (57): the PTDF formulation of powerflo.vda; crafted case demo12_ptdf (open)
 
 | # | Question | Decided | How |

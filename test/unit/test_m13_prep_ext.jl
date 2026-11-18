@@ -93,11 +93,14 @@ end
         t = TimesModel(joinpath(FIXTURES, "demo12_off_init"); switches=merge(fx["switches"], Dict(sw => "YES")))
         @test any(s -> occursin(line, s), prep_ext_unported(t))
     end
-    # %POWERFLO% YES: powerflo.vda PREP is translated (M1.3 change 27a); gas grids (GG_KGF data) are refused
+    # %POWERFLO% YES: powerflo.vda PREP is translated (M1.3 change 27a), with the gas grids in the LP formulation
+    # (GG_KGF data, change 61); pressure points (GG_PP data) are refused
     t = TimesModel(joinpath(FIXTURES, "demo12_off_init"); switches=merge(fx["switches"], Dict("POWERFLO" => "YES")))
     @test isempty(prep_ext_unported(t))
     TIMES.gput!(t, "GG_KGF", Dict{NTuple{4,String},Float64}(("REG1", "2005", "ELCTECOA00", "ELC") => 1.0))
-    @test any(s -> occursin("GG_KGF", s), prep_ext_unported(t))
+    @test isempty(prep_ext_unported(t))
+    TIMES.gput!(t, "GG_PP", Dict{NTuple{6,String},Float64}(("REG1", "2005", "ELCTECOA00", "ELC", "UP", "1") => 50.0))
+    @test any(s -> occursin("GG_PP", s), prep_ext_unported(t))
     t = TimesModel(joinpath(FIXTURES, "demo12_off_init"); switches=merge(fx["switches"], Dict("VINTOPT" => "1")))
     @test any(s -> occursin("L42-43", s), prep_ext_unported(t))
 end

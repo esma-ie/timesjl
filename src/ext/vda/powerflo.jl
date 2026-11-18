@@ -15,7 +15,7 @@
 "The powerflo.vda paths this model would take that are not translated."
 function powerflo_unported(tm)
     out = String[]
-    hasdata(tm, "GG_KGF", 4) && push!(out, "powerflo.vda L213-218, gasgrids.vda (GG_KGF has data: gas grids)")
+    append!(out, gasgrids_unported(tm))      # gas grids: the LP formulation is translated (M1.3 change 61)
     return out
 end
 
@@ -44,7 +44,15 @@ function powerflo_prep!(st)
     fillparm!(st, "GR_GENFR", "R", "C,ITEM", pd(",'0','0','0','0'"), T, one, ge0)             # L212
     # L213: $BATINCLUDE filparam GR_XBND 'R,' '' ",'0','0','0','0','0'" DATAYEAR T
     filparam!(st, "GR_XBND", "R,", "", pd(",'0','0','0','0','0'"), [y for y in st.ax.years if y in st.datayear], T)
-    # L214: $IFE CARD(GG_KGF)=0 $EXIT   (GG_KGF data is refused above)
+    # L214: $IFE CARD(GG_KGF)=0 $EXIT
+    hasdata(tm, "GG_KGF", 4) || return st
+    rtp = gset(tm, "RTP").members
+    onrtp = k -> (k[1], k[2], k[3]) in rtp                                   # 'RTP(R,T,P)'
+    fillparm!(st, "GG_GAMMA", "R", "P,C", pd(",'0','0','0','0'"), T, onrtp, ge0)              # L215
+    fillparm!(st, "GG_KGF", "R", "P,C", pd(",'0','0','0','0'"), T, onrtp, ge0)                # L216
+    fillparm!(st, "GG_KLP", "R", "P,C", pd(",'0','0','0','0'"), T, onrtp, ge0)                # L217
+    fillparm!(st, "GG_PP", "R", "P,C,BD,J", pd(",'0','0'"), T, onrtp, ge0)                    # L218 (no data: refused)
+    fillparm!(st, "GG_PRBD", "R", "C,L", pd(",'0','0','0','0'"), T, one, ge0)                 # L219
     return st
 end
 
@@ -92,6 +100,7 @@ which the equations read; GR_DEMFR given as input data is refused by the main bl
 function powerflo_model_unported(tm)
     out = powerflo_unported(tm)
     ptdf_mip(tm) && push!(out, "powerflo.vda L227, L230-246, L281-286 (GR_PTDF with %DSC% and %SOLMIP% YES: discrete candidate lines)")
+    foreach(w -> w in out || push!(out, w), gasgrids_model_unported(tm))   # two-way gas pipelines
     return out
 end
 
@@ -657,6 +666,7 @@ function powerflo_main!(tm)
     gput_scalar!(tm, "DFUNC", dfunc)
     my_f === nothing || gput_scalar!(tm, "MY_F", my_f)
     done === nothing || gput_scalar!(tm, "DONE", done)
+    gasgrids_main!(tm)                               # L183: $BATINCLUDE gasgrids.vda (with GG_KGF data)
     return tm
 end
 
@@ -737,6 +747,7 @@ function powerflo_decl!(tm)
     gput!(tm, "GR_GRID", g)
     # L225: $IF DEFINED VAR_GRVIRT $EXIT (the macro is defined below, so not on this first and only pass)
     ptdf_candidates!(tm)
+    gasgrids_decl!(tm)                               # L249: $BATINCLUDE gasgrids.vda DECL
     return tm
 end
 

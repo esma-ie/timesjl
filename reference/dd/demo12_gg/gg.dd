@@ -1,0 +1,72 @@
+* TIMES.jl crafted case demo12_gg (reference/crafted.toml, 18 Nov 2026): a gas grid (gasgrids.vda,
+* in the LP formulation: no GG_PP pressure points; M1.3 change 61), which no open model has:
+* - GAS in REG1 and REG2 typed as a gas-grid carrier (NRG_TMAP 'GAS'), with a density GG_DENS;
+* - TU_GAS_PIPE, a one-way pipeline from REG1's GAS to REG2's GAS, with a Weymouth constant
+*   GG_KGF, a linepack constant GG_KLP and a compressor at the REG1 end (GG_GAMMA 1.2);
+* - pressure bounds GG_PRBD at both nodes.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET PRC
+/
+TU_GAS_PIPE
+/
+
+SET PRC_MAP
+/
+REG1.IRE.TU_GAS_PIPE
+REG2.IRE.TU_GAS_PIPE
+/
+
+SET PRC_TSL
+/
+REG1.TU_GAS_PIPE.DAYNITE
+REG2.TU_GAS_PIPE.DAYNITE
+/
+
+SET PRC_ACTUNT
+/
+REG1.TU_GAS_PIPE.NRG.PJ
+REG2.TU_GAS_PIPE.NRG.PJ
+/
+
+SET TOP_IRE
+/
+ REG1.GAS.REG2.GAS.TU_GAS_PIPE
+/
+
+SET PRC_DESC
+/
+ REG1.TU_GAS_PIPE 'Crafted: gas pipeline from REG1 to REG2 (TIMES.jl demo12_gg)'
+ REG2.TU_GAS_PIPE 'Crafted: gas pipeline from REG1 to REG2 (TIMES.jl demo12_gg)'
+/
+
+SET NRG_TMAP
+/
+REG1.GAS.GAS
+REG2.GAS.GAS
+/
+
+PARAMETER GG_DENS /
+REG1.GAS 0.75
+REG2.GAS 0.75
+/;
+
+PARAMETER GG_KGF /
+REG1.2005.TU_GAS_PIPE.GAS 4
+/;
+
+PARAMETER GG_KLP /
+REG1.2005.TU_GAS_PIPE.GAS 0.05
+/;
+
+PARAMETER GG_GAMMA /
+REG1.2005.TU_GAS_PIPE.GAS 1.2
+/;
+
+PARAMETER GG_PRBD /
+REG1.2005.GAS.LO 30
+REG1.2005.GAS.UP 70
+REG2.2005.GAS.LO 20
+REG2.2005.GAS.UP 60
+/;

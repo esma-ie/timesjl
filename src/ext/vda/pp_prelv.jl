@@ -463,7 +463,9 @@ function pp_prelv!(tm)
     gput!(tm, "RVPCSL", Set{NTuple{6,String}}())
     gput!(tm, "RPC_CONLY", Set{NTuple{4,String}}())
     # L114: $IFI %POWERFLO%==YES $include powerflo.vda (M1.3 change 27a)
-    uppercase(strip(gswitch(tm, "POWERFLO", ""), ['\'', '"'])) == "YES" && powerflo_main!(tm)
+    #   It sets Z after L15-18 (its timeslice checks L90-95, gasgrids.vda L71, L77), so its Z is the one left
+    powerflo = uppercase(strip(gswitch(tm, "POWERFLO", ""), ['\'', '"'])) == "YES"
+    powerflo && (gput!(tm, "Z", gassign!(Dict{Tuple{},Float64}(), (), GNum(z))); powerflo_main!(tm))
 
     # --- L117-122: COM_VAR default bounds -------------------------------------------------------------------
     rtcs = gset(tm, "RTCS_VARC").keys
@@ -492,7 +494,7 @@ function pp_prelv!(tm)
     # the scratch as GAMS leaves it
     gput!(tm, "UNCD7", st_uncd7)
     ts_array === nothing || gput!(tm, "TS_ARRAY", ts_array)
-    gput!(tm, "Z", gassign!(Dict{Tuple{},Float64}(), (), GNum(z)))
+    powerflo || gput!(tm, "Z", gassign!(Dict{Tuple{},Float64}(), (), GNum(z)))
     return tm
 end
 

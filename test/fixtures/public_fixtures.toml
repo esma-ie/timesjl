@@ -787,3 +787,16 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 3248
 cols = 4509
 nonzeros = 18557
+
+# Crafted case TIMES_Demo-demo12_gg (reference/crafted.toml: demo12 + gg.dd), 18 Nov 2026 (GAMS 54.6.1 + CPLEX and
+# HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): the gas grids of powerflo.vda (gasgrids.vda, LP
+# formulation), the whole model. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_gg"
+model    = "TIMES_Demo-demo12_gg"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3473
+cols = 5253
+nonzeros = 20559
