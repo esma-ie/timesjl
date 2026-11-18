@@ -1,0 +1,12 @@
+* TIMES.jl crafted case demo12_gg2 (reference/crafted.toml, 18 Nov 2026): demo12_gg (a gas pipeline
+* from REG1 to REG2 with Weymouth, linepack and compressor data) made two-way: TU_GAS_PIPE also
+* carries gas from REG2 to REG1, so that gasgrids.vda generates the rows of two-way pipelines
+* (EQ_GG_PDIF1, EQ_GG_PDIF2, EQ_GG_STEP and the FX rows of EQ_GG_MBND; L141-205), in the LP
+* formulation (VAR_GG_Y continuous; M1.3 change 62).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET TOP_IRE
+/
+ REG2.GAS.REG1.GAS.TU_GAS_PIPE
+/

@@ -990,3 +990,17 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_gg/demo12_gg.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_gg"]
+
+# TIMES_Demo demo12 + demo12_gg/gg.dd + demo12_gg2/gg2.dd (18 Nov 2026): the gas pipeline of demo12_gg
+# made two-way (gasgrids.vda: EQ_GG_PDIF1, EQ_GG_PDIF2, EQ_GG_STEP, EQ_GG_MBND FX; M1.3 change 62).
+[[model]]
+name = "TIMES_Demo-demo12_gg2"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_gg2/demo12_gg2.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_gg", "{crafted}/demo12_gg2"]

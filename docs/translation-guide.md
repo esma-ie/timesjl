@@ -1091,3 +1091,7 @@ those checks, their figures and their crafted cases are not published
   1 to 3 PASS in both variants from the DD files (objective 23,960,685.74).
   Pressure points (GG_PP), %SOLMIP% YES and two-way pipelines stay
   refused.
+- 18 Nov 2026: M1.3 change 62: two-way gas pipelines (EQ_GG_PDIF1,
+  EQ_GG_PDIF2, EQ_GG_STEP, EQ_GG_MBND FX). New crafted case demo12_gg2:
+  layers 1 to 3 PASS in both variants from the DD files (objective
+  23,960,157.73). Only the MIP paths of the gas grids stay refused.
