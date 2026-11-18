@@ -115,7 +115,6 @@ function bounds_unported(tm::TimesModel)
     notempty_par("NCAP_SEMI", 3) && throw(UnportedError("mod_vars.dsc L18-19 (semi-continuous capacity)"))
     notempty_par("DAM_COST", 4) && throw(UnportedError("eqdamage.mod L141-156 (damage step bounds)"))
     notempty_par("RD_NLP", 2) && throw(UnportedError("pp_micro.mod L88-91 (VAR_DEM bounds)"))
-    notempty_par("COM_CSTBAL", 6) && throw(UnportedError("powerflo.vda (COM_CSTBAL)"))
     notempty_par("REG_FIXT", 1) && throw(UnportedError("%R_T% = RT_PP(R,T) (REG_FIXT, maindrv.mod L41)"))
     return nothing
 end

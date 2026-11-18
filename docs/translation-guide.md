@@ -1015,6 +1015,11 @@ those checks, their figures and their crafted cases are not published
   New crafted case demo12_ipslin (demo12_ips under OBJ LIN): layers 1 to
   3 PASS in both variants from the DD files (objective 24,227,978.35 with
   CPLEX and HiGHS); demo12_lin unchanged.
+- 17 Nov 2026: M1.3 change 50: costs on the components of a commodity's
+  balance, COM_CSTBAL (powerflo.vda CSTBAL and OBJBAL: OBJ_COMBAL and
+  EQ_OBJBAL), refused since change 27b, with and without a power-flow grid.
+  New crafted cases demo12_cstbal (no grid) and demo12_pfcst (grid nodes):
+  layers 1 to 3 PASS in both variants of both from the DD files.
 - 17 Nov 2026: James's answers (docs/decisions.md): the M1.3 gate covers
   the linear features only (ETL, the DSC lumpy investments and block
   retirements, the discrete unit commitment and TIMES-Micro after it);

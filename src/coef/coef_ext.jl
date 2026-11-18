@@ -37,13 +37,14 @@
 #   ACT_LOSPL 'FX' default). eqashar.vda L16-33 is
 #   `eqashar_prep!` (src/ext/vda/eqashar.jl): RPCG_ASHAR, the levelling of
 #   FLO_ASHAR, UNCD7. powerflo.vda CSTBAL is included only when COM_CSTBAL
-#   has data (`$IF DEFINED`, G35).
+#   has data (`$IF DEFINED`, G35): `cstbal_prep!` (src/ext/vda/cstbal.jl,
+#   M1.3 change 50).
 # - L81-83: COEF_PVT defaults to FPD; VDA_DISC; COEF_ILED of processes with
 #   an NCAP_BND 'N'.
 #
 # Refused: WAVER YES (fillwave.gms); the ETL, CLI, ABS and MACRO extensions;
 # reduced flows (RPC_FFUNC or RPCG_PTRAN not empty: L62-69, which coef_ptr
-# also refuses through KEEP_FLOF); COM_CSTBAL (powerflo.vda L372-396).
+# also refuses through KEEP_FLOF).
 
 "The coef_ext.vda paths this model would take that are not translated; empty when coef_ext! can run."
 function coef_ext_unported(tm)
@@ -54,7 +55,6 @@ function coef_ext_unported(tm)
         yes(n) && push!(out, "coef_ext.$(lowercase(n)) ($n YES)")
     end
     gswitch(tm, "MACRO", "") == "" || push!(out, "coef_ext.msa/mlf (MACRO set)")
-    isempty(gparam_opt(tm.data, "COM_CSTBAL", 6)) || push!(out, "coef_ext.vda L80, powerflo.vda L372-396 (COM_CSTBAL has data)")
     return out
 end
 
@@ -388,8 +388,9 @@ function coef_ext!(tm)
     end
     # L78: eqlducs.vda L12-41, the unit-commitment preparation (src/ext/vda/eqlducs.jl)
     eqlducs_prep!(tm)
-    # L79: eqashar.vda L16-33; L80: powerflo.vda CSTBAL is not included (COM_CSTBAL has no data)
+    # L79: eqashar.vda L16-33; L80: powerflo.vda CSTBAL with COM_CSTBAL data (src/ext/vda/cstbal.jl)
     eqashar_prep!(tm)
+    cstbal_prep!(tm)
 
     # L81: COEF_PVT(R,T)$(NOT COEF_PVT(R,T)) = FPD(T); L82: VDA_DISC(R,T) $= COEF_PVT(R,T)
     coef_pvt = gvalues(tm, "COEF_PVT", 2)

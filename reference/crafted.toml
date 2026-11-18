@@ -818,3 +818,32 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_ipslin/demo12_ipslin.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_ips", "{crafted}/demo12_ipslin"]
+
+# TIMES_Demo demo12 + demo12_cstbal/cstbal.dd (17 Nov 2026): costs on the components of a commodity's
+# balance, COM_CSTBAL, without a power-flow grid (powerflo.vda CSTBAL and OBJBAL, EQ_OBJBAL; M1.3
+# change 50).
+[[model]]
+name = "TIMES_Demo-demo12_cstbal"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_cstbal/demo12_cstbal.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_cstbal"]
+
+# TIMES_Demo demo12_pfd + demo12_pfcst/pfcst.dd (17 Nov 2026): COM_CSTBAL on the power-flow grid nodes
+# (powerflo.vda CSTBAL L388-394 and the grid terms of EQ_OBJBAL; M1.3 change 50).
+[[model]]
+name = "TIMES_Demo-demo12_pfcst"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_pfcst/demo12_pfcst.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa", "{crafted}/demo12_pfd", "{crafted}/demo12_pfcst"]

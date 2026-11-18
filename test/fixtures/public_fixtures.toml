@@ -644,3 +644,29 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 3335
 cols = 4624
 nonzeros = 18926
+
+# Crafted case TIMES_Demo-demo12_cstbal (reference/crafted.toml), 17 Nov 2026 (GAMS 54.6.1 + CPLEX and HiGHS on
+# James's workstation; TIMES v4.9.7 @ d9a6a25): costs on the components of a commodity's balance,
+# COM_CSTBAL (powerflo.vda CSTBAL and OBJBAL, EQ_OBJBAL), the whole model. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_cstbal"
+model    = "TIMES_Demo-demo12_cstbal"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3235
+cols = 4487
+nonzeros = 18601
+
+# Crafted case TIMES_Demo-demo12_pfcst (reference/crafted.toml), 17 Nov 2026 (GAMS 54.6.1 + CPLEX and HiGHS on
+# James's workstation; TIMES v4.9.7 @ d9a6a25): costs on the components of a commodity's balance,
+# COM_CSTBAL (powerflo.vda CSTBAL and OBJBAL, EQ_OBJBAL) on power-flow grid nodes, the whole model. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_pfcst"
+model    = "TIMES_Demo-demo12_pfcst"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3427
+cols = 4751
+nonzeros = 19483
