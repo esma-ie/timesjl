@@ -1013,3 +1013,7 @@ those checks, their figures and their crafted cases are not published
   L36-43), the last refused attribute, in the RS family. New crafted case
   demo12_uconl. Layer 1 checked in the cloud with the PyPI GAMS; layers
   2-3 need the workstation, before merge.
+- 17 Nov 2026: M1.3 change 46: nested user constraints (UC_UCN;
+  equserco.mod L75-76, L98-99) in both directions of a dynamic
+  constraint. New crafted case demo12_ucn. Layer 1 checked in the cloud
+  with the PyPI GAMS; layers 2-3 need the workstation, before merge.

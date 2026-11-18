@@ -86,10 +86,8 @@ function untranslated_families(tm::TimesModel)
         k === nothing || note!("EQ_STSLEV and the STSFLX terms of EQ_STSBAL", "eqstgtss.mod L56-73, L88-93",
                                "RP_STL$(gset(tm, "RP_STL").keys[k])")
     end
-    # User constraints (equserco.jl): nested UCs are not translated (ANNUL with INVCOST, INVTAX,
-    # INVSUB: M1.3 change 42; ONLINE: change 44).
-    isempty(S("UC_GMAP_U", 3)) ||
-        note!("user constraints, nested (UC_UCN terms)", "equserco.mod L76, L99", "UC_GMAP_U is not empty")
+    # User constraints (equserco.jl): every attribute and nested UCs are translated (ANNUL with
+    # INVCOST, INVTAX, INVSUB: M1.3 change 42; ONLINE: change 44; nested UCs, UC_UCN: change 46).
     return out
 end
 

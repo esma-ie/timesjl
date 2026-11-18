@@ -757,3 +757,19 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_uconl/demo12_uconl.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_disp", "{crafted}/demo12_uconl"]
+
+# TIMES_Demo demo12 + demo12_ucn/ucn.dd (17 Nov 2026): nested user constraints (UC_UCN,
+# UC_GMAP_U): the variable of a region-period constraint with an 'N' right-hand side in a dynamic
+# constraint, in the LHS direction (UC_T_SUCC) and in the RHS direction (GROWTH)
+# (equserco.mod L75-76, L98-99) (M1.3 change 46).
+[[model]]
+name = "TIMES_Demo-demo12_ucn"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_ucn/demo12_ucn.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_ucn"]

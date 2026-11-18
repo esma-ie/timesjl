@@ -50,9 +50,9 @@
 #
 # Not translated; data that needs them raises UnportedError:
 # - VAR_UC not YES (the typed FX/LO/UP includes, eqmain.mod L230-232);
-# - nested constraints (equserco.mod L76, L99: UC_GMAP_U/UC_UCN) and the
-#   climate terms of the RHS direction (L101, uc_cli.mod; %CLI% is refused
-#   by the generation driver);
+# - the climate terms of the RHS direction (L101, uc_cli.mod; %CLI% is
+#   refused by the generation driver). (Nested constraints, L76 and L99:
+#   UC_GMAP_U/UC_UCN, came in M1.3 change 46, `uc_ucn!`.)
 # - (none of the UC_ATTR attributes: ONLINE, uc_cap.mod L36-42, came in
 #   M1.3 change 44; the others were translated before: PERIOD, NEWFLO, PERDISC, EFF, CAPACT,
 #   BUILDUP and COST/DELIV/TAX/SUB in M1.3 change 22; ANNUL with INVCOST,
@@ -172,9 +172,6 @@ const UC_ATTR_REFUSED = ()
 function uc_unported(tm::TimesModel, setup)
     var_uc(tm) || throw(UnportedError("user constraints with VAR_UC not YES (eqmain.mod L230-232, equcwrap.mod L13)"))
     d = tm.data
-    # Dynamic families (equcwrap L34-40): nested UCs.
-    isempty(gset_opt(d, "UC_GMAP_U", 3)) ||
-        throw(UnportedError("equserco.mod L76/L99: nested user constraints (UC_GMAP_U, UC_UCN)"))
     isempty(gset(tm, "UC_CAPFLO")) ||
         throw(UnportedError("uc_flo.mod L35-49: capacity-related flows in user constraints (UC_CAPFLO, cal_caps.mod)"))
     return nothing
@@ -685,6 +682,44 @@ function uc_lhs!(expr::JuMP.AffExpr, tm::TimesModel, n::String, regions, t::Stri
 end
 
 """
+    uc_nested(tm, r, n) -> Vector{String}
+
+The constraints UCN nested in constraint `n` of region `r`: UC_GMAP_U(R,UC_N,UCN), in GAMS
+order (pp_qack.mod L53: `OPTION UC_GMAP_U<=UC_UCN`).
+"""
+function uc_nested(tm::TimesModel, r::String, n::String)
+    m = get!(tm.cache, "UC_GMAP_U/rn") do
+        indexby(gset_opt(tm.data, "UC_GMAP_U", 3), (1, 2))
+    end
+    return [k[3] for k in get(m, (r, n), _NO3)]
+end
+
+"""
+    uc_ucn!(expr, tm, n, r, ucn, tt, side; tc=tt) -> expr
+
+One nested-constraint term of a dynamic constraint (%8 = 1): the variable of the region-period
+constraint UCN at period TT, times its multiplier UC_UCN at the coefficient period `tc` (TT in
+the LHS direction, LL in the RHS direction) and UC_SIGN(SIDE), when UCN has an 'N' right-hand
+side in TT:
+
+    UC_SIGN(SIDE) * UC_UCN(UC_N,SIDE,R,tc,UCN) * VAR_UCRT(UCN,R,TT)\$UC_RHSRT(R,UCN,TT,'N')
+
+`\$UC_RHSRT(..,'N')` holds for any record, EPS included (G3). UC_UCN is interpolated over
+T by preppm.mod L174.
+
+GAMS: equserco.mod L75-76 (LHS direction, the %TSUM% of L60) and L98-99 (RHS direction, the
+%TSUM%'UCN'%TUCN% of L82), v4.9.7.
+"""
+function uc_ucn!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, ucn::String, tt::String,
+                 side::String; tc::String=tt)
+    x = uc_context(tm)
+    rhsrt = get!(() -> gparam_opt(tm.data, "UC_RHSRT", 4), tm.cache, "UC_UCN/UC_RHSRT")
+    haskey(rhsrt, (r, ucn, tt, "N")) || return expr
+    ucn_p = get!(() -> gparam_opt(tm.data, "UC_UCN", 5), tm.cache, "UC_UCN/UC_UCN")
+    return addterm!(expr, gv(x.uc_sign, (side,)) * gv(ucn_p, (n, side, r, tc, ucn)), tm, "VAR_UCRT", ucn, r, tt)
+end
+
+"""
     uc_tmap_n(tm) -> Dict{String,Vector{Tuple{String,String}}}
 
 The 'N' part of UC_TMAP (eqmain.mod L211-212), keyed for the LHS-direction
@@ -717,7 +752,8 @@ The dynamic body in the LHS direction, equserco.mod L56-78 (%8 = 1):
 
     ( SUM(UC_TMAP(TT,T,T,SIDE,'N'), UC_SIGN(SIDE) * [uc_flo, uc_ncap, uc_cap, uc_act,
           uc_com PRD, uc_com NET, uc_ire at period TT and side SIDE, GROWTH exponent LAGT(T)])
-      + [nested UCN terms, refused] )\$(NOT SUM(UC_DYNDIR(R,UC_N,'RHS'),1))
+      + SUM((%7UC_GMAP_U(R,UC_N,UCN)), SUM(UC_TMAP(TT,T,T,SIDE,'N'),UC_SIGN(SIDE)*
+            UC_UCN(UC_N,SIDE,R,TT,UCN)*VAR_UCRT(UCN,R,TT)\$UC_RHSRT(R,UCN,TT,'N'))) )\$(NOT SUM(UC_DYNDIR(R,UC_N,'RHS'),1))
 
 summed over `regions` (%4%7) and the timeslice terms over `ts_of(r)` (%6).
 The caller takes this block or [`uc_dyn_rhs!`](@ref), by the UC_DYNDIR
@@ -745,6 +781,9 @@ function uc_dyn!(expr::JuMP.AffExpr, tm::TimesModel, n::String, regions, t::Stri
     end
     for r in regions, (tt, side) in pairs, s in ts_of(r)
         uc_ire!(expr, tm, n, r, tt, s; kw(tt, side)...)
+    end
+    for r in regions, ucn in uc_nested(tm, r, n), (tt, side) in pairs     # L76 (M1.3 change 46)
+        uc_ucn!(expr, tm, n, r, ucn, tt, side; tc=tt)
     end
     return expr
 end
@@ -822,7 +861,9 @@ The dynamic body in the RHS direction, equserco.mod L80-106 (%8 = 1):
     ( SUM(UC_TMAP(T,LL,TT,SIDE,UC_DYNT)\$(LIM(UC_DYNT) xor UC_ATTR(R,UC_N,SIDE,grp,UC_DYNT)), UC_SIGN(SIDE)*
           [uc_flo, uc_ncap, uc_cap, uc_act, uc_com PRD, uc_com NET, uc_ire: the variables at TT,
            the coefficients at LL, side SIDE, GROWTH exponent -LEAD(T)*UC_SIGN(SIDE)-1])
-      + [nested UCN terms, refused] + [uc_cli.mod, %CLI% refused]
+      + SUM((%7UC_GMAP_U(R,UC_N,UCN)), SUM(UC_TMAP(T,LL,TT,SIDE,UC_DYNT)\$(LIM(UC_DYNT) xor UC_ATTR(R,UC_N,SIDE,'UCN',UC_DYNT)),
+            UC_SIGN(SIDE)*UC_UCN(UC_N,SIDE,R,LL,UCN)*VAR_UCRT(UCN,R,TT)\$UC_RHSRT(R,UCN,TT,'N')))
+      + [uc_cli.mod, %CLI% refused]
       - [uc_pasti.mod] )\$SUM(UC_DYNDIR(R,UC_N,'RHS'),1)
 
 grp is the name each include passes to the TSUM macro: FLO, NCAP, CAP, ACT,
@@ -861,6 +902,9 @@ function uc_dyn_rhs!(expr::JuMP.AffExpr, tm::TimesModel, n::String, regions, t::
     end
     for r in regions, (ll, tt, side) in take(r, "IRE"), s in ts_of(r)
         uc_ire!(expr, tm, n, r, tt, s; kw(ll, side)...)
+    end
+    for r in regions, ucn in uc_nested(tm, r, n), (ll, tt, side) in take(r, "UCN")   # L99 (M1.3 change 46)
+        uc_ucn!(expr, tm, n, r, ucn, tt, side; tc=ll)
     end
     return uc_pasti!(expr, tm, n, regions, t)
 end

@@ -591,3 +591,16 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 3627
 cols = 4783
 nonzeros = 19946
+
+# Crafted case TIMES_Demo-demo12_ucn (reference/crafted.toml: demo12 + ucn.dd), 17 Nov 2026 (GAMS
+# 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): nested user constraints
+# (equserco.mod L75-76, L98-99; pp_qack.mod L53), the whole model. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_ucn"
+model    = "TIMES_Demo-demo12_ucn"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3274
+cols = 4526
+nonzeros = 18486
