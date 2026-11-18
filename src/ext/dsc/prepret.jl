@@ -661,8 +661,10 @@ function _prepret_decl!(tm::TimesModel)
     yax = YearAxis(tm)
     T = gset(tm, "MILESTONYR")
     rtp = gset(tm, "RTP")
-    prc_cap = gset(tm, "PRC_CAP")
-    prc_rcap = filter(k -> k in prc_cap, gmembers(tm, "PRC_RCAP", 2))              # L48
+    prc_cap, rp = gset(tm, "PRC_CAP"), gset(tm, "RP")
+    # L49: PRC_RCAP(PRC_RCAP(RP)) = PRC_CAP(RP): the statement's domain is PRC_RCAP within RP, so a record
+    #   outside RP (a process not in the region) keeps its PRC_RCAP
+    prc_rcap = filter(k -> !(k in rp) || k in prc_cap, gmembers(tm, "PRC_RCAP", 2))
     gput!(tm, "PRC_RCAP", prc_rcap)
     refit = gparam_opt(d, "PRC_REFIT", 3)
     refit_of = indexby(refit, (1, 2))                                              # (r,prc) -> PRC_REFIT(r,prc,p)

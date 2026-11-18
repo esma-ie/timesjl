@@ -248,6 +248,14 @@ Stacked on #154 (branch m13-capflo).
 | 2 | With timeslices turned off, the RTS(S) families the case does not reach (storage, dispatching, ASHAR, CAFLAC, unit commitment by start-up type, residual load, power-flow grids) stay refused with a message, though the change in each is the same skip as in EQ_PEAK. | Recommended: yes; extend the case when a model needs one. Built in. | open |
 | 3 | The bound table now records which bounds are EPS (internal; the LP of every other model is unchanged), as GAMS's HOLDFIXED does not count a variable between 0 and EPS as fixed. | Recommended: yes. Built in. | open |
 
+### #165 M1.3 (64): PRC_RCAP outside RP and interest during construction for an EPS lead time; crafted case demo12_iled (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | A new crafted case, demo12_iled (demo12 plus `iled.dd`, CC BY 4.0), with one public CI fixture; it declares TJL_NOPRC, a process of no region, to hold a PRC_RCAP record outside RP. | Recommended: yes. Built in. | open |
+| 2 | Registering TIMES.jl in the Julia General registry (and renaming the repository to `<Name>.jl`) waits until after the December 2026 ETSAP ExCo in Paris, which decides the package name. | Waits for the ExCo. | James, 18 Nov 2026 |
+| 3 | Elastic demand is checked with a two-run case: demo12 reference as the base run (its prices), and demo12 with an additional constraint as the variant run with elastic demand. | Yes. | James, 18 Nov 2026 |
+
 ### #147 M1.3 (46): nested user constraints (equserco.mod L75-76, L98-99; pp_qack.mod L53); crafted case demo12_ucn (open)
 
 Logged here because #147 does not touch this file.

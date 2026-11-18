@@ -1018,3 +1018,17 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_tsoff/demo12_tsoff.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_tsoff"]
+
+# TIMES_Demo demo12 + demo12_iled/iled.dd (18 Nov 2026): an EPS lead time (interest during construction,
+# eqobjinv.mod L219-229) and an early-retirement record outside RP (prepret.dsc L49); M1.3 change 64.
+[[model]]
+name = "TIMES_Demo-demo12_iled"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_iled/demo12_iled.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_iled"]

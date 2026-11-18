@@ -315,9 +315,12 @@ function eqobjinv_prep!(tm::TimesModel)
     my_fs = 0.0
     for (r, v, p, cur) in icur_sorted
         (r, v, p) in obj_i2 || continue
-        zz = gv(coef_iled, (r, v, p)).v
-        scal["Z"] = zz
-        if zz != 0
+        zg = gv(coef_iled, (r, v, p))
+        zz = zg.v
+        scal["Z"] = zg
+        # IF(Z, ...): true for an EPS COEF_ILED too (G3), as for an EPS NCAP_ILED (prepret.dsc L62); then
+        #   CNT = MAX(1.E-5,Z) is 1.E-5, half a year's interest (L218)
+        if zz != 0 || zg.eps
             oc = 1 + gv(g_drate, (r, v, cur)).v
             scal["OBJ_C"] = oc
             my_fs, f, cnt = 0.0, 0.0, 0.0
