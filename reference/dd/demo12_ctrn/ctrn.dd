@@ -1,0 +1,91 @@
+* TIMES.jl crafted case demo12_ctrn (reference/crafted.toml, 17 Nov 2026): demo12_capcom plus the
+* capacity transfer of decommissioning flows (coef_shp.mod L77-94; M1.3 change 59): with
+* FLO_FUNCX(R,'0',P,'CAPFLO',C) = 3 and a capacity shape NCAP_CPX, the decommissioning flows
+* NCAP_OCOM of the gas plant ELCTNGAS01 follow the decline of its capacity over its life, instead of
+* coming at its end:
+* - capacity shape 3 (SHAPE: from 1 at age 1 down to 0.6 at age 50, a value at every age) on
+*   ELCTNGAS01 in both regions, for every vintage (NCAP_CPX is not interpolated), which also
+*   rescales its COEF_CPT (coef_shp.mod L55-73);
+* - the transfer on its ELCCO2 in REG1 (with early retirement and RCAP_OCAP from demo12_capcom, so
+*   COEF_RCOM too) and in REG2 (NCAP_OCOM 0.2, no early retirement).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER
+SHAPE ' '/
+3.1 1
+3.2 0.991837
+3.3 0.983673
+3.4 0.97551
+3.5 0.967347
+3.6 0.959184
+3.7 0.95102
+3.8 0.942857
+3.9 0.934694
+3.10 0.926531
+3.11 0.918367
+3.12 0.910204
+3.13 0.902041
+3.14 0.893878
+3.15 0.885714
+3.16 0.877551
+3.17 0.869388
+3.18 0.861224
+3.19 0.853061
+3.20 0.844898
+3.21 0.836735
+3.22 0.828571
+3.23 0.820408
+3.24 0.812245
+3.25 0.804082
+3.26 0.795918
+3.27 0.787755
+3.28 0.779592
+3.29 0.771429
+3.30 0.763265
+3.31 0.755102
+3.32 0.746939
+3.33 0.738776
+3.34 0.730612
+3.35 0.722449
+3.36 0.714286
+3.37 0.706122
+3.38 0.697959
+3.39 0.689796
+3.40 0.681633
+3.41 0.673469
+3.42 0.665306
+3.43 0.657143
+3.44 0.64898
+3.45 0.640816
+3.46 0.632653
+3.47 0.62449
+3.48 0.616327
+3.49 0.608163
+3.50 0.6
+/
+
+PARAMETER
+NCAP_CPX ' '/
+REG1.2010.ELCTNGAS01 3
+REG1.2015.ELCTNGAS01 3
+REG1.2020.ELCTNGAS01 3
+REG1.2030.ELCTNGAS01 3
+REG1.2050.ELCTNGAS01 3
+REG2.2010.ELCTNGAS01 3
+REG2.2015.ELCTNGAS01 3
+REG2.2020.ELCTNGAS01 3
+REG2.2030.ELCTNGAS01 3
+REG2.2050.ELCTNGAS01 3
+/
+
+PARAMETER
+FLO_FUNCX ' '/
+REG1.0.ELCTNGAS01.CAPFLO.ELCCO2 3
+REG2.0.ELCTNGAS01.CAPFLO.ELCCO2 3
+/
+
+PARAMETER
+NCAP_OCOM ' '/
+REG2.2005.ELCTNGAS01.ELCCO2 0.2
+/

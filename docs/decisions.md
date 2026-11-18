@@ -178,6 +178,13 @@ On 17 Nov 2026 James answered three questions of the list in the chat (below, un
 | 1 | A new crafted case, demo12_uccf (demo12 plus `capflo.dd`, `capcom.dd` and `uccf.dd`, CC BY 4.0), with one public CI fixture. | Recommended: yes. Built in. | open |
 | 2 | Stacked on #155 (base `m13-capcom`), as it needs the coefficients of changes 53 and 54; retargeted to `main` once #154 and #155 merge. | Recommended: yes. Built in. | open |
 
+### #160 M1.3 (59): the capacity transfer of decommissioning flows (coef_shp.mod L77-94); crafted case demo12_ctrn (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | A new crafted case, demo12_ctrn (demo12 plus `capcom.dd` and `ctrn.dd`, CC BY 4.0), with one public CI fixture. | Recommended: yes. Built in. | open |
+| 2 | Stacked on #155 (base `m13-capcom`), like #159; retargeted to `main` once #154 and #155 merge. | Recommended: yes. Built in. | open |
+
 ### #155 M1.3 (54): commodity flows over the lifetime of capacity and of early retirements (NCAP_COM, COEF_CIO, RCAP_OCAP); crafted case demo12_capcom (open)
 
 Stacked on #154 (branch m13-capflo).

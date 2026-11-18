@@ -96,9 +96,9 @@ end
     end
 end
 
-@testset "coef_shp refuses only the capacity transfer of capacity-related flows" begin
-    # M1.3 changes 53-54: NCAP_COM (L39-42) and RCAP_OCAP (L96) are translated; the capacity
-    # transfer, NCAP_OCOM with FLO_FUNCX(R,'0',P,'CAPFLO',C) = 3 (L77-94), stays refused.
+@testset "coef_shp refuses no capacity-related flows" begin
+    # M1.3 changes 53-54: NCAP_COM (L39-42) and RCAP_OCAP (L96); change 59: the capacity
+    # transfer, NCAP_OCOM with FLO_FUNCX(R,'0',P,'CAPFLO',C) = 3 (L77-94).
     tm = coef_shp_start(PPM_DEMO12, "cpt")
     gput!(tm, "NCAP_COM", Dict(("REG1", "2010", "ELCTNGAS01", "ELC", "OUT") => 1.0))
     @test isempty(coef_shp_unported(tm))
@@ -108,8 +108,7 @@ end
     tm = coef_shp_start(PPM_DEMO12, "cpt")
     gput!(tm, "NCAP_OCOM", Dict(("REG1", "2010", "ELCTNGAS01", "ELC") => 1.0))
     gput!(tm, "FLO_FUNCX", Dict(("REG1", "0", "ELCTNGAS01", "CAPFLO", "ELC") => 3.0))
-    @test occursin("L77-94", only(coef_shp_unported(tm)))
-    @test_throws UnportedError coef_shp!(tm)
+    @test isempty(coef_shp_unported(tm))
 end
 
 @testset "later_overwrites: COEF_CPT that coef_shp.mod L73 rescales" begin

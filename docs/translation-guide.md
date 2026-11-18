@@ -1082,3 +1082,7 @@ those checks, their figures and their crafted cases are not published
   (UC_CAPFLO: uc_flo.mod L50-59 with cal_caps.mod), the last refused term
   of the UC families. New crafted case demo12_uccf: layers 1 to 3 PASS in
   both variants from the DD files (objective 24,020,747.77).
+- 18 Nov 2026: M1.3 change 59: the capacity transfer of decommissioning
+  flows (coef_shp.mod L77-94: COEF_OCOM and COEF_RCOM from the capacity
+  shape NCAP_CPX). New crafted case demo12_ctrn: layers 1 to 3 PASS in
+  both variants from the DD files (objective 23,969,134.31).
