@@ -27,7 +27,6 @@ function ppmain_reduce_unported(tm)
     out = String[]
     yes(n) = uppercase(strip(gswitch(tm, n, ""))) == "YES"
     yes("REDUCE") && yes("ETL") && push!(out, "pp_reduce.red L43 (%ETL% YES: PRC_CAP of SEG)")
-    (yes("DYNTS") && !isempty(gset_opt(tm.data, "TS_OFF", 4).keys)) && push!(out, "pp_reduce.red L188 (dynslite.vda REDUCE)")
     yes("MACRO") && push!(out, "ppmain.mod L1354 (%MACRO% YES: ppmain.tm)")
     return out
 end
@@ -334,6 +333,8 @@ function ppmain_reduce!(tm)
     filter!(k -> !((k[1], k[2]) in rp && !((k[1], k[2]) in prc_cap)), pkc)
     pkf = gvalues(tm, "RPC_PKF", 3)
     filter!(((k, _),) -> !(k in pkc), pkf)
+    # L187-188: $IF NOT %RTS%==S $BATINCLUDE dynslite.vda REDUCE (M1.3 change 63)
+    dynslite_reduce!(tm, rtps_off, rtpcs_out, rhs_prd)
 
     # --- ppmain.mod L1342-1350 ------------------------------------------------------------------------------
     # L1342: RTPCS_VARF(RTPC(RTP_VARA(R,T,P),C),S)$((NOT RTPCS_OUT(R,T,P,C,S))$RPCS_VAR(R,P,C,S)) = YES

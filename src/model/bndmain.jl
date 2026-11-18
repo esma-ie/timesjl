@@ -65,8 +65,11 @@ declared default.
 """
 struct BoundTable
     recs::Dict{String,Dict{Tuple,Tuple{Float64,Float64}}}
+    # which of a record's (lower, upper) bounds were set to EPS: a zero bound (G10), yet not equal to
+    # a 0 bound where GAMS tests a variable for being fixed (HOLDFIXED, `holdfixed!`)
+    eps::Dict{String,Dict{Tuple,Tuple{Bool,Bool}}}
 end
-BoundTable() = BoundTable(Dict{String,Dict{Tuple,Tuple{Float64,Float64}}}())
+BoundTable() = BoundTable(Dict{String,Dict{Tuple,Tuple{Float64,Float64}}}(), Dict{String,Dict{Tuple,Tuple{Bool,Bool}}}())
 
 "The declared default bounds of variable family `name`: (0, Inf) if POSITIVE, else (-Inf, Inf)."
 function default_bounds(tm::TimesModel, name::AbstractString)
@@ -84,6 +87,10 @@ function _setbound!(bt::BoundTable, tm, name, key::Tuple, which::Symbol, v::GNum
     x = v.v                                     # EPS is a zero bound (G10)
     which === :lo ? (lo = x) : which === :up ? (up = x) : (lo = up = x)
     fam[key] = (lo, up)
+    ef = get!(() -> Dict{Tuple,Tuple{Bool,Bool}}(), bt.eps, uppercase(name))
+    le, ue = get(ef, key, (false, false))
+    which === :lo ? (le = v.eps) : which === :up ? (ue = v.eps) : (le = ue = v.eps)
+    (le || ue) ? (ef[key] = (le, ue)) : delete!(ef, key)
     return bt
 end
 
@@ -110,7 +117,6 @@ function bounds_unported(tm::TimesModel)
     end
     haskey(tm.switches, "RPOINT") && uppercase(tm.switches["RPOINT"]) != "NO" &&
         throw(UnportedError("bounds under RPOINT (spoint.mod)"))
-    notempty_par("NORTS", 3) && throw(UnportedError("dynslite.vda BOUNDS (dynamic timeslices)"))
     notempty_set("PREMILE", 1) && throw(UnportedError("bnd_ire.vda (VDA fixed trade before PREMILE)"))
     notempty_par("NCAP_SEMI", 3) && throw(UnportedError("mod_vars.dsc L18-19 (semi-continuous capacity)"))
     notempty_par("RD_NLP", 2) && throw(UnportedError("pp_micro.mod L88-91 (VAR_DEM bounds)"))
@@ -725,6 +731,7 @@ function bndmain(tm::TimesModel)
         bnd_cum!(bt, tm)          # L64
         bnd_ucw!(bt, tm)          # L69
         bnd_obj!(bt, tm)          # L73-79
+        bnd_dynslite!(bt, tm)     # L87: dynslite.vda BOUNDS (M1.3 change 63)
         bt
     end::BoundTable
 end

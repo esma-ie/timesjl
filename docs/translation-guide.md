@@ -1095,3 +1095,7 @@ those checks, their figures and their crafted cases are not published
   EQ_GG_PDIF2, EQ_GG_STEP, EQ_GG_MBND FX). New crafted case demo12_gg2:
   layers 1 to 3 PASS in both variants from the DD files (objective
   23,960,157.73). Only the MIP paths of the gas grids stay refused.
+- 18 Nov 2026: M1.3 change 63: dynamic timeslice trees (dynslite.vda:
+  PRELEV, REDUCE, POSTLEV, BOUNDS with HOLDFIXED; the RTS(S) rows of
+  EQ_PEAK, EQ_PTRANS, EQE_ACTEFF). New crafted case demo12_tsoff: layers
+  1 to 3 PASS in both variants from the DD files (objective 23,960,685.74).

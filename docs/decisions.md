@@ -240,6 +240,14 @@ Stacked on #154 (branch m13-capflo).
 | 2 | The discrete candidate lines (GR_PTDF with %DSC% and %SOLMIP% YES: GR_DUNIT, GR_DNCAP, VAR_PTDNCAP, a MIP) stay refused with a message, with the other MIP features after the M1.3 gate (q5 of 17 Nov 2026). | Recommended: yes. Built in. | open |
 | 3 | At a node of a PTDF grid, VAR_COMAUX appears only in EQ_GR_PTDFLO in v4.9.7: no GAMS statement ties it to the node's net injection. Translated as written; to be checked against the TIMES grid user note, and logged as a discrepancy or asked of ETSAP if the note says otherwise. | Recommended: translate as written; check the note. Built in. | open |
 
+### #163 M1.3 (63): dynamic timeslice trees (dynslite.vda); crafted case demo12_tsoff (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | A new crafted case, demo12_tsoff (demo12 plus `tsoff.dd`, CC BY 4.0), with one public CI fixture. GAMS only accepts complementary trees (timslice.mod L70-75; dynslite.vda L25-27; ppmain.mod L729 divides by a demand's annual share), so the case gives REG1 a second tree (season A) rather than turning one season off. | Recommended: yes. Built in. | open |
+| 2 | With timeslices turned off, the RTS(S) families the case does not reach (storage, dispatching, ASHAR, CAFLAC, unit commitment by start-up type, residual load, power-flow grids) stay refused with a message, though the change in each is the same skip as in EQ_PEAK. | Recommended: yes; extend the case when a model needs one. Built in. | open |
+| 3 | The bound table now records which bounds are EPS (internal; the LP of every other model is unchanged), as GAMS's HOLDFIXED does not count a variable between 0 and EPS as fixed. | Recommended: yes. Built in. | open |
+
 ### #147 M1.3 (46): nested user constraints (equserco.mod L75-76, L98-99; pp_qack.mod L53); crafted case demo12_ucn (open)
 
 Logged here because #147 does not touch this file.

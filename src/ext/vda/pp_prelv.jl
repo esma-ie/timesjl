@@ -30,7 +30,6 @@
 function pp_prelv_unported(tm)
     out = String[]
     uppercase(strip(gswitch(tm, "POWERFLO", ""), ['\'', '"'])) == "YES" && append!(out, powerflo_main_unported(tm))
-    isempty(gset_opt(tm.data, "TS_OFF", 4).keys) || push!(out, "pp_prelv.vda L125 (TS_OFF data: dynslite.vda PRELEV)")
     return out
 end
 
@@ -495,6 +494,8 @@ function pp_prelv!(tm)
     gput!(tm, "UNCD7", st_uncd7)
     ts_array === nothing || gput!(tm, "TS_ARRAY", ts_array)
     powerflo || gput!(tm, "Z", gassign!(Dict{Tuple{},Float64}(), (), GNum(z)))
+    # L124-125: $IF NOT %RTS%==S $BATINCLUDE dynslite.vda PRELEV (M1.3 change 63)
+    dynslite_prelev!(tm)
     return tm
 end
 

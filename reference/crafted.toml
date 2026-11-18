@@ -1004,3 +1004,17 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_gg2/demo12_gg2.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_gg", "{crafted}/demo12_gg2"]
+
+# TIMES_Demo demo12 + demo12_tsoff/tsoff.dd (18 Nov 2026): dynamic timeslices (%DYNTS% YES, TS_OFF:
+# REG1's summer season turned off in 2020 and 2030; dynslite.vda, M1.3 change 60).
+[[model]]
+name = "TIMES_Demo-demo12_tsoff"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_tsoff/demo12_tsoff.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_tsoff"]

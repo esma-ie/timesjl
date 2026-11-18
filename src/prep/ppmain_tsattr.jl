@@ -27,17 +27,15 @@
     ppmain_tsattr_unported(tm) -> Vector{String}
 
 What ppmain.mod L683-797 meets that is not translated: TIMES-Micro (L749,
-pp_micro.mod) and the dynamic timeslice tree (L742: `RTS(S)` is
+pp_micro.mod). The dynamic timeslice tree of L742 (`RTS(S)` is
 `S+NORTS(R,T,S)` when %DYNTS% is YES and TS_OFF has data, timslice.mod
-L31-33, L39).
+L31-33, L39) is translated since M1.3 change 63.
 """
 function ppmain_tsattr_unported(tm)
     out = String[]
     yes(n) = uppercase(gswitch(tm, n, "")) == "YES"
     # maindrv.mod L25: %MICRO% YES sets %TIMESED% YES unless the run set it otherwise
     (yes("TIMESED") || yes("MICRO")) && push!(out, "ppmain.mod L749 (%TIMESED% YES: pp_micro.mod PRE, TIMES-Micro)")
-    (yes("DYNTS") && !isempty(gset_opt(tm.data, "TS_OFF", 4).keys)) &&
-        push!(out, "ppmain.mod L742 (%DYNTS% YES with TS_OFF data: RTS(S) is S+NORTS(R,T,S), timslice.mod L33)")
     return out
 end
 
@@ -542,10 +540,12 @@ function ppmain_tsattr!(tm)
         end
     end
     gput!(tm, "RTCS_FR", rtcsfr)
-    # L742: COM_FR(RTC(R,T,C),RTS(S))$((NOT COM_FR(RTC,S))$RCS_COMTS(R,C,S)) = G_YRFR(R,S)    (RTS(S) is S)
+    # L742: COM_FR(RTC(R,T,C),RTS(S))$((NOT COM_FR(RTC,S))$RCS_COMTS(R,C,S)) = G_YRFR(R,S): RTS(S) is S, or
+    #   S+NORTS(R,T,S) with dynamic timeslices (timslice.mod L33), no element where NORTS is -INF (M1.3 change 63)
     rcs_comts = Dict{NTuple{2,String},Vector{String}}()
     foreach(k -> pushat!(rcs_comts, (k[1], k[2]), k[3]), gset(tm, "RCS_COMTS").keys)
     for (r, t, c) in rtcT, s in get(rcs_comts, (r, c), String[])
+        haskey(norts, (r, t, s)) && continue
         haskey(cfr, (r, t, c, s)) || gassign!(cfr, (r, t, c, s), yrfr_at(tr, r, s))
     end
     gput!(tm, "COM_FR", cfr)

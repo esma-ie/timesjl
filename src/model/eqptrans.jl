@@ -35,8 +35,7 @@ it references. Returns the number of rows generated.
 GAMS: eqptrans.mod L14-39, v4.9.7.
 """
 function eq_ptrans!(tm::TimesModel)
-    isempty(gparam(tm, "NORTS")) || throw(UnportedError(
-        "dynamic timeslices: %RTS% = S+NORTS(R,T,S) in eqptrans.mod L19 (timslice.mod L31-39)"))
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 63)
 
     rtp_vintyr = gset(tm, "RTP_VINTYR")
     modlyear = gset(tm, "MODLYEAR")
@@ -73,6 +72,7 @@ function eq_ptrans!(tm::TimesModel)
             ptran = get(ptran_of, (r, v, p, cg1, cg2), NTuple{7,String}[])
             isempty(ptran) && continue
             for (_, _, s) in get(s1_of_rp, (r, p), NTuple{3,String}[])
+                off(r, t, s) && continue
                 # SUM((RPC(R,P,C),RS_TREE(R,S,TS))$COEF_PTRAN(R,V,P,COM_GRP,C,CG,TS),1) > 0
                 any(k -> (r, p, k[5]) in rpc && (r, s, k[7]) in rs_tree, ptran) || continue
 
