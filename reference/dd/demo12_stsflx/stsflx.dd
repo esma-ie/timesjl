@@ -1,0 +1,96 @@
+* TIMES.jl crafted case demo12_stsflx (reference/crafted.toml, 17 Nov 2026): storage flexibility,
+* %STSFLX% YES (eqstgtss.mod L53-93: the VAR_UDP and $RP_STL(R,P,TSL,'UP') terms of EQ_STSBAL and
+* the levelizer EQ_STSLEV; M1.3 change 52), added to TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo
+* @ 962db86, CC BY 4.0).
+* STSELC is a general timeslice storage of electricity (PRC_MAP STS, at DAYNITE), so ppmain.mod
+* L1084-1089 gives it RP_STL 'N' entries at the SEASON and DAYNITE levels. It has capacity and no
+* availability factor of its own, so ppm_ext.vda L140-141 adds the 'UP' entries at the same levels;
+* coef_ext.vda L32 keeps them under %STSFLX% YES. REG2's is vintaged, with a past investment, and
+* both lose 1% a year (STG_LOSS). A lower bound on its annual discharge makes it work.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET PRC
+/
+STSELC 'Crafted: general timeslice storage of electricity (TIMES.jl demo12_stsflx)'
+/
+
+SET COM_GRP
+/
+STSELC_NRGO
+/
+
+SET COM_GMAP
+/
+REG1.STSELC_NRGO.ELC
+REG2.STSELC_NRGO.ELC
+/
+
+SET PRC_MAP
+/
+REG1.STG.STSELC
+REG2.STG.STSELC
+REG1.STS.STSELC
+REG2.STS.STSELC
+/
+
+SET PRC_TSL
+/
+REG1.STSELC.DAYNITE
+REG2.STSELC.DAYNITE
+/
+
+SET PRC_ACTUNT
+/
+REG1.STSELC.STSELC_NRGO.PJ
+REG2.STSELC.STSELC_NRGO.PJ
+/
+
+SET TOP
+/
+REG1.STSELC.ELC.IN
+REG1.STSELC.ELC.OUT
+REG2.STSELC.ELC.IN
+REG2.STSELC.ELC.OUT
+/
+
+SET PRC_VINT
+/
+REG2.STSELC
+/
+
+PARAMETER
+STG_EFF ' '/
+REG1.2005.STSELC 0.9
+REG2.2005.STSELC 0.85
+/
+
+PARAMETER
+STG_LOSS ' '/
+REG1.2005.STSELC.ANNUAL 0.01
+REG2.2005.STSELC.ANNUAL 0.01
+/
+
+PARAMETER
+NCAP_COST ' '/
+REG1.2005.STSELC.MEURO05 2
+REG2.2005.STSELC.MEURO05 3
+/
+
+PARAMETER
+NCAP_TLIFE ' '/
+REG1.2005.STSELC 15
+REG2.2005.STSELC 12
+/
+
+PARAMETER
+NCAP_PASTI ' '/
+REG2.2000.STSELC 0.2
+/
+
+PARAMETER
+STGOUT_BND ' '/
+REG1.2010.STSELC.ELC.ANNUAL.LO 2
+REG1.2020.STSELC.ELC.ANNUAL.LO 2.5
+REG2.2010.STSELC.ELC.ANNUAL.LO 1
+/

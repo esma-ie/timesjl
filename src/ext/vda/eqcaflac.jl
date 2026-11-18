@@ -49,7 +49,8 @@
 #
 # Not translated; data that needs it raises UnportedError:
 # - VAR_STS(R,V,T,P,TS,'UP') in EQL_CAPFLO (L48): RP_STL entries of type UP
-#   exist only with %STSFLX% = YES (coef_ext.vda L32; see eqstgtss.jl).
+#   exist only with %STSFLX% = YES (coef_ext.vda L32; `var_sts!` in
+#   eqstgtss.jl, M1.3 change 52).
 
 "Equation variants of eqcaflac.vda as included from equ_ext.vda L88-89: (%1, %2)."
 const CAFLAC_VARIANTS = (("E", "FX"), ("L", "UP"))
@@ -279,7 +280,7 @@ EQL_CAPFLO, eqcaflac.vda L40-60 (L include only):
 The domain's STL index is S itself. An NCAP_AFC entry of EPS (an
 availability <= 0 for a commodity of the group, ppm_ext.vda L134) gives the
 row with EPS capacity coefficients (the columns exist, docs/discrepancies.md G5).
-VAR_STS has terms only with %STSFLX% (refused).
+VAR_STS has terms only with %STSFLX% (`var_sts!`).
 
 GAMS: eqcaflac.vda L40-60, v4.9.7.
 """
@@ -322,13 +323,12 @@ function eq_capflo!(tm::TimesModel, ncap_afc::GamsParam{5})
             if (r, p) in rp_stg
                 # Storage level, L48: ACTCG(CG).
                 if uppercase(cg) == "ACT"
-                    (r, p) in stl_up && throw(UnportedError(
-                        "eqcaflac.vda L48 VAR_STS(R,V,T,P,TS,'UP') of ($r, $p): RP_STL with %STSFLX% (coef_ext.vda L31-32)"))
                     cyc = gexp(gv(prc_sc, (r, p)))
                     for (_, _, ts) in get(ts_of_rp, (r, p), no3)
                         haskey(rs_fr, (r, ts, s)) || continue
                         k = gv(rs_fr, (r, ts, s)) * cyc / gv(rs_stgprd, (r, ts)) * gv(g_yrfr, (r, s))
                         addterm!(lhs, k, tm, "VAR_ACT", r, v, t, p, ts)
+                        (r, p) in stl_up && var_sts!(lhs, k, tm, r, v, t, p, ts, "UP")    # + VAR_STS(R,V,T,P,TS,'UP')
                     end
                 end
                 # Storage flows of a stored commodity in CG, L49-51.

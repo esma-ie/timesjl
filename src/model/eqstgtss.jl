@@ -109,14 +109,31 @@ stg_loss_prev(l::GNum) = gmax(l / GNum(2.0), GNum(1.0) + l / (GNum(1.0) / gexp(l
 "`MAX(L/2, L/(EXP(L)-1)-1)`: the loss factor on the current level (eqstgtss.mod L43-45, L73-75)."
 stg_loss_cur(l::GNum) = gmax(l / GNum(2.0), l / (gexp(l) - GNum(1.0)) - GNum(1.0))
 
+"""
+    var_sts!(expr, coef, tm, r, v, t, p, ts, bd) -> expr
+
+`coef * VAR_STS(R,V,T,P,TS,BD)`, the VDA macro of coef_ext.vda L31:
+
+    \$ macro var_sts(r,v,t,p,ts,bd) sum(rp_stl(r,p,tsl,bd)\$ts_group(r,tsl,ts),%var%_udp(r,v,t,p,ts,bd%sow%))
+
+VAR_UDP at TS for each RP_STL entry of type BD whose level holds TS (a timeslice is in one level
+only, so one term at most). GAMS counts the macro as DEFINED, so mod_vars.mod L96's empty parameter
+is never declared (G2). RP_STL has entries other than 'N' only under %STSFLX% (coef_ext.vda L32).
+
+GAMS: coef_ext.vda L31, v4.9.7.
+"""
+function var_sts!(expr::JuMP.AffExpr, coef::GNum, tm, r, v, t, p, ts, bd)
+    stl = get!(() -> indexby(gset(tm, "RP_STL"), (1, 2)), tm.cache, "RP_STL_OF_RP")::Dict
+    tsg = gset(tm, "TS_GROUP")
+    for (_, _, tsl, b) in get(stl, (r, p), NTuple{4,String}[])
+        (b == bd && (r, tsl, ts) in tsg) && addterm!(expr, coef, tm, "VAR_UDP", r, v, t, p, ts, bd)
+    end
+    return expr
+end
+
 function stgtss_unported(tm::TimesModel)
     isempty(gparam(tm, "NORTS")) || throw(UnportedError(
         "dynamic timeslices: RTS(S) = S+NORTS(R,T,S) in eqstgtss.mod L13/L53 (timslice.mod L31-39)"))
-    for k in gset(tm, "RP_STL")
-        k[4] == "N" || throw(UnportedError(
-            "storage flexibility (%STSFLX% = YES): RP_STL$k gives the VAR_UDP/VAR_STS terms of EQ_STSBAL " *
-            "(eqstgtss.mod L56-73) and EQ_STSLEV (L88-93)"))
-    end
     return nothing
 end
 
@@ -131,7 +148,7 @@ GAMS: eqstgtss.mod L13-83, v4.9.7.
 function eq_stgtss!(tm::TimesModel)
     gset(tm, "RP_STG") |> isempty && return 0
     stgtss_unported(tm)
-    return eq_stgtss_rows!(tm) + eq_stsbal!(tm)
+    return eq_stgtss_rows!(tm) + eq_stsbal!(tm) + eq_stslev!(tm)   # L13-48, L53-83, L86-93
 end
 
 """
@@ -209,21 +226,28 @@ The EQ_STSBAL rows: for each STS level TSL of RP_STL(R,P,TSL,L) and each S of
 that level in PRC_TS,
 
     EQ_STSBAL(RTP_VINTYR(R,V,T,P),TSL,RTS(S),L)\$(TS_GROUP(R,TSL,S)\$PRC_TS(R,P,S)\$RP_STL(R,P,TSL,L))..
-      SUM(RS_BELOW(R,ANNUAL,S), VAR_ACT(R,V,T,P,S) + [STSFLX, refused])
+      SUM(RS_BELOW(R,ANNUAL,S), VAR_ACT(R,V,T,P,S) + (VAR_SIN(R,V,T,P,'ACT',S)+VAR_STS(R,V,T,P,S,'N'))\$RP_STL(R,P,TSL,'UP'))
       =E=
       SUM(RS_BELOW(R,ANNUAL,SL(S--RS_STG(R,S))),
-          VAR_ACT(R,V,T,P,SL)\$IPS(L) + [VAR_UDP\$BD(L), STSFLX, refused] +
+          VAR_ACT(R,V,T,P,SL)\$IPS(L) + VAR_UDP(R,V,T,P,SL,'LO')\$BD(L) +
+          (VAR_SIN(R,V,T,P,'ACT',SL)+VAR_STS(R,V,T,P,SL,L))\$RP_STL(R,P,TSL,'UP') +
           (VAR_SOUT(R,V,T,P,'ACT',SL)
            - SUM(PRC_TS(R,P,TS)\$RS_BELOW1(R,TS,S), VAR_SOUT(R,V,T,P,'ACT',TS)*RS_FR(R,SL,TS))
            - (VAR_ACT(R,V,T,P,SL)\$RS_STG(R,S)) * MAX(STG_LOSS/2, 1+STG_LOSS/(1/EXP(STG_LOSS)-1))\$STG_LOSS
-           - (VAR_ACT(R,V,T,P,S)\$RS_STG(R,S) + [STSFLX, refused]) *
+           - (VAR_ACT(R,V,T,P,S)\$RS_STG(R,S) + (VAR_SIN(R,V,T,P,'ACT',S)-VAR_SIN(R,V,T,P,'ACT',SL))\$RP_STL(R,P,TSL,'UP')) *
                MAX(STG_LOSS/2, STG_LOSS/(EXP(STG_LOSS)-1)-1)\$STG_LOSS
           )\$IPS(L))
-      + SUM(ANNUAL(S), [PRC_STGIPS charging, refused] - VAR_SOUT(R,V,T,P,'ACT',S));
+      + SUM(ANNUAL(S), [PRC_STGIPS charging] - VAR_SOUT(R,V,T,P,'ACT',S));
 
-with STG_LOSS = STG_LOSS(R,V,P,SL). Without %STSFLX% (coef_ext.vda L32)
-RP_STL only has L = 'N' (ppmain.mod L1089), so IPS(L) holds and BD(L) does
-not; the S = ANNUAL term (L78-83) is reached by no such row: RP_STL's levels
+with STG_LOSS = STG_LOSS(R,V,P,SL). Storage flexibility (%STSFLX% YES, M1.3
+change 52): coef_ext.vda L32 then keeps the RP_STL entries of the bound types,
+and ppm_ext.vda L141 gives a storage with capacity the type 'UP' at its 'N'
+levels. A row with L in BD has the VAR_UDP term and none of the IPS(L)
+terms; the 'UP' entry of its level adds the charging VAR_SIN at S and SL
+(and to the losses) and VAR_STS at S ('N') and at SL (L), the VAR_UDP of
+coef_ext.vda L31's macro (`var_sts!`). Without
+%STSFLX%, RP_STL only has L = 'N' (ppmain.mod L1089), so IPS(L) holds and
+BD(L) does not; the S = ANNUAL term (L78-83) is reached by no such row: RP_STL's levels
 are TSL+1 (ppmain.mod L1089, SEASON and below; ppm_ext.vda L141 adds 'UP'
 at the same levels) and RP_STL is declared after the DD files are read
 (ppmain.mod L23), so no data can give it ANNUAL. The term, with the
@@ -242,7 +266,8 @@ GAMS: eqstgtss.mod L53-83, v4.9.7.
 function eq_stsbal!(tm::TimesModel)
     x = stg_context(tm)
     one = GNum(1.0)
-    stl_of_rp = indexby(gset(tm, "RP_STL"), (1, 2))         # (r,p) -> RP_STL(r,p,tsl,l)
+    rp_stl = gset(tm, "RP_STL")
+    stl_of_rp = indexby(rp_stl, (1, 2))                     # (r,p) -> RP_STL(r,p,tsl,l)
     group_of = indexby(gset(tm, "TS_GROUP"), (1, 2))        # (r,tsl) -> TS_GROUP(r,tsl,s)
     ips, bd = gset(tm, "IPS"), gset(tm, "BD")
     top, actflo = gset(tm, "TOP"), gparam_opt(tm.data, "PRC_ACTFLO", 4)
@@ -254,22 +279,41 @@ function eq_stsbal!(tm::TimesModel)
         isempty(stls) && continue
         for (_, _, tsl, l) in stls, (_, _, s) in get(group_of, (r, tsl), NTuple{3,String}[])
             (r, p, s) in x.prc_ts || continue
-            (l,) in bd && throw(UnportedError("eqstgtss.mod L62: VAR_UDP term of EQ_STSBAL for L = $l (STSFLX)"))
+            up = (r, p, tsl, "UP") in rp_stl                                                 # $RP_STL(R,P,TSL,'UP')
             lhs = JuMP.AffExpr(0.0)
-            (r, "ANNUAL", s) in x.rs_below && addterm!(lhs, one, tm, "VAR_ACT", r, v, t, p, s)   # L56
+            if (r, "ANNUAL", s) in x.rs_below                                                # L56
+                addterm!(lhs, one, tm, "VAR_ACT", r, v, t, p, s)
+                if up
+                    addterm!(lhs, one, tm, "VAR_SIN", r, v, t, p, "ACT", s)
+                    var_sts!(lhs, one, tm, r, v, t, p, s, "N")
+                end
+            end
             rhs = JuMP.AffExpr(0.0)
             sl = stg_prev(x, r, s)
-            if (r, "ANNUAL", sl) in x.rs_below && (l,) in ips                               # L60-76
-                addterm!(rhs, one, tm, "VAR_ACT", r, v, t, p, sl)                            # L62
-                addterm!(rhs, one, tm, "VAR_SOUT", r, v, t, p, "ACT", sl)                    # L66
-                for (_, ts, _) in get(x.parents_of, (r, s), NTuple{3,String}[])              # L67
-                    (r, p, ts) in x.prc_ts || continue
-                    addterm!(rhs, -gv(x.rs_fr, (r, sl, ts)), tm, "VAR_SOUT", r, v, t, p, "ACT", ts)
+            if (r, "ANNUAL", sl) in x.rs_below                                               # L60-76
+                (l,) in ips && addterm!(rhs, one, tm, "VAR_ACT", r, v, t, p, sl)            # L62
+                (l,) in bd && addterm!(rhs, one, tm, "VAR_UDP", r, v, t, p, sl, "LO")       # L62
+                if up                                                                        # L63
+                    addterm!(rhs, one, tm, "VAR_SIN", r, v, t, p, "ACT", sl)
+                    var_sts!(rhs, one, tm, r, v, t, p, sl, l)
                 end
-                if haskey(x.stg_loss, (r, v, p, sl)) && haskey(x.rs_stg, (r, s))           # L70-75
-                    lv = gv(x.stg_loss, (r, v, p, sl))
-                    addterm!(rhs, -stg_loss_prev(lv), tm, "VAR_ACT", r, v, t, p, sl)
-                    addterm!(rhs, -stg_loss_cur(lv), tm, "VAR_ACT", r, v, t, p, s)
+                if (l,) in ips
+                    addterm!(rhs, one, tm, "VAR_SOUT", r, v, t, p, "ACT", sl)                # L66
+                    for (_, ts, _) in get(x.parents_of, (r, s), NTuple{3,String}[])          # L67
+                        (r, p, ts) in x.prc_ts || continue
+                        addterm!(rhs, -gv(x.rs_fr, (r, sl, ts)), tm, "VAR_SOUT", r, v, t, p, "ACT", ts)
+                    end
+                    if haskey(x.stg_loss, (r, v, p, sl))                                     # L70-75
+                        lv = gv(x.stg_loss, (r, v, p, sl))
+                        if haskey(x.rs_stg, (r, s))
+                            addterm!(rhs, -stg_loss_prev(lv), tm, "VAR_ACT", r, v, t, p, sl)
+                            addterm!(rhs, -stg_loss_cur(lv), tm, "VAR_ACT", r, v, t, p, s)
+                        end
+                        if up && sl != s                                                     # (SIN(S)-SIN(SL))$RP_STL(..,'UP')
+                            addterm!(rhs, -stg_loss_cur(lv), tm, "VAR_SIN", r, v, t, p, "ACT", s)
+                            addterm!(rhs, stg_loss_cur(lv), tm, "VAR_SIN", r, v, t, p, "ACT", sl)
+                        end
+                    end
                 end
             end
             if s == "ANNUAL"                                                                 # L78-83
@@ -286,6 +330,64 @@ function eq_stsbal!(tm::TimesModel)
                 addterm!(rhs, -one, tm, "VAR_SOUT", r, v, t, p, "ACT", s)
             end
             gconstraint!(tm, "EQ_STSBAL", (r, v, t, p, tsl, s, l), "E", lhs, rhs) === nothing || (n += 1)
+        end
+    end
+    return n
+end
+
+"""
+    eq_stslev!(tm) -> Int
+
+EQ_STSLEV, the levelizer of a flexible timeslice storage (%STSFLX% YES, M1.3 change 52), one row for
+each vintage, level TSL with an 'UP' entry of RP_STL and timeslice S of that level at the storage's
+own level (STOAL(R,S) = PRC_SGL(R,P)); %SWX% is ,'1' and %SWTX% empty outside stochastic runs
+(setglobs.gms L363-365):
+
+    EQ_STSLEV(RTP_VINTYR(R,V,T,P),TSL,RTS(S),'1')\$((STOAL(R,S)=PRC_SGL(R,P))\$TS_GROUP(R,TSL,S)\$RP_STL(R,P,TSL,'UP'))..
+      SUM(TS_MAP(R,TS,S)\$STOA(TS),(VAR_SIN(R,V,T,P,'ACT',TS)+VAR_UDP(R,V,T,P,TS,'LO')+VAR_STS(R,V,T,P,TS,'N'))/RS_STGPRD(R,TS))
+      =L=
+      SUM(RS_BELOW1(R,S,TS)\$RS_FR(R,TS,S),VAR_ACT(R,V,T,P,TS)/RS_STGPRD(R,TS)*RS_FR(R,TS,S));
+
+`STOAL(R,S)=PRC_SGL(R,P)` compares numbers, so a missing value is 0 on either side. VAR_STS is the
+VAR_UDP of coef_ext.vda L31's macro (`var_sts!`). Returns the number of rows.
+
+GAMS: eqstgtss.mod L86-93, v4.9.7.
+"""
+function eq_stslev!(tm::TimesModel)
+    rp_stl = gset(tm, "RP_STL")
+    any(k -> k[4] == "UP", rp_stl) || return 0
+    x = stg_context(tm)
+    one = GNum(1.0)
+    stoal, prc_sgl, stoa = gparam(tm, "STOAL"), gparam(tm, "PRC_SGL"), gparam(tm, "STOA")
+    rs_stgprd = gparam(tm, "RS_STGPRD")
+    group_of = indexby(gset(tm, "TS_GROUP"), (1, 2))        # (r,tsl) -> TS_GROUP(r,tsl,s)
+    up_of_rp = Dict{NTuple{2,String},Vector{String}}()      # (r,p) -> TSL with RP_STL(r,p,tsl,'UP')
+    foreach(k -> k[4] == "UP" && push!(get!(up_of_rp, (k[1], k[2]), String[]), k[3]), rp_stl.keys)
+    tsmap_to = indexby(gset(tm, "TS_MAP"), (1, 3))          # (r,s) -> TS_MAP(r,ts,s)
+    below1_of = indexby(gset(tm, "RS_BELOW1"), (1, 2))      # (r,s) -> RS_BELOW1(r,s,ts)
+    vx, tx = gset(tm, "MODLYEAR"), eq_periods(tm)           # %R_V_T% (maindrv.mod L38-40)
+    n = 0
+    for (r, v, t, p) in gset(tm, "RTP_VINTYR")
+        ((v,) in vx && (t,) in tx) || continue
+        tsls = get(up_of_rp, (r, p), String[])
+        isempty(tsls) && continue
+        sgl = gv(prc_sgl, (r, p)).v
+        for tsl in tsls, (_, _, s) in get(group_of, (r, tsl), NTuple{3,String}[])
+            gv(stoal, (r, s)).v == sgl || continue
+            lhs = JuMP.AffExpr(0.0)
+            for (_, ts, _) in get(tsmap_to, (r, s), NTuple{3,String}[])
+                haskey(stoa.values, (ts,)) || continue                                   # $STOA(TS)
+                k = one / gv(rs_stgprd, (r, ts))
+                addterm!(lhs, k, tm, "VAR_SIN", r, v, t, p, "ACT", ts)
+                addterm!(lhs, k, tm, "VAR_UDP", r, v, t, p, ts, "LO")
+                var_sts!(lhs, k, tm, r, v, t, p, ts, "N")
+            end
+            rhs = JuMP.AffExpr(0.0)
+            for (_, _, ts) in get(below1_of, (r, s), NTuple{3,String}[])
+                haskey(x.rs_fr, (r, ts, s)) || continue                                  # $RS_FR(R,TS,S)
+                addterm!(rhs, one / gv(rs_stgprd, (r, ts)) * gv(x.rs_fr, (r, ts, s)), tm, "VAR_ACT", r, v, t, p, ts)
+            end
+            gconstraint!(tm, "EQ_STSLEV", (r, v, t, p, tsl, s, "1"), "L", lhs, rhs) === nothing || (n += 1)
         end
     end
     return n

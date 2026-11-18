@@ -51,7 +51,7 @@
 # the coef_ext.vda L31 macro under VDA (GAMS counts a macro as DEFINED, so
 # mod_vars.mod L96's zero parameter is never declared, G2): a sum of
 # VAR_UDP over RP_STL(R,P,TSL,'%2') entries, which exist only with
-# %STSFLX% = YES (coef_ext.vda L32), refused (eqstgtss.jl).
+# %STSFLX% = YES (coef_ext.vda L32; `var_sts!` in eqstgtss.jl, M1.3 change 52).
 #
 # Coefficients are computed as GNum (GAMS EPS arithmetic) and emitted with
 # addterm!, which reproduces GAMS's rule for matrix entries: a term and its
@@ -279,12 +279,12 @@ function eq_capact!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, 
                 end
             else
                 # L28: storage level times the storage cycles of TS within S.
-                (r, p, bd) in stl_bd && throw(UnportedError(
-                    "eqcapact.mod L28 VAR_STS(R,V,T,P,TS,'$bd') of ($r, $p): RP_STL with %STSFLX% (coef_ext.vda L31-32)"))
                 cyc = gexp(gv(prc_sc, (r, p)))
                 for (_, _, ts) in get(ts_of_rp, (r, p), NTuple{3,String}[])
                     haskey(rs_fr, (r, ts, s)) || continue
-                    addterm!(lhs, gv(rs_fr, (r, ts, s)) * cyc / gv(rs_stgprd, (r, ts)), tm, "VAR_ACT", r, v, t, p, ts)
+                    k = gv(rs_fr, (r, ts, s)) * cyc / gv(rs_stgprd, (r, ts))
+                    addterm!(lhs, k, tm, "VAR_ACT", r, v, t, p, ts)
+                    (r, p, bd) in stl_bd && var_sts!(lhs, k, tm, r, v, t, p, ts, bd)   # + VAR_STS(R,V,T,P,TS,'%2')
                 end
             end
 
