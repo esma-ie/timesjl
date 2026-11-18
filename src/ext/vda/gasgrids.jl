@@ -392,9 +392,12 @@ function gg_context(tm)
         (rtpc=gams_sort!(collect(S("GG_RTPC", 4).keys), d), link=link.members, links_of, ts_of,
          top=S("GG_TOP", 5).members, arc=S("GG_ARC", 4).members, wink=S("GG_WINK", 5).members,
          edge=S("GG_EDGE", 3).members, kgf=P("GG_KGF", 4), klp=P("GG_KLP", 4), gamma=P("GG_GAMMA", 4),
-         dens=P("GG_DENS", 2), mm=P("GG_MM", 4), ppm=P("GG_PPM", 7), ppw, ppw_j,
+         dens=P("GG_DENS", 2), mm=P("GG_MM", 4), prbd=P("GG_PRBD", 4), ppm=P("GG_PPM", 7), ppw, ppw_j,
          g_yrfr=gparam(tm, "G_YRFR"), stgprd=gparam(tm, "RS_STGPRD"),
          prev=Dict((r, s) => sl for (r, s, sl) in gset(tm, "RS_PREV").keys),
+         jord=Dict(k[1] => i for (i, k) in enumerate(gset(tm, "J").keys)),
+         gg_vi=[k[1] for k in gset(tm, "J").keys if k[1] in ("1", "2", "99")],         # GG_VI(J) /1,2,99/ (L21)
+         gg_o=Set(k[1] for (i, k) in enumerate(gset(tm, "J").keys) if i <= GG_WN),     # GG_O(J) /1*19/
          vint_of=indexby(gset(tm, "RTP_VINTYR"), (1, 3, 4)),           # (r,t,p) -> RTP_VINTYR(r,v,t,p)
          rpc_ire=S("RPC_IRE", 4).members, ire_of=indexby(gset(tm, "RPC_IRE"), (1, 2, 3)),
          aire=S("RPC_AIRE", 3).members, actflo=gparam(tm, "PRC_ACTFLO"), rpc_pg=S("RPC_PG", 3).members,
@@ -421,12 +424,40 @@ end
 gg_pru!(expr, tm, k::GNum, r, t, p, c, s) = addterm!(expr, k, tm, "VAR_GG_PDIF", r, t, p, c, r, "ACT", s)
 
 """
-VAR_GG_WSLAC(r,t,p,c,reg,com,s) (gasgrids.vda L148) for a one-way pipeline (GG_M1 is 0 and there is
-no GG_WINK(REG,P,COM,R,C)): VAR_GG_PDIF(r,t,p,'ACT',r,c,s)\$GG_KGF(r,t,p,c), times `k`.
+VAR_GG_WSLAC(r,t,p,c,reg,com,s) (gasgrids.vda L148), times `k`:
+
+    sum(com2(actcg)\$GG_KGF(r,t,p,c),var_gg_pdif(r,t,p,com2,r,c,s)+8/11*var_gg_pdif(reg,t,p,com2,reg,com,s)\$gg_wink(reg,p,com,r,c)\$(GG_M1->0))
+
+GG_M1 is 0 in the LP formulation, so GG_M1->0 holds.
 """
 function gg_wslac!(expr, x, tm, k::GNum, r, t, p, c, reg, com, s)
-    haskey(x.kgf.values, (r, t, p, c)) && addterm!(expr, k, tm, "VAR_GG_PDIF", r, t, p, "ACT", r, c, s)
-    (reg, p, com, r, c) in x.wink && throw(UnportedError("gasgrids.vda L148: two-way gas pipelines"))
+    haskey(x.kgf.values, (r, t, p, c)) || return expr
+    addterm!(expr, k, tm, "VAR_GG_PDIF", r, t, p, "ACT", r, c, s)
+    (reg, p, com, r, c) in x.wink && addterm!(expr, k * (GNum(8.0) / GNum(11.0)), tm, "VAR_GG_PDIF", reg, t, p, "ACT", reg, com, s)
+    return expr
+end
+
+"""
+The flow-direction term of VAR_GG_Y2 and VAR_GG_PDMAX (gasgrids.vda L145, L150), times `k`:
+
+    (VAR_GG_Y(R,T,P,C,S)\$GG_TOP(R,C,REG,COM,P) + (1-VAR_GG_Y(REG,T,P,COM,S))\$GG_TOP(REG,COM,R,C,P))
+"""
+function gg_y2!(expr, x, tm, k::GNum, r, t, p, c, reg, com, s)
+    (r, c, reg, com, p) in x.top && addterm!(expr, k, tm, "VAR_GG_Y", r, t, p, c, s)
+    if (reg, com, r, c, p) in x.top
+        addconst!(expr, k)
+        addterm!(expr, -k, tm, "VAR_GG_Y", reg, t, p, com, s)
+    end
+    return expr
+end
+
+"""
+The constant of VAR_GG_PDMAX(r,t,p,c,reg,com,ts,z) (gasgrids.vda L150) before its direction term:
+MAX(POWER(GG_PRBD(R,T,C,'UP')*MAX(1,GG_GAMMA(R,T,P,C)),Z)-POWER(GG_PRBD(REG,T,COM,'LO'),Z),0).
+"""
+function gg_pdmax(x, r, t, p, c, reg, com, z::Int)
+    up = gv(x.prbd, (r, t, c, "UP")) * gmax(GNum(1.0), gv(x.gamma, (r, t, p, c)))
+    return gmax(gpower(up, z) - gpower(gv(x.prbd, (reg, t, com, "LO")), z), GZERO)
 end
 
 """
@@ -463,8 +494,9 @@ VAR_GG_HLIP(r,t,p,s) is VAR_GG_PADD(r,t,p,%PGPRIM%,s) (L147). VAR_IRE is replace
 PRC_ACTFLO for a process with RPC_AIRE. S--RS_STG(R,S) is read from RS_PREV, as in EQ_STGTSS.
 LNX is {N, FX}, IPS(L) is L = N, BD(L) is L in {LO, FX, UP}, BDLOX {LO, FX}, BDUPX {UP, FX}, BDNEQ
 {LO, UP}. The rows of two-way pipelines (EQ_GG_PDIF1, EQ_GG_PDIF2, EQ_GG_STEP, the FX rows of
-EQ_GG_MBND with VAR_GG_Y) and EQ_GG_WEYMTX (pressure points, GG_WTX) are refused
-(`gasgrids_model_unported`). Returns the number of rows.
+EQ_GG_MBND with VAR_GG_Y, the second term of VAR_GG_WSLAC) came with M1.3 change 62.
+EQ_GG_WEYMTX needs GG_WTX, from pressure points given as data (refused). Returns the number of
+rows.
 
 GAMS: gasgrids.vda L141-205, v4.9.7.
 """
@@ -502,16 +534,57 @@ function eq_gg!(tm)
                 rhs = JuMP.AffExpr(0.0); addterm!(rhs, g - one, tm, "VAR_GG_PR", r, t, c, s)
                 put("EQ_GG_GAMA", (r, t, p, c, reg, com, s), "L", lhs, rhs)
             end
-            # EQ_GG_MBND, L = 'N' (IPS; GG_M1->GG_WTX is true with GG_M1 0)
-            lhs = JuMP.AffExpr(0.0); addterm!(lhs, one, tm, "VAR_GG_MF", r, t, p, c, reg, com, s)
-            rhs = JuMP.AffExpr(0.0)
-            if (r, c, reg, com, p) in x.top
+            # EQ_GG_MBND: L = 'N' (IPS; GG_M1->GG_WTX is true with GG_M1 0), and L = 'FX' (BD) for a two-way link
+            twoway = (reg, p, com, r, c) in x.link
+            for l in (twoway ? ("N", "FX") : ("N",))
+                lhs = JuMP.AffExpr(0.0); addterm!(lhs, one, tm, "VAR_GG_MF", r, t, p, c, reg, com, s)
+                (reg, p, com, r, c) in x.wink && gg_wslac!(lhs, x, tm, one, r, t, p, c, reg, com, s)
+                rhs = JuMP.AffExpr(0.0)
                 mm = gv(x.mm, (r, t, p, c))
-                gg_prio!(rhs, x, tm, mm, r, t, p, c, s)
-                gg_prio!(rhs, x, tm, -mm, reg, t, p, com, s)
+                if l == "N"
+                    if (r, c, reg, com, p) in x.top
+                        gg_prio!(rhs, x, tm, mm, r, t, p, c, s)
+                        gg_prio!(rhs, x, tm, -mm, reg, t, p, com, s)
+                        twoway && addterm!(rhs, mm, tm, "VAR_GG_PDIF", reg, t, p, com, r, c, s)
+                    end
+                    (reg, com, r, c, p) in x.top && addterm!(rhs, mm, tm, "VAR_GG_PDIF", r, t, p, c, reg, com, s)
+                else
+                    # (GG_KGF(r,t,p,c)*SQRT(VAR_GG_PDMAX(R,T,P,C,REG,COM,S,2)))$BD(L): the macro closes the SQRT
+                    #   before its direction term, which multiplies it
+                    gg_y2!(rhs, x, tm, gv(x.kgf, (r, t, p, c)) * GNum(sqrt(gg_pdmax(x, r, t, p, c, reg, com, 2).v)),
+                           r, t, p, c, reg, com, s)
+                end
+                put("EQ_GG_MBND", (r, t, p, c, reg, com, l, s), "L", lhs, rhs)
             end
-            (reg, com, r, c, p) in x.top && addterm!(rhs, gv(x.mm, (r, t, p, c)), tm, "VAR_GG_PDIF", r, t, p, c, reg, com, s)
-            put("EQ_GG_MBND", (r, t, p, c, reg, com, "N", s), "L", lhs, rhs)
+            if twoway
+                # EQ_GG_PDIF1(GG_RTPC(R,T,P,C),RC(REG,COM),GG_VI(J),S), J in /1, 2, 99/ (GG_WTX is empty)
+                for j in x.gg_vi
+                    lhs = JuMP.AffExpr(0.0)
+                    if !(j in x.gg_o)                                         # $(NOT GG_O(J))
+                        addterm!(lhs, one, tm, "VAR_GG_PDIF", r, t, p, c, reg, com, s)
+                        gg_y2!(lhs, x, tm, -gg_pdmax(x, r, t, p, c, reg, com, 1), r, t, p, c, reg, com, s)
+                    elseif x.jord[j] == 1                                     # ORD(J)=1
+                        gg_pru!(lhs, tm, one, r, t, p, c, s)
+                        gg_y2!(lhs, x, tm, -gv(x.prbd, (r, t, c, "UP")), r, t, p, c, reg, com, s)
+                    elseif x.jord[j] == 2                                     # ORD(J)=2
+                        gg_pru!(lhs, tm, one, r, t, p, c, s)
+                        gg_prio!(lhs, x, tm, -one, r, t, p, c, s)
+                        lo = gv(x.prbd, (r, t, c, "LO"))
+                        addconst!(lhs, lo)                                    # +GG_PRBD(R,T,C,'LO')*(1-VAR_GG_Y2)
+                        gg_y2!(lhs, x, tm, -lo, r, t, p, c, reg, com, s)
+                    end
+                    put("EQ_GG_PDIF1", (r, t, p, c, reg, com, j, s), "L", lhs, JuMP.AffExpr(0.0))
+                end
+                # EQ_GG_PDIF2(GG_RTPC(R,T,P,C),REG,COM,S)$(GG_LINK(REG,P,COM,R,C)$PRC_TS(R,P,S)$GG_TOP(R,C,REG,COM,P))
+                if (r, c, reg, com, p) in x.top
+                    lhs = JuMP.AffExpr(0.0); addterm!(lhs, one, tm, "VAR_GG_PDIF", reg, t, p, com, r, c, s)
+                    rhs = JuMP.AffExpr(0.0)
+                    gg_prio!(rhs, x, tm, one, reg, t, p, com, s)
+                    gg_prio!(rhs, x, tm, -one, r, t, p, c, s)
+                    addterm!(rhs, one, tm, "VAR_GG_PDIF", r, t, p, c, reg, com, s)
+                    put("EQ_GG_PDIF2", (r, t, p, c, reg, com, s), "E", lhs, rhs)
+                end
+            end
             # EQ_GG_HLIP and EQ_GG_HLEV
             if (r, c, reg, com) in x.arc
                 hl = JuMP.AffExpr(0.0); addterm!(hl, one, tm, "VAR_GG_PADD", r, t, p, "ACT", s)
@@ -531,6 +604,13 @@ function eq_gg!(tm)
                 put("EQ_GG_HLEV", (r, t, p, c, reg, com, s), "E", hl, rhs)
             end
             (r, p, c, reg, com) in x.wink || continue
+            # EQ_GG_STEP(GG_RTPC(R,T,P,C),RC(REG,COM),S)$((GG_M1->0)$PRC_TS(R,P,S)$GG_WINK(REG,P,COM,R,C)$GG_WINK(R,P,C,RC)$GG_ARC(R,C,RC))
+            if (reg, p, com, r, c) in x.wink && (r, c, reg, com) in x.arc
+                lhs = JuMP.AffExpr(0.0)
+                foreach(j -> addterm!(lhs, one, tm, "VAR_GG_STEP", r, t, p, c, s, j), get(x.ppw_j, (r, t, p, c, reg, com), String[]))
+                foreach(j -> addterm!(lhs, one, tm, "VAR_GG_STEP", reg, t, p, com, s, j), get(x.ppw_j, (reg, t, p, com, r, c), String[]))
+                put("EQ_GG_STEP", (r, t, p, c, reg, com, s), "L", lhs, JuMP.AffExpr(1.0))
+            end
             # EQ_GG_PRIO, L in LNX = (N, FX)
             if (r, c, reg, com) in x.arc
                 for l in ("N", "FX")
@@ -571,14 +651,7 @@ end
 """
     gasgrids_model_unported(tm) -> Vector{String}
 
-The gas-grid paths of the model not translated: two-way pipelines (GG_LINK both ways: the rows
-EQ_GG_PDIF1, EQ_GG_PDIF2, EQ_GG_STEP, the FX rows of EQ_GG_MBND with VAR_GG_Y, and the second
-term of VAR_GG_WSLAC), which no crafted case has yet; besides `gasgrids_unported`.
+The gas-grid paths of the model not translated: those of `gasgrids_unported` (pressure points as
+data, %SOLMIP% YES). Two-way pipelines are translated since M1.3 change 62.
 """
-function gasgrids_model_unported(tm)
-    out = gasgrids_unported(tm)
-    link = gset_opt(tm.data, "GG_LINK", 5).members
-    any(k -> (k[4], k[2], k[5], k[1], k[3]) in link, link) &&
-        push!(out, "gasgrids.vda L141-205 (two-way gas pipelines: EQ_GG_PDIF1, EQ_GG_PDIF2, EQ_GG_STEP, the FX rows of EQ_GG_MBND)")
-    return out
-end
+gasgrids_model_unported(tm) = gasgrids_unported(tm)

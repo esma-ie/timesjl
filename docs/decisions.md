@@ -216,6 +216,13 @@ Stacked on #154 (branch m13-capflo).
 | 1 | A new crafted case, demo12_dam, with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
 | 2 | %DAMAGE% NLP (eqdamage.mod NLPDAM, BDNLP) stays refused with a message: it is non-linear, so it goes with the features after the M1.3 gate (q5 of 17 Nov 2026), checked with IPOPT like MACRO. | Recommended: yes. Built in. | open |
 
+### #162 M1.3 (62): two-way gas pipelines (gasgrids.vda); crafted case demo12_gg2 (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | A new crafted case, demo12_gg2 (demo12 plus `gg.dd` and `gg2.dd`, CC BY 4.0), with one public CI fixture. | Recommended: yes. Built in. | open |
+| 2 | Stacked on #161 (base `m13-gasgrid`), which is stacked on #158. | Recommended: yes. Built in. | open |
+
 ### #161 M1.3 (61): the gas grids (gasgrids.vda) in the LP formulation; crafted case demo12_gg (open)
 
 | # | Question | Decided | How |
