@@ -258,6 +258,17 @@ Stacked on #154 (branch m13-capflo).
 | 2 | Registering TIMES.jl in the Julia General registry (and renaming the repository to `<Name>.jl`) waits until after the December 2026 ETSAP ExCo in Paris, which decides the package name. | Waits for the ExCo. | James, 18 Nov 2026 |
 | 3 | Elastic demand is checked with a two-run case: demo12 reference as the base run (its prices), and demo12 with an additional constraint as the variant run with elastic demand. | Yes. | James, 18 Nov 2026 |
 
+### #166 README: a quick start for new users; log the 18 Nov TIAM outcomes (open)
+
+Asked for by James on 18 Nov 2026.
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | The quick start runs from a clone, in the `test` environment (where HiGHS is a dependency). | Recommended: yes. Built in. | open |
+| 2 | Julia 1.11 or later for the quick start; a one-line workaround for 1.10 (`[sources]` in `test/Project.toml`). | Recommended: yes. Built in. | open |
+| 3 | macOS described as "should work, not tested yet". | Recommended: yes. Built in. | open |
+| 4 | The two TIAM outcomes of 18 Nov 2026 logged under Decisions in the chat. | Nothing to answer. | logged |
+
 ### #147 M1.3 (46): nested user constraints (equserco.mod L75-76, L98-99; pp_qack.mod L53); crafted case demo12_ucn (open)
 
 Logged here because #147 does not touch this file.
