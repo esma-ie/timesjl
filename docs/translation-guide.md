@@ -1010,6 +1010,11 @@ those checks, their figures and their crafted cases are not published
   variants from the DD files (12 IN rows, 8 binding; objective
   23,972,884.01 with CPLEX and HiGHS). %IREAUXBAL% set by the run itself
   (cal_ire.mod L30) stays refused: it is the run's own GAMS text (#149 d1).
+- 17 Nov 2026: M1.3 change 49: inter-period storage under OBJ LIN
+  (eqstgips.lin L12-66, eqstgaux.lin L25-31), refused since change 19.
+  New crafted case demo12_ipslin (demo12_ips under OBJ LIN): layers 1 to
+  3 PASS in both variants from the DD files (objective 24,227,978.35 with
+  CPLEX and HiGHS); demo12_lin unchanged.
 - 17 Nov 2026: James's answers (docs/decisions.md): the M1.3 gate covers
   the linear features only (ETL, the DSC lumpy investments and block
   retirements, the discrete unit commitment and TIMES-Micro after it);

@@ -5,7 +5,7 @@
 # GAMS: eqstgaux.mod L14-42, v4.9.7, included from eqmain.mod L170 as
 # `$BATINCLUDE eqstgaux.%OBJ%`, with %OBJ% = mod unless the run sets OBJ LIN
 # (eqmain.mod L33; eqstgaux.lin differs from eqstgaux.mod only in the
-# inter-period storage terms, refused); declared eqdeclr.mod L90
+# inter-period storage terms, L25-31: M1.3 change 49); declared eqdeclr.mod L90
 # (R,ALLYEAR,ALLYEAR,P,C,S), =E=.
 #
 #   EQ_STGAUX(RTP_VINTYR(R,V,T,P),C,RTS(S))$((RPCS_VAR(R,P,C,S)*(NOT RPC_STG(R,P,C)+RPC_EMIS(R,P,C)))$RP_STG(R,P))..
@@ -38,6 +38,16 @@
 # STK process the whole bracket is scaled up to the level in the middle of
 # the period. Y_EOH is a set of its own (setglobs.gms L146-147), as in
 # eqstgips.jl. `IPS(IO)`: IN charges, OUT discharges (IPS = {IN, N}).
+#
+# Under OBJ LIN (eqstgaux.lin L25-31, M1.3 change 49) the level is the one at
+# the milestone year: half a year of the IPS flows is subtracted, discounted
+# for half a year's losses, and a STK process's bracket is scaled by
+# (1-STG_LOSS)**(-0.5):
+#
+#   - SUM(TOP(PRC_STGIPS(R,P,COM),IO), 0.5 *
+#       (VAR_SIN(R,V,T,P,COM,SL)$IPS(IO) - VAR_SOUT(R,V,T,P,COM,SL)$(NOT IPS(IO))) / PRC_ACTFLO(R,V,P,COM) *
+#       ((1-STG_LOSS(R,V,P,SL))**0.5))
+#   ) * (1+((1-STG_LOSS(R,V,P,SL))**(-0.5)-1)$PRC_MAP(R,'STK',P))
 
 """
     eq_stgaux!(tm::TimesModel) -> Int
@@ -45,12 +55,13 @@
 Generate every EQ_STGAUX row (eqmain.mod L170) from `tm.data`. Returns the
 number of rows generated.
 
-GAMS: eqstgaux.mod L14-42, v4.9.7.
+GAMS: eqstgaux.mod L14-42; eqstgaux.lin L25-31 under OBJ LIN; v4.9.7.
 """
 function eq_stgaux!(tm::TimesModel)
     x = stg_context(tm)
     isempty(x.rp_stg) && return 0
-    one = GNum(1.0)
+    one, half = GNum(1.0), GNum(0.5)
+    lin = uppercase(gswitch(tm, "OBJ", "")) == "LIN"             # eqmain.mod L170: eqstgaux.%OBJ%
     rpc_emis = gset(tm, "RPC_EMIS")
     com_gmap = gset(tm, "COM_GMAP")
     g_yrfr = gparam(tm, "G_YRFR")
@@ -79,17 +90,20 @@ function eq_stgaux!(tm::TimesModel)
             # Storage level, L22-24, less the IPS flows L25-30, scaled by L32 for STK.
             af = gv(x.prc_actflo, (r, v, p, c))
             if !iszero(af)
-                f = stk ? ips_mid_factor(ipx, x, r, v, t, p) : one                          # L32
+                base = one - gv(x.stg_loss, (r, v, p, "ANNUAL"))
+                f = !stk ? one : lin ? one + (gpow(base, -half) - one) :                 # .lin L31
+                    ips_mid_factor(ipx, x, r, v, t, p)                                      # L32
                 for (_, _, ts) in get(ts_of_rp, (r, p), NTuple{3,String}[])
                     (r, ts, s) in ts_map || continue
                     addterm!(rhs, af * (one / gv(rs_stgprd, (r, ts)) * gv(g_yrfr, (r, s))) * f, tm, "VAR_ACT", r, v, t, p, ts)
                 end
                 ips = get(x.stgips_of_rp, (r, p), NTuple{3,String}[])
                 if !isempty(ips)
-                    w = ips_late_weight(ipx, x, r, v, t, p)                                  # L28-30
+                    w = lin ? GZERO : ips_late_weight(ipx, x, r, v, t, p)                    # L28-30
                     for (_, _, com) in ips, io in ("IN", "OUT")
                         (r, p, com, io) in x.top || continue
-                        k = af * (w / gv(x.prc_actflo, (r, v, p, com))) * f
+                        k = lin ? af * (half / gv(x.prc_actflo, (r, v, p, com)) * gpow(base, half)) * f :   # .lin L26-29
+                                  af * (w / gv(x.prc_actflo, (r, v, p, com))) * f
                         io == "IN" ? addterm!(rhs, -k, tm, "VAR_SIN", r, v, t, p, com, "ANNUAL") :
                                      addterm!(rhs, k, tm, "VAR_SOUT", r, v, t, p, com, "ANNUAL")
                     end
