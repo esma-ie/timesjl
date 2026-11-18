@@ -604,3 +604,17 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 3274
 cols = 4526
 nonzeros = 18486
+
+# Crafted case TIMES_Demo-demo12_ucbet (reference/crafted.toml: demo12 + ucbet.dd), 17 Nov 2026 (GAMS
+# 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): the VDA betting
+# constraints EQG_UCMAX and EQG_UCSUMAX (ucbet.vda L11-125, UC_ACTBET and UC_FLOBET), the whole model.
+# Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_ucbet"
+model    = "TIMES_Demo-demo12_ucbet"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3246
+cols = 4491
+nonzeros = 18802

@@ -1017,3 +1017,10 @@ those checks, their figures and their crafted cases are not published
   equserco.mod L75-76, L98-99) in both directions of a dynamic
   constraint. New crafted case demo12_ucn. Layer 1 checked in the cloud
   with the PyPI GAMS; layers 2-3 need the workstation, before merge.
+- 17 Nov 2026: M1.3 change 47: the VDA betting constraints EQG_UCMAX and
+  EQG_UCSUMAX (ucbet.vda L11-125), refused since M1.1, translated on the
+  workstation (James, 17 Nov 2026, q6: all work back on the workstation).
+  The preparation L11-40 runs at the end of `eqmain_prep!`; the equations
+  follow EQ(l)_ASHAR. UC_ACTBET data is no longer refused at prep_ext.vda
+  L35. New crafted case demo12_ucbet: layers 1 to 3 PASS in both variants
+  from the DD files (objective 24,004,875.70 with CPLEX and HiGHS).
