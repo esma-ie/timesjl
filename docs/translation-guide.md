@@ -1103,3 +1103,15 @@ those checks, their figures and their crafted cases are not published
   PRC_RCAP outside RP kept; eqobjinv.mod L219-229, an EPS COEF_ILED gives
   interest during construction). New crafted case demo12_iled: layers 1
   to 3 PASS in both variants from the DD files (objective 23,961,179.22).
+- 18 Nov 2026: `run_model` (James: TIMES.jl usable without cloning the
+  repository). The run from a run file and DD files moves from
+  `scripts/run_dd.jl` into the package (`src/run.jl`), with HiGHS as a
+  package dependency and its default solver; `scripts/run_dd.jl` calls it.
+  The order of the translated steps is now one list, `TIMES.PRESOLVE_STEPS`
+  (maindrv.mod L55-113): `scripts/m13_probe.jl` (`M13_STEPS`) and
+  `scripts/m13_gate.jl` (`M12_COEF`) take their steps from it, and keep
+  what each step is compared on (`STEP_SYMBOLS`). A newly translated step
+  goes into `PRESOLVE_STEPS` in GAMS's order, with its entry in
+  `STEP_SYMBOLS`. No generated LP changes (#35, #54): the steps, their
+  order and the functions are those of before, checked one by one, and the
+  M1.3 gate passes on demo12 as before.

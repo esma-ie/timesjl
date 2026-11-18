@@ -22,6 +22,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "M1.4: TIMES source download; demo12 from its DD files" begin
         include("unit/test_ddsource.jl")
     end
+    @testset "run_model: demo12 from its DD files to the optimum (README Quick start)" begin
+        include("unit/test_run_model.jl")
+    end
     @testset "Reference: layer 1 comparison" begin
         include("unit/test_compare.jl")
     end

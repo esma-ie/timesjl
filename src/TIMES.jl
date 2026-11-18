@@ -17,6 +17,7 @@ const TIMES_GAMS_VERSION = v"4.9.7"
 const TIMES_GAMS_COMMIT = "d9a6a25"
 
 import JuMP
+import HiGHS   # the default solver of run_model (src/run.jl)
 import Arrow, JSON
 using LazyArtifacts   # lazy artifacts need the module itself loaded (Artifacts.toml, src/dd/sources.jl)
 
@@ -117,5 +118,8 @@ include("model/generate.jl")
 include("model/solve_stp.jl")     # M1.5: the stepped (myopic) solve, solve.stp
 include("model/bnd_stp.jl")       # M1.5: the bounds of a stepped run and the model of one step
 include("model/solution.jl")      # #97: the solution as a TIMES.jl dump (M1.6, started early)
+include("run.jl")                 # run_model: a model from its run and DD files, without GAMS (18 Nov 2026)
+
+export run_model
 
 end # module TIMES
