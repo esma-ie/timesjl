@@ -346,6 +346,7 @@ function eqmain_prep!(tm::TimesModel)
     # ucbet.vda L11-40 (equ_ext.vda L99, when UC_FLOBET is DEFINED): the betting constraints' sets (M1.3 change 47)
     ucbet_prep!(tm)
     obj_lin(tm) && rtp_eqstk!(tm)
+    resloadc_equa!(tm)                   # equ_ext.vda L102: resloadc.vda EQUA L67 (M1.3 change 55)
     return tm
 end
 

@@ -217,6 +217,20 @@ function gdata!(g::GamsCompile, s::GSym, recs::Vector{DDRecord}, file, line)
             end
             continue
         end
+        if any(l -> startswith(l, SETREF_TAG), r.labels)
+            # (SET.name) in a key: one record for each member of that 1-dimensional set, in label order
+            i = findfirst(l -> startswith(l, SETREF_TAG), r.labels)
+            name = r.labels[i][length(SETREF_TAG)+1:end]
+            src = gsym(g, name)
+            src === nothing && compile_error(file, r.line, "SET.$name: unknown set")
+            for m in sort!(collect(gmembers1(src)); by=l -> labelpos(g.labels, l))
+                labs = copy(r.labels); labs[i] = m
+                any(l -> startswith(l, SETREF_TAG), labs) && compile_error(file, r.line, "two SET.name in one record key")
+                key = [intern!(g.labels, l) for l in labs]
+                gput!(g, s, key, r.text, (r.value, r.special), doms, seen, file, r.line)
+            end
+            continue
+        end
         key = [intern!(g.labels, l) for l in r.labels]
         gput!(g, s, key, r.text, (r.value, r.special), doms, seen, file, r.line)
     end
@@ -962,17 +976,25 @@ end
 """
     gdx_uels(g) -> Vector{String}
 
-The label list of the input dump: GDX lists a label where `execute_unload` first writes it, going
-through the symbols in declaration order and each symbol's records in GAMS order. That is not GAMS's
-own label order (initsys.mod: GAMS has EOH before 0, the dump 0 before EOH; docs/discrepancies.md).
+The label list of the input dump, as the harness builds it (`gams.transfer`'s `Container.getUELs()`,
+reference/python/gdx2arrow.py): going through the symbols in declaration order and, in each symbol,
+dimension by dimension, the labels its records hold in that dimension, in GAMS's own label order. That
+is not GAMS's own label order overall (initsys.mod: GAMS has EOH before 0, the dump 0 before EOH), and
+by dimension it differs from going record by record when a later dimension's labels come in another
+order than the records (GR_GENMAP(R,P,ITEM) in resloadc.vda's crafted case; docs/discrepancies.md G55).
 """
 function gdx_uels(g::GamsCompile)
     seen = Set{String}()
     out = String[]
     for s in sort!([s for s in values(g.syms) if s.kind in (:set, :parameter, :scalar)]; by=x -> x.order)
         ks, _ = grecords(g, s)
-        for k in ks, l in k
-            l in seen || (push!(seen, l); push!(out, l))
+        isempty(ks) && continue
+        for d in 1:length(first(ks))
+            labs = unique(k[d] for k in ks)
+            sort!(labs; by=l -> labelpos(g.labels, l))
+            for l in labs
+                l in seen || (push!(seen, l); push!(out, l))
+            end
         end
     end
     out

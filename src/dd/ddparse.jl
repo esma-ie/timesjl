@@ -238,7 +238,14 @@ function ddsegment!(c::DDCursor)::Vector{Vector{String}}
         alts = Vector{String}[]
         while true
             ddskip!(c)
-            append!(alts, ddkeys!(c))
+            if ddsetref(c)
+                # SET.name inside a label list, every member of that set (resloadc.vda L16,
+                # `GR_TP(R,BD) / (SET.R).UP INF /`): a placeholder label that gdata! expands
+                c.i += 4
+                push!(alts, [string(SETREF_TAG, ddident!(c))])
+            else
+                append!(alts, ddkeys!(c))
+            end
             ddskip!(c)
             ch = ddpeek(c)
             c.i += 1
@@ -297,6 +304,9 @@ function ddscalar(c::DDCursor)
     end
     a > length(c.b) || c.b[a] in (UInt8('\n'), UInt8(','), UInt8('/'))
 end
+
+# the placeholder label of a `SET.name` inside a label list of a record key (expanded by gdata!)
+const SETREF_TAG = " SET."
 
 # `SET.` followed by a name, at the cursor (any case)
 ddsetref(c::DDCursor) = c.i + 4 <= length(c.b) && lowercase(String(c.b[c.i:c.i+3])) == "set." && ddidentchar(c.b[c.i+4])

@@ -1,0 +1,91 @@
+* TIMES.jl crafted case demo12_rldc (reference/crafted.toml, 17 Nov 2026): residual load curve
+* constraints (resloadc.vda: the preparation from prep_ext.vda L38, COEF from ppm_ext.vda L12, the
+* equations EQ_RL_LOAD, EQ_RL_NDIS, EQ_RL_STCAP, EQ_RL_PKCAP and EQ_RL_THMIN from equ_ext.vda L102;
+* M1.3 change 55, docs/m13-plan.md), added to TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo @ 962db86,
+* CC BY 4.0), in REG1:
+* - GR_VARGEN: the variance of the residual load (RL-DISP), of wind (annual and winter, so the
+*   levelling of L47-49 acts) and of solar, and RL-THMIN; RL-TP starts the constraints in 2010.
+* - GR_GENMAP: wind, solar and run-of-river hydro by plant, and the oil plant as dispatchable
+*   (its production is the dispatchable term of EQ_RL_LOAD).
+* - GR_THMIN: the thermal minimum of the coal plant (0.4: a LO share), of the gas plant (1.5: an
+*   UP share 1/1.5) and of the new gas plant (-0.2: a fixed level).
+* - RLDBAT, a daynite battery of electricity, for the storage terms.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET PRC
+/
+RLDBAT 'Crafted: daynite battery of electricity (TIMES.jl demo12_rldc)'
+/
+
+SET COM_GRP
+/
+RLDBAT_NRGO
+/
+
+SET COM_GMAP
+/
+REG1.RLDBAT_NRGO.ELC
+/
+
+SET PRC_MAP
+/
+REG1.STG.RLDBAT
+/
+
+SET PRC_TSL
+/
+REG1.RLDBAT.DAYNITE
+/
+
+SET PRC_ACTUNT
+/
+REG1.RLDBAT.RLDBAT_NRGO.PJ
+/
+
+SET TOP
+/
+REG1.RLDBAT.ELC.IN
+REG1.RLDBAT.ELC.OUT
+/
+
+PARAMETER
+STG_EFF ' '/
+REG1.2005.RLDBAT 0.9
+/
+
+PARAMETER
+NCAP_COST ' '/
+REG1.2005.RLDBAT.MEURO05 2
+/
+
+PARAMETER
+NCAP_TLIFE ' '/
+REG1.2005.RLDBAT 15
+/
+
+PARAMETER
+GR_VARGEN ' '/
+REG1.ANNUAL.RL-DISP.UP 0.05
+REG1.ANNUAL.RL-WIND.UP 0.3
+REG1.ANNUAL.RL-WIND.LO 0.2
+REG1.W.RL-WIND.UP 0.4
+REG1.ANNUAL.RL-SOL.LO 0.1
+REG1.ANNUAL.RL-THMIN.LO 1
+REG1.ANNUAL.RL-TP.LO 2010
+/
+
+PARAMETER
+GR_GENMAP ' '/
+REG1.ELCREWIN00.RL-WIND 1
+REG1.ELCRESOL00.RL-SOL 1
+REG1.ELCREHYD00.RL-ROR 1
+REG1.ELCTEOIL00.RL-DISP 1
+/
+
+PARAMETER
+GR_THMIN ' '/
+REG1.2005.ELCTECOA00 0.4
+REG1.2005.ELCTEGAS00 1.5
+REG1.2005.ELCTNGAS01 -0.2
+/

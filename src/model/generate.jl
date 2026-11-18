@@ -68,7 +68,6 @@ function untranslated_families(tm::TimesModel)
             # the dispatching equations of eqactups.vda L39-117 (eq_actups!) and the unit commitment by
             # start-up type of eqlducs.vda L67-124 (eq_lducs!) are translated; so is EQL_STGCCL (L121-125, eql_stgccl!)
             ("eq_sdind_1/eq_sdind_0", "eqlducs.vda L158-169", "DP_UNS", 7, :p),
-            ("EQ_RL_*", "resloadc.vda (mod_ext.vda L48-49)", "GR_VARGEN", 4, :p),
             ("EQ_MSNCAP*", "mod_ext.vda L51-52", "RTC_MS", 3, :s),
             ("EQ_GG_*", "mod_ext.vda L54-55", "GG_MM", 2, :s),
             ("EQ_DSCNCAP/EQ_DSCONE", "equ_ext.dsc L21-28", "PRC_DSCNCAP", 2, :s))
@@ -146,6 +145,7 @@ function generate!(tm::TimesModel)
     n += eq_ashar!(tm)               # VDA: equ_ext.vda L94-96
     n += eq_ucbet!(tm)               # VDA: equ_ext.vda L99 (ucbet.vda L46-125, M1.3 change 47)
     n += eq_objbal!(tm)              # VDA: equ_ext.vda L100, powerflo.vda OBJBAL (COM_CSTBAL)
+    n += eq_rl!(tm)                  # VDA: equ_ext.vda L102, resloadc.vda EQUA (GR_VARGEN)
     n += eq_ucrtp!(tm)               # VDA: equ_ext.vda L105-106
     n += eq_gr_powflo!(tm)           # VDA: equ_ext.vda L101 (powerflo.vda POWFLO, M1.3 change 27b)
     n += eq_gr_genall!(tm)           #   powerflo.vda L290-313 (M1.3 change 27b-2)
