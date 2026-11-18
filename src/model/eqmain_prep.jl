@@ -330,6 +330,9 @@ function eqmain_prep!(tm::TimesModel)
         gput!(tm, "R_UC", Set{NTuple{2,String}}()); gput!(tm, "R_UCT", Set{NTuple{3,String}}())
     end
 
+    # eqmain.mod L262: $IF DEFINED DAM_COST $BATINCLUDE eqdamage.mod (M1.3 change 56)
+    dam_prep!(tm)
+
     # equ_ext.vda L77, L79
     pace = Set((k[1], k[2]) for k in S("RPG_PACE", 3))
     rp_pl = filter(k -> !((k[1], k[2]) in pace), gmembers(tm, "RP_PL", 3))

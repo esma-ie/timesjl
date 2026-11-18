@@ -113,7 +113,6 @@ function bounds_unported(tm::TimesModel)
     notempty_par("NORTS", 3) && throw(UnportedError("dynslite.vda BOUNDS (dynamic timeslices)"))
     notempty_set("PREMILE", 1) && throw(UnportedError("bnd_ire.vda (VDA fixed trade before PREMILE)"))
     notempty_par("NCAP_SEMI", 3) && throw(UnportedError("mod_vars.dsc L18-19 (semi-continuous capacity)"))
-    notempty_par("DAM_COST", 4) && throw(UnportedError("eqdamage.mod L141-156 (damage step bounds)"))
     notempty_par("RD_NLP", 2) && throw(UnportedError("pp_micro.mod L88-91 (VAR_DEM bounds)"))
     notempty_par("REG_FIXT", 1) && throw(UnportedError("%R_T% = RT_PP(R,T) (REG_FIXT, maindrv.mod L41)"))
     return nothing
@@ -715,6 +714,7 @@ function bndmain(tm::TimesModel)
         ret_bounds!(bt, tm)       # mod_vars.mod L94: prepret.dsc DECL (early retirement), before bndmain
         bnd_powerflo!(bt, tm)     # mod_vars.mod L95: powerflo.vda DECL L223 (reference phase angles)
         bnd_rld!(bt, tm)          # equ_ext.vda L102: resloadc.vda L69 (VAR_RLD at RL-DISP is free)
+        bnd_dam!(bt, tm)          # eqmain.mod L262: eqdamage.mod L138-142 (damage steps)
         bnd_act!(bt, tm)          # L26
         bnd_flo!(bt, tm)          # L31
         bnd_stg!(bt, tm, "VAR_SIN", "IN", GNum(0.0))       # L36

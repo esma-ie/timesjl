@@ -63,7 +63,6 @@ function untranslated_families(tm::TimesModel)
     # Families whose domain needs a parameter or set that is empty in a model without them.
     for (fam, gams, sym, N, kind) in (
             ("EQ_OBJELS / EQL_COMCES", "eqobjels.mod, mod_equa.mod L30/L80", "RCJ", 4, :s),
-            ("EQ_DAMAGE / EQ_OBJDAM", "eqdamage.mod, mod_equa.mod L209-210", "DAM_COST", 4, :p),
             # VDA (always loaded, initmty.mod L458) and DSC extensions
             # the dispatching equations of eqactups.vda L39-117 (eq_actups!) and the unit commitment by
             # start-up type of eqlducs.vda L67-124 (eq_lducs!) are translated; so is EQL_STGCCL (L121-125, eql_stgccl!)
@@ -142,6 +141,7 @@ function generate!(tm::TimesModel)
     n += eql_stgccl!(tm)             #   eqactups.vda L121-125
     n += eq_slsift!(tm)              #   eqactups.vda L131
     n += eq_lducs!(tm)               # VDA: equ_ext.vda L91 (eqlducs.vda L67-124)
+    n += eq_damage!(tm)              # eqmain.mod L262: eqdamage.mod (DAM_COST)
     n += eq_ashar!(tm)               # VDA: equ_ext.vda L94-96
     n += eq_ucbet!(tm)               # VDA: equ_ext.vda L99 (ucbet.vda L46-125, M1.3 change 47)
     n += eq_objbal!(tm)              # VDA: equ_ext.vda L100, powerflo.vda OBJBAL (COM_CSTBAL)

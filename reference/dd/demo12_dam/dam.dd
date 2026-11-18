@@ -1,0 +1,45 @@
+* TIMES.jl crafted case demo12_dam (reference/crafted.toml, 17 Nov 2026): damage costs in their
+* linear form (eqdamage.mod with %DAMAGE% not set: the preparation L11-56, EQ_DAMAGE, EQ_OBJDAM and
+* the bounds of VAR_DAM, L135-142; M1.3 change 56, docs/m13-plan.md), added to TIMES_Demo demo12
+* (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0):
+* - REG1 TOTCO2: a damage cost from 2010 on the net emissions, with a base quantity and a step
+*   size share, 3 steps below and 4 above the base, elasticities 1 below and 1.5 above.
+* - REG2 TOTCO2: a damage cost on the production of emissions (DAM_ELAST 'N' set), a shift by
+*   DAM_ELAST 'N' of the cost curve, 2 steps each side.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER
+DAM_COST ' '/
+REG1.2010.TOTCO2.MEURO05 0.002
+REG2.2010.TOTCO2.MEURO05 0.003
+/
+
+PARAMETER
+DAM_BQTY ' '/
+REG1.TOTCO2 60000
+REG2.TOTCO2 40000
+/
+
+PARAMETER
+DAM_ELAST ' '/
+REG1.TOTCO2.LO 1
+REG1.TOTCO2.UP 1.5
+REG2.TOTCO2.LO 1
+REG2.TOTCO2.UP 1
+REG2.TOTCO2.N 1
+/
+
+PARAMETER
+DAM_STEP ' '/
+REG1.TOTCO2.LO 3
+REG1.TOTCO2.UP 4
+REG2.TOTCO2.LO 2
+REG2.TOTCO2.UP 2
+/
+
+PARAMETER
+DAM_VOC ' '/
+REG1.TOTCO2.N 0.1
+REG2.TOTCO2.N 0.2
+/
