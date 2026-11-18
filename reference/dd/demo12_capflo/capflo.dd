@@ -1,0 +1,40 @@
+* TIMES.jl crafted case demo12_capflo (reference/crafted.toml, 17 Nov 2026): commodity flows tied
+* to new capacity and to decommissioning (NCAP_ICOM, NCAP_OCOM, NCAP_CLED: coef_nio.mod L13-67 and
+* the second term of cal_cap.mod in EQ(l)_COMBAL and EQ_PEAK; their costs, cal_caps.mod in
+* EQ_OBJVAR; M1.3 change 53, docs/m13-plan.md), added to TIMES_Demo demo12
+* (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0).
+* - ELCTNGAS01 (the new gas plant, vintaged) consumes diesel when built, from two years before
+*   it starts (NCAP_CLED), with a flow cost on it, and electricity in REG1 (a peak commodity), and
+*   releases ELCCO2 when decommissioned.
+* - A past vintage 1995 of the coal plant ELCTECOA00 in REG1 releases ELCCO2 when decommissioned.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER
+NCAP_ICOM ' '/
+REG1.2005.ELCTNGAS01.DSL 2
+REG1.2005.ELCTNGAS01.ELC 0.5
+REG2.2005.ELCTNGAS01.DSL 1.5
+/
+
+PARAMETER
+NCAP_CLED ' '/
+REG1.2005.ELCTNGAS01.DSL 2
+/
+
+PARAMETER
+NCAP_PASTI ' '/
+REG1.1995.ELCTECOA00 3
+/
+
+PARAMETER
+NCAP_OCOM ' '/
+REG1.2005.ELCTNGAS01.ELCCO2 0.3
+REG2.2005.ELCTNGAS01.ELCCO2 0.2
+REG1.1995.ELCTECOA00.ELCCO2 0.25
+/
+
+PARAMETER
+FLO_COST ' '/
+REG1.2005.ELCTNGAS01.DSL.ANNUAL.MEURO05 3
+/

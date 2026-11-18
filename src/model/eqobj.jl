@@ -79,8 +79,8 @@ function objective_unported(tm::TimesModel)
     yes("STAGES") && throw(UnportedError("stochastic objective (STAGES)"))
     isempty(gparam_opt(d, "DAM_COST", 4)) || throw(UnportedError("damage costs (eqdamage.mod via eqmain.mod L262)"))
     isempty(gset_opt(d, "RCJ", 4)) || throw(UnportedError("elastic demand costs (eqobjels.mod, EQ_OBJ L89-90)"))
-    (isempty(gset_opt(d, "RPC_CAPFLO", 4)) && isempty(gparam_opt(d, "NCAP_COM", 5))) ||
-        throw(UnportedError("capacity-related flow costs in EQ_OBJVAR (cal_caps.mod, eqobjvar.mod L98-100)"))
+    isempty(gparam_opt(d, "NCAP_COM", 5)) ||
+        throw(UnportedError("capacity-related flow costs over the lifetime in EQ_OBJVAR (cal_caps.mod L22-26, NCAP_COM)"))
     return nothing
 end
 
@@ -463,6 +463,12 @@ function eq_objvar!(tm::TimesModel)
     # blending costs (L105-107)
     ble_opr_of_r = indexby(gset_opt(tm.data, "BLE_OPR", 3), (1,))      # (r,) -> BLE_OPR(r,ble,opr)
     obj_blndv = gparam_opt(tm.data, "OBJ_BLNDV", 5)
+    # capacity-related flow costs (L97-100)
+    capflo = gset_opt(tm.data, "RPC_CAPFLO", 4).keys
+    vnt_of_v = indexby(gset(tm, "VNT"), (1,))                            # v -> VNT(v,t)
+    coef_icom, coef_ocom = gparam_opt(tm.data, "COEF_ICOM", 5), gparam_opt(tm.data, "COEF_OCOM", 5)
+    rs_fr_obj, g_yrfr_obj = gparam(tm, "RS_FR"), gparam(tm, "G_YRFR")
+    ncap_pasti_obj, milestonyr_obj = gparam(tm, "NCAP_PASTI"), gset(tm, "MILESTONYR")
     ble, opr = gset_opt(tm.data, "BLE", 1), gset_opt(tm.data, "OPR", 1)
 
     weighted(r, t, cur, f) = (w = GZERO; for (y, wy) in tpulse(tm, r, t, cur); w = w + wy * f(y); end; w)
@@ -575,6 +581,32 @@ function eq_objvar!(tm::TimesModel)
                     addterm!(lhs, ksin, tm, "VAR_SIN", r, v, t, p, c, s)
                     addterm!(lhs, ksout, tm, "VAR_SOUT", r, v, t, p, c, s)
                 end
+            end
+        end
+        # Costs of the flows tied to investment and decommissioning (L97-100, cal_caps.mod L18-21, M1.3
+        # change 53), with %1 = T, %3 = TS and S = ANNUAL:
+        #   SUM((VNT(V,T),RPC_CAPFLO(R,V,P,C)), ((COEF_ICOM(R,V,T,P,C)+COEF_OCOM(R,V,T,P,C)) * G_YRFR(R,S) *
+        #     (VAR_NCAP(R,V,P)$MILESTONYR(V) + NCAP_PASTI(R,V,P)) *
+        #     SUM(RPCS_VAR(R,P,C,TS), RS_FR(R,TS,S) * SUM(TS_ANN(TS,SL),SUM(%TPULSE%*(OBJ_FCOST+OBJ_FDELV+OBJ_FTAX)(R,Y_EOH,P,C,SL,CUR)))))
+        #   $(COEF_ICOM(R,V,T,P,C)+COEF_OCOM(R,V,T,P,C))
+        # NCAP_PASTI is not conditioned on PASTYEAR here, unlike cal_cap.mod.
+        for (rr, v, p, c) in capflo
+            rr == r || continue
+            for (_, t) in get(vnt_of_v, (v,), NTuple{2,String}[])
+                k0 = gv(coef_icom, (r, v, t, p, c)) + gv(coef_ocom, (r, v, t, p, c))
+                iszero(k0) && continue
+                cost = GZERO
+                for (_, _, _, ts) in get(stg_var_of_rpc, (r, p, c), NO4)
+                    w = GZERO
+                    for (_, sl) in get(ts_ann_of_s, (ts,), NTuple{2,String}[])
+                        w = w + weighted(r, t, cur, y -> obmac(ob_fcos, r, y, p, c, sl, cur) + obmac(ob_fdel, r, y, p, c, sl, cur) +
+                                                         obmac(ob_ftax, r, y, p, c, sl, cur))
+                    end
+                    cost = cost + gv(rs_fr_obj, (r, ts, "ANNUAL")) * w
+                end
+                k = k0 * gv(g_yrfr_obj, (r, "ANNUAL")) * cost
+                (v,) in milestonyr_obj && addterm!(lhs, k, tm, "VAR_NCAP", r, v, p)
+                addconst!(lhs, k * gv(ncap_pasti_obj, (r, v, p)))
             end
         end
         # Commodity blending costs (L105-107).

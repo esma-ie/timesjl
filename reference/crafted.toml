@@ -875,3 +875,17 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_stsflx/demo12_stsflx.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_stsflx"]
+
+# TIMES_Demo demo12 + demo12_capflo/capflo.dd (17 Nov 2026): commodity flows tied to new capacity and
+# to decommissioning (NCAP_ICOM, NCAP_OCOM, NCAP_CLED; coef_nio.mod, cal_cap.mod, cal_caps.mod; M1.3 change 53).
+[[model]]
+name = "TIMES_Demo-demo12_capflo"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_capflo/demo12_capflo.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_capflo"]

@@ -2,21 +2,21 @@
 #
 # GAMS (v4.9.7): coef_nio.mod L13-71.
 #
-# Capacity-related commodity flows (NCAP_ICOM, NCAP_OCOM, RCAP_OCAP, the
-# RPC_CAPFLO control set, NCAP_COM, NCAP_CLED) are not translated in Phase 1
-# yet: no test model has any (M1.1 refuses their equation terms, cal_cap.mod,
-# likewise). With all of them empty the loops (L17-33, L38-56) and the
-# assignments L15, L35, L58, L64-67 and L70-71 change nothing, and the file
-# reduces to its two work-set assignments, L16 and L36, and the CLEAR of CNT
-# (L59); other data raise UnportedError.
+# M1.3 change 53 translates the flows tied to investment (NCAP_ICOM, with its
+# lead NCAP_CLED) and to decommissioning (NCAP_OCOM): the loops L17-33 and
+# L37-56 that spread them over the periods into COEF_ICOM and COEF_OCOM, the
+# filter of RPC_CAPFLO (L15), the swap of negative coefficients (L64-67) and
+# the clean-up of NCAP_CLED (L71). Still refused, with their own change: the
+# flows tied to early retirements (RCAP_OCAP: L35, L58) and to the capacity
+# in place (NCAP_COM; NCAP_CLAG from NCAP_CLED, L70), with coef_shp.mod
+# L39-42 and the first term of cal_cap.mod.
 
 "The coef_nio.mod paths this model would take that are not translated; empty when coef_nio! can run."
 function coef_nio_unported(tm)
     out = String[]
-    for (s, n, kind) in (("RPC_CAPFLO", 4, :set), ("NCAP_ICOM", 4, :param), ("NCAP_OCOM", 4, :param),
-                         ("RCAP_OCAP", 4, :param), ("NCAP_COM", 5, :param), ("NCAP_CLED", 4, :param))
-        empty = kind == :set ? isempty(gset_opt(tm.data, s, n)) : isempty(gparam_opt(tm.data, s, n))
-        empty || push!(out, "coef_nio.mod L15-71 (capacity-related commodity flows: $s has data)")
+    for (s, n, lines) in (("RCAP_OCAP", 4, "L35, L58"), ("NCAP_COM", 5, "L70"))
+        isempty(gparam_opt(tm.data, s, n)) ||
+            push!(out, "coef_nio.mod $lines (capacity-related commodity flows: $s has data)")
     end
     return out
 end
@@ -24,35 +24,143 @@ end
 """
     coef_nio!(tm) -> tm
 
-coef_nio.mod on the GAMS state in `tm`, for a model without capacity-related
-commodity flows (see the file header): FIL(V) = YEARVAL(V) GE MIYR_V1 (L16),
-FIL2(T) = E(T)+(1+MAX(1,D(T+1))-B(T)-E(T))/2 (L36; T+1 is the next
-milestone year, none after the last, whose D is then 0) and CNT cleared
-(L59).
+coef_nio.mod on the GAMS state in `tm`:
+
+    RPC_CAPFLO(R,V,P,C)\$(NOT RTP(R,V,P)) = 0;                                        (L15)
+    FIL(V) = YEARVAL(V) GE MIYR_V1;                                                   (L16)
+    LOOP(RPC_CAPFLO(R,FIL(V),P,C)\$NCAP_ICOM(R,V,P,C), DFUNC = COEF_RPTI(R,V,P);       (L18-33)
+      MY_F = NCAP_ILED(R,V,P); F = COEF_ILED(R,V,P); CNT = ABS(NCAP_CLED(R,V,P,C));
+      Z = B(V)+MAX(1\$(CNT\$MY_F=0),MY_F); F = Z-MAX(1,MIN(CNT,F));
+      IF(DFUNC > 1, COEF_ICOM(R,T(V),T,P,C) = (DFUNC * NCAP_ICOM(R,V,P,C) / FPD(T))
+      ELSE LOOP(T\$((E(T) >= F) * (B(T) < Z)),
+        COEF_ICOM(R,V,T,P,C) = MAX(0,((MIN(Z-1,E(T))-MAX(F,B(T)) + 1) / FPD(T))) * NCAP_ICOM(R,V,P,C) / (Z-F))));
+    FIL2(T) = E(T)+(1+MAX(1,D(T+1))-B(T)-E(T))/2;                                     (L36)
+    LOOP(RPC_CAPFLO(R,V,P,C)\$NCAP_OCOM(R,V,P,C),                                      (L37-56)
+      F = NCAP_ILED(R,V,P)+NCAP_DLAG(R,V,P); MY_F = NCAP_TLIFE(R,V,P); DFUNC = COEF_RPTI(R,V,P);
+      Z = B(V)+F+DFUNC*MY_F;
+      Z = MAX(1,NCAP_DLIFE(R,V,P),SUM(VNT(V,T)\$((Z>=B(T))*(E(T)+1>Z)),(E(T)-Z+1)/(1-(Z-(B(T)+E(T))/2)/FIL2(T))));
+      IF(DFUNC > 1, FOR(CNT = 1 TO CEIL(DFUNC), COEF_OCOM(R,VNT(V,T),P,C) = COEF_OCOM(R,V,T,P,C) +
+          MIN(1,DFUNC-CNT+1) * MAX(0,(MIN(B(V)+F+(CNT*MY_F)+Z,E(T)+1) - MAX(B(V)+F+(CNT*MY_F),B(T)))/FPD(T)) * (NCAP_OCOM(R,V,P,C)/Z))
+      ELSE MY_F = B(V)+F+MY_F;
+        COEF_OCOM(R,V,T,P,C)\$(E(T)+1 > MY_F) = MAX(0,(MIN(MY_F+Z,E(T)+1) - MAX(MY_F,B(T)))/FPD(T)) * (NCAP_OCOM(R,V,P,C)/Z)));
+    OPTION CLEAR=CNT;                                                                 (L59)
+    [L64-67: a negative COEF_ICOM moves to COEF_OCOM and a negative COEF_OCOM to COEF_ICOM]
+    NCAP_CLED(R,V,P,C)\$(NOT NCAP_ICOM(R,V,P,C)) = 0;                                  (L71)
+
+The loops run in GAMS order over RPC_CAPFLO. `1\$(CNT\$MY_F=0)`: `\$` binds before `=` (G13), so the
+lead of the flow is 1 year unless there is a construction lead NCAP_ILED and an NCAP_CLED. The
+scratch scalars DFUNC, MY_F, F and Z are left as later files set them (coef_shp.mod, coef_obj.mod).
+T is MILESTONYR; T+1 the next milestone year (none after the last, whose D is then 0).
 
 GAMS: coef_nio.mod L13-71, v4.9.7.
 """
 function coef_nio!(tm)
     u = coef_nio_unported(tm)
     isempty(u) || throw(UnportedError(join(u, "; ")))
-    # L16: FIL(V) over MODLYEAR (V's domain); members outside V are kept
     yearval = gparam(tm, "YEARVAL")
+    B, E, D, FPD = gparam(tm, "B"), gparam(tm, "E"), gparam(tm, "D"), gparam(tm, "FPD")
+    tl = [k[1] for k in gset(tm, "MILESTONYR").keys]
+    tset = Set(tl)
+    one, zero = GNum(1.0), GZERO
+    # L15: RPC_CAPFLO(R,V,P,C)$(NOT RTP(R,V,P)) = 0
+    rtp = gset(tm, "RTP")
+    capflo = [k for k in gset(tm, "RPC_CAPFLO").keys if (k[1], k[2], k[3]) in rtp]
+    gput!(tm, "RPC_CAPFLO", Set(capflo))
+    # L16: FIL(V) over MODLYEAR (V's domain); members outside V are kept
     miyr_v1 = gv(gparam(tm, "MIYR_V1"), ())
     fil = Set(k for k in gmembers(tm, "FIL", 1) if !(k in gset(tm, "MODLYEAR")))
     for (v,) in gset(tm, "MODLYEAR").keys
         Float64(gv(yearval, (v,))) >= Float64(miyr_v1) && push!(fil, (v,))
     end
     gput!(tm, "FIL", fil)
-    # L36
-    B, E, D = gparam(tm, "B"), gparam(tm, "E"), gparam(tm, "D")
-    t = [k[1] for k in gset(tm, "MILESTONYR").keys]
+
+    icom, ocom = gparam(tm, "NCAP_ICOM"), gparam(tm, "NCAP_OCOM")
+    coef_icom, coef_ocom = gvalues(tm, "COEF_ICOM", 5), gvalues(tm, "COEF_OCOM", 5)
+    rpti, iled, ciled = gparam(tm, "COEF_RPTI"), gparam(tm, "NCAP_ILED"), gparam(tm, "COEF_ILED")
+    cled = gvalues(tm, "NCAP_CLED", 4)
+    b(y) = gv(B, (y,)); e(y) = gv(E, (y,)); fpd(y) = gv(FPD, (y,))
+
+    # L18-33: flows tied to investment
+    if !isempty(icom.values)
+        for (r, v, p, c) in capflo
+            ((v,) in fil && haskey(icom.values, (r, v, p, c))) || continue
+            dfunc = gv(rpti, (r, v, p))
+            my_f = gv(iled, (r, v, p)); f = gv(ciled, (r, v, p)); cl = gv(cled, (r, v, p, c)); cnt = GNum(abs(cl.v), cl.eps)
+            z = b(v) + gmax(gif(one, (iszero(my_f) ? zero : cnt).v == 0), my_f)
+            f = z - gmax(one, gmin(cnt, f))
+            ic = gv(icom, (r, v, p, c))
+            if dfunc.v > 1
+                v in tset && gassign!(coef_icom, (r, v, v, p, c), dfunc * ic / fpd(v))
+            else
+                for t in tl
+                    (e(t).v >= f.v && b(t).v < z.v) || continue
+                    x = gmax(zero, (gmin(z - one, e(t)) - gmax(f, b(t)) + one) / fpd(t)) * ic / (z - f)
+                    gassign!(coef_icom, (r, v, t, p, c), x)
+                end
+            end
+        end
+    end
+    # L36: FIL2
     fil2 = gvalues(tm, "FIL2", 1)
-    for (i, ti) in enumerate(t)
-        dnext = i < length(t) ? gv(D, (t[i+1],)) : GZERO
-        gassign!(fil2, (ti,), gv(E, (ti,)) + (1 + gmax(GNum(1), dnext) - gv(B, (ti,)) - gv(E, (ti,))) / 2)
+    for (i, ti) in enumerate(tl)
+        dnext = i < length(tl) ? gv(D, (tl[i+1],)) : GZERO
+        gassign!(fil2, (ti,), e(ti) + (1 + gmax(GNum(1), dnext) - b(ti) - e(ti)) / 2)
     end
     gput!(tm, "FIL2", fil2)
+    # L37-56: flows tied to decommissioning
+    if !isempty(ocom.values)
+        dlag, tlife, dlife = gparam(tm, "NCAP_DLAG"), gparam(tm, "NCAP_TLIFE"), gparam(tm, "NCAP_DLIFE")
+        vnt_of = indexby(gset(tm, "VNT"), (1,))                       # v -> VNT(v,t)
+        for (r, v, p, c) in capflo
+            haskey(ocom.values, (r, v, p, c)) || continue
+            f = gv(iled, (r, v, p)) + gv(dlag, (r, v, p)); my_f = gv(tlife, (r, v, p)); dfunc = gv(rpti, (r, v, p))
+            z = b(v) + f + dfunc * my_f
+            s = GZERO
+            for (_, t) in get(vnt_of, (v,), NTuple{2,String}[])
+                (z.v >= b(t).v && (e(t) + 1).v > z.v) || continue
+                s = s + (e(t) - z + one) / (one - (z - (b(t) + e(t)) / 2) / gv(fil2, (t,)))
+            end
+            z = gmax(gmax(one, gv(dlife, (r, v, p))), s)
+            oc = gv(ocom, (r, v, p, c))
+            if dfunc.v > 1
+                for k in 1:ceil(Int, dfunc.v)
+                    cntk = GNum(k)
+                    for (_, t) in get(vnt_of, (v,), NTuple{2,String}[])
+                        st = b(v) + f + cntk * my_f
+                        x = gv(coef_ocom, (r, v, t, p, c)) + gmin(one, dfunc - cntk + one) *
+                            gmax(zero, (gmin(st + z, e(t) + one) - gmax(st, b(t))) / fpd(t)) * (oc / z)
+                        gassign!(coef_ocom, (r, v, t, p, c), x)
+                    end
+                end
+            else
+                my_f = b(v) + f + my_f
+                for t in tl
+                    (e(t) + one).v > my_f.v || continue
+                    x = gmax(zero, (gmin(my_f + z, e(t) + one) - gmax(my_f, b(t))) / fpd(t)) * (oc / z)
+                    gassign!(coef_ocom, (r, v, t, p, c), x)
+                end
+            end
+        end
+    end
     # L59: OPTION CLEAR=CNT
     gput!(tm, "CNT", Dict{Tuple{},Float64}())
+    # L64-67: a negative COEF_ICOM becomes a COEF_OCOM, and a negative COEF_OCOM a COEF_ICOM
+    for (k, x) in collect(coef_icom)                                 # L64-65
+        x < 0 || continue
+        gassign!(coef_ocom, k, gv(coef_ocom, k) - GNum(x))
+        delete!(coef_icom, k)
+    end
+    for (k, x) in collect(coef_ocom)                                 # L66-67
+        x < 0 || continue
+        gassign!(coef_icom, k, gv(coef_icom, k) - GNum(x))
+        delete!(coef_ocom, k)
+    end
+    gput!(tm, "COEF_ICOM", coef_icom)
+    gput!(tm, "COEF_OCOM", coef_ocom)
+    # L71: NCAP_CLED(R,V,P,C)$(NOT NCAP_ICOM(R,V,P,C)) = 0
+    if Reference.has_symbol(tm.data.dump, "NCAP_CLED")
+        filter!(((k, _),) -> haskey(icom.values, k), cled)
+        gput!(tm, "NCAP_CLED", cled)
+    end
     return tm
 end

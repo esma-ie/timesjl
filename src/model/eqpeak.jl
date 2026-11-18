@@ -40,8 +40,8 @@ function peak_unported(tm::TimesModel)
     d = tm.data
     nonempty_set(name, N) = !isempty(gset_opt(d, name, N))
     nonempty_par(name, N) = !isempty(gparam_opt(d, name, N))
-    (nonempty_par("NCAP_COM", 5) || nonempty_set("RPC_CAPFLO", 4)) &&
-        throw(UnportedError("eqpeak.mod L72 capacity-related flows, cal_cap.mod (NCAP_COM / RPC_CAPFLO)"))
+    nonempty_par("NCAP_COM", 5) &&
+        throw(UnportedError("eqpeak.mod L72 capacity-related flows over the lifetime, cal_cap.mod L15-19 (NCAP_COM)"))
     nonempty_par("COM_ELAST", 5) && throw(UnportedError("eqpeak.mod L85 elastic demand under %TIMESED% (COM_ELAST)"))
     nonempty_par("RD_NLP", 2) && throw(UnportedError("eqpeak.mod L82 non-linear demand VAR_DEM (RD_NLP)"))
     haskey(tm.switches, "PEAKCHP") && throw(UnportedError("eqpeak.mod L49 %PEAKCHP% (IER extension, prep_ext.ier L21)"))
@@ -191,6 +191,8 @@ function eq_peak!(tm::TimesModel)
             pkcoi = (p, v, ts) -> gv(flo_pkcoi, (r, t, p, c, ts))
             cal_fflo!(rhs, tm, flx, "IN", r, t, c, s; pk=pkcoi)          # L65
             cal_ire!(rhs, tm, flx, "EXP", "IN", r, t, c, s; pk=pkcoi)    # L68
+            # Flows tied to investment (L72: cal_cap.mod IN I '1$(NOT PRC_PKNO(R,P))*').
+            cal_ncom!(rhs, tm, flx, "IN", r, t, c, s; pf=p -> GNum((r, p) in prc_pkno ? 0.0 : 1.0))
             # Storage input (L75), net of STG_EFF * NCAP_PKCNT**RPC_PKF * output with RPC_STGN.
             cal_stgn!(rhs, tm, flx, "IN", r, t, c, s;
                       cond=(p, ts) -> !((r, "NST", p) in prc_map) || (r, p, ts) in nstts,

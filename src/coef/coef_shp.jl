@@ -31,18 +31,22 @@
 #
 # Refused: capacity-related commodity flows (L39-42 COEF_CIO from NCAP_COM
 # and NCAP_CLAG; L77-94 the COEF_OCOM/COEF_RCOM override for NCAP_OCOM with
-# FLO_FUNCX(R,'0',P,'CAPFLO',C) = 3; L96 the RCAP_OCAP age filter), which
-# coef_nio.mod L15-71 also leaves untranslated (coef_nio_unported); they are
-# one change together.
+# FLO_FUNCX(R,'0',P,'CAPFLO',C) = 3; L96 the RCAP_OCAP age filter). NCAP_OCOM
+# itself is translated (coef_nio.mod L37-56, M1.3 change 53): without the
+# override and without RCAP_OCAP, L77-97 change nothing.
 
 "The coef_shp.mod paths this model would take that are not translated; empty when coef_shp! can run."
 function coef_shp_unported(tm)
     out = String[]
-    for (s, n, lines) in (("NCAP_COM", 5, "L39"), ("NCAP_CLAG", 5, "L40-42"), ("NCAP_OCOM", 4, "L77-94"),
-                          ("RCAP_OCAP", 4, "L96"))
+    for (s, n, lines) in (("NCAP_COM", 5, "L39"), ("NCAP_CLAG", 5, "L40-42"), ("RCAP_OCAP", 4, "L96"))
         isempty(gparam_opt(tm.data, s, n)) ||
-            push!(out, "coef_shp.mod $lines (capacity-related commodity flows: $s has data; with coef_nio.mod L15-71)")
+            push!(out, "coef_shp.mod $lines (capacity-related commodity flows: $s has data)")
     end
+    # L77: RPC_CONLY(RTP(R,V,P),C)$((FLO_FUNCX(R,'0',P,'CAPFLO',C)=3)$NCAP_OCOM(RTP,C))
+    ocom = gparam_opt(tm.data, "NCAP_OCOM", 4)
+    funcx = gparam_opt(tm.data, "FLO_FUNCX", 5)
+    any(k -> haskey(funcx.values, (k[1], "0", k[3], "CAPFLO", k[4])) && funcx.values[(k[1], "0", k[3], "CAPFLO", k[4])] == 3,
+        ocom.keys) && push!(out, "coef_shp.mod L77-94 (NCAP_OCOM with FLO_FUNCX(R,'0',P,'CAPFLO',C) = 3: the capacity transfer)")
     return out
 end
 
