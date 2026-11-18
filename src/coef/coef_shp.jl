@@ -31,18 +31,13 @@
 #
 # M1.3 change 54: L39-42, COEF_CIO from the CAPFLO shapes (FLO_FUNCX) and
 # from NCAP_CLAG, for the flows over the lifetime (NCAP_COM); L96, the age
-# filter of RCAP_OCAP on COEF_OCOM. Refused: L77-94, the COEF_OCOM/COEF_RCOM
-# override for NCAP_OCOM with FLO_FUNCX(R,'0',P,'CAPFLO',C) = 3 (the capacity
-# transfer); without it L77-94 change nothing.
+# filter of RCAP_OCAP on COEF_OCOM. M1.3 change 59: L77-94, the COEF_OCOM and
+# COEF_RCOM override for NCAP_OCOM with FLO_FUNCX(R,'0',P,'CAPFLO',C) = 3 (the
+# capacity transfer, `capacity_transfer!`).
 
 "The coef_shp.mod paths this model would take that are not translated; empty when coef_shp! can run."
 function coef_shp_unported(tm)
     out = String[]
-    # L77: RPC_CONLY(RTP(R,V,P),C)$((FLO_FUNCX(R,'0',P,'CAPFLO',C)=3)$NCAP_OCOM(RTP,C))
-    ocom = gparam_opt(tm.data, "NCAP_OCOM", 4)
-    funcx = gparam_opt(tm.data, "FLO_FUNCX", 5)
-    any(k -> haskey(funcx.values, (k[1], "0", k[3], "CAPFLO", k[4])) && funcx.values[(k[1], "0", k[3], "CAPFLO", k[4])] == 3,
-        ocom.keys) && push!(out, "coef_shp.mod L77-94 (NCAP_OCOM with FLO_FUNCX(R,'0',P,'CAPFLO',C) = 3: the capacity transfer)")
     return out
 end
 
@@ -340,6 +335,8 @@ function coef_shp!(tm)
     # the same domain, values (EPS included) copied (G26)
     gput!(tm, "RTP_CPX", Dict((k[1], k[2], k[4], k[3]) => x for (k, x) in coef_cap))
     gput!(tm, "COEF_CAP", Dict{NTuple{4,String},Float64}())
+    # L77-94 (M1.3 change 59): the capacity transfer of decommissioning flows (`capacity_transfer!`)
+    capacity_transfer!(tm, tab, cpx)
     # L96 (M1.3 change 54): COEF_OCOM(R,VNT(V,T),P,C)$RCAP_OCAP(R,V,P,C) =
     #   (COEF_OCOM(R,V,T,P,C)+EPS$COEF_RCOM(R,V,T,P,C))$(SIGN(RCAP_OCAP(R,V,P,C))*(B(T)-(B(V)+NCAP_ILED(R,V,P)+1/PI**9))<RCAP_OCAP(R,V,P,C))
     rcap_ocap = gparam_opt(tm.data, "RCAP_OCAP", 4)
@@ -363,5 +360,142 @@ function coef_shp!(tm)
         end
         gput!(tm, "COEF_OCOM", coef_ocom)
     end
+    return tm
+end
+
+"""
+    capacity_transfer!(tm, tab, cpx) -> tm
+
+coef_shp.mod L77-94, the capacity transfer of decommissioning flows: for a
+process with NCAP_OCOM on a commodity C and FLO_FUNCX(R,'0',P,'CAPFLO',C) = 3
+(RPC_CONLY), the decommissioning flows follow the decline of the capacity
+over its life, by its capacity shape NCAP_CPX, instead of coming at its end:
+
+    RPC_CONLY(RTP(R,V,P),C)\$((FLO_FUNCX(R,'0',P,'CAPFLO',C)=3)\$NCAP_OCOM(RTP,C)) = YES;
+    LOOP(AGEJ(J,AGE)\$CARD(RPC_CONLY),
+      OPTION PASTSUM < RPC_CONLY;
+      PASTSUM(RTP(R,V,P))\$PASTSUM(RTP) = B(V)+ROUND(NCAP_ILED(RTP))+ROUND(NCAP_DLAG(RTP)+NCAP_DLIFE(RTP)/2);
+      RVPRL(RTP)\$PASTSUM(RTP) = PASTSUM(RTP)+ROUND(COEF_RPTI(RTP)*NCAP_TLIFE(RTP));
+      LOOP(G_RCUR(R,CUR),
+        FIL2(T)=COEF_PVT(R,T)*D(T)/SUM(PERIODYR(T,Y_EOH),(YEARVAL(Y_EOH)-B(T)+1)*OBJ_DISC(R,Y_EOH,CUR));
+        COEF_CAP(R,VNT(V,T),P)\$((MIN(M(T)+1,E(T))<RVPRL(R,V,P))\$RVPRL(R,V,P)) = 1/COEF_RPTI(R,V,P) *
+          MAX(POWER(SH(B(T)-PASTSUM-1),B(T)-PASTSUM-1>=0)*(1-FIL2(T)) +
+              SUM(PERIODYR(T,Y_EOH)\$(YEARVAL(Y_EOH)<RVPRL),OBJ_DISC(R,Y_EOH,CUR)*
+                POWER(SH(MOD(YEARVAL(Y_EOH)-PASTSUM,ROUND(NCAP_TLIFE))),YEARVAL(Y_EOH)-PASTSUM>=0))/COEF_PVT(R,T)*FIL2(T),
+              SH(MAX(0,E(T)-PASTSUM))\$(E(T)<RVPRL)));
+      COEF_OCOM(R,VNT(V,T),P,C)\$RPC_CONLY(R,V,P,C) = COEF_RPTI(R,V,P) *
+        (MAX(0,POWER(SH(B(T)-PASTSUM-1),B(T)-PASTSUM-1>=0)-COEF_CAP(R,V,T,P))*NCAP_OCOM(R,V,P,C)/FPD(T))\$(B(T)<RVPRL(R,V,P));
+      COEF_OCOM(R,V,T(TT+1),P,C)\$((B(T)>PASTSUM(R,V,P))\$VNT(V,TT)\$RPC_CONLY(R,V,P,C)) =
+        COEF_RPTI(R,V,P) * MAX(0,COEF_CAP(R,V,TT,P)-COEF_CAP(R,V,T,P))*NCAP_OCOM(R,V,P,C)/FPD(T);
+      COEF_RCOM(RTP_CPTYR(R,V,T(TT+1),P),C)\$(RPC_CONLY(R,V,P,C)\$RCAP_OCAP(R,V,P,C)) = COEF_CAP(R,V,TT,P)*NCAP_OCOM(R,V,P,C)/FPD(T));
+
+SH(a) is SHAPE(J+(NCAP_CPX(R,V,P)-1),AGE+(a)) (`shape`): zero without a
+capacity shape, as the J lead then leaves the set; POWER(x,0) is 1 even for
+x = 0 (G23). COEF_CAP is computed inside the currency loop, so for each
+region in its G_RCUR iterations (the last currency wins); the COEF_OCOM and
+COEF_RCOM overrides run over all regions after it. MOD takes the sign of
+its first argument (G43); ROUND rounds half away from zero. FIL2 keeps the
+values of the last region; RPC_CONLY, COEF_CAP, PASTSUM and RVPRL are
+cleared after L96 (L97), so they are left empty here.
+
+GAMS: coef_shp.mod L77-94, v4.9.7.
+"""
+function capacity_transfer!(tm, tab::ShapeTable, cpx)
+    rtp = gset(tm, "RTP")
+    ocom = gparam_opt(tm.data, "NCAP_OCOM", 4)
+    ffx = gparam_opt(tm.data, "FLO_FUNCX", 5)
+    # L77
+    conly = Set{NTuple{4,String}}()
+    for (k, x) in ocom.values
+        (k[1], k[2], k[3]) in rtp || continue
+        get(ffx.values, (k[1], "0", k[3], "CAPFLO", k[4]), 0.0) == 3 && push!(conly, k)
+    end
+    isempty(conly) && return tm                                         # LOOP(AGEJ(J,AGE)$CARD(RPC_CONLY), ...)
+    ax = YearAxis(tm)
+    yv(y) = ax.yearval[y]
+    rnd(x) = round(x, RoundNearestTiesAway)
+    B, E, M, D, FPD = (gparam(tm, n) for n in ("B", "E", "M", "D", "FPD"))
+    f(p, k) = Float64(gv(p, k))
+    iled, dlag, dlife = gparam(tm, "NCAP_ILED"), gparam_opt(tm.data, "NCAP_DLAG", 3), gparam_opt(tm.data, "NCAP_DLIFE", 3)
+    tlife, rpti = gparam(tm, "NCAP_TLIFE"), gparam(tm, "COEF_RPTI")
+    disc, coef_pvt = gparam(tm, "OBJ_DISC"), gparam(tm, "COEF_PVT")
+    T = [k[1] for k in gset(tm, "MILESTONYR").keys]
+    periodyr = indexby(gset(tm, "PERIODYR"), (1,))
+    y_eoh = Set(k[1] for k in gset(tm, "Y_EOH").keys)
+    vnt = gset(tm, "VNT")
+    vnt_of = indexby(vnt, (1,))                                         # v -> VNT(v,t)
+    # L79-81: PASTSUM and RVPRL of the (R,V,P) of RPC_CONLY
+    pastsum, rvprl = Dict{NTuple{3,String},Float64}(), Dict{NTuple{3,String},Float64}()
+    for (r, v, p, _) in conly
+        haskey(pastsum, (r, v, p)) && continue
+        ps = f(B, (v,)) + rnd(f(iled, (r, v, p))) + rnd(f(dlag, (r, v, p)) + f(dlife, (r, v, p)) / 2)
+        pastsum[(r, v, p)] = ps
+        rvprl[(r, v, p)] = ps + rnd(f(rpti, (r, v, p)) * f(tlife, (r, v, p)))
+    end
+    sh(r, v, p, a) = Float64(shape(tab, get(cpx, (r, v, p), 0.0), a))
+    pw(x, b) = b ? x : 1.0                                               # POWER(x, 1 or 0), 0**0 = 1 (G23)
+    # L82-88: per G_RCUR(R,CUR), FIL2(T) and COEF_CAP
+    fil2 = gvalues(tm, "FIL2", 1)
+    coef_cap = Dict{NTuple{4,String},Float64}()
+    for (r, cur) in gams_sort!(collect(gset(tm, "G_RCUR").keys), tm.data)
+        fl = Dict{String,Float64}()
+        for t in T
+            s = sum(((yv(y) - f(B, (t,)) + 1) * f(disc, (r, y, cur)) for (_, y) in get(periodyr, (t,), NTuple{2,String}[]) if y in y_eoh); init=0.0)
+            fl[t] = f(coef_pvt, (r, t)) * f(D, (t,)) / s
+            fl[t] == 0 ? delete!(fil2, (t,)) : (fil2[(t,)] = fl[t])
+        end
+        for ((rr, v, p), rv) in rvprl
+            rr == r || continue
+            ps = pastsum[(r, v, p)]
+            for (_, t) in get(vnt_of, (v,), NTuple{2,String}[])
+                min(f(M, (t,)) + 1, f(E, (t,))) < rv || continue
+                bt = f(B, (t,))
+                a1 = pw(sh(r, v, p, bt - ps - 1), bt - ps - 1 >= 0) * (1 - fl[t])
+                s = 0.0
+                for (_, y) in get(periodyr, (t,), NTuple{2,String}[])
+                    (y in y_eoh && yv(y) < rv) || continue
+                    s += f(disc, (r, y, cur)) * pw(sh(r, v, p, rem(yv(y) - ps, rnd(f(tlife, (r, v, p))))), yv(y) - ps >= 0)
+                end
+                a1 += s / f(coef_pvt, (r, t)) * fl[t]
+                a2 = f(E, (t,)) < rv ? sh(r, v, p, max(0.0, f(E, (t,)) - ps)) : 0.0
+                x = 1 / f(rpti, (r, v, p)) * max(a1, a2)
+                x == 0 ? delete!(coef_cap, (r, v, t, p)) : (coef_cap[(r, v, t, p)] = x)
+            end
+        end
+    end
+    gput!(tm, "FIL2", fil2)
+    cap(k) = get(coef_cap, k, 0.0)
+    coef_ocom = gvalues(tm, "COEF_OCOM", 5)
+    put!(d, k, x) = x == 0 ? delete!(d, k) : (d[k] = x)
+    # L90-91: COEF_OCOM(R,VNT(V,T),P,C)$RPC_CONLY(R,V,P,C) = ...$(B(T)<RVPRL(R,V,P))
+    for (r, v, p, c) in conly, (_, t) in get(vnt_of, (v,), NTuple{2,String}[])
+        ps, rv, bt = pastsum[(r, v, p)], rvprl[(r, v, p)], f(B, (t,))
+        x = bt < rv ? f(rpti, (r, v, p)) * (max(0.0, pw(sh(r, v, p, bt - ps - 1), bt - ps - 1 >= 0) - cap((r, v, t, p))) *
+                                         f(ocom, (r, v, p, c)) / f(FPD, (t,))) : 0.0
+        put!(coef_ocom, (r, v, t, p, c), x)
+    end
+    # L92: COEF_OCOM(R,V,T(TT+1),P,C)$((B(T)>PASTSUM(R,V,P))$VNT(V,TT)$RPC_CONLY(R,V,P,C)) =
+    #   COEF_RPTI(R,V,P)*MAX(0,COEF_CAP(R,V,TT,P)-COEF_CAP(R,V,T,P))*NCAP_OCOM(R,V,P,C)/FPD(T)
+    for (r, v, p, c) in conly, i in 1:length(T)-1
+        tt, t = T[i], T[i+1]
+        ((v, tt) in vnt && f(B, (t,)) > pastsum[(r, v, p)]) || continue
+        put!(coef_ocom, (r, v, t, p, c),
+             f(rpti, (r, v, p)) * max(0.0, cap((r, v, tt, p)) - cap((r, v, t, p))) * f(ocom, (r, v, p, c)) / f(FPD, (t,)))
+    end
+    gput!(tm, "COEF_OCOM", coef_ocom)
+    # L93: COEF_RCOM(RTP_CPTYR(R,V,T(TT+1),P),C)$(RPC_CONLY(R,V,P,C)$RCAP_OCAP(R,V,P,C)) = COEF_CAP(R,V,TT,P)*NCAP_OCOM(R,V,P,C)/FPD(T)
+    rcap_ocap = gparam_opt(tm.data, "RCAP_OCAP", 4)
+    cptyr = gset(tm, "RTP_CPTYR")
+    coef_rcom = gvalues(tm, "COEF_RCOM", 5)
+    for (r, v, p, c) in conly
+        haskey(rcap_ocap.values, (r, v, p, c)) || continue
+        for i in 1:length(T)-1
+            tt, t = T[i], T[i+1]
+            (r, v, t, p) in cptyr || continue
+            put!(coef_rcom, (r, v, t, p, c), cap((r, v, tt, p)) * f(ocom, (r, v, p, c)) / f(FPD, (t,)))
+        end
+    end
+    gput!(tm, "COEF_RCOM", coef_rcom)
+    # L97: OPTION CLEAR=RPC_CONLY, CLEAR=COEF_CAP, CLEAR=PASTSUM, CLEAR=RVPRL (all left empty)
     return tm
 end

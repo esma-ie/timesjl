@@ -774,3 +774,16 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 3252
 cols = 4517
 nonzeros = 18585
+
+# Crafted case TIMES_Demo-demo12_ctrn (reference/crafted.toml: demo12 + capcom.dd and ctrn.dd), 18 Nov 2026 (GAMS
+# 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): the capacity transfer of decommissioning
+# flows (coef_shp.mod L77-94), the whole model. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_ctrn"
+model    = "TIMES_Demo-demo12_ctrn"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3248
+cols = 4509
+nonzeros = 18557

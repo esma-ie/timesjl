@@ -961,3 +961,18 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_uccf/demo12_uccf.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_capflo", "{crafted}/demo12_capcom", "{crafted}/demo12_uccf"]
+
+# TIMES_Demo demo12 + demo12_capcom/capcom.dd + demo12_ctrn/ctrn.dd (17 Nov 2026): the capacity
+# transfer of decommissioning flows (FLO_FUNCX(R,'0',P,'CAPFLO',C) = 3 with NCAP_CPX: coef_shp.mod
+# L77-94; M1.3 change 59), with early retirement in REG1 (COEF_RCOM).
+[[model]]
+name = "TIMES_Demo-demo12_ctrn"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_ctrn/demo12_ctrn.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_capcom", "{crafted}/demo12_ctrn"]
