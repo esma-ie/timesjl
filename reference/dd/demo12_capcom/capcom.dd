@@ -1,0 +1,67 @@
+* TIMES.jl crafted case demo12_capcom (reference/crafted.toml, 17 Nov 2026): commodity flows over the
+* lifetime of capacity (NCAP_COM, with the shapes and lags of COEF_CIO: coef_shp.mod L39-42, coef_nio.mod
+* L70; the first term of cal_cap.mod and of cal_caps.mod) and of early retirements (RCAP_OCAP: coef_nio.mod
+* L35, L58, coef_shp.mod L96, the RCAP terms of cal_cap.mod); M1.3 change 54, docs/m13-plan.md. Added to
+* TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0).
+* - ELCTNGAS01, the new gas plant: per unit of capacity it consumes electricity in REG1 (a peak
+*   commodity) and diesel in REG2 (with a flow cost) and emits ELCCO2 in both regions; REG1's ELCCO2
+*   follows a SHAPE over the plant's age (FLO_FUNCX CAPFLO, shape 2), REG2's starts 3 years late
+*   (NCAP_CLAG).
+* - A 1995 vintage of the coal plant ELCTECOA00 in REG1 emits ELCCO2 per unit of capacity.
+* - REG1's ELCTNGAS01 can retire early (PRC_RCAP) and releases ELCCO2 when decommissioned
+*   (NCAP_OCOM), also on early retirement up to an age of 40 years (RCAP_OCAP), past its 30-year
+*   life, so its decommissioning flows are kept (coef_shp.mod L96) and the retired capacity
+*   (VAR_SCAP) releases them too.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET PRC_RCAP
+/
+REG1.ELCTNGAS01
+/
+
+PARAMETER
+NCAP_PASTI ' '/
+REG1.1995.ELCTECOA00 3
+/
+
+PARAMETER
+NCAP_COM ' '/
+REG1.2005.ELCTNGAS01.ELC.IN 0.2
+REG1.2005.ELCTNGAS01.ELCCO2.OUT 0.5
+REG2.2005.ELCTNGAS01.ELCCO2.OUT 0.4
+REG2.2005.ELCTNGAS01.DSL.IN 0.1
+REG1.1995.ELCTECOA00.ELCCO2.OUT 0.3
+/
+
+PARAMETER
+NCAP_CLAG ' '/
+REG2.2005.ELCTNGAS01.ELCCO2.OUT 3
+/
+
+PARAMETER
+FLO_FUNCX ' '/
+REG1.2005.ELCTNGAS01.CAPFLO.ELCCO2 2
+/
+
+PARAMETER
+SHAPE ' '/
+2.1 1
+2.10 1.2
+2.30 1.5
+/
+
+PARAMETER
+FLO_COST ' '/
+REG2.2005.ELCTNGAS01.DSL.ANNUAL.MEURO05 2
+/
+
+PARAMETER
+NCAP_OCOM ' '/
+REG1.2005.ELCTNGAS01.ELCCO2 0.3
+/
+
+PARAMETER
+RCAP_OCAP ' '/
+REG1.2005.ELCTNGAS01.ELCCO2 40
+/

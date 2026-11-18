@@ -52,6 +52,7 @@ answer yet.
 | 15 Nov 2026 | chat | The workstation batch's DD-file stage: the HiGHS solve of TIMES-NZ shift with REDUCE off hit its one-hour limit on 14 Nov 2026 (3,625.7 s; with REDUCE on it solved in 2,658 s). Solve TIMES-NZ in that stage with REDUCE on only, its REDUCE-off model still compared with GAMS's matrix and cross-evaluated? | yes | Open; the batch keeps its one-hour limit meanwhile. |
 | 17 Nov 2026 | chat | User constraints with VAR_UC not YES (eqmain.mod L229-232, equcwrap.mod L13, equserco.mod L112-114) are refused, and no open model sets VAR_UC NO. Translating them is the M1.5 run option VAR_UC (docs/translation-guide.md, M1.5): with VAR_UC NO, UC_RHSMAP, UC_UT, UC_UTS and RUCTS take an extra bound index (eqmain.mod L204-207), the rows become EQE_/EQG_/EQL_ families with the UC_RHS* value as a constant right-hand side and no VAR_UC* variables. Count it in the M1.3 gate's scope, or leave it with M1.5 (the gate closes without it, refused with its message)? Rule-level (the milestone scope). | leave it with M1.5 | Open; asked on 17 Nov 2026. Nothing is built for it. |
 | 17 Nov 2026 | #150 | The VDA trade bounds and prices from an earlier run (`bnd_ire.vda`, equ_ext.vda L67; PREMILE, PAR_IRE and PAR_IPRIC loaded from the GDX files named by the run options GDX_IREBND and GDX_IPRIC, init_ext.vda L137-151) are refused, and no open model sets them. Count them in the M1.3 gate's scope, or move them to M1.5 with the other run options (the gate closes without them, refused with their message)? Rule-level (the milestone scope). | move to M1.5 | Open (#150, decision 3). Nothing is built for it. |
+| 17 Nov 2026 | #155 | coef_nio.mod L58 computes COEF_RCOM from COEF_CPT before coef_alt.lin L77 fills COEF_CPT (coefmain.mod order), so COEF_RCOM is empty outside the capacity transfer and the VAR_RCAP term of cal_cap.mod is never reached; TIMES.jl does the same. Report it to the TIMES maintainers (ETSAP) as a possible ordering issue? | yes, as a note to ETSAP | Open (#155, decision 2). Nothing in TIMES.jl depends on it. |
 
 Reviewed on 14 Nov 2026 against pull requests #1 to #120 (108 merged, six open: #114, #115, #117 to #120). Four questions that James had answered left this list for the log of their pull requests: the demo12 trade case (#68, #104); refused features before v4.9.8 (#109, decision 3); the stepped solve before the gates (#108, decision 3); the M1.4 CI criterion with demo12_uc refused (#118, decision 2). Five questions asked in the chat and never listed were added (issues #97, #100 and #17, the commit trailer, the unused worktree). Every row of the log that is still "open" is either on this list or is a built-in default of an open pull request, which its merge decides. Later the same evening James merged #114 to #125 (eleven pull requests): their built-in defaults are accepted by merge, and his answers on #120 (decision 5), #121 (decision 2) and #125 (decisions 6, 8, 9 and 10) are in the log of those pull requests. Two more pull requests were opened later that evening, #127 (the dashboard changes James asked for on #125) and #128 (M1.5 change 2); #127's choice of the green and the orange joined this list.
 
@@ -168,6 +169,15 @@ On 17 Nov 2026 James answered three questions of the list in the chat (below, un
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
 | 1 | A new crafted case, demo12_stsflx, with one public CI fixture (as run, about 4 MB): demo12 with a general timeslice storage STSELC (PRC_MAP STS) and $SET STSFLX YES. demo12_stgccl's battery cannot serve: it is not an STS storage, so it has no RP_STL entries. | Recommended: yes. Built in. | open |
+
+### #155 M1.3 (54): commodity flows over the lifetime of capacity and of early retirements (NCAP_COM, COEF_CIO, RCAP_OCAP); crafted case demo12_capcom (open)
+
+Stacked on #154 (branch m13-capflo).
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | A new crafted case, demo12_capcom, with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
+| 2 | COEF_RCOM (coef_nio.mod L58) is empty in every run without the capacity transfer: it reads COEF_CPT, which coef_alt.lin L77 fills only later (coefmain.mod order), so the VAR_RCAP term of cal_cap.mod is never reached. TIMES.jl does the same. Report it to the TIMES maintainers as a possible ordering issue? | Recommended: yes, as a note to ETSAP; nothing changes here. | open (no default built in) |
 
 ### #154 M1.3 (53): commodity flows tied to investment and decommissioning (coef_nio.mod L13-71, cal_cap.mod, cal_caps.mod); crafted case demo12_capflo (open)
 

@@ -6,20 +6,13 @@
 # lead NCAP_CLED) and to decommissioning (NCAP_OCOM): the loops L17-33 and
 # L37-56 that spread them over the periods into COEF_ICOM and COEF_OCOM, the
 # filter of RPC_CAPFLO (L15), the swap of negative coefficients (L64-67) and
-# the clean-up of NCAP_CLED (L71). Still refused, with their own change: the
-# flows tied to early retirements (RCAP_OCAP: L35, L58) and to the capacity
-# in place (NCAP_COM; NCAP_CLAG from NCAP_CLED, L70), with coef_shp.mod
-# L39-42 and the first term of cal_cap.mod.
+# the clean-up of NCAP_CLED (L71). Change 54 adds the flows tied to early
+# retirements (RCAP_OCAP: L35, L58) and the lag of the flows over the
+# lifetime (NCAP_CLAG from NCAP_CLED, L70), which coef_shp.mod L39-42 turns
+# into COEF_CIO.
 
 "The coef_nio.mod paths this model would take that are not translated; empty when coef_nio! can run."
-function coef_nio_unported(tm)
-    out = String[]
-    for (s, n, lines) in (("RCAP_OCAP", 4, "L35, L58"), ("NCAP_COM", 5, "L70"))
-        isempty(gparam_opt(tm.data, s, n)) ||
-            push!(out, "coef_nio.mod $lines (capacity-related commodity flows: $s has data)")
-    end
-    return out
-end
+coef_nio_unported(tm) = String[]
 
 """
     coef_nio!(tm) -> tm
@@ -44,7 +37,10 @@ coef_nio.mod on the GAMS state in `tm`:
       ELSE MY_F = B(V)+F+MY_F;
         COEF_OCOM(R,V,T,P,C)\$(E(T)+1 > MY_F) = MAX(0,(MIN(MY_F+Z,E(T)+1) - MAX(MY_F,B(T)))/FPD(T)) * (NCAP_OCOM(R,V,P,C)/Z)));
     OPTION CLEAR=CNT;                                                                 (L59)
+    NCAP_OCOM(RTP,C)\$((NOT NCAP_OCOM(RTP,C))\$RCAP_OCAP(RTP,C)) = 1;                  (L35, before L37)
+    COEF_RCOM(RTP_CPTYR(R,V,T,P),C)\$RCAP_OCAP(R,V,P,C) = COEF_CPT(R,V,T,P) * NCAP_OCOM(R,V,P,C) / FPD(T);   (L58)
     [L64-67: a negative COEF_ICOM moves to COEF_OCOM and a negative COEF_OCOM to COEF_ICOM]
+    NCAP_CLAG(RTP,C,IO)\$((NOT NCAP_ICOM(RTP,C))\$NCAP_COM(RTP,C,IO)) \$= NCAP_CLED(RTP,C);  (L70)
     NCAP_CLED(R,V,P,C)\$(NOT NCAP_ICOM(R,V,P,C)) = 0;                                  (L71)
 
 The loops run in GAMS order over RPC_CAPFLO. `1\$(CNT\$MY_F=0)`: `\$` binds before `=` (G13), so the
@@ -74,7 +70,18 @@ function coef_nio!(tm)
     end
     gput!(tm, "FIL", fil)
 
-    icom, ocom = gparam(tm, "NCAP_ICOM"), gparam(tm, "NCAP_OCOM")
+    icom = gparam(tm, "NCAP_ICOM")
+    rcap_ocap = gparam_opt(tm.data, "RCAP_OCAP", 4)
+    # L35: NCAP_OCOM(RTP,C)$((NOT NCAP_OCOM(RTP,C))$RCAP_OCAP(RTP,C)) = 1   (no statement between it and L18
+    # reads NCAP_OCOM, so it is applied here)
+    if !isempty(rcap_ocap.values)
+        ocomv = gvalues(tm, "NCAP_OCOM", 4)
+        for k in rcap_ocap.keys
+            ((k[1], k[2], k[3]) in rtp && !haskey(ocomv, k)) && gassign!(ocomv, k, GNum(1.0))
+        end
+        gput!(tm, "NCAP_OCOM", ocomv)
+    end
+    ocom = gparam(tm, "NCAP_OCOM")
     coef_icom, coef_ocom = gvalues(tm, "COEF_ICOM", 5), gvalues(tm, "COEF_OCOM", 5)
     rpti, iled, ciled = gparam(tm, "COEF_RPTI"), gparam(tm, "NCAP_ILED"), gparam(tm, "COEF_ILED")
     cled = gvalues(tm, "NCAP_CLED", 4)
@@ -142,6 +149,18 @@ function coef_nio!(tm)
             end
         end
     end
+    # L58: COEF_RCOM(RTP_CPTYR(R,V,T,P),C)$RCAP_OCAP(R,V,P,C) = COEF_CPT(R,V,T,P)*NCAP_OCOM(R,V,P,C)/FPD(T)
+    if !isempty(rcap_ocap.values)
+        coef_rcom = gvalues(tm, "COEF_RCOM", 5)
+        coef_cpt = gparam(tm, "COEF_CPT")
+        cptyr_of = indexby(gset(tm, "RTP_CPTYR"), (1, 2, 4))         # (r,v,p) -> RTP_CPTYR(r,v,t,p)
+        for (r, v, p, c) in rcap_ocap.keys
+            for (_, _, t, _) in get(cptyr_of, (r, v, p), NTuple{4,String}[])
+                gassign!(coef_rcom, (r, v, t, p, c), gv(coef_cpt, (r, v, t, p)) * gv(ocom, (r, v, p, c)) / fpd(t))
+            end
+        end
+        gput!(tm, "COEF_RCOM", coef_rcom)
+    end
     # L59: OPTION CLEAR=CNT
     gput!(tm, "CNT", Dict{Tuple{},Float64}())
     # L64-67: a negative COEF_ICOM becomes a COEF_OCOM, and a negative COEF_OCOM a COEF_ICOM
@@ -157,6 +176,16 @@ function coef_nio!(tm)
     end
     gput!(tm, "COEF_ICOM", coef_icom)
     gput!(tm, "COEF_OCOM", coef_ocom)
+    # L70: NCAP_CLAG(RTP,C,IO)$((NOT NCAP_ICOM(RTP,C))$NCAP_COM(RTP,C,IO)) $= NCAP_CLED(RTP,C)
+    ncom = gparam_opt(tm.data, "NCAP_COM", 5)
+    if !isempty(ncom.values) && !isempty(cled)
+        clag = gvalues(tm, "NCAP_CLAG", 5)
+        for (r, v, p, c, io) in ncom.keys
+            ((r, v, p) in rtp && !haskey(icom.values, (r, v, p, c)) && haskey(cled, (r, v, p, c))) || continue
+            gassign!(clag, (r, v, p, c, io), gv(cled, (r, v, p, c)))
+        end
+        gput!(tm, "NCAP_CLAG", clag)
+    end
     # L71: NCAP_CLED(R,V,P,C)$(NOT NCAP_ICOM(R,V,P,C)) = 0
     if Reference.has_symbol(tm.data.dump, "NCAP_CLED")
         filter!(((k, _),) -> haskey(icom.values, k), cled)

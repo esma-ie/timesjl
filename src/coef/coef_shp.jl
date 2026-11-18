@@ -29,19 +29,15 @@
 #   positions swapped (G26, positions matched by domain); PRC_YMIN, PRC_YMAX, TRACKP, RVPRL,
 #   COEF_CAP cleared.
 #
-# Refused: capacity-related commodity flows (L39-42 COEF_CIO from NCAP_COM
-# and NCAP_CLAG; L77-94 the COEF_OCOM/COEF_RCOM override for NCAP_OCOM with
-# FLO_FUNCX(R,'0',P,'CAPFLO',C) = 3; L96 the RCAP_OCAP age filter). NCAP_OCOM
-# itself is translated (coef_nio.mod L37-56, M1.3 change 53): without the
-# override and without RCAP_OCAP, L77-97 change nothing.
+# M1.3 change 54: L39-42, COEF_CIO from the CAPFLO shapes (FLO_FUNCX) and
+# from NCAP_CLAG, for the flows over the lifetime (NCAP_COM); L96, the age
+# filter of RCAP_OCAP on COEF_OCOM. Refused: L77-94, the COEF_OCOM/COEF_RCOM
+# override for NCAP_OCOM with FLO_FUNCX(R,'0',P,'CAPFLO',C) = 3 (the capacity
+# transfer); without it L77-94 change nothing.
 
 "The coef_shp.mod paths this model would take that are not translated; empty when coef_shp! can run."
 function coef_shp_unported(tm)
     out = String[]
-    for (s, n, lines) in (("NCAP_COM", 5, "L39"), ("NCAP_CLAG", 5, "L40-42"), ("RCAP_OCAP", 4, "L96"))
-        isempty(gparam_opt(tm.data, s, n)) ||
-            push!(out, "coef_shp.mod $lines (capacity-related commodity flows: $s has data)")
-    end
     # L77: RPC_CONLY(RTP(R,V,P),C)$((FLO_FUNCX(R,'0',P,'CAPFLO',C)=3)$NCAP_OCOM(RTP,C))
     ocom = gparam_opt(tm.data, "NCAP_OCOM", 4)
     funcx = gparam_opt(tm.data, "FLO_FUNCX", 5)
@@ -219,7 +215,33 @@ function coef_shp!(tm)
             end
         end
     end
-    # L39-42: COEF_CIO from NCAP_COM and NCAP_CLAG - refused above (none here)
+    # L39: COEF_CIO(RTP_CAPYR(R,V,T,P),C,IO)$NCAP_COM(R,V,P,C,IO) $= RTP_FFCX(R,V,T,P,'CAPFLO',C)
+    # L40-42: COEF_CIO(RTP_CPTYR(R,V,T,P),C,IO)$NCAP_CLAG(R,V,P,C,IO) = SIGN(NCAP_CLAG(R,V,P,C,IO)) *
+    #   (MAX(0, E(T)+1-MAX(B(V)+NCAP_ILED(R,V,P)+ABS(NCAP_CLAG(R,V,P,C,IO)),B(T))) /
+    #    MAX(.1,E(T)+1-MAX(B(V)+NCAP_ILED(R,V,P),B(T)))-1)-1$(NCAP_CLAG(R,V,P,C,IO)<0)      (M1.3 change 54)
+    ncom = gparam_opt(tm.data, "NCAP_COM", 5)
+    if !isempty(ncom.values)
+        coef_cio = gvalues(tm, "COEF_CIO", 6)
+        capyr_of = Dict{NTuple{3,String},Vector{NTuple{4,String}}}()   # (r,v,p) -> RTP_CAPYR(r,v,t,p)
+        foreach(k -> push!(get!(capyr_of, (k[1], k[2], k[4]), NTuple{4,String}[]), k), rtp_capyr)
+        for (r, v, p, c, io) in ncom.keys, (_, _, t, _) in get(capyr_of, (r, v, p), NTuple{4,String}[])
+            ff = get(rtp_ffcx, (r, v, t, p, "CAPFLO", c), nothing)
+            ff === nothing || gassign!(coef_cio, (r, v, t, p, c, io), GNum(ff, ff == 0))   # $=
+        end
+        clag = gparam_opt(tm.data, "NCAP_CLAG", 5)
+        if !isempty(clag.values)
+            Bp, Ep, iled = gparam(tm, "B"), gparam(tm, "E"), gparam(tm, "NCAP_ILED")
+            cptyr_of = indexby(S1("RTP_CPTYR"), (1, 2, 4))            # (r,v,p) -> RTP_CPTYR(r,v,t,p)
+            for (r, v, p, c, io) in clag.keys, (_, _, t, _) in get(cptyr_of, (r, v, p), NTuple{4,String}[])
+                cl = gv(clag, (r, v, p, c, io))
+                bv, bt, et1 = gv(Bp, (v,)) + gv(iled, (r, v, p)), gv(Bp, (t,)), gv(Ep, (t,)) + one
+                num = gmax(GZERO, et1 - gmax(bv + GNum(abs(cl.v)), bt))
+                den = gmax(GNum(0.1), et1 - gmax(bv, bt))
+                gassign!(coef_cio, (r, v, t, p, c, io), GNum(sign(cl.v)) * (num / den - one) - gif(one, cl.v < 0))
+            end
+        end
+        gput!(tm, "COEF_CIO", coef_cio)
+    end
     # L43: RTP_FFCX(RTP_CAPYR,'CAPFLO',CG) = 0
     for k in collect(keys(rtp_ffcx))
         (k[5] == "CAPFLO" && (k[1], k[2], k[3], k[4]) in rtp_capyr) && delete!(rtp_ffcx, k)
@@ -318,5 +340,28 @@ function coef_shp!(tm)
     # the same domain, values (EPS included) copied (G26)
     gput!(tm, "RTP_CPX", Dict((k[1], k[2], k[4], k[3]) => x for (k, x) in coef_cap))
     gput!(tm, "COEF_CAP", Dict{NTuple{4,String},Float64}())
+    # L96 (M1.3 change 54): COEF_OCOM(R,VNT(V,T),P,C)$RCAP_OCAP(R,V,P,C) =
+    #   (COEF_OCOM(R,V,T,P,C)+EPS$COEF_RCOM(R,V,T,P,C))$(SIGN(RCAP_OCAP(R,V,P,C))*(B(T)-(B(V)+NCAP_ILED(R,V,P)+1/PI**9))<RCAP_OCAP(R,V,P,C))
+    rcap_ocap = gparam_opt(tm.data, "RCAP_OCAP", 4)
+    if !isempty(rcap_ocap.values)
+        coef_ocom, coef_rcom = gvalues(tm, "COEF_OCOM", 5), gparam(tm, "COEF_RCOM")
+        Bp, iled = gparam(tm, "B"), gparam(tm, "NCAP_ILED")
+        vnt_of = indexby(S1("VNT"), (1,))                            # v -> VNT(v,t)
+        for (r, v, p, c) in rcap_ocap.keys
+            ro = gv(rcap_ocap, (r, v, p, c))
+            for (_, t) in get(vnt_of, (v,), NTuple{2,String}[])
+                k = (r, v, t, p, c)
+                age = gv(Bp, (t,)) - (gv(Bp, (v,)) + gv(iled, (r, v, p)) + GNum(1 / pi^9))
+                if sign(ro.v) * age.v < ro.v
+                    x = gv(coef_ocom, k)
+                    haskey(coef_rcom.values, k) && (x = x + GEPS)
+                    gassign!(coef_ocom, k, x)
+                else
+                    delete!(coef_ocom, k)
+                end
+            end
+        end
+        gput!(tm, "COEF_OCOM", coef_ocom)
+    end
     return tm
 end

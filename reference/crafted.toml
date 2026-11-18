@@ -889,3 +889,17 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_capflo/demo12_capflo.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_capflo"]
+
+# TIMES_Demo demo12 + demo12_capcom/capcom.dd (17 Nov 2026): commodity flows over the lifetime of capacity
+# and of early retirements (NCAP_COM, NCAP_CLAG, FLO_FUNCX CAPFLO, RCAP_OCAP; M1.3 change 54).
+[[model]]
+name = "TIMES_Demo-demo12_capcom"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_capcom/demo12_capcom.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_capcom"]
