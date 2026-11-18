@@ -1,0 +1,36 @@
+* TIMES.jl crafted case demo12_scapin (reference/crafted.toml, 17 Nov 2026): the IN rows of
+* EQL_SCAP (prepret.dsc L105-107; M1.3 change 48, docs/m13-plan.md), "salvage limited by
+* activity": with an operating life NCAP_OLIFE, a vintage's cumulative activity, in capacity
+* units, divided by NCAP_OLIFE is at most its capacity left after early retirements. Added to
+* TIMES_Demo demo12 (etsap-TIMES/TIMES_Demo @ 962db86, CC BY 4.0).
+* - PRC_RCAP turns early retirement on for the coal plant ELCTECOA00 in REG1 and the new gas
+*   plant ELCTNGAS01 in both regions (prepret.dsc L17 gives them the RCAP_BND 'N' option).
+* - ELCTNGAS01 is vintaged (PRC_VINT): its milestone vintages keep NCAP_OLIFE (12 in REG1;
+*   15 in REG2, interpolated to 20 by 2030, prepret.dsc L28). Its technical life is 30 years at
+*   an availability of 0.85, so at most 25.5 full-load years: the limits bind if it runs.
+* - ELCTECOA00 is not vintaged: L129 clears NCAP_OLIFE on its milestone vintages, so only the
+*   past vintage 1995 added here (NCAP_PASTI 3, NCAP_OLIFE 20) has an IN row, whose activity
+*   terms VAR_ACT(REG1,1995,T,ELCTECOA00,S) no other row has.
+* - L29: NCAP_ELIFE takes the NCAP_OLIFE values where no NCAP_ELIFE is given.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET PRC_RCAP
+/
+REG1.ELCTECOA00
+REG1.ELCTNGAS01
+REG2.ELCTNGAS01
+/
+
+PARAMETER
+NCAP_PASTI ' '/
+REG1.1995.ELCTECOA00 3
+/
+
+PARAMETER
+NCAP_OLIFE ' '/
+REG1.1995.ELCTECOA00 20
+REG1.2006.ELCTNGAS01 12
+REG2.2006.ELCTNGAS01 15
+REG2.2030.ELCTNGAS01 20
+/

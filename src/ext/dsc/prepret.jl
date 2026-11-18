@@ -477,11 +477,18 @@ end
 # `RP_RTF$VNT$BD<3` reads `(RP_RTF$VNT$BD) < 3`. `MOD(x,2)` keeps the sign
 # of x (G43), so a negative odd RP_RTF gives INF.
 #
-# Not translated yet; data that reaches them raises UnportedError:
+# EQL_SCAP's IN rows (M1.3 change 48) are the IO ones: with NCAP_OLIFE (the
+# operating life, interpolated at L28 and cleared at L129 for the milestone
+# vintages of a process that is not vintaged), the cumulative activity of the
+# vintage over its operating life, in capacity units, is at most its
+# capacity left after the early retirements; `SUM(IO(IPS), ...)` is the
+# activity term of the IN rows, and the `$LIM(IPS)` term is the N rows'.
+# VAR_ACT(R,V,TT,P,S) is referenced for every RTP_CPTYR(R,V,TT,P) and
+# PRC_TS(R,P,S), and its column is created there if no other row has made it.
+#
+# Not translated yet; data that reaches it raises UnportedError:
 # - EQ_DSCRET (L92-95), rows only with RCAP_BLK, which L122 clears unless
-#   %MIP% (RCAP_BLK is refused: init_ext.jl);
-# - the IN rows of EQL_SCAP (NCAP_OLIFE, prepret.dsc L28-29), which no
-#   suite model reaches.
+#   %MIP% (RCAP_BLK is refused: init_ext.jl).
 
 """
     eq_ret!(tm::TimesModel) -> Int
@@ -499,9 +506,6 @@ function eq_ret!(tm::TimesModel)
     isempty(gparam_opt(d, "RCAP_BLK", 3).keys) ||
         throw(UnportedError("EQ_DSCRET: retirements in blocks (RCAP_BLK, prepret.dsc L92-95)"))
     prc_rcap, rp_rtf = gset(tm, "PRC_RCAP"), gparam(tm, "RP_RTF")
-    ncap_olife = gparam_opt(d, "NCAP_OLIFE", 3)
-    any(k -> (k[1], k[3]) in prc_rcap, ncap_olife.keys) &&
-        throw(UnportedError("EQL_SCAP IN rows: salvage limited by activity (NCAP_OLIFE, prepret.dsc L105-107)"))
     one = GNum(1.0)
     t_set = gset(tm, "MILESTONYR")
     t_list = [k[1] for k in t_set.keys]
@@ -528,12 +532,28 @@ function eq_ret!(tm::TimesModel)
         gconstraint!(tm, "EQ_CUMRET", (r, v, k, p), "E", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
     end
 
-    # EQL_SCAP, the N rows (L105-111)
+    # EQL_SCAP (L105-111): per RTP, the IN row (IO) then the N row (LIM), IPS = {IN, N}
     rvprl, obj_sums, prc_vint = gparam(tm, "RVPRL"), gset(tm, "OBJ_SUMS"), gset(tm, "PRC_VINT")
     ncap_pasti = gparam(tm, "NCAP_PASTI")
+    ncap_olife = gparam(tm, "NCAP_OLIFE")                               # after L28 and L129
+    fpd, prc_capact = gparam(tm, "FPD"), gparam(tm, "PRC_CAPACT")
+    ts_of_rp = indexby(gset(tm, "PRC_TS"), (1, 2))
+    cpt_of_rvp = indexby(rtp_cptyr, (1, 2, 4))                          # (r,v,p) -> RTP_CPTYR(r,v,TT,p)
     for (r, v, p) in gset(tm, "RTP")
         ((r, p) in prc_rcap && (v,) in modlyear) || continue            # RTP(R,V(LL),P): V as solve.stp L115 leaves it
-        haskey(rvprl.values, (r, v, p)) || continue                      # $RVPRL(RTP)
+        if haskey(ncap_olife.values, (r, v, p))                          # NCAP_OLIFE(RTP)$IO(IPS): the IN row
+            lhs = JuMP.AffExpr(0.0)
+            div = gv(prc_capact, (r, p)) * gv(ncap_olife, (r, v, p))
+            for (_, _, tt, _) in get(cpt_of_rvp, (r, v, p), NTuple{4,String}[]), (_, _, s) in get(ts_of_rp, (r, p), NTuple{3,String}[])
+                addterm!(lhs, gv(fpd, (tt,)) / div, tm, "VAR_ACT", r, v, tt, p, s)   # VAR_ACT*FPD(TT)/PRC_CAPACT/NCAP_OLIFE
+            end
+            rhs = JuMP.AffExpr(0.0)
+            (v,) in t_set && addterm!(rhs, one, tm, "VAR_NCAP", r, v, p)
+            addconst!(rhs, gv(ncap_pasti, (r, v, p)))
+            haskey(rvprl.values, (r, v, p)) && addterm!(rhs, -one, tm, "VAR_SCAP", r, v, "0", p)
+            gconstraint!(tm, "EQL_SCAP", (r, v, p, "IN"), "L", lhs, rhs) === nothing || (n += 1)
+        end
+        haskey(rvprl.values, (r, v, p)) || continue                      # $RVPRL(RTP)$L(IPS): the N row
         ((r, v, p) in obj_sums || (!((r, p) in prc_vint) && (v,) in t_set)) || continue
         lhs = JuMP.AffExpr(0.0)
         i = ord[v] + glead(gv(rvprl, (r, v, p)).v)                     # T(LL+RVPRL(RTP))
