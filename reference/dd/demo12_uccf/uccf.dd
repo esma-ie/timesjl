@@ -1,0 +1,49 @@
+* TIMES.jl crafted case demo12_uccf (reference/crafted.toml, 17 Nov 2026): demo12_capcom (commodity
+* flows tied to the investment, decommissioning and lifetime of capacity) plus user constraints on
+* those flows (UC_ATTR CAPFLO, so UC_CAPFLO: ppmain.mod L660-661, L1189), which give the term of
+* uc_flo.mod L50-59 with cal_caps.mod; M1.3 change 58:
+* - UCF_EACH, in both regions and each period, bounds the gas plant ELCTNGAS01's capacity-related
+*   ELCCO2 and diesel; in REG2 with the attribute PERIOD (a factor FPD);
+* - UCF_COST, in REG1, bounds the cost of the diesel tied to its investment (attribute COST: the
+*   FLO_COST of demo12_capflo).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET UC_N
+/
+UCF_EACH 'Crafted: capacity-related flows of the new gas plant (TIMES.jl demo12_uccf)'
+UCF_COST 'Crafted: cost of the diesel tied to the gas plant investment (TIMES.jl demo12_uccf)'
+/
+
+SET UC_R_EACH
+/
+REG1.UCF_EACH
+REG2.UCF_EACH
+REG1.UCF_COST
+/
+
+SET UC_ATTR
+/
+REG1.UCF_EACH.LHS.FLO.CAPFLO
+REG2.UCF_EACH.LHS.FLO.CAPFLO
+REG2.UCF_EACH.LHS.FLO.PERIOD
+REG1.UCF_COST.LHS.FLO.CAPFLO
+REG1.UCF_COST.LHS.FLO.COST
+/
+
+PARAMETER
+UC_FLO ' '/
+UCF_EACH.LHS.REG1.2005.ELCTNGAS01.ELCCO2.ANNUAL 1
+UCF_EACH.LHS.REG1.2005.ELCTNGAS01.DSL.ANNUAL 0.5
+UCF_EACH.LHS.REG2.2005.ELCTNGAS01.ELCCO2.ANNUAL 1
+UCF_EACH.LHS.REG2.2005.ELCTNGAS01.DSL.ANNUAL 2
+UCF_COST.LHS.REG1.2005.ELCTNGAS01.DSL.ANNUAL 1
+/
+
+PARAMETER
+UC_RHSRT ' '/
+REG1.UCF_EACH.2020.UP 3
+REG1.UCF_EACH.2030.UP 4
+REG2.UCF_EACH.2030.UP 20
+REG1.UCF_COST.2015.UP 10
+/

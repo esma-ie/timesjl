@@ -946,3 +946,18 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_ptdf/demo12_ptdf.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa", "{crafted}/demo12_pfd", "{crafted}/demo12_ptdf"]
+
+# TIMES_Demo demo12 + demo12_capflo/capflo.dd + demo12_capcom/capcom.dd + demo12_uccf/uccf.dd (17 Nov 2026):
+# user constraints on capacity-related flows (UC_ATTR CAPFLO: UC_CAPFLO, uc_flo.mod L50-59 with
+# cal_caps.mod; M1.3 change 58), with the attributes PERIOD and COST.
+[[model]]
+name = "TIMES_Demo-demo12_uccf"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_uccf/demo12_uccf.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_capflo", "{crafted}/demo12_capcom", "{crafted}/demo12_uccf"]

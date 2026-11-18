@@ -171,6 +171,13 @@ On 17 Nov 2026 James answered three questions of the list in the chat (below, un
 | --- | --- | --- | --- |
 | 1 | A new crafted case, demo12_stsflx, with one public CI fixture (as run, about 4 MB): demo12 with a general timeslice storage STSELC (PRC_MAP STS) and $SET STSFLX YES. demo12_stgccl's battery cannot serve: it is not an STS storage, so it has no RP_STL entries. | Recommended: yes. Built in. | open |
 
+### #159 M1.3 (58): capacity-related flows in user constraints (UC_CAPFLO, cal_caps.mod); crafted case demo12_uccf (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | A new crafted case, demo12_uccf (demo12 plus `capflo.dd`, `capcom.dd` and `uccf.dd`, CC BY 4.0), with one public CI fixture. | Recommended: yes. Built in. | open |
+| 2 | Stacked on #155 (base `m13-capcom`), as it needs the coefficients of changes 53 and 54; retargeted to `main` once #154 and #155 merge. | Recommended: yes. Built in. | open |
+
 ### #155 M1.3 (54): commodity flows over the lifetime of capacity and of early retirements (NCAP_COM, COEF_CIO, RCAP_OCAP); crafted case demo12_capcom (open)
 
 Stacked on #154 (branch m13-capflo).
