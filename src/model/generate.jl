@@ -69,7 +69,6 @@ function untranslated_families(tm::TimesModel)
             # start-up type of eqlducs.vda L67-124 (eq_lducs!) are translated; so is EQL_STGCCL (L121-125, eql_stgccl!)
             ("eq_sdind_1/eq_sdind_0", "eqlducs.vda L158-169", "DP_UNS", 7, :p),
             ("EQ_MSNCAP*", "mod_ext.vda L51-52", "RTC_MS", 3, :s),
-            ("EQ_GG_*", "mod_ext.vda L54-55", "GG_MM", 2, :s),
             ("EQ_DSCNCAP/EQ_DSCONE", "equ_ext.dsc L21-28", "PRC_DSCNCAP", 2, :s))
         if kind === :decl
             Reference.has_symbol(d.dump, sym) && note!(fam, gams, "$sym is declared")
@@ -155,6 +154,7 @@ function generate!(tm::TimesModel)
     n += eq_gr_genall!(tm)           #   powerflo.vda L290-313 (M1.3 change 27b-2)
     n += eq_gr_demall!(tm)           #   powerflo.vda L314-340 (M1.3 change 27b-2)
     n += eq_gr_xbnd!(tm)             #   powerflo.vda L341-359
+    n += eq_gg!(tm)                  #   powerflo.vda L360: gasgrids.vda MODEL (M1.3 change 61)
     n += eq_ret!(tm)                 # DSC: mod_equa.mod L212 (prepret.dsc EQOBJ; RP_RTF marks VNRET)
     apply_bounds!(tm)                # maindrv.mod L92
     JuMP.@objective(tm.model, Min, getvar!(tm, "OBJZ"))   # solve.mod L37

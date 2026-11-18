@@ -486,6 +486,9 @@ function parse_dd(text::AbstractString; file::AbstractString="<string>", source:
         if c.source && kw in DD_VARTYPES
             # POSITIVE VARIABLE(S) ...: the type word, then the keyword
             ddskip!(c)
+            # the type word alone from a $IF line, the keyword after the dollar lines that follow
+            # (gasgrids.vda L106-108: `$IFI %SOLMIP%==YES BINARY`, `$IFI NOT ... POSITIVE`, `VARIABLES ...`)
+            ddeof(c) && return unfinished(st, line)
             nxt = lowercase(ddident!(c))
             nxt in ("variable", "variables") || ddfail(c, "expected VARIABLE after $word")
             kw = "variable"

@@ -1086,3 +1086,8 @@ those checks, their figures and their crafted cases are not published
   flows (coef_shp.mod L77-94: COEF_OCOM and COEF_RCOM from the capacity
   shape NCAP_CPX). New crafted case demo12_ctrn: layers 1 to 3 PASS in
   both variants from the DD files (objective 23,969,134.31).
+- 18 Nov 2026: M1.3 change 61: the gas grids (gasgrids.vda) in the LP
+  formulation, for one-way pipelines. New crafted case demo12_gg: layers
+  1 to 3 PASS in both variants from the DD files (objective 23,960,685.74).
+  Pressure points (GG_PP), %SOLMIP% YES and two-way pipelines stay
+  refused.
