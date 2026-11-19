@@ -195,7 +195,7 @@ investments and block retirements, the discrete unit commitment, ETL,
 TIMES-Micro) and MACRO (checked with IPOPT) come after it, refused with a
 message until then (docs/decisions.md, 17 Nov 2026).
 
-James, 18 Nov 2026 (q1 and q2 of the gate audit below): also in the gate are shaped availability (NCAP_AFM, NCAP_AFX, NCAP_AFSM, NCAP_AFSX; coef_cpt.mod L42-58, pp_shapr.mod L19-40); the rest of dynamic timeslices (the re-interpolation of dynslite.vda L94-102, and the RTS(S) rows of the storage, dispatching, EQ(l)_ASHAR, EQL_CAPFLO, unit commitment, residual load curve and power-flow families); GR_DEMFR as input data (powerflo.vda L107, L131); %IREAUXBAL% set by the run without %POWERFLO% (cal_ire.mod L30). Moved to M1.5 as run options, refused with their message until then: %OBJANN% YES (eqobjann.tm), %VALIDATE% YES, %VINTOPT% 1 (fillvint.gms), %WAVER% YES (fillwave.gms), %INTEXT_ONLY% YES and %PREP_ANS% YES; and user constraints with VAR_UC not YES (eqmain.mod L204-207, L229-232; equcwrap.mod L13), and the VDA trade bounds and prices from an earlier run (bnd_ire.vda, equ_ext.vda L67; GDX_IREBND and GDX_IPRIC, init_ext.vda L137-151).
+James, 18 Nov 2026 (q1 and q2 of the gate audit below): also in the gate are shaped availability (NCAP_AFM, NCAP_AFX, NCAP_AFSM, NCAP_AFSX; coef_cpt.mod L42-58, pp_shapr.mod L19-40); the rest of dynamic timeslices (the re-interpolation of dynslite.vda L94-102, and the RTS(S) rows of the storage, dispatching, EQ(l)_ASHAR, EQL_CAPFLO, unit commitment, residual load curve and power-flow families); GR_DEMFR as input data (powerflo.vda L107, L131). %IREAUXBAL% set by the run without %POWERFLO% (cal_ire.mod L30), in the gate from q1, left it on 19 Nov 2026 (James: "yes, leave IREAUXBAL refused"; no GAMS code to translate, #149 d1): it stays refused with its message. Moved to M1.5 as run options, refused with their message until then: %OBJANN% YES (eqobjann.tm), %VALIDATE% YES, %VINTOPT% 1 (fillvint.gms), %WAVER% YES (fillwave.gms), %INTEXT_ONLY% YES and %PREP_ANS% YES; and user constraints with VAR_UC not YES (eqmain.mod L204-207, L229-232; equcwrap.mod L13), and the VDA trade bounds and prices from an earlier run (bnd_ire.vda, equ_ext.vda L67; GDX_IREBND and GDX_IPRIC, init_ext.vda L137-151).
 
 - Input dump to `ppm/` at 1e-9 on every core model, reduce_off and as_run
   (TIM-bau locally).
@@ -272,7 +272,7 @@ Every refusal left in `src/` was listed (`UnportedError`, the `*_unported` lists
 | Shaped availability (NCAP_AFM, NCAP_AFX, NCAP_AFSM, NCAP_AFSX; coef_cpt.mod L42-58, pp_shapr.mod L19-40) | M1.3 gate (q1) |
 | Dynamic timeslices: the re-interpolation (dynslite.vda L94-102) and the RTS(S) rows of the other families | M1.3 gate (q1) |
 | GR_DEMFR as input data (powerflo.vda L107, L131) | M1.3 gate (q1) |
-| %IREAUXBAL% set by the run without %POWERFLO% (cal_ire.mod L30) | M1.3 gate (q1) |
+| %IREAUXBAL% set by the run without %POWERFLO% (cal_ire.mod L30) | stays refused: no GAMS code to translate (#149 d1); out of the gate (James, 19 Nov 2026) |
 | %OBJANN%, %VALIDATE%, %VINTOPT% 1, %WAVER%, %INTEXT_ONLY%, %PREP_ANS% | M1.5 (q1) |
 | VAR_UC not YES; bnd_ire.vda with GDX_IREBND and GDX_IPRIC | M1.5 (q2) |
 | Restart points (SPOINT, LPOINT, RPOINT, FIXBOH), REG_FIXT | M1.5 |
