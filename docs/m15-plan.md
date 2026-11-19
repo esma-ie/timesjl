@@ -10,7 +10,8 @@ GAMS names kept; every function cites its lines.
 
 This file covers the stepped solve only. The other run options of M1.5 (the
 OBJ variants, MID_YEAR, DSCAUTO, VAR_UC, the restart points with FIXBOH) are
-added to it as a second part.
+added to it as a second part. James, 18 Nov 2026 (q1 and q2 of the M1.3 gate
+audit) moved more of the refused features here: %OBJANN% YES (eqobjann.tm), %VALIDATE% YES, %VINTOPT% 1 (fillvint.gms), %WAVER% YES (fillwave.gms), %INTEXT_ONLY% YES and %PREP_ANS% YES; and user constraints with VAR_UC not YES (eqmain.mod L204-207, L229-232; equcwrap.mod L13), and the VDA trade bounds and prices from an earlier run (bnd_ire.vda, equ_ext.vda L67; GDX_IREBND and GDX_IPRIC, init_ext.vda L137-151).
 
 ## Goal
 

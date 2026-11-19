@@ -195,6 +195,8 @@ investments and block retirements, the discrete unit commitment, ETL,
 TIMES-Micro) and MACRO (checked with IPOPT) come after it, refused with a
 message until then (docs/decisions.md, 17 Nov 2026).
 
+James, 18 Nov 2026 (q1 and q2 of the gate audit below): also in the gate are shaped availability (NCAP_AFM, NCAP_AFX, NCAP_AFSM, NCAP_AFSX; coef_cpt.mod L42-58, pp_shapr.mod L19-40); the rest of dynamic timeslices (the re-interpolation of dynslite.vda L94-102, and the RTS(S) rows of the storage, dispatching, EQ(l)_ASHAR, EQL_CAPFLO, unit commitment, residual load curve and power-flow families); GR_DEMFR as input data (powerflo.vda L107, L131); %IREAUXBAL% set by the run without %POWERFLO% (cal_ire.mod L30). Moved to M1.5 as run options, refused with their message until then: %OBJANN% YES (eqobjann.tm), %VALIDATE% YES, %VINTOPT% 1 (fillvint.gms), %WAVER% YES (fillwave.gms), %INTEXT_ONLY% YES and %PREP_ANS% YES; and user constraints with VAR_UC not YES (eqmain.mod L204-207, L229-232; equcwrap.mod L13), and the VDA trade bounds and prices from an earlier run (bnd_ire.vda, equ_ext.vda L67; GDX_IREBND and GDX_IPRIC, init_ext.vda L137-151).
+
 - Input dump to `ppm/` at 1e-9 on every core model, reduce_off and as_run
   (TIM-bau locally).
 - In CI on demo12: input, preprocessing, coefficients and the model, with the
@@ -258,6 +260,27 @@ Not part of the gate, for the record:
   that are missing (docs/gams-julia-map.md, "Untranslated paths that stop
   generation"). No core model reaches one. They are translated one PR
   each, with a crafted demo12 case, after the gate.
+
+### Gate audit, 18 Nov 2026 (main 7fcdd05, #147 to #168 merged)
+
+Every refusal left in `src/` was listed (`UnportedError`, the `*_unported` lists, `untranslated_families`) and sorted by the scope above. No suite model reaches any of them: the open models run from their DD files to the solve. The criteria of the close-out of 14 Nov 2026 still pass in the nightly of 17 Nov 2026 (14 of 14 gate runs, 281 of 281 parity checks, 490 of 490 probe steps); the JRC-EU-TIMES presolve failure of that pass is fixed by change 64 (#165). The nightly pass on 7fcdd05 checks the merged stack.
+
+| Refused feature | Where it goes |
+| --- | --- |
+| Elastic demand, linear form (%TIMESED%: readbprice.mod, ppmain.mod L747-755, pp_micro.mod PRE, bnd_elas.mod, eqobjels.mod) | M1.3 gate, next |
+| The stochastic extension (%STAGES%, SPINES, SENSIS) | M1.3 gate |
+| Shaped availability (NCAP_AFM, NCAP_AFX, NCAP_AFSM, NCAP_AFSX; coef_cpt.mod L42-58, pp_shapr.mod L19-40) | M1.3 gate (q1) |
+| Dynamic timeslices: the re-interpolation (dynslite.vda L94-102) and the RTS(S) rows of the other families | M1.3 gate (q1) |
+| GR_DEMFR as input data (powerflo.vda L107, L131) | M1.3 gate (q1) |
+| %IREAUXBAL% set by the run without %POWERFLO% (cal_ire.mod L30) | M1.3 gate (q1) |
+| %OBJANN%, %VALIDATE%, %VINTOPT% 1, %WAVER%, %INTEXT_ONLY%, %PREP_ANS% | M1.5 (q1) |
+| VAR_UC not YES; bnd_ire.vda with GDX_IREBND and GDX_IPRIC | M1.5 (q2) |
+| Restart points (SPOINT, LPOINT, RPOINT, FIXBOH), REG_FIXT | M1.5 |
+| DSC lumpy investments and block retirements, the discrete unit commitment, ETL, TIMES-Micro (RD_NLP, MICRO), %DAMAGE% NLP, gas-grid pressure points and %SOLMIP%, the PTDF candidate lines | after the gate, Phase 1 (17 Nov 2026) |
+| MACRO (with MSA) | after the gate, checked with IPOPT (17 Nov 2026) |
+| The ECB, CLI, ABS, MCA and IER extensions | after M1.7 (15 Nov 2026) |
+
+The M1.4 gate's own criteria still pass; it waits for this gate (CLAUDE.md), and elastic demand adds `$GDXIN`/`$LOAD` of a GDX file to the reader before it closes.
 
 ## Findings so far
 
