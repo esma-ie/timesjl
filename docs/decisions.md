@@ -135,6 +135,12 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
+### #PRNUM M1.3 (68): dynamic timeslices, the re-interpolation of dynslite.vda POSTLEV; crafted case demo12_tsoff_rint (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the crafted case demo12_tsoff_rint (demo12_tsoff + rint.dd, CC BY 4.0) with its public CI fixtures, the run fixture included so that CI runs it from the DD files (about 7 MB). | Recommended: yes. Built in. | open |
+
 ### #171 README: status without the pre-MVP label; probes of the 18-19 Nov nightly (open)
 
 Asked for by James on 19 Nov 2026 ("update the read.me for update probe status. remove the pre MPV status of TIMES.jl. the model now runs well from city, national, multi-regional models.").

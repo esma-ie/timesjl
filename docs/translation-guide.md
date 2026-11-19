@@ -1108,6 +1108,9 @@ those checks, their figures and their crafted cases are not published
   PRC_RCAP outside RP kept; eqobjinv.mod L219-229, an EPS COEF_ILED gives
   interest during construction). New crafted case demo12_iled: layers 1
   to 3 PASS in both variants from the DD files (objective 23,961,179.22).
+- 19 Nov 2026: M1.3 change 68: dynamic timeslices, the re-interpolation
+  of dynslite.vda POSTLEV (L91-103). New crafted case demo12_tsoff_rint:
+  layers 1 to 3 PASS in both variants from the DD files.
 - 18 Nov 2026: `run_model` (James: TIMES.jl usable without cloning the
   repository). The run from a run file and DD files moves from
   `scripts/run_dd.jl` into the package (`src/run.jl`), with HiGHS as a
