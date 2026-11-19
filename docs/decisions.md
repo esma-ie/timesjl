@@ -135,7 +135,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
-### #PRNUM M1.3 (67): dynamic timeslices, the RTS(S) rows of the other families; twelve crafted cases demo12_tsoff_* (open)
+### #176 M1.3 (67): dynamic timeslices, the RTS(S) rows of the other families; twelve crafted cases demo12_tsoff_* (open)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
