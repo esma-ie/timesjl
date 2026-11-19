@@ -307,6 +307,7 @@ function eq_actups!(tm::TimesModel)
     tx = eq_periods(tm)   # %R_V_T%: SUBT in a stepped run (maindrv.mod L38-40)
     vint = gset(tm, "RTP_VINTYR")
     vt_ok(v, t) = (v,) in modlyear && (t,) in tx
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     vt_of_rp = indexby(vint, (1, 4))                                       # (r,p) -> RTP_VINTYR(r,v,t,p)
     vint_of_rtp = indexby(vint, (1, 3, 4))                                 # (r,t,p) -> RTP_VINTYR(r,v,t,p)
     prc_ts = S("PRC_TS", 3)
@@ -396,7 +397,7 @@ function eq_actups!(tm::TimesModel)
     for (r, p, bd) in rp_upl
         bd in ("LO", "UP") || continue
         for (_, _, s) in get(ts_of_rp, (r, p), no3), (_, v, t, _) in get(vt_of_rp, (r, p), no4)
-            vt_ok(v, t) || continue
+            (vt_ok(v, t) && !off(r, t, s)) || continue                     # RTS(S), L50
             any(k -> haskey(act_ups, (r, v, p, k[2], bd)), get(tsann_of_s, (s,), no2)) && push!(rows6, (r, v, t, p, s, bd))
         end
     end
@@ -431,7 +432,7 @@ function eq_actups!(tm::TimesModel)
     # EQE_ACTUPS, L65-72, and EQL_ACTUPS, L76-82
     rows_e, rows_l = NTuple{7,String}[], NTuple{7,String}[]
     for (r, p, tsl, l) in rp_ups, (_, _, s) in get(group_of, (r, tsl), no3), (_, v, t, _) in get(vt_of_rp, (r, p), no4)
-        vt_ok(v, t) || continue
+        (vt_ok(v, t) && !off(r, t, s)) || continue                         # RTS(S), L65, L76
         l in _SLS_BD && push!(rows_e, (r, v, t, p, tsl, l, s))             # L(BND_TYPE)
         l in ("FX", "N") && push!(rows_l, (r, v, t, p, tsl, l, s))         # LNX(L)
     end
@@ -477,7 +478,7 @@ function eq_actups!(tm::TimesModel)
     # EQL_ACTUPC, L86-95
     rows7 = NTuple{7,String}[]
     for (r, p, tsl, l) in rp_upc, (_, _, s) in get(group_of, (r, tsl), no3), (_, v, t, _) in get(vt_of_rp, (r, p), no4)
-        vt_ok(v, t) && push!(rows7, (r, v, t, p, tsl, l, s))
+        vt_ok(v, t) && !off(r, t, s) && push!(rows7, (r, v, t, p, tsl, l, s))     # RTS(S), L86
     end
     for (r, v, t, p, tsl, l, s) in gams_sort!(rows7, d)
         lhs = JuMP.AffExpr(0.0)
@@ -505,7 +506,7 @@ function eq_actups!(tm::TimesModel)
     for (r, p, l) in rp_pl
         l == "N" || continue
         for (_, _, s) in get(ts_of_rp, (r, p), no3), (_, v, t, _) in get(vt_of_rp, (r, p), no4)
-            vt_ok(v, t) && push!(rows5, (r, v, t, p, s))
+            vt_ok(v, t) && !off(r, t, s) && push!(rows5, (r, v, t, p, s))         # RTS(S), L99
         end
     end
     for (r, v, t, p, s) in gams_sort!(rows5, d)

@@ -135,6 +135,14 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
+### #PRNUM M1.3 (67): dynamic timeslices, the RTS(S) rows of the other families; twelve crafted cases demo12_tsoff_* (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the twelve crafted cases demo12_tsoff_* and tsoff2.dd (run files only, CC BY 4.0), with three public CI fixtures (demo12_tsoff_disp, _ptdf, _gg2; as run, about 13 MB together); the other nine are checked by the gate from their DD files. | Recommended: yes. Built in. | open |
+| 2 | D46 (timslice.mod L121 divides by zero when the regions have different timeslice trees and there is ramping or start-up data): report it to ETSAP, with the other notes? Rule-level (a report to ETSAP). | yes, with the other reports | open |
+| 3 | prepret.dsc L75 keeps an EPS upper bound EPS (MIN of the VAR_RCAP and VAR_SCAP bounds); only visible under HOLDFIXED. Fixed in this change rather than in its own PR, as the case that shows it is this change's. | Recommended: yes. Built in. | open |
+
 ### #171 README: status without the pre-MVP label; probes of the 18-19 Nov nightly (open)
 
 Asked for by James on 19 Nov 2026 ("update the read.me for update probe status. remove the pre MPV status of TIMES.jl. the model now runs well from city, national, multi-regional models.").
