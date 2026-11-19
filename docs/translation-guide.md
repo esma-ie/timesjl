@@ -1108,6 +1108,10 @@ those checks, their figures and their crafted cases are not published
   PRC_RCAP outside RP kept; eqobjinv.mod L219-229, an EPS COEF_ILED gives
   interest during construction). New crafted case demo12_iled: layers 1
   to 3 PASS in both variants from the DD files (objective 23,961,179.22).
+- 19 Nov 2026: M1.3 change 66: shaped availability factors (NCAP_AFX,
+  NCAP_AFM, NCAP_AFSX, NCAP_AFSM; coef_cpt.mod L42-58, pp_shapr.mod
+  L19-40). New crafted case demo12_afshp: layers 1 to 3 PASS in both
+  variants from the DD files (objective 23,962,468.09).
 - 18 Nov 2026: `run_model` (James: TIMES.jl usable without cloning the
   repository). The run from a run file and DD files moves from
   `scripts/run_dd.jl` into the package (`src/run.jl`), with HiGHS as a

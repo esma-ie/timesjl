@@ -135,6 +135,12 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
+### #PRNUM M1.3 (66): shaped availability, NCAP_AFX/AFM/AFSX/AFSM (coef_cpt.mod L42-58, pp_shapr.mod L19-40); crafted case demo12_afshp (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the crafted case demo12_afshp (demo12 + afshp.dd, CC BY 4.0) with one public CI fixture (as run, about 8.5 MB with the coefficient files, so that CI runs the new code). | Recommended: yes. Built in. | open |
+
 ### #171 README: status without the pre-MVP label; probes of the 18-19 Nov nightly (open)
 
 Asked for by James on 19 Nov 2026 ("update the read.me for update probe status. remove the pre MPV status of TIMES.jl. the model now runs well from city, national, multi-regional models.").
