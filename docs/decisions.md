@@ -27,7 +27,7 @@ answer yet.
 
 | Asked | Where | Question | Recommended | Status |
 | --- | --- | --- | --- | --- |
-| 19 Nov 2026 | #PRNUM | Approve the plan for the stochastic extension (`docs/m13-plan.md`, "Plan: the stochastic extension"): changes 70 to 76, one pull request each, with eight crafted demo12 cases; about four to five working days. Rule-level (a plan for major work; CLAUDE.local.md: plan before building). | yes | Open; nothing of it starts until James approves it. |
+| 19 Nov 2026 | #178 | Approve the plan for the stochastic extension (`docs/m13-plan.md`, "Plan: the stochastic extension"): changes 70 to 76, one pull request each, with eight crafted demo12 cases; about four to five working days. Rule-level (a plan for major work; CLAUDE.local.md: plan before building). | yes | Open; nothing of it starts until James approves it. |
 | 4 Nov 2026 | #30 | Add `scripts/m13_replay.jl` (needs GAMS, about 7 min) to the nightly run? | none given | Open (#30, decision 3). Checked 14 Nov 2026: the workstation batch does not run it. |
 | 8 Nov 2026 | chat | Harness fix as one small PR: CHECK status for a non-optimal solve; redo `ppm/` and `coef/` made with older GAMS | one small PR | Open; no PR yet. Checked 14 Nov 2026: `make_reference.py` still reports OK for a run that GAMS ends without an optimum. |
 | 10 Nov 2026 | #89 | Keep P2-5 (data and equation schemas) on the Phase 2 backlog, with its three pilots after M1.7? | keep; all pilots after M1.7 | Open (#89, decisions 1 and 2); provisional until James confirms. |
@@ -138,7 +138,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
-### #PRNUM Plan for the stochastic extension; q1 and q2 of 19 Nov 2026 (open)
+### #178 Plan for the stochastic extension; q1 and q2 of 19 Nov 2026 (open)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
