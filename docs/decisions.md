@@ -27,7 +27,7 @@ answer yet.
 
 | Asked | Where | Question | Recommended | Status |
 | --- | --- | --- | --- | --- |
-| 19 Nov 2026 | #PRNUM | Known difference K4 (#PRNUM d2): the base prices of elastic demand as Arrow folders in place of GDX files, and no record for a zero marginal where GAMS writes EPS. Rule-level (a known difference). | yes | Open; needs James's explicit yes. |
+| 19 Nov 2026 | #179 | Known difference K4 (#179 d2): the base prices of elastic demand as Arrow folders in place of GDX files, and no record for a zero marginal where GAMS writes EPS. Rule-level (a known difference). | yes | Open; needs James's explicit yes. |
 | 4 Nov 2026 | #30 | Add `scripts/m13_replay.jl` (needs GAMS, about 7 min) to the nightly run? | none given | Open (#30, decision 3). Checked 14 Nov 2026: the workstation batch does not run it. |
 | 8 Nov 2026 | chat | Harness fix as one small PR: CHECK status for a non-optimal solve; redo `ppm/` and `coef/` made with older GAMS | one small PR | Open; no PR yet. Checked 14 Nov 2026: `make_reference.py` still reports OK for a run that GAMS ends without an optimum. |
 | 10 Nov 2026 | #89 | Keep P2-5 (data and equation schemas) on the Phase 2 backlog, with its three pilots after M1.7? | keep; all pilots after M1.7 | Open (#89, decisions 1 and 2); provisional until James confirms. |
@@ -136,7 +136,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
-### #PRNUM M1.3 (69): elastic demand, the linear form (%TIMESED%); crafted cases demo12_edbase, demo12_ed, demo12_edagg (open)
+### #179 M1.3 (69): elastic demand, the linear form (%TIMESED%); crafted cases demo12_edbase, demo12_ed, demo12_edagg (open)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
