@@ -135,7 +135,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
-### #PRNUM M1.3 (65): total demand fractions given as data, GR_DEMFR (powerflo.vda L40, L107, L131); crafted case demo12_pfdf (open)
+### #174 M1.3 (65): total demand fractions given as data, GR_DEMFR (powerflo.vda L40, L107, L131); crafted case demo12_pfdf (open)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
