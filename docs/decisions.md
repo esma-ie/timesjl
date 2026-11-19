@@ -134,6 +134,17 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
+### #171 README: status without the pre-MVP label; probes of the 18-19 Nov nightly (open)
+
+Asked for by James on 19 Nov 2026 ("update the read.me for update probe status. remove the pre MPV status of TIMES.jl. the model now runs well from city, national, multi-regional models.").
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | The status box drops "pre-MVP", "Not ready for modelling use" and "For analysis, use TIMES in GAMS"; it keeps the facts: no release, no report parameters or VEDA files yet (M1.6), a few features refused, interfaces may change. | Recommended: yes. Built in. | open |
+| 2 | OTNYC and OTCGEN (both New York City) are named as city models, TIMES-NZ as national, OTUS9r as multi-regional, with a Scale column in the probe table; JRC-EU-TIMES is named as multi-regional for preprocessing only (its matrix and optimum are not compared yet). | Recommended: yes. Built in. | open |
+| 3 | JRC-EU-TIMES verdicts: 850 of 850 sets and parameters match to the end of preprocessing (cli_ll, REDUCE off and as run), QA log identical, DD files compile as GAMS in all nine scenarios; verdicts only (`redistribute = "summary"`). | Recommended: yes. Built in. | open |
+| 4 | TIMES-NZ shift REDUCE off: HiGHS reaches the one-hour limit in most batches (also 18-19 Nov); the 3e-9 kept in the table is from the daytime batch of 18 Nov, explained in a note. | Nothing to answer. | logged |
+
 ### #148 M1.3 (47): the VDA betting constraints EQG_UCMAX, EQG_UCSUMAX (ucbet.vda L11-125); crafted case demo12_ucbet (merged 18 Nov 2026)
 
 | # | Question | Decided | How |
