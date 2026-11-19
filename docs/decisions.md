@@ -27,6 +27,7 @@ answer yet.
 
 | Asked | Where | Question | Recommended | Status |
 | --- | --- | --- | --- | --- |
+| 19 Nov 2026 | #PRNUM | Approve the plan for the stochastic extension (`docs/m13-plan.md`, "Plan: the stochastic extension"): changes 70 to 76, one pull request each, with eight crafted demo12 cases; about four to five working days. Rule-level (a plan for major work; CLAUDE.local.md: plan before building). | yes | Open; nothing of it starts until James approves it. |
 | 4 Nov 2026 | #30 | Add `scripts/m13_replay.jl` (needs GAMS, about 7 min) to the nightly run? | none given | Open (#30, decision 3). Checked 14 Nov 2026: the workstation batch does not run it. |
 | 8 Nov 2026 | chat | Harness fix as one small PR: CHECK status for a non-optimal solve; redo `ppm/` and `coef/` made with older GAMS | one small PR | Open; no PR yet. Checked 14 Nov 2026: `make_reference.py` still reports OK for a run that GAMS ends without an optimum. |
 | 10 Nov 2026 | #89 | Keep P2-5 (data and equation schemas) on the Phase 2 backlog, with its three pilots after M1.7? | keep; all pilots after M1.7 | Open (#89, decisions 1 and 2); provisional until James confirms. |
@@ -65,6 +66,8 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 19 Nov 2026 | q1 of the 19 Nov check-in: "id go with option b, reading the base prices from the arrow database." Elastic demand (%TIMESED%) reads the base prices of the earlier run from TIMES.jl's own Arrow file, not from a GDX file (readbprice.mod `$GDXIN`/`$LOAD`); TIMES.jl writes that file after a solve, as wrtbprice.mod writes `com_bprice.gdx`. For the checks against GAMS the reference harness converts GAMS's `com_bprice.gdx` to Arrow. No GDX reader is added; one can follow if users need it. The case design is #165 d3. | this log; `docs/m13-plan.md` (gate audit, change 69) |
+| 19 Nov 2026 | q2 of the 19 Nov check-in: "yes show me the plan". The plan for the stochastic extension is in `docs/m13-plan.md` ("Plan: the stochastic extension"); nothing of it starts until James approves it (Open decisions). | this log; `docs/m13-plan.md` |
 | 19 Nov 2026 | "yes, leave IREAUXBAL refused": %IREAUXBAL% set by the run without %POWERFLO% (cal_ire.mod L30) leaves the M1.3 gate. GAMS pastes the run's own text into the balance there, so there is no GAMS code to translate (#149 d1); TIMES.jl keeps refusing it with its message (eqcombal.jl, eqpeak.jl). Narrows q1 of 18 Nov 2026. Rule-level (the milestone scope); explicit yes. | this log; `docs/m13-plan.md` (Gate, and Gate audit, 18 Nov 2026) |
 | 18 Nov 2026 | q1 of the M1.3 gate audit: yes, as recommended. Still refused linear features count for the M1.3 gate: shaped availability (NCAP_AFM, NCAP_AFX, NCAP_AFSM, NCAP_AFSX; coef_cpt.mod L42-58, pp_shapr.mod L19-40); the rest of dynamic timeslices (the re-interpolation of dynslite.vda L94-102, and the RTS(S) rows of the storage, dispatching, EQ(l)_ASHAR, EQL_CAPFLO, unit commitment, residual load curve and power-flow families); GR_DEMFR as input data (powerflo.vda L107, L131); %IREAUXBAL% set by the run without %POWERFLO% (cal_ire.mod L30). Moved to M1.5 as run options: %OBJANN% YES (eqobjann.tm), %VALIDATE% YES, %VINTOPT% 1 (fillvint.gms), %WAVER% YES (fillwave.gms), %INTEXT_ONLY% YES and %PREP_ANS% YES. Elastic demand (%TIMESED%, its linear form) and the stochastic extension stay in the gate. Rule-level (the milestone scope); explicit yes. | this log; `docs/m13-plan.md` (Gate, and Gate audit, 18 Nov 2026); `docs/m15-plan.md`; `docs/translation-guide.md` (Decisions) |
 | 18 Nov 2026 | q2 of the M1.3 gate audit: move both to M1.5: user constraints with VAR_UC not YES (eqmain.mod L204-207, L229-232; equcwrap.mod L13), and the VDA trade bounds and prices from an earlier run (bnd_ire.vda, equ_ext.vda L67; GDX_IREBND and GDX_IPRIC, init_ext.vda L137-151). The M1.3 gate closes without them; they stay refused with their message until M1.5. Answers the VAR_UC question of 17 Nov 2026 and #150 decision 3. Rule-level (the milestone scope); explicit yes. | this log; `docs/m13-plan.md` (Gate); `docs/m15-plan.md` |
@@ -134,6 +137,12 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 | 11 Nov 2026 | Keep this decision log, with its rule. | `docs/decisions.md` |
 
 ## Log by pull request
+
+### #PRNUM Plan for the stochastic extension; q1 and q2 of 19 Nov 2026 (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Approve the plan for the stochastic extension (changes 70 to 76, eight crafted cases, about four to five working days). | Recommended: yes. Not built in: nothing starts until James says yes. | open (Open decisions) |
 
 ### #173 m13_gate.jl: 24 hours for every HiGHS solve (open)
 
