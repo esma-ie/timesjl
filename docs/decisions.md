@@ -27,6 +27,7 @@ answer yet.
 
 | Asked | Where | Question | Recommended | Status |
 | --- | --- | --- | --- | --- |
+| 19 Nov 2026 | #PRNUM | Known difference K4 (#PRNUM d2): the base prices of elastic demand as Arrow folders in place of GDX files, and no record for a zero marginal where GAMS writes EPS. Rule-level (a known difference). | yes | Open; needs James's explicit yes. |
 | 4 Nov 2026 | #30 | Add `scripts/m13_replay.jl` (needs GAMS, about 7 min) to the nightly run? | none given | Open (#30, decision 3). Checked 14 Nov 2026: the workstation batch does not run it. |
 | 8 Nov 2026 | chat | Harness fix as one small PR: CHECK status for a non-optimal solve; redo `ppm/` and `coef/` made with older GAMS | one small PR | Open; no PR yet. Checked 14 Nov 2026: `make_reference.py` still reports OK for a run that GAMS ends without an optimum. |
 | 10 Nov 2026 | #89 | Keep P2-5 (data and equation schemas) on the Phase 2 backlog, with its three pilots after M1.7? | keep; all pilots after M1.7 | Open (#89, decisions 1 and 2); provisional until James confirms. |
@@ -134,6 +135,14 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 | 11 Nov 2026 | Keep this decision log, with its rule. | `docs/decisions.md` |
 
 ## Log by pull request
+
+### #PRNUM M1.3 (69): elastic demand, the linear form (%TIMESED%); crafted cases demo12_edbase, demo12_ed, demo12_edagg (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the crafted cases demo12_edbase, demo12_ed and demo12_edagg (demo12 with the base prices of demo12_edbase as a GDX file and its Arrow form, CC BY 4.0), with public CI fixtures of demo12_ed and demo12_edagg, the run fixtures included (about 7 MB each). | Recommended: yes. Built in. | open |
+| 2 | Known difference K4: TIMES.jl reads and writes the base prices as Arrow folders, not GDX files (q1, option b), looking for them in the run file's folder and along the include path; a zero marginal is written as no record where GAMS writes EPS. Rule-level (a known difference). | Recommended: yes. Built in; needs your explicit yes. | open (Open decisions) |
+| 3 | Harness 0.3.6: `work_files`, files the harness copies into GAMS's work folder before each run (here the base prices). | Recommended: yes. Built in. | open |
 
 ### #173 m13_gate.jl: 24 hours for every HiGHS solve (open)
 

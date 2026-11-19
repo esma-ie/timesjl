@@ -29,7 +29,7 @@
 #
 # Not translated yet; data that needs them raises UnportedError:
 # - capacity-related flows, cal_cap.mod L72 (NCAP_COM, RPC_CAPFLO);
-# - elastic demand, L85 under %TIMESED% (COM_ELAST); VAR_DEM, L82 (RD_NLP);
+# - VAR_DEM, L82 (RD_NLP). Elastic demand (L85, %TIMESED% YES) is translated since M1.3 change 69;
 # - the IER extraction-condensing CHP adjustment, L49 (%PEAKCHP%);
 # - %IREAUXBAL% in cal_ire.mod L30 other than from powerflo.vda DECL (its IREAUX
 #   terms, L31, are `ireaux!`: M1.3 change 27b-2). (REDUCE YES goes through cal_fflo_red!, M1.3 change 17b.)
@@ -40,7 +40,6 @@ function peak_unported(tm::TimesModel)
     d = tm.data
     nonempty_set(name, N) = !isempty(gset_opt(d, name, N))
     nonempty_par(name, N) = !isempty(gparam_opt(d, name, N))
-    nonempty_par("COM_ELAST", 5) && throw(UnportedError("eqpeak.mod L85 elastic demand under %TIMESED% (COM_ELAST)"))
     nonempty_par("RD_NLP", 2) && throw(UnportedError("eqpeak.mod L82 non-linear demand VAR_DEM (RD_NLP)"))
     haskey(tm.switches, "PEAKCHP") && throw(UnportedError("eqpeak.mod L49 %PEAKCHP% (IER extension, prep_ext.ier L21)"))
     # %IREAUXBAL% comes from powerflo.vda DECL (L221) under %POWERFLO% (`ireaux!`); set any other way, refused
@@ -109,6 +108,11 @@ function eq_peak!(tm::TimesModel)
     rd_nlp = gparam(tm, "RD_NLP")
     rd_shar = gparam(tm, "RD_SHAR")
     stg_eff = gparam(tm, "STG_EFF")
+    # elastic demand (L85, %TIMESED% YES; M1.3 change 69)
+    ted = timesed_on(tm)
+    com_elast = gparam_opt(tm.data, "COM_ELAST", 5)
+    rcj_of = indexby(gset_opt(tm.data, "RCJ", 4), (1, 2))
+    bdneq = Set(k[1] for k in gset(tm, "BDNEQ").keys)
     nstts, prc_map = gset(tm, "PRC_NSTTS"), gset(tm, "PRC_MAP")
     one = GNum(1.0)
     # blending (L78)
@@ -214,6 +218,13 @@ function eq_peak!(tm::TimesModel)
                 haskey(rd_nlp, (r, c)) || addconst!(rhs, flx * (gv(com_proj, (r, t, c)) * cfr))
                 for (_, cm) in get(agg_of_r, (r,), no2)
                     addterm!(rhs, flx * (gv(rd_shar, (r, t, cm, c)) * cfr), tm, "VAR_COMPRD", r, t, cm, "ANNUAL")
+                end
+            end
+            # Elastic demand (L85): SUM(RCJ(R,C,J,BDNEQ(BD))$COM_ELAST(R,T,C,S,BD),-BDSIG(BD)*VAR_ELAST(R,T,C,S,J,BD))
+            if ted
+                for (_, _, j, b) in get(rcj_of, (r, c), NTuple{4,String}[])
+                    (b in bdneq && !iszero(gv(com_elast, (r, t, c, s, b)))) || continue
+                    addterm!(rhs, flx * GNum(-bdsig(b)), tm, "VAR_ELAST", r, t, c, s, j, b)
                 end
             end
         end

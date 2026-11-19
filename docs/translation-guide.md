@@ -1108,6 +1108,10 @@ those checks, their figures and their crafted cases are not published
   PRC_RCAP outside RP kept; eqobjinv.mod L219-229, an EPS COEF_ILED gives
   interest during construction). New crafted case demo12_iled: layers 1
   to 3 PASS in both variants from the DD files (objective 23,961,179.22).
+- 19 Nov 2026: M1.3 change 69: elastic demand, the linear form (%TIMESED%
+  YES), with the base prices read from and written to TIMES.jl's own Arrow
+  folder (q1). New crafted cases demo12_edbase, demo12_ed and demo12_edagg:
+  layers 1 to 3 PASS in both variants from the DD files.
 - 18 Nov 2026: `run_model` (James: TIMES.jl usable without cloning the
   repository). The run from a run file and DD files moves from
   `scripts/run_dd.jl` into the package (`src/run.jl`), with HiGHS as a
