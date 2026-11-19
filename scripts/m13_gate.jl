@@ -151,10 +151,27 @@ function dd_input(dir, model, variant, sources, sw)
 end
 
 """
+    highs_time_limit(model) -> Float64
+
+The time limit of the layer-3 HiGHS solve, in seconds: the suite entry's `highs_time_limit`
+(reference/suite.toml or crafted.toml), else an hour. TIMES-NZ has 24 hours (James, 19 Nov 2026):
+with REDUCE off, HiGHS rarely finishes TIMES-NZ shift within the hour.
+"""
+function highs_time_limit(model)
+    e = try
+        suite_model(model)
+    catch
+        Dict{String,Any}()
+    end
+    return Float64(get(e, "highs_time_limit", 3600))
+end
+
+"""
     model_check(tm, dir, model, variant; solve) -> Bool
 
 Layer 2: the model generated from TIMES.jl's state against GAMS's CONVERT matrix (1e-9). Layer 3
-with `solve`: HiGHS (TIMESJL_THREADS threads, an hour at most) against GAMS/CPLEX's objective (1e-6).
+with `solve`: HiGHS (TIMESJL_THREADS threads, within `highs_time_limit(model)`, an hour unless the
+suite entry says otherwise) against GAMS/CPLEX's objective (1e-6).
 """
 function model_check(tm, dir, model, variant; solve=false)
     ok = true
@@ -176,7 +193,7 @@ function model_check(tm, dir, model, variant; solve=false)
     JuMP.set_optimizer(tm.model, HiGHS.Optimizer)
     JuMP.set_silent(tm.model)
     JuMP.set_attribute(tm.model, "threads", parse(Int, get(ENV, "TIMESJL_THREADS", "12")))
-    JuMP.set_time_limit_sec(tm.model, 3600.0)
+    JuMP.set_time_limit_sec(tm.model, highs_time_limit(model))
     ts = @elapsed JuMP.optimize!(tm.model)
     st = JuMP.termination_status(tm.model)
     if st != JuMP.OPTIMAL

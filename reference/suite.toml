@@ -148,6 +148,9 @@ kind = "run"
 run_file = "{times_nz_dd}/dd/steady-v308/steady-v308.run"
 idirs = ["{times_nz_dd}/dd/steady-v308"]
 solver_opt_dir = "{times_nz_dd}/dd/steady-v308"
+# The layer-3 HiGHS solve of scripts/m13_gate.jl, in seconds (default 3600): 24 hours for
+# TIMES-NZ (James, 19 Nov 2026), which HiGHS often cannot solve within the hour.
+highs_time_limit = 86400
 
 [[model]]
 name = "TIMES-NZ-shift-v308"
@@ -161,6 +164,7 @@ kind = "run"
 run_file = "{times_nz_dd}/dd/shift-v308/shift-v308.run"
 idirs = ["{times_nz_dd}/dd/shift-v308"]
 solver_opt_dir = "{times_nz_dd}/dd/shift-v308"
+highs_time_limit = 86400          # 24 hours, as TIMES-NZ-steady-v308 above
 
 # OTCGEN (ESMA; CC-BY-SA-4.0 in esma-ie/OTCGEN, from the US EPA's Generative COMET
 # v0.0.0, US public domain; the EPA release is populated for New York City). Its
