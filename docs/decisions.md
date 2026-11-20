@@ -135,6 +135,12 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
+### #174 M1.3 (65): total demand fractions given as data, GR_DEMFR (powerflo.vda L40, L107, L131); crafted case demo12_pfdf (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the crafted case demo12_pfdf (demo12 + pf.dd and pfdf.dd, CC BY 4.0) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
+
 ### #176 M1.3 (67): dynamic timeslices, the RTS(S) rows of the other families; twelve crafted cases demo12_tsoff_* (open)
 
 | # | Question | Decided | How |
