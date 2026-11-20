@@ -124,6 +124,14 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
     profile (`raw/tjl_solve_<solver>_profile.txt`, seconds per statement),
     cut at the files of the Include File Summary. Only numbers are read; no
     line of a listing or log is copied.
+  - No CPLEX timings on this board (James, 20 Nov 2026; #182 d6). The GAMS
+    EULA's "Publication of Benchmarks" forbids publishing performance
+    comparisons of CPLEX and its other Restricted Solvers (Gurobi, Xpress,
+    ...) without the consent of GAMS and the solver vendor. `run_timing.jl`
+    leaves every entry of such a solver out of the block, and `--embed`
+    refuses one. The slides then say "runs with CPLEX: times not published".
+    The local board adds them back (`run_timing.jl --restricted`, block
+    `run-timing-restricted`, merged into the same runs by the page).
   - TIMES.jl, one entry per model and variant of a workstation batch
     (`scripts/m13_gate.jl --from-dd`): the seconds the gate prints for each
     step in the batch's `dd-<model>.log`, and the wall time of the whole run
