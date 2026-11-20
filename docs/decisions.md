@@ -65,7 +65,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
-| 20 Nov 2026 | Rename the repository and the Julia package to OpenTIMES: repository `esma-ie/OpenTIMES.jl` (GitHub redirects `esma-ie/TIMESjl`), package and module `OpenTIMES`, UUID unchanged. The registry needs a name that starts with an upper-case letter, so not `openTimes`. Register in Julia's General registry only after the test fixtures (386 MB, about 135 MB compressed) leave the package tree, so `Pkg.add` stays small. | this log; `CLAUDE.md`; rename PR |
+| 20 Nov 2026 | Rename the repository and the Julia package to OpenTIMES: repository `esma-ie/OpenTIMES.jl` (GitHub redirects `esma-ie/TIMESjl`), package and module `OpenTIMES`, UUID unchanged. The registry needs a name that starts with an upper-case letter, so not `openTimes`. Register in Julia's General registry only after the test fixtures (386 MB, about 135 MB compressed) leave the package tree, so `Pkg.add` stays small. | this log; `CLAUDE.md`; #183 |
 | 19 Nov 2026 | "yes, leave IREAUXBAL refused": %IREAUXBAL% set by the run without %POWERFLO% (cal_ire.mod L30) leaves the M1.3 gate. GAMS pastes the run's own text into the balance there, so there is no GAMS code to translate (#149 d1); TIMES.jl keeps refusing it with its message (eqcombal.jl, eqpeak.jl). Narrows q1 of 18 Nov 2026. Rule-level (the milestone scope); explicit yes. | this log; `docs/m13-plan.md` (Gate, and Gate audit, 18 Nov 2026) |
 | 18 Nov 2026 | q1 of the M1.3 gate audit: yes, as recommended. Still refused linear features count for the M1.3 gate: shaped availability (NCAP_AFM, NCAP_AFX, NCAP_AFSM, NCAP_AFSX; coef_cpt.mod L42-58, pp_shapr.mod L19-40); the rest of dynamic timeslices (the re-interpolation of dynslite.vda L94-102, and the RTS(S) rows of the storage, dispatching, EQ(l)_ASHAR, EQL_CAPFLO, unit commitment, residual load curve and power-flow families); GR_DEMFR as input data (powerflo.vda L107, L131); %IREAUXBAL% set by the run without %POWERFLO% (cal_ire.mod L30). Moved to M1.5 as run options: %OBJANN% YES (eqobjann.tm), %VALIDATE% YES, %VINTOPT% 1 (fillvint.gms), %WAVER% YES (fillwave.gms), %INTEXT_ONLY% YES and %PREP_ANS% YES. Elastic demand (%TIMESED%, its linear form) and the stochastic extension stay in the gate. Rule-level (the milestone scope); explicit yes. | this log; `docs/m13-plan.md` (Gate, and Gate audit, 18 Nov 2026); `docs/m15-plan.md`; `docs/translation-guide.md` (Decisions) |
 | 18 Nov 2026 | q2 of the M1.3 gate audit: move both to M1.5: user constraints with VAR_UC not YES (eqmain.mod L204-207, L229-232; equcwrap.mod L13), and the VDA trade bounds and prices from an earlier run (bnd_ire.vda, equ_ext.vda L67; GDX_IREBND and GDX_IPRIC, init_ext.vda L137-151). The M1.3 gate closes without them; they stay refused with their message until M1.5. Answers the VAR_UC question of 17 Nov 2026 and #150 decision 3. Rule-level (the milestone scope); explicit yes. | this log; `docs/m13-plan.md` (Gate); `docs/m15-plan.md` |
@@ -136,7 +136,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
-### Rename TIMES -> OpenTIMES (open)
+### #183 Rename TIMES -> OpenTIMES (open)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
