@@ -853,3 +853,16 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 3092
 cols = 4330
 nonzeros = 17433
+# Crafted case TIMES_Demo-demo12_pfdf (reference/crafted.toml: demo12 + pf.dd and pfdf.dd), 19 Nov 2026 (GAMS
+# 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): total demand fractions given as data
+# (GR_DEMFR) on a grid with two nodes in REG1, the total demand path of EQ_GR_DEMALL (powerflo.vda L40, L107, L131),
+# the whole model. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_pfdf"
+model    = "TIMES_Demo-demo12_pfdf"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3377
+cols = 4605
+nonzeros = 18687

@@ -19,7 +19,7 @@
 # zero removes a record; `$=` writes only nonzero or EPS (G24); a statement
 # reads the values from before it (G11).
 #
-# Refused: GR_DEMFR and gas-grid data under %POWERFLO% YES, and GR_PTDF with %DSC%
+# Refused: gas-grid data under %POWERFLO% YES, and GR_PTDF with %DSC%
 # and %SOLMIP% YES (L114, powerflo.vda: `powerflo_main!`, M1.3 changes 27a, 57) and TS_OFF data (L125:
 # dynslite.vda PRELEV runs when %RTS% is not S, that is with TS_OFF data,
 # timslice.mod L33; no core model has any). Not translated: the DISPLAY of
@@ -462,8 +462,12 @@ function pp_prelv!(tm)
     gput!(tm, "RVPCSL", Set{NTuple{6,String}}())
     gput!(tm, "RPC_CONLY", Set{NTuple{4,String}}())
     # L114: $IFI %POWERFLO%==YES $include powerflo.vda (M1.3 change 27a)
-    #   It sets Z after L15-18 (its timeslice checks L90-95, gasgrids.vda L71, L77), so its Z is the one left
-    powerflo = uppercase(strip(gswitch(tm, "POWERFLO", ""), ['\'', '"'])) == "YES"
+    #   It sets Z after L15-18 (its timeslice checks L90-95, gasgrids.vda L71, L77), so its Z is the one left.
+    #   The scratch of the lines above is stored first: powerflo.vda L107 (pp_lvlfc.mod GR_DEMFR) clears UNCD7
+    #   and, with GR_DEMFR rows to level, leaves its own UNCD7 and TS_ARRAY (M1.3 change 65)
+    gput!(tm, "UNCD7", st_uncd7)
+    ts_array === nothing || gput!(tm, "TS_ARRAY", ts_array)
+    powerflo =uppercase(strip(gswitch(tm, "POWERFLO", ""), ['\'', '"'])) == "YES"
     powerflo && (gput!(tm, "Z", gassign!(Dict{Tuple{},Float64}(), (), GNum(z))); powerflo_main!(tm))
 
     # --- L117-122: COM_VAR default bounds -------------------------------------------------------------------
@@ -490,9 +494,7 @@ function pp_prelv!(tm)
         gput!(tm, name, b)
     end
 
-    # the scratch as GAMS leaves it
-    gput!(tm, "UNCD7", st_uncd7)
-    ts_array === nothing || gput!(tm, "TS_ARRAY", ts_array)
+    # the scratch as GAMS leaves it (UNCD7 and TS_ARRAY are stored before L114, above)
     powerflo || gput!(tm, "Z", gassign!(Dict{Tuple{},Float64}(), (), GNum(z)))
     # L124-125: $IF NOT %RTS%==S $BATINCLUDE dynslite.vda PRELEV (M1.3 change 63)
     dynslite_prelev!(tm)
