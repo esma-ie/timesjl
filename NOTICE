@@ -1,10 +1,10 @@
-TIMES.jl - a Julia/JuMP translation of the IEA-ETSAP TIMES model generator
+OpenTIMES.jl - a Julia/JuMP translation of the IEA-ETSAP TIMES model generator
 
 Copyright (C) 2000-2025 IEA Energy Technology Systems Analysis Programme
 (ETSAP), for the TIMES GAMS code from which this translation is derived.
-Copyright (C) 2026 ESMA Ltd and TIMES.jl contributors, for the translation.
+Copyright (C) 2026 ESMA Ltd and OpenTIMES.jl contributors, for the translation.
 
-TIMES.jl is a derivative work of "The Integrated MARKAL-EFOM System - TIMES"
+OpenTIMES.jl is a derivative work of "The Integrated MARKAL-EFOM System - TIMES"
 (https://github.com/etsap-TIMES/TIMES_model), translated from TIMES v4.9.7.
 
 This program is free software: you can redistribute it and/or modify it under
