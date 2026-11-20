@@ -9,7 +9,7 @@
 # G_ILEDNO becomes -1 and every lead time is rounded (L478-481), and ALTOBJ is
 # 1 (L498-502). Every process has a PRC_RESID and no NCAP_PASTI.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, gput_scalar!
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, gput_scalar!
 import TOML
 
 """

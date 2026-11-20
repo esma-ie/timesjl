@@ -6,7 +6,7 @@
 # differences), and prints what the CONVERT matrix export contains so the
 # layer-2 adapter can be finalised (docs/discrepancies.md, U1-U2).
 
-using TIMES.Reference
+using OpenTIMES.Reference
 import JSON
 
 dir = isempty(ARGS) ? error("usage: julia --project=. scripts/m10_gate.jl <reference run dir>") : ARGS[1]

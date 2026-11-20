@@ -9,7 +9,7 @@
 # WN below W; only the DAYNITE fractions are given. MILESTONYR is 2005, 2010,
 # 2015, 2020, 2030, 2050 (D(2005) = 1); BOHYEAR runs 'BOH', 1960, ..., 2200.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, gset
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, gset
 import TOML
 
 """

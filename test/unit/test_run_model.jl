@@ -6,7 +6,7 @@
 #   the same optimum, 23960685.737 in both reference runs), at the layer-3 tolerance 1e-6.
 using Test, TOML, JSON
 import JuMP
-using TIMES: times_demo_dir, run_switches, PRESOLVE_STEPS
+using OpenTIMES: times_demo_dir, run_switches, PRESOLVE_STEPS
 
 let fx = only(filter(f -> f["prefix"] == "demo12_red",
                      TOML.parsefile(joinpath(@__DIR__, "..", "fixtures", "public_fixtures.toml"))["fixture"])),

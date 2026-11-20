@@ -5,8 +5,8 @@
 # the same on the core reference runs), and on crafted states against GAMS
 # running ppmain.mod L1-196 itself.
 
-using TIMES: TimesModel, DumpData, layer1, ppmain_head!, ppmain_years!, timslice!, timslice_symbols, gset, gparam
-using TIMES.Reference: ispass
+using OpenTIMES: TimesModel, DumpData, layer1, ppmain_head!, ppmain_years!, timslice!, timslice_symbols, gset, gparam
+using OpenTIMES.Reference: ispass
 import TOML
 
 @testset "timslice.mod layer 1, TIMES_Demo demo12" begin

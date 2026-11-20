@@ -48,7 +48,7 @@ concurrency:
 jobs:
   cuopt:
     name: cuOpt layer 3 (GPU)
-    if: github.repository == 'esma-ie/TIMESjl' && vars.CUOPT_NIGHTLY != 'false'
+    if: (github.repository == 'esma-ie/OpenTIMES.jl' || github.repository == 'esma-ie/TIMESjl') && vars.CUOPT_NIGHTLY != 'false'
     runs-on: ${{ vars.GPU_RUNNER || 'gpu-t4' }}
     timeout-minutes: 180
     env:

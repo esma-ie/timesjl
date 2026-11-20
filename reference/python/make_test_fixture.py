@@ -1,7 +1,7 @@
 """Write the small dump in test/fixtures/tiny_dump used by the Julia tests.
 
 It goes through the same writer functions as gdx2arrow.py, so the Julia tests
-pin the file format shared by the Python harness and TIMES.Reference without
+pin the file format shared by the Python harness and OpenTIMES.Reference without
 needing GAMS. Run from the repository root:
 
     python reference/python/make_test_fixture.py

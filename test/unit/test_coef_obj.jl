@@ -5,9 +5,9 @@
 # G_DYEAR before the first year, NCAP_ISPCT, flow taxes and subsidies,
 # storage flow costs, OBJ_COMPD and EPS cost data.
 
-using TIMES: TimesModel, DumpData, coef_obj!, coef_obj_unported, later_overwrites, layer1, gparam, gset, gput!,
+using OpenTIMES: TimesModel, DumpData, coef_obj!, coef_obj_unported, later_overwrites, layer1, gparam, gset, gput!,
              gvalues, iseps, glead, UnportedError
-using TIMES.Reference: ispass
+using OpenTIMES.Reference: ispass
 
 isdefined(@__MODULE__, :PPM_DEMO12) || (const PPM_DEMO12 = joinpath(FIXTURES, "demo12_off_ppm"))
 isdefined(@__MODULE__, :COEF_DEMO12) || (const COEF_DEMO12 = joinpath(FIXTURES, "demo12_off_coef"))

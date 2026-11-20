@@ -1,4 +1,4 @@
-# Contributing to TIMES.jl
+# Contributing to OpenTIMES.jl
 
 ## Phase 1 rules (faithful translation)
 
@@ -48,7 +48,7 @@ under "Unconfirmed behaviour" until a reference run settles it.
 
 ## Test models and fixtures
 
-TIMES.jl is developed and tested only on models with a clearly stated
+OpenTIMES.jl is developed and tested only on models with a clearly stated
 open-source or open-data licence that allows redistribution and derivative
 works ([`docs/test-models.md`](docs/test-models.md)). A model with no stated
 licence, a non-commercial or no-derivatives licence, or a closed or
@@ -59,7 +59,7 @@ proprietary model is not used, not even to check something locally.
 - Commit fixtures or references only from models with
   `redistribute = "public"`, and list them in
   [`test/fixtures/public_fixtures.toml`](test/fixtures/public_fixtures.toml).
-- If you run TIMES.jl on a proprietary model, keep everything from it out of
+- If you run OpenTIMES.jl on a proprietary model, keep everything from it out of
   issues and pull requests: no data, results, timings or error output that
   carries its data. Reproduce a problem on an open model instead.
 - To propose a new test model, open an issue with a link to its licence
@@ -80,7 +80,7 @@ AI-assisted contributions are welcome, on the same terms as any other:
 
 ## Licensing of contributions
 
-TIMES.jl is licensed under GPL-3.0-or-later. It intends to relicense to
+OpenTIMES.jl is licensed under GPL-3.0-or-later. It intends to relicense to
 AGPL-3.0-or-later if IEA-ETSAP releases the TIMES code under the AGPL (see
 the [README](README.md#licence)). So that this move needs no further
 permission from contributors, by submitting a contribution you agree that it

@@ -6,10 +6,10 @@
 # from that state against GAMS's matrix (layer 2): `bnd_cum!` takes the bounds from the tables
 # as `bnd_data!` stored them.
 
-using TIMES: TimesModel, DumpData, layer1, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!,
+using OpenTIMES: TimesModel, DumpData, layer1, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!,
              prepret_decl!, eqobjinv_prep!, eqobjfix_prep!, eqobsalv_prep!, eqmain_prep!, bnd_data!, pp_qack_data!,
              pp_clean!, generate!, gset, gparam, gv, GZERO
-using TIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp
+using OpenTIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp
 import TOML
 
 let vx = only(v for v in TOML.parsefile(joinpath(FIXTURES, "variant_fixtures.toml"))["variant"]
@@ -74,7 +74,7 @@ let vx = only(v for v in TOML.parsefile(joinpath(FIXTURES, "variant_fixtures.tom
         # record at %EOTIME% is cleared (L14, L28), and the lead J+(-0.2-1), rounded to -1 (G29), names no
         # element of J, so no modifier is set again (L19-20, L34-35).
         for pass in 2:3
-            TIMES.bnd_cum_data!(tm)
+            OpenTIMES.bnd_cum_data!(tm)
             flo, com = gparam(tm, "FLO_CUM"), gparam(tm, "COM_CUM")
             @test gv(flo, ("REG2", "MINGAS2", "GAS", "2010", "EOH", "N")).v ≈ -0.2
             @test iszero(gv(flo, ("REG2", "MINGAS2", "GAS", "2010", "2200", "N")))

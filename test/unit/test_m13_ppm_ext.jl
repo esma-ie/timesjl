@@ -7,8 +7,8 @@
 # symbol written compared at ppm_ext.vda L58 (scripts/m13_replay.jl does the
 # same on the core models' own states).
 
-using TIMES: TimesModel, DumpData, layer1, ppm_ext_actef!, ppm_ext_actef_symbols, PPM_EXT_ACTEF_OUTPUTS, gset, gparam
-using TIMES.Reference: ispass
+using OpenTIMES: TimesModel, DumpData, layer1, ppm_ext_actef!, ppm_ext_actef_symbols, PPM_EXT_ACTEF_OUTPUTS, gset, gparam
+using OpenTIMES.Reference: ispass
 import TOML
 
 isdefined(@__MODULE__, :PPMAIN_TO_REDUCE) || include("test_m13_ppmain_reduce.jl")

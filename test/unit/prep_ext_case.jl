@@ -12,7 +12,7 @@
 # process has a PRC_RESID '0' record, so demo12 itself runs the one-point
 # run-down of L59-62.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, register_uel!
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, register_uel!
 import TOML
 
 """

@@ -125,8 +125,8 @@ the reference suite against its GAMS runs.
 
 # Example
 ```julia
-using TIMES
-r = run_model(joinpath(TIMES.times_demo_dir(), "demo12.run"); out="demo12_out")
+using OpenTIMES
+r = run_model(joinpath(OpenTIMES.times_demo_dir(), "demo12.run"); out="demo12_out")
 r.objective
 ```
 """
@@ -216,7 +216,7 @@ function run_model(runfile::AbstractString; dd=String[], out=nothing, solve::Boo
     say("== $name: ", JuMP.solver_name(m), " ", st, " in ", round(ts; digits=1), " s", obj === nothing ? "" : ", objective $obj")
     if write_solution && JuMP.has_values(m)
         sdir = joinpath(out, "solution")
-        tw = @elapsed TIMES.write_solution(tm, sdir; source="$name: solved by TIMES.jl from its DD files",
+        tw = @elapsed OpenTIMES.write_solution(tm, sdir; source="$name: solved by TIMES.jl from its DD files",
                                            solver=highs ? "HiGHS.jl $(pkgversion(HiGHS))" : JuMP.solver_name(m))
         say("== $name: solution written to $sdir in ", round(tw; digits=1), " s")
     end

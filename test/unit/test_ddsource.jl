@@ -4,9 +4,9 @@
 # its DD files are TIMES_Demo's and its own (reference/dd/<case>, in this repository).
 # TIMES_Demo is CC BY 4.0 (redistribute = "public" in reference/suite.toml and reference/crafted.toml).
 using Test, TOML
-using TIMES: times_source, times_demo_dir, compile_run, grecords, gdx_uels, gdx_symbols,
+using OpenTIMES: times_source, times_demo_dir, compile_run, grecords, gdx_uels, gdx_symbols,
              TIMES_MODEL_COMMIT, TIMES_GAMS_COMMIT
-using TIMES.Reference: load_dump, read_symbol, SV_EPS
+using OpenTIMES.Reference: load_dump, read_symbol, SV_EPS
 
 @test startswith(TIMES_MODEL_COMMIT, TIMES_GAMS_COMMIT)
 src = times_source()

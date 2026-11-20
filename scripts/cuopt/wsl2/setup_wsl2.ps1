@@ -28,7 +28,7 @@
     WSL2 is a lightweight VM: shut it down with 'wsl --shutdown'.
 
 .PARAMETER Ref
-    Branch or commit of esma-ie/TIMESjl to set up (default main).
+    Branch or commit of esma-ie/OpenTIMES.jl to set up (default main).
 #>
 [CmdletBinding()]
 param(

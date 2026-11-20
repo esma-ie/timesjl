@@ -3,8 +3,8 @@
 # the rows alone against the CONVERT export, and the branches spelled out. The whole model is
 # checked against GAMS in test_public_parity.jl.
 
-using TIMES: TimesModel, eq_flomrk!
-using TIMES.Reference: canonical_from_jump, canonical_from_dump
+using OpenTIMES: TimesModel, eq_flomrk!
+using OpenTIMES.Reference: canonical_from_jump, canonical_from_dump
 import TOML
 isdefined(@__MODULE__, :check_family_parity) || include("parity_helpers.jl")
 

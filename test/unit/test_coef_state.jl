@@ -4,7 +4,7 @@
 # coefficient files now runs in test_public_parity.jl on openly licensed
 # fixtures.
 
-using TIMES: GNum, GEPS, gassign!
+using OpenTIMES: GNum, GEPS, gassign!
 
 @testset "gassign!: GAMS stores no zero, keeps EPS" begin
     d = Dict{NTuple{2,String},Float64}(("a", "b") => 3.0)
@@ -19,11 +19,11 @@ end
 @testset "gset: an alias follows its target's current state (PYR, ALIAS(PASTYEAR,PYR))" begin
     # TIMES.jl computes PASTYEAR in preprocessing; PYR read after that must be the new PASTYEAR, as in
     # GAMS, not PASTYEAR's records in the dump (found by the M1.4 from-DD gate on TIMES-NZ, REDUCE YES)
-    tm = TIMES.TimesModel(joinpath(@__DIR__, "..", "fixtures", "demo12_off_input"))
-    @test TIMES.gset(tm, "PYR").keys == TIMES.gset(tm, "PASTYEAR").keys
-    new = Set(TIMES.gset(tm, "PASTYEAR").keys)
-    pop!(new, first(TIMES.gset(tm, "PASTYEAR").keys))
-    TIMES.gput!(tm, "PASTYEAR", new)
-    @test Set(TIMES.gset(tm, "PYR").keys) == new
+    tm = OpenTIMES.TimesModel(joinpath(@__DIR__, "..", "fixtures", "demo12_off_input"))
+    @test OpenTIMES.gset(tm, "PYR").keys == OpenTIMES.gset(tm, "PASTYEAR").keys
+    new = Set(OpenTIMES.gset(tm, "PASTYEAR").keys)
+    pop!(new, first(OpenTIMES.gset(tm, "PASTYEAR").keys))
+    OpenTIMES.gput!(tm, "PASTYEAR", new)
+    @test Set(OpenTIMES.gset(tm, "PYR").keys) == new
     @test !haskey(tm.data.sets, "PYR")                  # never cached under the alias's own name
 end

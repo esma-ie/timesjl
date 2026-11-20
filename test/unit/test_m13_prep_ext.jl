@@ -5,9 +5,9 @@
 # the same on the core reference runs), and on crafted states against GAMS
 # running ppmain.mod L1-247, preppm.mod L1-212 and prep_ext.vda itself.
 
-using TIMES: TimesModel, DumpData, layer1, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, prep_ext!, prep_ext_symbols,
+using OpenTIMES: TimesModel, DumpData, layer1, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, prep_ext!, prep_ext_symbols,
              prep_ext_unported, gset, gparam
-using TIMES.Reference: ispass
+using OpenTIMES.Reference: ispass
 import TOML
 
 const PREP_STEPS = (ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, prep_ext!)
@@ -97,9 +97,9 @@ end
     # (GG_KGF data, change 61); pressure points (GG_PP data) are refused
     t = TimesModel(joinpath(FIXTURES, "demo12_off_init"); switches=merge(fx["switches"], Dict("POWERFLO" => "YES")))
     @test isempty(prep_ext_unported(t))
-    TIMES.gput!(t, "GG_KGF", Dict{NTuple{4,String},Float64}(("REG1", "2005", "ELCTECOA00", "ELC") => 1.0))
+    OpenTIMES.gput!(t, "GG_KGF", Dict{NTuple{4,String},Float64}(("REG1", "2005", "ELCTECOA00", "ELC") => 1.0))
     @test isempty(prep_ext_unported(t))
-    TIMES.gput!(t, "GG_PP", Dict{NTuple{6,String},Float64}(("REG1", "2005", "ELCTECOA00", "ELC", "UP", "1") => 50.0))
+    OpenTIMES.gput!(t, "GG_PP", Dict{NTuple{6,String},Float64}(("REG1", "2005", "ELCTECOA00", "ELC", "UP", "1") => 50.0))
     @test any(s -> occursin("GG_PP", s), prep_ext_unported(t))
     t = TimesModel(joinpath(FIXTURES, "demo12_off_init"); switches=merge(fx["switches"], Dict("VINTOPT" => "1")))
     @test any(s -> occursin("L42-43", s), prep_ext_unported(t))

@@ -1,7 +1,7 @@
 # Shared layer-2 parity check: one equation family of a TIMES.jl model
 # against the CONVERT export of the GAMS run (matched by GAMS-style names).
 
-using TIMES.Reference: family, sense
+using OpenTIMES.Reference: family, sense
 
 _same_bound(a, b; rtol) = (isinf(a) || isinf(b)) ? a == b : isapprox(a, b; rtol=rtol, atol=0.0)
 

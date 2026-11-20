@@ -1117,7 +1117,7 @@ those checks, their figures and their crafted cases are not published
   repository). The run from a run file and DD files moves from
   `scripts/run_dd.jl` into the package (`src/run.jl`), with HiGHS as a
   package dependency and its default solver; `scripts/run_dd.jl` calls it.
-  The order of the translated steps is now one list, `TIMES.PRESOLVE_STEPS`
+  The order of the translated steps is now one list, `OpenTIMES.PRESOLVE_STEPS`
   (maindrv.mod L55-113): `scripts/m13_probe.jl` (`M13_STEPS`) and
   `scripts/m13_gate.jl` (`M12_COEF`) take their steps from it, and keep
   what each step is compared on (`STEP_SYMBOLS`). A newly translated step

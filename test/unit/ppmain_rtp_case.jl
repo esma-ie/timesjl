@@ -10,7 +10,7 @@
 # 2041-2052, with M(T) = T; MIYR_V1 = 2005. Its past investments are on 2004,
 # and its NCAP_START values are 2006 to 2015 (none with past investment).
 
-using TIMES: TimesModel, gvalues, gmembers, gput!
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!
 import TOML
 
 """

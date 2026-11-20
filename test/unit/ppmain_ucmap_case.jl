@@ -10,7 +10,7 @@
 # IMPGAS1 trade processes; S and W the seasons, SD SN WD WN the day-nights.
 # Two UCs are added, UC_X3 and UC_X4.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, register_uel!
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, register_uel!
 import TOML
 
 """

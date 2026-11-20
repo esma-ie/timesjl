@@ -14,7 +14,7 @@
 # (shadow group NRG). Timeslices: ANNUAL; S, W (SEASON); SD, SN, WD, WN
 # (DAYNITE).
 
-using TIMES: TimesModel, gvalues, gmembers, gput!
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!
 import TOML
 
 """

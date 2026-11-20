@@ -7,8 +7,8 @@
 # compared at the end of ppm_ext.vda (scripts/m13_replay.jl does the same on
 # the core models' own states).
 
-using TIMES: TimesModel, DumpData, layer1, ppm_ext!, ppm_ext_symbols, PPM_EXT_ACTEF_OUTPUTS, PPM_EXT_OUTPUTS, gset, gparam
-using TIMES.Reference: ispass
+using OpenTIMES: TimesModel, DumpData, layer1, ppm_ext!, ppm_ext_symbols, PPM_EXT_ACTEF_OUTPUTS, PPM_EXT_OUTPUTS, gset, gparam
+using OpenTIMES.Reference: ispass
 import TOML
 
 isdefined(@__MODULE__, :PPMAIN_TO_PPM_EXT) || include("test_m13_ppm_ext.jl")

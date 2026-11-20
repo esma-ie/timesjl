@@ -9,12 +9,12 @@
 #   pre-solve dump, or the dump the variant names (`state`; equ for a stepped run, whose
 #   pre-solve dump is the state after the loop of solve.stp).
 
-using TIMES: TimesModel, DumpData, layer1, untranslated_families, generate!, UnportedError,
+using OpenTIMES: TimesModel, DumpData, layer1, untranslated_families, generate!, UnportedError,
              init_ext!, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, prep_ext!, preppm_shape!,
              ppmain_topo!, ppmain_tslvl!, ppmain_life!, pp_prelv!, pp_qafs!, ppmain_dflt!, ppmain_tsattr!, ppmain_flo!,
              ppmain_flofs!, ppmain_ire!, ppmain_bnd!, ppmain_cum!, ppmain_stg!, ppmain_uc!, ppmain_ucmap!, ppmain_blend!,
              ppmain_reduce!, ppm_ext_actef!, ppm_ext!
-using TIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, family
+using OpenTIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, family
 import TOML
 isdefined(@__MODULE__, :check_family_parity) || include("parity_helpers.jl")
 
@@ -54,7 +54,7 @@ for vx in VARIANTS
         if haskey(vx, "partial")
             @testset "rows of $(join(vx["partial"]["families"], ", "))" begin
                 tm = TimesModel(fx("presolve"); reduce=get(vx, "reduce", false), switches=vx["switches"])
-                foreach(g -> getfield(TIMES, Symbol(g))(tm), vx["partial"]["generators"])
+                foreach(g -> getfield(OpenTIMES, Symbol(g))(tm), vx["partial"]["generators"])
                 mine = canonical_from_jump(tm.model)
                 ref = canonical_from_dump(joinpath(fx("matrix"), "matrix"), joinpath(fx("matrix"), "dictmap"))
                 for fam in vx["partial"]["families"]
@@ -62,7 +62,7 @@ for vx in VARIANTS
                 end
                 # Column bounds of the listed variable families (bndmain.jl with ret_bounds!).
                 if haskey(vx["partial"], "bounds")
-                    TIMES.apply_bounds!(tm)
+                    OpenTIMES.apply_bounds!(tm)
                     mine = canonical_from_jump(tm.model)
                     for vf in vx["partial"]["bounds"]
                         ka = sort([k for k in keys(mine.cols) if family(k) == vf])

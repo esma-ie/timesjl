@@ -6,8 +6,8 @@
 # are the activity times the flow's coefficient (cal_red.red), so the rows are on VAR_ACT; the
 # variables of an aggregate flow are VAR_FLO.
 
-using TIMES: TimesModel, generate!, eq_flofr!, untranslated_families, gparam, gv
-using TIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp
+using OpenTIMES: TimesModel, generate!, eq_flofr!, untranslated_families, gparam, gv
+using OpenTIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp
 import TOML
 
 let vx = only(v for v in TOML.parsefile(joinpath(FIXTURES, "variant_fixtures.toml"))["variant"]
@@ -28,7 +28,7 @@ let vx = only(v for v in TOML.parsefile(joinpath(FIXTURES, "variant_fixtures.tom
         # L105-109: the record at the year '0' and ANNUAL, with bounds of the same type below: 'N' 1 at
         # ANNUAL and 'N' EPS at the seasons; the record itself stays
         for (r, t, p, c, bd) in (("REG1", "2020", "FTE-RSDELC", "ELC", "UP"), ("REG2", "2030", "ELCTNGAS01", "ELCGAS", "LO"))
-            @test gv(fr, (r, t, p, c, "ANNUAL", "N")) == TIMES.GNum(1.0)
+            @test gv(fr, (r, t, p, c, "ANNUAL", "N")) == OpenTIMES.GNum(1.0)
             @test all(s -> gv(fr, (r, t, p, c, s, "N")).eps, ("S", "W"))
             @test gv(fr, (r, "0", p, c, "ANNUAL", bd)).v == 1.0
         end

@@ -5,8 +5,8 @@
 # checks that the cloud-made checkpoints lead to it: every symbol the four
 # segments leave alone must be in ppm/ as the input dump has it.
 
-using TIMES: TimesModel
-using TIMES.Reference: load_dump, compare_dumps, ispass
+using OpenTIMES: TimesModel
+using OpenTIMES.Reference: load_dump, compare_dumps, ispass
 import TOML
 
 const M13_CHECKPOINTS = ["input", "init", "prep", "prelv"]
@@ -18,7 +18,7 @@ const M13_CHECKPOINTS = ["input", "init", "prep", "prelv"]
     @test all(d -> length(d.symbols) > 800, dumps)
     # TIMES.jl can start from the input dump (the M1.3 starting state)
     tm = TimesModel(joinpath(FIXTURES, "demo12_off_input"); switches=fx["switches"])
-    @test !isempty(TIMES.gset(tm, "MILESTONYR"))
+    @test !isempty(OpenTIMES.gset(tm, "MILESTONYR"))
     # what each segment changes (sets and parameters, records at 1e-9, order ignored);
     # the last segment ends at the licensed ppm fixture, on the symbols prelv/ has
     ends = [dumps[2:end]; ppm]

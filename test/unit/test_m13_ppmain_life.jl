@@ -5,9 +5,9 @@
 # runs), and on crafted states against GAMS running ppmain.mod L1-247 and
 # L249-611, preppm.mod L1-212 and L218-252 and prep_ext.vda itself.
 
-using TIMES: TimesModel, DumpData, layer1, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, prep_ext!, preppm_shape!,
+using OpenTIMES: TimesModel, DumpData, layer1, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, prep_ext!, preppm_shape!,
              ppmain_topo!, ppmain_tslvl!, ppmain_life!, ppmain_life_symbols, gset, gparam
-using TIMES.Reference: ispass
+using OpenTIMES.Reference: ispass
 import TOML
 
 @testset "prep -> prelv: ppmain.mod L461-611 layer 1, TIMES_Demo demo12" begin

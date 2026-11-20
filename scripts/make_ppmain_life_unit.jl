@@ -25,7 +25,7 @@ include(joinpath(REPO, "test", "unit", "prep_ext_case.jl"))        # PREP_EXT_BA
 include(joinpath(REPO, "test", "unit", "ppmain_topo_case.jl"))     # PPMAIN_TOPO_OUTPUTS
 include(joinpath(REPO, "test", "unit", "ppmain_tslvl_case.jl"))    # PPMAIN_TSLVL_OUTPUTS
 include(joinpath(REPO, "test", "unit", "ppmain_life_case.jl"))
-using TIMES: ctst
+using OpenTIMES: ctst
 
 function main(times_dir, gams...)
     kw = isempty(gams) ? (;) : (; gams=gams[1])

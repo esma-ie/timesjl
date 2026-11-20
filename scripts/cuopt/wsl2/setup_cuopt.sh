@@ -10,7 +10,7 @@
 # 4. writes ~/.config/timesjl/cuopt.env (LD_LIBRARY_PATH, CPU thread limits),
 #    sources it from ~/.bashrc, and writes ~/.config/timesjl/cuopt-nightly.conf
 #    (what the local nightly solves) unless it exists
-# 5. clones esma-ie/TIMESjl on the Linux file system (fast; /mnt/c is slow)
+# 5. clones esma-ie/OpenTIMES.jl on the Linux file system (fast; /mnt/c is slow)
 # 6. instantiates scripts/cuopt and solves a small LP on the GPU
 # 7. unless --no-demo: the cuOpt layer-3 check on the demo12 CI fixture
 #
@@ -145,7 +145,7 @@ if [ -d "$DIR/.git" ]; then
   fi
 else
   mkdir -p "$(dirname "$DIR")"
-  git clone -q https://github.com/esma-ie/TIMESjl "$DIR"
+  git clone -q https://github.com/esma-ie/OpenTIMES.jl "$DIR"
   git -C "$DIR" fetch -q origin "$REF"
   git -C "$DIR" checkout -q -B "$REF" FETCH_HEAD
 fi

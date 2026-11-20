@@ -9,7 +9,7 @@
 # demo12 (REG1): ELCTNOIL01 runs at DAYNITE (PRC_TS SD, SN, WD, WN), with
 # ELC out; no storage process.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, gset
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, gset
 import TOML
 
 """

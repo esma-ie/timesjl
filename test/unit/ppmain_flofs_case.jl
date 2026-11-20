@@ -12,7 +12,7 @@
 # SD, SN, WD and WN; the milestones 2005, 2010, 2015, 2020, 2030, 2050. No
 # FLO_FUNC, FLO_SUM or PRC_MARK data.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, gset
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, gset
 import TOML
 
 """

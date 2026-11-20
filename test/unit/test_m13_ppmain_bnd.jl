@@ -7,9 +7,9 @@
 # ppmain.mod L616-1001 itself, every symbol written compared at L1001
 # (scripts/m13_replay.jl does the same on the core models' own states).
 
-using TIMES: TimesModel, DumpData, layer1, pp_qafs!, ppmain_dflt!, ppmain_tsattr!, ppmain_flo!, ppmain_flofs!, ppmain_ire!,
+using OpenTIMES: TimesModel, DumpData, layer1, pp_qafs!, ppmain_dflt!, ppmain_tsattr!, ppmain_flo!, ppmain_flofs!, ppmain_ire!,
              ppmain_bnd!, ppmain_bnd_symbols, gset, gparam, UnportedError
-using TIMES.Reference: ispass
+using OpenTIMES.Reference: ispass
 import TOML
 
 const PPMAIN_TO_BND = (pp_qafs!, ppmain_dflt!, ppmain_tsattr!, ppmain_flo!, ppmain_flofs!, ppmain_ire!, ppmain_bnd!)

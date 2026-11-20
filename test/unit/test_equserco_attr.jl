@@ -3,8 +3,8 @@
 # user-constraint rows alone against the CONVERT export, and a few coefficients spelled out.
 # The whole model is checked against GAMS in test_public_parity.jl.
 
-using TIMES: TimesModel, eq_uc!
-using TIMES.Reference: canonical_from_jump, canonical_from_dump
+using OpenTIMES: TimesModel, eq_uc!
+using OpenTIMES.Reference: canonical_from_jump, canonical_from_dump
 import TOML
 isdefined(@__MODULE__, :check_family_parity) || include("parity_helpers.jl")
 

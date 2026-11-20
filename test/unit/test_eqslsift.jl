@@ -3,8 +3,8 @@
 # windows, with the hour map of timslice.mod L110-121), as_run: the rows alone against the
 # CONVERT export. The whole models are checked against GAMS in test_public_parity.jl.
 
-using TIMES: TimesModel, eq_slsift!
-using TIMES.Reference: canonical_from_jump, canonical_from_dump, family
+using OpenTIMES: TimesModel, eq_slsift!
+using OpenTIMES.Reference: canonical_from_jump, canonical_from_dump, family
 import TOML
 isdefined(@__MODULE__, :check_family_parity) || include("parity_helpers.jl")
 

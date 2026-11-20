@@ -6,9 +6,9 @@
 # ppmain.mod L1-247 and L249-328, preppm.mod L1-212 and L218-252 and
 # prep_ext.vda itself.
 
-using TIMES: TimesModel, DumpData, layer1, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, prep_ext!, preppm_shape!,
+using OpenTIMES: TimesModel, DumpData, layer1, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, prep_ext!, preppm_shape!,
              preppm_shape_symbols, preppm_shape_unported, ppmain_topo!, ppmain_topo_symbols, gset, gparam
-using TIMES.Reference: ispass
+using OpenTIMES.Reference: ispass
 import TOML
 
 @testset "prep -> prelv: preppm.mod L218-252, ppmain.mod L249-328 layer 1, TIMES_Demo demo12" begin

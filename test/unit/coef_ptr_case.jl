@@ -12,7 +12,7 @@
 # 2010-2050). NRG holds ELC, ELCGAS, ELCCOA and COMCOA, not DCOT; ELCCOA is
 # a REG1 commodity that ELCTNGAS01 does not use.
 
-using TIMES: TimesModel, gvalues, gput!, coef_cpt!, coef_nio!
+using OpenTIMES: TimesModel, gvalues, gput!, coef_cpt!, coef_nio!
 
 const COEF_PTR_CASE_SWITCHES = Dict("OBJ" => "MOD", "VDA" => "YES", "DSCAUTO" => "YES", "VALIDATE" => "NO", "STAGES" => "NO")
 

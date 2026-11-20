@@ -1,8 +1,8 @@
 # Issue #97: write_solution writes the solution in the harness's dump layout (format version 1),
 # and the harness's own reader reads it back. demo12 (CC BY 4.0), REDUCE off, solved with HiGHS.
 import JSON, JuMP, HiGHS, TOML
-using TIMES: TimesModel, generate!, write_solution
-using TIMES.Reference: load_dump, read_symbol, SV_NONE
+using OpenTIMES: TimesModel, generate!, write_solution
+using OpenTIMES.Reference: load_dump, read_symbol, SV_NONE
 
 let fx = joinpath(@__DIR__, "..", "fixtures")
     spec = only(f for f in TOML.parsefile(joinpath(fx, "public_fixtures.toml"))["fixture"] if f["prefix"] == "demo12_off")

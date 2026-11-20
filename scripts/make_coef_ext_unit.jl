@@ -14,7 +14,7 @@
 const REPO = dirname(@__DIR__)
 include(joinpath(@__DIR__, "gams_replay.jl"))
 include(joinpath(REPO, "test", "unit", "coef_ext_case.jl"))
-using TIMES: ctst, varcost
+using OpenTIMES: ctst, varcost
 
 function main(times_dir, gams...)
     kw = isempty(gams) ? (;) : (; gams=gams[1])

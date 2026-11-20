@@ -9,9 +9,9 @@
 
 import JSON
 import JuMP
-using TIMES: MOD_VARS, OBV, VariableStore, VariableSpec, dimension,
+using OpenTIMES: MOD_VARS, OBV, VariableStore, VariableSpec, dimension,
              varfamily, has_family, getvar!, var, colname, instance_records
-using TIMES.Reference: load_dump, read_symbol, compare_symbol, ispass
+using OpenTIMES.Reference: load_dump, read_symbol, compare_symbol, ispass
 
 # Families declared by the DSC extension, present in any dump made with
 # DSCAUTO=YES (initmty.mod L453), not by mod_vars.mod; ported with DSC.

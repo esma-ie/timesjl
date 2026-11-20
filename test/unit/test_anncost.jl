@@ -4,10 +4,10 @@
 # coef -> pre-solve step, with TIMES.jl's own state; every set and parameter against the pre-solve
 # dump (1e-9), then the model from that state against GAMS's matrix (layer 2).
 
-using TIMES: TimesModel, DumpData, layer1, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!,
+using OpenTIMES: TimesModel, DumpData, layer1, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!,
              prepret_decl!, eqobjinv_prep!, eqobjfix_prep!, eqobsalv_prep!, eqmain_prep!, bnd_data!, pp_qack_data!,
              pp_clean!, generate!, gset, gparam, gv, gscalar
-using TIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp
+using OpenTIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp
 import TOML
 
 # (prefix, MINYR after coef_obj.mod, first year of Y_EOH, members of Y_EOH)

@@ -6,8 +6,8 @@
 # and INT_DEFAULT('PASTI') with past lead times (L69 recomputes a past lead
 # time from the discount factor: 3 becomes 3.159 at 5%).
 
-using TIMES: TimesModel, DumpData, coef_alt!, stepped, later_overwrites, layer1, linflo, linacc, gparam, gset
-using TIMES.Reference: ispass
+using OpenTIMES: TimesModel, DumpData, coef_alt!, stepped, later_overwrites, layer1, linflo, linacc, gparam, gset
+using OpenTIMES.Reference: ispass
 
 isdefined(@__MODULE__, :PPM_DEMO12) || (const PPM_DEMO12 = joinpath(FIXTURES, "demo12_off_ppm"))
 isdefined(@__MODULE__, :COEF_DEMO12) || (const COEF_DEMO12 = joinpath(FIXTURES, "demo12_off_coef"))

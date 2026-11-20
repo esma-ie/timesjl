@@ -12,7 +12,7 @@
 # with ELC as PG, an ACT_EFF group on ACT and their fuel as shadow group;
 # TOP_IRE has dummy imports (IMPNRGZ) from IMPEXP of every energy carrier.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!
 import TOML
 
 """

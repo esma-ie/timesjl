@@ -26,8 +26,8 @@
 # made on.
 
 import TOML, JSON
-using TIMES: STP_POINT_VARS
-using TIMES.Reference: load_dump, compare_dumps, ispass
+using OpenTIMES: STP_POINT_VARS
+using OpenTIMES.Reference: load_dump, compare_dumps, ispass
 
 const REPO = dirname(@__DIR__)
 function main(refrun, prefix)

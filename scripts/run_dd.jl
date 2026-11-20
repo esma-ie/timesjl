@@ -22,14 +22,14 @@
 # The QA log TIMES writes (QA_CHECK.LOG) goes to the --out folder. A TIMES feature that TIMES.jl does
 # not translate yet stops the run with "not translated" and the GAMS lines it would need.
 #
-# Since 18 Nov 2026 the run itself is `TIMES.run_model` (src/run.jl), so it can be used without this
-# script: `using TIMES; run_model("<run file>")`. This script reads the arguments and calls it.
+# Since 18 Nov 2026 the run itself is `OpenTIMES.run_model` (src/run.jl), so it can be used without this
+# script: `using OpenTIMES; run_model("<run file>")`. This script reads the arguments and calls it.
 #
 # Results come with no comparison: to check them against GAMS, use scripts/m13_gate.jl --from-dd on a
 # suite reference. Licences: CLAUDE.md, "Test-model licences" (this script runs any model, but what it
 # shows about a model without an open licence must not enter the repository).
 
-using TIMES
+using OpenTIMES
 
 function run_dd(args)
     args = collect(args)

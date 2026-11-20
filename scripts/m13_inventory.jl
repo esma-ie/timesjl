@@ -16,8 +16,8 @@
 # model that is not redistribute = "public" (reference/suite.toml) keep it on
 # the machine that holds the reference.
 
-using TIMES
-using TIMES.Reference: load_dump, compare_dumps, n_mismatches
+using OpenTIMES
+using OpenTIMES.Reference: load_dump, compare_dumps, n_mismatches
 import JSON
 
 const SEGMENTS = [("input", "init"), ("init", "prep"), ("prep", "prelv"), ("prelv", "ppm")]

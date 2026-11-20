@@ -16,8 +16,8 @@
 
 isdefined(@__MODULE__, :check_family_parity) || include("parity_helpers.jl")
 import TOML, JSON, JuMP, HiGHS
-using TIMES: TimesModel, DumpData, generate!, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!, layer1
-using TIMES.Reference: canonical_from_jump, canonical_from_dump, compare_lp, evaluate_point, ispass, family,
+using OpenTIMES: TimesModel, DumpData, generate!, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!, layer1
+using OpenTIMES.Reference: canonical_from_jump, canonical_from_dump, compare_lp, evaluate_point, ispass, family,
                        jump_name_key
 
 const PUBLIC_FIXTURES = TOML.parsefile(joinpath(FIXTURES, "public_fixtures.toml"))

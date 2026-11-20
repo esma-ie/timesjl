@@ -5,8 +5,8 @@
 # same on the core reference runs), and on crafted states against GAMS
 # running ppmain.mod L1-247 and preppm.mod L1-212 itself.
 
-using TIMES: TimesModel, DumpData, layer1, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, preppm_symbols, gset, gparam
-using TIMES.Reference: ispass
+using OpenTIMES: TimesModel, DumpData, layer1, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, preppm_symbols, gset, gparam
+using OpenTIMES.Reference: ispass
 import TOML
 
 @testset "preppm.mod L1-212 layer 1, TIMES_Demo demo12" begin

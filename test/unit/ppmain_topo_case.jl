@@ -13,7 +13,7 @@
 # CSHNOIL1 and ELCTNGAS01 from 2010; ELCTNGAS01 is the only vintaged one, and
 # prep_ext.vda L44 deletes FLO_FUNCX of the others.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!
 import TOML
 
 """

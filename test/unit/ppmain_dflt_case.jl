@@ -14,7 +14,7 @@
 # 1980, 2004, 2005, 2010, 2015, 2020, 2030, 2050 (the milestones from 2005).
 # No CHP, storage, SHAPE or MULTI data; the NCAP_TLIFE are at most 60.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, gset
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, gset
 import TOML
 
 """

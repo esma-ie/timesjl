@@ -12,14 +12,14 @@
 # they are rebuilt from reference/suite.toml (--root fills the placeholders of
 # run-file models, e.g. --root times_demo=../TIMES_Demo).
 
-using TIMES
-using TIMES: TimesModel, untranslated_families, generate!, UnportedError, stepped
-using TIMES.Reference: canonical_from_dump, canonical_from_jump, compare_lp, ispass, evaluate_point,
+using OpenTIMES
+using OpenTIMES: TimesModel, untranslated_families, generate!, UnportedError, stepped
+using OpenTIMES.Reference: canonical_from_dump, canonical_from_jump, compare_lp, ispass, evaluate_point,
                        solution_levels, jump_name_key
 import JSON, JuMP, HiGHS, TOML
 
-"Values of `\$SET` switches in a TIMES run file: `TIMES.run_switches` (src/run.jl)."
-run_switches(path) = TIMES.run_switches(path)
+"Values of `\$SET` switches in a TIMES run file: `OpenTIMES.run_switches` (src/run.jl)."
+run_switches(path) = OpenTIMES.run_switches(path)
 
 function runfile_of(refdir, model, variant)
     for p in (joinpath(refdir, model, variant, "raw", "tjl_convert.run"),        # harness >= 0.2.2

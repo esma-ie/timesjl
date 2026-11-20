@@ -9,7 +9,7 @@
 # out; activity unit PJ on ELC), ELCTECOA00 (ELCCOA in), COTNCOA1 (COMCOA
 # in, DCOT out), EXPCOA1 an IRE process. Every case is in REG1.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!
 import TOML
 
 """

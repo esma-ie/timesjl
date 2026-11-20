@@ -11,7 +11,7 @@
 # end-use commodities are at DAYNITE, the rest ANNUAL; every process has a
 # PRC_TSL; COM_PEAK holds REG1.ELC without COM_PKTS; no storage.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!
 import TOML
 
 """

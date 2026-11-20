@@ -1,10 +1,10 @@
 # Authors
 
-## TIMES.jl (Julia/JuMP translation)
+## OpenTIMES.jl (Julia/JuMP translation)
 
 - James Glynn, ESMA Ltd (Ireland) — project lead
 
-TIMES.jl builds on the TIMES2JuMP feasibility study for IEA-ETSAP
+OpenTIMES.jl builds on the TIMES2JuMP feasibility study for IEA-ETSAP
 (James Glynn and Siddharth Krishna, 2026) and on the earlier
 [TIMES.jl prototype](https://github.com/olejandro/times.jl) by
 Olexandr Balyk, with review contributions from Oscar Dowson.

@@ -1,4 +1,4 @@
-# TIMES.jl — working rules for Claude
+# OpenTIMES.jl (formerly TIMES.jl) — working rules for Claude
 
 This repository ports the IEA-ETSAP TIMES model generator from GAMS to
 Julia/JuMP. These rules apply in every Claude session (claude.ai Project,
@@ -66,7 +66,7 @@ Claude Code in the terminal, VS Code, or the desktop app).
 | Reporting | report parameters and `.vd` vs GAMS | 1e-6 |
 
 OTUS9r at the M1.3 gate (James, 11 Nov 2026; #61): layer 3 is checked one
-way, CPLEX's GAMS optimum cross-evaluated in TIMES.jl; HiGHS on OTUS9r is
+way, CPLEX's GAMS optimum cross-evaluated in OpenTIMES.jl; HiGHS on OTUS9r is
 looked at separately.
 
 Any mismatch blocks the merge. Justified differences go in
@@ -109,7 +109,7 @@ Any mismatch blocks the merge. Justified differences go in
   then `julia --project=. scripts/m10_gate.jl ../timesjl-reference/<model>/<variant>`.
 - Local run limits on James's Windows workstation (James, 29 Oct 2026), for
   load management and comparable, fair resources across tests: every TIMES
-  run (GAMS or TIMES.jl, any solver) uses at most 12 threads, and at most 4
+  run (GAMS or OpenTIMES.jl, any solver) uses at most 12 threads, and at most 4
   CPU-heavy runs run at the same time. `make_reference.py` enforces both
   (`--threads 12`: GAMS `threads=` and the `threads` line of solver option
   files; `--max-parallel 4`: shared slot files, `reference/python/runlimits.py`);
@@ -118,13 +118,13 @@ Any mismatch blocks the merge. Justified differences go in
   timings only between runs made under them.
 
 ## Test-model licences
-- Translate, test, debug, profile and improve TIMES.jl only on models with a
+- Translate, test, debug, profile and improve OpenTIMES.jl only on models with a
   clearly stated open-source or open-data licence that allows redistribution
   and derivative works (OSI-approved, or Open Definition data licences such
   as CC0, CC BY, CC BY-SA). No licence stated, NC, ND, closed or proprietary:
   never used, not even locally or "just to check". Details and the current
   list: `docs/test-models.md`.
-- Users may run TIMES.jl on proprietary models; the translation does not
+- Users may run OpenTIMES.jl on proprietary models; the translation does not
   learn from them. Nothing derived from a closed model (data, results,
   timings, error reports carrying its data) enters this repository, its
   issues or its pull requests, and no design decision rests on one.
@@ -157,11 +157,15 @@ Any mismatch blocks the merge. Justified differences go in
 
 ## Repository
 - Licence GPL-3.0-or-later (derivative of TIMES); keep the ETSAP notice and
-  `AUTHORS.md` current. If IEA-ETSAP releases TIMES under the AGPL, TIMES.jl
+  `AUTHORS.md` current. If IEA-ETSAP releases TIMES under the AGPL, OpenTIMES.jl
   intends to relicense to AGPL-3.0-or-later; contributions are accepted under
   both licences (`CONTRIBUTING.md`).
-- Repository `esma-ie/TIMESjl`, public from 30 Oct 2026, before the MVP, as
-  an open experiment in AI-assisted translation (James, 27 and 30 Oct 2026).
+- Repository `esma-ie/OpenTIMES.jl` (named `esma-ie/TIMESjl` until the
+  rename to OpenTIMES, James, 20 Nov 2026; the old URL redirects), public
+  from 30 Oct 2026, before the MVP, as an open experiment in AI-assisted
+  translation (James, 27 and 30 Oct 2026). The Julia package and module are
+  `OpenTIMES` (UUID unchanged); never create a new `esma-ie/TIMESjl`, which
+  would break the redirect.
   Its history starts with one commit holding the pre-publication work
   (17-30 Oct 2026), which was developed in private repositories
   (`esma-ie/TIMES.jl`, then `esma-ie/TIMESjl`, now `esma-ie/TIMESjl-private`)

@@ -10,7 +10,7 @@
 # REG1 and REG2; the period of 2010 spans 2008-2012. Two UCs are added here,
 # UC_X1 and UC_X2.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, gset, register_uel!
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, gset, register_uel!
 import TOML
 
 """

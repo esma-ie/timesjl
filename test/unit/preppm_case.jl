@@ -11,7 +11,7 @@
 # 2004. The REG1 processes used below (COTE*, CSHE*, FTE-*, ELC*) have RTP in
 # every milestone; CSHNOIL1 and the other new technologies start in 2010.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, register_uel!
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, register_uel!
 import TOML
 
 """
@@ -181,7 +181,7 @@ const PREPPM_BARE = ["G_CUREX", "R_CUREX", "DAM_COST", "PRC_SIMV", "PRC_REFIT", 
 const PREPPM_OUTPUTS = vcat(["MODLYEAR", "DATAYEAR", "DM_YEAR", "FIL2", "MY_FIL", "OBJ_VFLO", "RPC_CUR", "IE_DEFAULT", "PRC_YMIN", "PASTSUM",
                              "PRC_SIMV", "PRC_VINT", "G_RFRIR", "UC_TIME", "RCAP_BND", "PRC_RCAP", "RCAP_BLK", "RCAP_OCAP", "NCAP_OLIFE",
                              "RTP_VARP", "PRC_CAP", "INT_DEFAULT", "RTP", "RVP", "TRACKP", "UNCD7", "MY_ARRAY", "MY_FIL2",
-                             "CNT", "DFUNC", "MY_F", "F", "Z", "LAST_VAL", "FIRST_VAL", "MY_FYEAR"], TIMES.PREPPM_PARAMS)
+                             "CNT", "DFUNC", "MY_F", "F", "Z", "LAST_VAL", "FIRST_VAL", "MY_FYEAR"], OpenTIMES.PREPPM_PARAMS)
 
 "What curex.gms (preppm.mod L27-28) writes besides `PREPPM_OUTPUTS`, compared in the \"curex\" case only."
 const CUREX_OUTPUTS = ["R_CUREX", "RDCUR", "CURMAP", "RXX", "COM_BPRICE", "COM_CSTNET", "COM_TAXNET", "COM_SUBNET", "COM_CSTPRD",

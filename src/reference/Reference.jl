@@ -1,5 +1,5 @@
 """
-    TIMES.Reference
+    OpenTIMES.Reference
 
 Tools for checking TIMES.jl against GAMS reference runs (milestone M1.0):
 

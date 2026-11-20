@@ -56,13 +56,13 @@ const GATE_T0 = time()
 include(joinpath(@__DIR__, "m13_probe.jl"))      # M13_STEPS, M13_SEGMENTS, run_switches, runfile_of, suite_switches
 include(joinpath(@__DIR__, "m14_models.jl"))     # REFGAMS, dd_model_dirs, take_local!
 import HiGHS, JuMP
-using TIMES: compile_run, write_dump, generate!
-using TIMES.Reference: load_dump, compare_dumps, canonical_from_jump, canonical_from_dump, compare_lp
-using TIMES: coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!, qa_warnings!, gams_warnings,
+using OpenTIMES: compile_run, write_dump, generate!
+using OpenTIMES.Reference: load_dump, compare_dumps, canonical_from_jump, canonical_from_dump, compare_lp
+using OpenTIMES: coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!, qa_warnings!, gams_warnings,
              qa_carry!, qa_text, qa_compare
 
 "The M1.2 coefficient stage, ppm -> coef: coefmain.mod in order, then coef_ext.vda (maindrv.mod L62-73)."
-const M12_COEF = Tuple(f for (a, _, f) in TIMES.PRESOLVE_STEPS if a == "ppm")   # src/run.jl
+const M12_COEF = Tuple(f for (a, _, f) in OpenTIMES.PRESOLVE_STEPS if a == "ppm")   # src/run.jl
 
 "The gate's segments: M1.3's preprocessing, the M1.2 coefficient stage, then the coef -> pre-solve step."
 const GATE_SEGMENTS = [filter(s -> s[1] != "coef", M13_SEGMENTS)..., ("ppm", "coef"), ("coef", "presolve")]
@@ -78,7 +78,7 @@ function gate_steps(a, b="presolve")
 end
 
 "The segments of one run: a stepped run with an equ checkpoint (harness 0.3.3) goes coef -> equ -> presolve."
-gate_segments(tm, dir) = TIMES.stepped(tm) && isdir(joinpath(dir, "equ")) ?
+gate_segments(tm, dir) = OpenTIMES.stepped(tm) && isdir(joinpath(dir, "equ")) ?
                          [GATE_SEGMENTS[1:end-1]..., ("coef", "equ"), ("equ", "presolve")] : GATE_SEGMENTS
 
 """
@@ -215,7 +215,7 @@ reduced model, as scripts/m11_probe.jl sets it.
 function stepped_state(snap)
     sw = snap.switches
     nt = qa_carry!(TimesModel(deepcopy(snap.data); reduce=strip(get(sw, "REDUCE", "")) == "YES", switches=sw), snap)
-    foreach(f -> f(nt), filter(f -> f !== TIMES.pp_clean!, gate_steps("equ", "presolve")))
+    foreach(f -> f(nt), filter(f -> f !== OpenTIMES.pp_clean!, gate_steps("equ", "presolve")))
     return nt
 end
 
@@ -292,10 +292,10 @@ function stepped_check(snap, dir, model, variant)
             println(tag, ", step ", k, " (periods ", join(info.periods, ", "), "): ", good ? "PASS" : "FAIL", "; ", join(parts, "; "),
                     "; prepared, generated, solved in ", round(info.prepare_s; digits=2), ", ", round(info.generate_s; digits=2), ", ",
                     round(info.solve_s; digits=2), " s")
-            own || TIMES.stp_load_point!(tm, DumpData(joinpath(d, "final")))
+            own || OpenTIMES.stp_load_point!(tm, DumpData(joinpath(d, "final")))
         end
         steps = try
-            TIMES.solve_stepped!(tm, HiGHS.Optimizer; attributes=("threads" => threads,), step_hook=hook)
+            OpenTIMES.solve_stepped!(tm, HiGHS.Optimizer; attributes=("threads" => threads,), step_hook=hook)
         catch e
             e isa ErrorException || rethrow()
             println(tag, ": FAIL (", sprint(showerror, e), ")")
@@ -337,7 +337,7 @@ function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off"
     else
         tm, ok = dd_input(dir, model, variant, from_dd, sw)
     end
-    stp = TIMES.stepped(tm)
+    stp = OpenTIMES.stepped(tm)
     snap = nothing          # a stepped run: TIMES.jl's state at the equ checkpoint, for the steps
     for (a, b) in gate_segments(tm, dir)
         isdir(joinpath(dir, b)) || (println("== ", model, "/", variant, ": no ", b, " dump; the chain ends at ", a); break)
@@ -349,7 +349,7 @@ function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off"
         t = try
             @elapsed foreach(f -> f(tm), gate_steps(a, b))
         catch e
-            e isa TIMES.UnportedError || rethrow()
+            e isa OpenTIMES.UnportedError || rethrow()
             # Before ppm a refusal fails the gate ("not translated", as run_overnight.ps1 counts it); past
             # ppm it only ends the chain, worded so that run_overnight.ps1 does not count it as a failure
             past_gate = reached in ("ppm", "coef", "equ")
@@ -393,7 +393,7 @@ function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off"
     if stp
         # M1.5: no single model; the steps of solve.stp, each against GAMS's (stepped_check)
         if snap === nothing || reached != "presolve"
-            println("== ", model, "/", variant, ": stepped run (TIMESTEP ", TIMES.gswitch(tm, "TIMESTEP", ""), "): ",
+            println("== ", model, "/", variant, ": stepped run (TIMESTEP ", OpenTIMES.gswitch(tm, "TIMESTEP", ""), "): ",
                     snap === nothing ? "no per-step reference (steps/, harness 0.3.4), the steps are not run" :
                                        "the chain did not reach the pre-solve state, the steps are not run")
             return ok && gate
@@ -418,7 +418,7 @@ if abspath(PROGRAM_FILE) == @__FILE__
             try
                 gate13(refdir, model; roots, variant, from_dd, solve)
             catch e
-                e isa TIMES.UnportedError || rethrow()
+                e isa OpenTIMES.UnportedError || rethrow()
                 println("== ", model, "/", variant, ": not translated: ", sprint(showerror, e))
             end
             t1 = time()

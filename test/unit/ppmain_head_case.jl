@@ -9,7 +9,7 @@
 # COMCO2, DCOT out; PG DCOT), EXPCOA1 and IMPCOA1 (IRE, PG COA). PASTYEAR is
 # 1960 and 1980 at this checkpoint.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, register_uel!
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, register_uel!
 import TOML
 
 """

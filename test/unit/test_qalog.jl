@@ -3,7 +3,7 @@
 # (docs/discrepancies.md G53).
 
 import TOML
-using TIMES: TimesModel, QaLog, qput!, qat!, qnl!, qclose!, qa_text, qnum, qcenter, qlab12, qa_compare, gams_warnings
+using OpenTIMES: TimesModel, QaLog, qput!, qat!, qnl!, qclose!, qa_text, qnum, qcenter, qlab12, qa_compare, gams_warnings
 
 @testset "QA log: PUT rules" begin
     # numbers: F:0:0, Z:0:0 (0.5), G:0:5, F, G, H (NW=12, ND=2), Z:<3:0, H:0:0, G:8:3
@@ -11,7 +11,7 @@ using TIMES: TimesModel, QaLog, qput!, qat!, qnl!, qclose!, qa_text, qnum, qcent
                 qnum(1234567.891, 12, 2), qnum(0.5, 3, 0; left=true), qnum(1234567.891, 0, 0), qnum(-12.345678, 8, 3)], "|") ==
           "3|0|-12.34568|        3.00|      -12.35|  1234567.89|0  |1234568| -12.346"
     # EPS:0:2, INF, -INF, 1e15 (E format), 1e-7, 1e-7:0:2
-    @test join([qnum(TIMES.GEPS, 0, 2), qnum(Inf, 12, 2), qnum(-Inf, 12, 2), qnum(1e15, 12, 2), qnum(1e-7, 12, 2), qnum(1e-7, 0, 2)], "|") ==
+    @test join([qnum(OpenTIMES.GEPS, 0, 2), qnum(Inf, 12, 2), qnum(-Inf, 12, 2), qnum(1e15, 12, 2), qnum(1e-7, 12, 2), qnum(1e-7, 0, 2)], "|") ==
           "0.00|        +INF|        -INF|1.000000E+15|        0.00|0.00"
     @test qnum(2.675, 0, 2) == "2.67" && qnum(0.125, 0, 2) == "0.12"     # the binary value, half to even
     @test qcenter("AB", 5) == " AB  " && qcenter("ABC", 6) == " ABC  "
@@ -31,14 +31,14 @@ end
 @testset "QA log: pp_qaput.mod" begin
     fx = only(filter(f -> f["prefix"] == "demo12_off", TOML.parsefile(joinpath(FIXTURES, "public_fixtures.toml"))["fixture"]))
     tm = TimesModel(joinpath(FIXTURES, "demo12_off_input"); switches=fx["switches"])
-    TIMES.qa_group!(tm)
-    TIMES.pp_qaput!(tm, 11, "Group one")
-    TIMES.pp_qaput!(tm, 1, "Group one")
-    qput!(TIMES.qalog(tm), " WARNING       - x:   R=" * qlab12("REG1") * " P=REG1")
+    OpenTIMES.qa_group!(tm)
+    OpenTIMES.pp_qaput!(tm, 11, "Group one")
+    OpenTIMES.pp_qaput!(tm, 1, "Group one")
+    qput!(OpenTIMES.qalog(tm), " WARNING       - x:   R=" * qlab12("REG1") * " P=REG1")
     @test qa_text(tm) == "              ******          TIMES -- VERSION 4.9.7           ******\r\n" *
                          "              **************   QUALITY ASSURANCE LOG   **************\r\n\r\n" *
                          " *** Group one\r\n *11\r\n *01 WARNING       - x:   R=REG1         P=REG1\r\n"
-    @test TIMES.gscalar(tm, "PUTOUT") == 1 && TIMES.gscalar(tm, "PUTGRP") == 1 && TIMES.gscalar(tm, "ERRLEV") == 11
+    @test OpenTIMES.gscalar(tm, "PUTOUT") == 1 && OpenTIMES.gscalar(tm, "PUTGRP") == 1 && OpenTIMES.gscalar(tm, "ERRLEV") == 11
     # the compare: a prefix ending at a line end, GAMS going on with a new group
     ref = qa_text(tm) * "\r\n *** Next group\r\n *01 W\r\n"
     @test qa_compare(qa_text(tm), ref)[1] && !qa_compare(qa_text(tm), ref; complete=true)[1]
@@ -53,7 +53,7 @@ end
 # The crafted cases (reference/crafted.toml, M1.3 change 25b-3): demo12 with data the QA checks
 # complain about, every step from the input dump on one TimesModel, the QA log against GAMS's.
 # demo12_qa: warnings, the run goes on; demo12_qa99: a FATAL error, pp_qack.mod L380 aborts.
-using TIMES: init_ext!, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, prep_ext!, preppm_shape!,
+using OpenTIMES: init_ext!, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, prep_ext!, preppm_shape!,
              ppmain_topo!, ppmain_tslvl!, ppmain_life!, pp_prelv!, pp_qafs!, ppmain_dflt!, ppmain_tsattr!, ppmain_flo!,
              ppmain_flofs!, ppmain_ire!, ppmain_bnd!, ppmain_cum!, ppmain_stg!, ppmain_uc!, ppmain_ucmap!, ppmain_blend!,
              ppmain_reduce!, ppm_ext_actef!, ppm_ext!, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!,

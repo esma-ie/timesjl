@@ -1,10 +1,12 @@
-# TIMES.jl
+# OpenTIMES.jl
+
+*Formerly TIMES.jl; links to `esma-ie/TIMESjl` redirect here.*
 
 A Julia/JuMP translation of the IEA-ETSAP TIMES model generator, validated
 against the GAMS code for numerical parity.
 
 > **Status: Phase 1 (M1.0 to M1.2 passed; M1.3, M1.4 and M1.5 under way).**
-> TIMES.jl reads a TIMES model from its own `.run` and DD files,
+> OpenTIMES.jl reads a TIMES model from its own `.run` and DD files,
 > preprocesses it, builds it and solves it without GAMS. It runs city,
 > national and multi-regional models: New York City (OTNYC, OTCGEN), New
 > Zealand (TIMES-NZ) and the United States in nine regions (OTUS9r, 2.5
@@ -15,12 +17,12 @@ against the GAMS code for numerical parity.
 > TIMES features are not translated yet, and its interfaces may still
 > change. See [Progress](#progress).
 >
-> TIMES.jl is an independent project of ESMA Ltd. It is not an official
+> OpenTIMES.jl is an independent project of ESMA Ltd. It is not an official
 > IEA-ETSAP product and is not endorsed by IEA-ETSAP or the TIMES maintainers.
 
 ## Quick start
 
-Try TIMES.jl on your own machine with the open TIMES demo model (demo12): it
+Try OpenTIMES.jl on your own machine with the open TIMES demo model (demo12): it
 reads the model's `.run` and DD files, preprocesses it, builds the LP and
 solves it with the open-source solver HiGHS. No GAMS, no solver licence.
 
@@ -46,17 +48,17 @@ Use juliaup, Julia's official installer, which also keeps Julia up to date:
 Open a new terminal afterwards and check that `julia --version` prints 1.10
 or later.
 
-### 2. Install TIMES.jl
+### 2. Install OpenTIMES.jl
 
 Start Julia (type `julia` in a terminal), then at the `julia>` prompt:
 
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/esma-ie/TIMESjl")
+Pkg.add(url="https://github.com/esma-ie/OpenTIMES.jl")
 ```
 
-This installs TIMES.jl and its dependencies (JuMP, HiGHS, Arrow, ...) and
-precompiles them, which takes a few minutes the first time. TIMES.jl is not
+This installs OpenTIMES.jl and its dependencies (JuMP, HiGHS, Arrow, ...) and
+precompiles them, which takes a few minutes the first time. OpenTIMES.jl is not
 in Julia's package registry yet, so it is added from its GitHub address.
 
 ### 3. Run the demo model
@@ -64,8 +66,8 @@ in Julia's package registry yet, so it is added from its GitHub address.
 In Julia:
 
 ```julia
-using TIMES
-r = run_model(joinpath(TIMES.times_demo_dir(), "demo12.run"); out="demo12_out")
+using OpenTIMES
+r = run_model(joinpath(OpenTIMES.times_demo_dir(), "demo12.run"); out="demo12_out")
 ```
 
 The first call downloads the TIMES v4.9.7 source and the TIMES_Demo models
@@ -83,7 +85,7 @@ line per step:
 The rows, columns and objective are the ones GAMS gives for the same model
 (objective 23960685.737007827 with CPLEX in the reference run). The first
 run in a Julia session is slow, about 3 minutes in all, because Julia
-compiles TIMES.jl's code as it first uses it. Further runs in the same
+compiles OpenTIMES.jl's code as it first uses it. Further runs in the same
 session reuse that compiled code: run the `run_model(...)` line again and
 demo12 takes about 2 seconds. So keep the Julia session open between runs.
 (Timings on a Windows workstation, 18 Nov 2026.)
@@ -100,13 +102,13 @@ In Julia, `r.objective` is the objective and `r.model.model` the JuMP model,
 for example to inspect it or solve it again with another solver.
 `?run_model` at the `julia>` prompt lists every option.
 
-TIMES.jl does not write TIMES's report parameters or VEDA `.vd` files yet
+OpenTIMES.jl does not write TIMES's report parameters or VEDA `.vd` files yet
 (milestone M1.6), so the results cannot be opened in VEDA.
 
 ### 4. Run your own model
 
 ```julia
-using TIMES
+using OpenTIMES
 run_model(raw"C:\VEDA\GAMS_WrkTIMES\scenario.run"; dd=[raw"C:\VEDA\GAMS_WrkTIMES"], out="results")
 ```
 
@@ -120,7 +122,7 @@ run_model(raw"C:\VEDA\GAMS_WrkTIMES\scenario.run"; dd=[raw"C:\VEDA\GAMS_WrkTIMES
   JuMP solver, such as `Gurobi.Optimizer` if you have it installed and
   licensed.
 
-If the model uses a TIMES feature that TIMES.jl does not translate yet, the
+If the model uses a TIMES feature that OpenTIMES.jl does not translate yet, the
 run stops with `not translated` and names the GAMS file it would need (see
 [Progress](#progress)). Results come with no comparison against GAMS: to
 check a model against GAMS, see [`reference/README.md`](reference/README.md).
@@ -131,21 +133,21 @@ check a model against GAMS, see [`reference/README.md`](reference/README.md).
   `run_model`, or set `TIMESJL_THREADS` before starting Julia:
   `$env:TIMESJL_THREADS = "4"` in PowerShell, `set TIMESJL_THREADS=4` in
   Command Prompt, `export TIMESJL_THREADS=4` on macOS and Linux.
-- **Updating.** `using Pkg; Pkg.update("TIMES")` fetches the latest `main`.
+- **Updating.** `using Pkg; Pkg.update("OpenTIMES")` fetches the latest `main`.
 - **Offline or behind a firewall.** Clone
   [etsap-TIMES/TIMES_model](https://github.com/etsap-TIMES/TIMES_model) at
   commit `d9a6a25` and set `TIMESJL_TIMES_SOURCE` to that folder, so the
   TIMES source is not downloaded. Julia uses the usual `HTTPS_PROXY`
   setting for its downloads.
 
-### Working on TIMES.jl itself
+### Working on OpenTIMES.jl itself
 
 To run the tests and the scripts, clone the repository (Julia 1.11 or later
 for the `test` environment):
 
 ```
-git clone https://github.com/esma-ie/TIMESjl.git
-cd TIMESjl
+git clone https://github.com/esma-ie/OpenTIMES.jl.git
+cd OpenTIMES.jl
 julia --project=test -e "using Pkg; Pkg.instantiate()"
 julia --project=. -e "using Pkg; Pkg.test()"
 ```
@@ -163,7 +165,7 @@ to be registered", because 1.10 does not read the `[sources]` entry in
 
 ## An experiment in AI-assisted translation
 
-TIMES.jl is also an experiment: how useful is AI at translating a large,
+OpenTIMES.jl is also an experiment: how useful is AI at translating a large,
 mature GAMS code base such as TIMES into open-source languages and tool
 stacks, when every step must reproduce the original's results?
 
@@ -206,12 +208,12 @@ stacks, when every step must reproduce the original's results?
 The GAMS code is authoritative. Where it disagrees with the documentation the
 difference is logged in [`docs/discrepancies.md`](docs/discrepancies.md).
 
-To read a model's `.run` and `.dd` files, TIMES.jl compiles TIMES's own files as GAMS
+To read a model's `.run` and `.dd` files, OpenTIMES.jl compiles TIMES's own files as GAMS
 does, so it needs the v4.9.7 source. It downloads that commit's GitHub archive on
 first use and checks it by hash ([`Artifacts.toml`](Artifacts.toml),
-`TIMES.times_source()`). To use a local clone of the same commit instead, set
+`OpenTIMES.times_source()`). To use a local clone of the same commit instead, set
 `TIMESJL_TIMES_SOURCE`. The open demo models (`etsap-TIMES/TIMES_Demo` @ 962db86,
-CC BY 4.0, IEA-ETSAP) come the same way (`TIMES.times_demo_dir()`).
+CC BY 4.0, IEA-ETSAP) come the same way (`OpenTIMES.times_demo_dir()`).
 
 ## Phases
 
@@ -248,7 +250,7 @@ As of 19 Nov 2026 (`main`):
   Zealand (TIMES-NZ, two scenarios) and the United States in nine regions
   (OTUS9r, two scenarios, up to 2.5 million rows). JRC-EU-TIMES, a
   multi-country model of Europe, matches GAMS to the end of preprocessing.
-  See [Probes against GAMS](#probes-against-gams) below. TIMES.jl has not
+  See [Probes against GAMS](#probes-against-gams) below. OpenTIMES.jl has not
   been run on a global model yet: the test suite has none, because a test
   model needs an open licence ([`docs/test-models.md`](docs/test-models.md)).
 - **CI.** Every pull request runs 35,350 tests (all pass on 18 Nov): demo12
@@ -275,7 +277,7 @@ As of 19 Nov 2026 (`main`):
   ([`docs/m13-plan.md`](docs/m13-plan.md)).
 - **Discrepancies.** 44 places where the GAMS code and the documentation
   disagree are logged in [`docs/discrepancies.md`](docs/discrepancies.md).
-  Three known differences between TIMES.jl
+  Three known differences between OpenTIMES.jl
   and GAMS are listed in [`docs/known-differences.md`](docs/known-differences.md).
 - **Dashboard.** [`docs/dashboard/index.html`](docs/dashboard/index.html),
   opened in a browser, shows these results in slides
@@ -286,11 +288,11 @@ Phase 2.
 
 ### Probes against GAMS
 
-The probes run TIMES.jl beside GAMS on the same model and compare the
+The probes run OpenTIMES.jl beside GAMS on the same model and compare the
 two at each stage, from the DD files to the optimum. Each open model is
 run twice, with REDUCE off and as its run file sets it. Results of the
 workstation's nightly batch of 18-19 Nov 2026, on `main` with every M1.3
-change up to 64 merged (GAMS 54.6.1, CPLEX; TIMES.jl with HiGHS):
+change up to 64 merged (GAMS 54.6.1, CPLEX; OpenTIMES.jl with HiGHS):
 
 | Model | Scale | Based on | Rows (REDUCE off) | Preprocessing steps | Matrix | Optimum vs GAMS/CPLEX |
 | --- | --- | --- | ---: | --- | --- | --- |
@@ -299,8 +301,8 @@ change up to 64 merged (GAMS 54.6.1, CPLEX; TIMES.jl with HiGHS):
 | OTCGEN | city | US EPA Generative COMET (New York City) | 1,257,132 | match | identical | 2e-15 |
 | TIMES-NZ steady | national | New Zealand's TIMES-NZ | 1,408,361 | match | identical | 2e-10 |
 | TIMES-NZ shift | national | New Zealand's TIMES-NZ | 1,483,415 | match | identical | 3e-9 (see below) |
-| OTUS9r reference | multi-regional | US EPA EPAUS9rT, 9 US regions | 2,174,010 | match | identical | GAMS's optimum checked in TIMES.jl |
-| OTUS9r tax1 | multi-regional | US EPA EPAUS9rT, 9 US regions | 2,528,996 | match | identical | GAMS's optimum checked in TIMES.jl |
+| OTUS9r reference | multi-regional | US EPA EPAUS9rT, 9 US regions | 2,174,010 | match | identical | GAMS's optimum checked in OpenTIMES.jl |
+| OTUS9r tax1 | multi-regional | US EPA EPAUS9rT, 9 US regions | 2,528,996 | match | identical | GAMS's optimum checked in OpenTIMES.jl |
 
 What each column checks:
 
@@ -314,9 +316,9 @@ What each column checks:
   column, coefficient, right-hand side and bound of the LP against GAMS's
   CONVERT export, at 1e-9. All 14 runs match.
 - **Optimum:** the relative difference between HiGHS's objective in
-  TIMES.jl and CPLEX's in GAMS, the larger of the model's two runs (the
+  OpenTIMES.jl and CPLEX's in GAMS, the larger of the model's two runs (the
   tolerance is 1e-6). For OTUS9r, CPLEX's optimum from GAMS is put into
-  the TIMES.jl model and checked against every constraint and the
+  the OpenTIMES.jl model and checked against every constraint and the
   objective; HiGHS's own solve of OTUS9r is followed separately. For
   TIMES-NZ shift with REDUCE off, HiGHS usually reaches the batch's
   one-hour time limit, as it did on 18-19 Nov (the matrix was identical to
@@ -329,7 +331,7 @@ JRC-EU-TIMES, a multi-country model of the European energy system, is
 followed too; its licence lets us publish summary results only. Its DD
 files compile to the same 851 sets and parameters as GAMS in all nine of
 its scenarios. Run from GAMS's input dump (scenario cli_ll, REDUCE off and
-as run), TIMES.jl now matches GAMS for all 850 sets and parameters at
+as run), OpenTIMES.jl now matches GAMS for all 850 sets and parameters at
 every checkpoint to the end of preprocessing, and its QA log is identical.
 Its matrix and optimum are not compared with GAMS yet.
 
@@ -346,7 +348,7 @@ Every change is checked against reference runs of the GAMS code:
 
 Reference runs are produced with the harness in [`reference/`](reference/),
 and only from test models with a clearly stated open-source or open-data
-licence ([`docs/test-models.md`](docs/test-models.md)). TIMES.jl does not
+licence ([`docs/test-models.md`](docs/test-models.md)). OpenTIMES.jl does not
 learn from closed or proprietary models.
 
 ## Repository layout
@@ -371,7 +373,7 @@ docs/           plans, GAMS-to-Julia map, discrepancies, known differences,
 
 ## Origins and acknowledgements
 
-TIMES.jl builds on two earlier pieces of work:
+OpenTIMES.jl builds on two earlier pieces of work:
 
 - the **TIMES2JuMP feasibility study** for IEA-ETSAP (James Glynn and
   Siddharth Krishna, 2026), which set out the translation approach and the
@@ -394,8 +396,8 @@ GPL-3.0-or-later, the same licence as the TIMES GAMS code. See
 [`LICENSE`](LICENSE), [`NOTICE`](NOTICE) and [`AUTHORS.md`](AUTHORS.md).
 
 **Intended move to the AGPL.** If IEA-ETSAP releases the TIMES code under the
-GNU Affero General Public License version 3 (AGPL-3.0), TIMES.jl intends to
+GNU Affero General Public License version 3 (AGPL-3.0), OpenTIMES.jl intends to
 follow it and relicense to AGPL-3.0-or-later, so that the translation keeps
-the licence of the code it is derived from. Until then TIMES.jl stays under
+the licence of the code it is derived from. Until then OpenTIMES.jl stays under
 GPL-3.0-or-later. Contributions are accepted on terms that allow this move
 (see [`CONTRIBUTING.md`](CONTRIBUTING.md#licensing-of-contributions)).

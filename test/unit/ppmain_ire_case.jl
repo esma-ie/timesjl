@@ -12,7 +12,7 @@
 # import from IMPEXP. No IRE_FLO, IRE_PRICE or IRE_FLOSUM data, no
 # marketplace, no CORR or DISTR process.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, gset
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, gset
 import TOML
 
 """

@@ -11,7 +11,7 @@
 # ELCTECOA00 (past vintage 2004 in REG1) and COTNCOA1 (new, 2010) are demo12
 # processes.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, ctst
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, ctst
 
 """
 The cases: name => (switches, ALTOBJ, state edits). ALTOBJ follows

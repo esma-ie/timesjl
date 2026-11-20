@@ -10,8 +10,8 @@
 # LAGT, LEAD, the cumulative ranges) are the same in the two runs. The whole case, layers 1 to
 # 3, is checked on the workstation (scripts/m13_gate.jl, scripts/m11_probe.jl).
 
-using TIMES: TimesModel, generate!
-using TIMES.Reference: canonical_from_jump, canonical_from_dump
+using OpenTIMES: TimesModel, generate!
+using OpenTIMES.Reference: canonical_from_jump, canonical_from_dump
 import TOML, JSON
 
 let vx = only(v for v in TOML.parsefile(joinpath(FIXTURES, "variant_fixtures.toml"))["variant"]

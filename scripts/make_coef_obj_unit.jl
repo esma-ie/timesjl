@@ -13,7 +13,7 @@
 const REPO = dirname(@__DIR__)
 include(joinpath(@__DIR__, "gams_replay.jl"))
 include(joinpath(REPO, "test", "unit", "coef_obj_case.jl"))
-using TIMES: ctst, varcost
+using OpenTIMES: ctst, varcost
 
 function main(times_dir, gams...)
     tm = coef_obj_start(joinpath(REPO, "test", "fixtures", "demo12_off_ppm"))

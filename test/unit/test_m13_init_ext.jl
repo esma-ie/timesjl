@@ -4,8 +4,8 @@
 # and parameter of the dump (scripts/m13_probe.jl does the same on the core
 # reference runs).
 
-using TIMES: TimesModel, DumpData, layer1, init_ext!, init_ext_unported, gset, gparam, gput!, UnportedError
-using TIMES.Reference: ispass
+using OpenTIMES: TimesModel, DumpData, layer1, init_ext!, init_ext_unported, gset, gparam, gput!, UnportedError
+using OpenTIMES.Reference: ispass
 import TOML
 
 @testset "init_ext layer 1, TIMES_Demo demo12" begin

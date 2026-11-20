@@ -11,7 +11,7 @@
 # The file records the model, the variant and the GAMS version, not the machine or its paths.
 
 import TOML, JSON
-using TIMES.Reference: canonical_from_dump
+using OpenTIMES.Reference: canonical_from_dump
 
 const REPO = dirname(@__DIR__)
 function main(refrun, out, families...)

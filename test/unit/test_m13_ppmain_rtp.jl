@@ -5,8 +5,8 @@
 # (scripts/m13_probe.jl does the same on the core reference runs), and on
 # crafted states against GAMS running ppmain.mod L1-247 itself.
 
-using TIMES: TimesModel, DumpData, layer1, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, ppmain_rtp_symbols, gset, gparam
-using TIMES.Reference: ispass
+using OpenTIMES: TimesModel, DumpData, layer1, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, ppmain_rtp_symbols, gset, gparam
+using OpenTIMES.Reference: ispass
 import TOML
 
 @testset "ppmain.mod L199-247 layer 1, TIMES_Demo demo12" begin

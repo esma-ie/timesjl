@@ -7,10 +7,10 @@
 # the core models' own states). With blending data: the crafted case
 # demo12_blnd (test/unit/test_eqblnd.jl, test/unit/test_variants.jl).
 
-using TIMES: TimesModel, DumpData, layer1, pp_qafs!, ppmain_dflt!, ppmain_tsattr!, ppmain_flo!, ppmain_flofs!,
+using OpenTIMES: TimesModel, DumpData, layer1, pp_qafs!, ppmain_dflt!, ppmain_tsattr!, ppmain_flo!, ppmain_flofs!,
              ppmain_ire!, ppmain_bnd!, ppmain_cum!, ppmain_stg!, ppmain_uc!, ppmain_ucmap!, ppmain_blend!, ppmain_blend_symbols,
              gparam, gset, gput!
-using TIMES.Reference: ispass
+using OpenTIMES.Reference: ispass
 import TOML
 
 const PPMAIN_TO_BLEND = (pp_qafs!, ppmain_dflt!, ppmain_tsattr!, ppmain_flo!, ppmain_flofs!, ppmain_ire!, ppmain_bnd!, ppmain_cum!,

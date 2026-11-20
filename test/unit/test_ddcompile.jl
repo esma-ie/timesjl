@@ -2,7 +2,7 @@
 # source is not in CI; scripts/m14_probe.jl checks the real run files against the input dumps on
 # James's machine.
 using Test
-using TIMES: GamsCompile, gams_compile!, gsym, grecords, gdx_uels, gdx_symbols, DDSyntaxError, UnportedError
+using OpenTIMES: GamsCompile, gams_compile!, gsym, grecords, gdx_uels, gdx_symbols, DDSyntaxError, UnportedError
 
 function compile_files(files::Dict{String,String}; run="m.run", kw...)
     dir = mktempdir()
@@ -170,7 +170,7 @@ end
 end
 
 @testset "an assignment makes its symbol DEFINED (G35; preppm.mod L27-28, R_CUREX)" begin
-    using TIMES: gassignees
+    using OpenTIMES: gassignees
     @test gassignees("R_CUREX(R,CURR,CUR)\$NO=0") == ["R_CUREX"]
     @test gassignees("R_CUREX(R,CURR,CUR)\$(NOT R_CUREX(R,CURR,CUR))\$=G_CUREX(CURR,CUR)") == ["R_CUREX"]
     @test gassignees("IF(CNT=DONE+1,CNT=DONE)") == ["CNT"]                 # the first `=` compares

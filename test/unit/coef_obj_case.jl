@@ -7,7 +7,7 @@
 # scripts/make_coef_obj_unit.jl, which runs coef_obj.mod itself on it with
 # GAMS, and test/unit/test_coef_obj.jl, which checks coef_obj! against that.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, coef_cpt!, coef_nio!, coef_ptr!
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, coef_cpt!, coef_nio!, coef_ptr!
 
 "Add labels to a model's unique-element list, after the dump's (as GAMS enters new labels)."
 function add_uels!(tm, labels...)

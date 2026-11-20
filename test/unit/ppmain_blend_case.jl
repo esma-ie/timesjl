@@ -4,7 +4,7 @@
 # runs ppmain.mod L616-1333 itself on it (scripts/make_ppmain_blend_unit.jl;
 # test/unit/test_m13_ppmain_blend.jl).
 
-using TIMES: TimesModel, gvalues, gput!
+using OpenTIMES: TimesModel, gvalues, gput!
 import TOML
 
 """
