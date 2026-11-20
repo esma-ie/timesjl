@@ -9,9 +9,9 @@
 # `indic` lines, and PRIOROPT) comes only with eq_sdind_0/1, which the model generation refuses
 # (src/model/generate.jl), so a TIMES.jl run never reaches it.
 #
-# Option files are read for HiGHS only. CPLEX (q2 of 20 Nov 2026) waits for James's answer: the
-# CPLEX in GAMS is licensed for use within GAMS only (GAMS EULA, Exhibit A), and this machine has
-# no other CPLEX (docs/decisions.md).
+# Option files are read for HiGHS only (James, 20 Nov 2026, #182 d5: "HiGHS only for now"). CPLEX.jl
+# was asked for (q2 of 20 Nov) but not built: the CPLEX in GAMS is licensed for use within GAMS only
+# (GAMS EULA, Exhibit A), and this machine has no other CPLEX (docs/decisions.md).
 
 """
     read_optfile(path) -> Vector{Pair{String,String}}
