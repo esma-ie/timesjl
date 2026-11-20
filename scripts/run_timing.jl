@@ -2,7 +2,7 @@
 # the dashboard's slides 11 and 12 (docs/dashboard/index.html, block "run-timing").
 #
 #   julia --project=test scripts/run_timing.jl <reference dir> [<batch log dir> ...]
-#         [--meta <parity report .json of the batch>] [--out <file.json>] [--embed [<page>]] [--all | --local]
+#         [--meta <parity report .json of the batch>] [--out <file.json>] [--embed [<page>]] [--all | --local | --restricted]
 #
 # Nothing is run here: every number is read from output that exists already.
 #
@@ -37,6 +37,14 @@
 #
 # Only models with redistribute = "public" in reference/suite.toml are read, unless --all (every
 # model) or --local (only the others); both are for a local board, and --embed then refuses.
+#
+# Solvers whose timings are not published (James, 20 Nov 2026, #182 d6): the GAMS EULA's
+# "Publication of Benchmarks" (C:\GAMS\54\EULA.md L362-376) forbids publishing performance
+# comparisons of its Restricted Solvers (RT_RESTRICTED: CPLEX among them) without the consent of
+# GAMS and the solver vendor. The public page leaves out every entry of such a solver: by default
+# they are dropped, and --embed refuses an entry of one. --restricted writes only those entries, of
+# the public models, for the local board (C:\git\esma\build_dashboard_local.ps1 embeds them as the
+# block run-timing-restricted); --all and --local keep every solver, as they are local already.
 # No path, host name or log line goes into the output.
 
 import JSON, TOML
@@ -46,6 +54,9 @@ include(joinpath(@__DIR__, "gams_profile.jl"))   # include_summary, profile_line
 const RT_REPO = normpath(joinpath(@__DIR__, ".."))
 const RT_VARIANTS = ("reduce_off", "as_run")
 const RT_GAMS_MAJOR = 54                          # CLAUDE.md: every reference run is made with GAMS 54
+# The GAMS EULA's Restricted Solvers (C:\GAMS\54\EULA.md L362-376), ODHCPLEX with CPLEX as its subsolver:
+# their timings are kept off the public page (#182 d6; the header above)
+const RT_RESTRICTED = ("COPT", "CPLEX", "GUROBI", "KNITRO", "LINDO", "LINDOGLOBAL", "XPRESS", "ODHCPLEX")
 
 r3(x) = x === nothing ? nothing : round(Float64(x); digits=3)
 int(x) = x === nothing ? nothing : round(Int, x)
@@ -183,7 +194,10 @@ function julia_entries(log, model, meta, logname)
     return out
 end
 
-function run_timing(refdir, logdirs; meta=Dict{String,Any}(), all_models=false, only_local=false)
+# restricted: :drop (the public page: no entry of a solver in RT_RESTRICTED), :only (only those entries,
+# for the local board) or :keep (every solver; --all and --local)
+function run_timing(refdir, logdirs; meta=Dict{String,Any}(), all_models=false, only_local=false, restricted=:drop)
+    restricted in (:drop, :only, :keep) || error("restricted is :drop, :only or :keep, not $restricted")
     suite = TOML.parsefile(joinpath(RT_REPO, "reference", "suite.toml"))["model"]
     runs = Any[]
     for m in suite
@@ -219,6 +233,9 @@ function run_timing(refdir, logdirs; meta=Dict{String,Any}(), all_models=false, 
                     error("$name/$v: TIMES.jl's model has $(e.rows) rows and $(e.cols) columns, GAMS's $rows and $cols")
                 push!(timing, Base.structdiff(e, NamedTuple{(:rows, :cols)}))
             end
+            restricted === :drop && filter!(e -> !(e.solver in RT_RESTRICTED), timing)
+            restricted === :only && filter!(e -> e.solver in RT_RESTRICTED, timing)
+            isempty(timing) && continue
             push!(runs, (run="$name/$v", model=name, variant=v, redistribute=red, rows=rows, cols=cols,
                          nonzeros=int(si["numnz"]), timing=timing))
         end
@@ -231,6 +248,8 @@ end
 function embed_timing!(page, data; id="run-timing")
     all(r -> r.redistribute == "public", data.runs) ||
         error("only models with redistribute = \"public\" go into the page")
+    any(r -> any(e -> e.solver in RT_RESTRICTED, r.timing), data.runs) &&
+        error("no timing of a solver in RT_RESTRICTED goes into the page (#182 d6): " * join(RT_RESTRICTED, ", "))
     html = read(page, String)
     open_tag = "<script id=\"$id\" type=\"application/json\">"
     a = findfirst(open_tag, html)
@@ -245,7 +264,7 @@ function main_run_timing(args)
     i = 1
     while i <= length(args)
         a = args[i]
-        if a in ("--all", "--local")
+        if a in ("--all", "--local", "--restricted")
             opt[a[3:end]] = true
         elseif a == "--embed"
             opt["embed"] = i < length(args) && !startswith(args[i+1], "--") ? args[i+=1] :
@@ -257,9 +276,12 @@ function main_run_timing(args)
         end
         i += 1
     end
-    isempty(pos) && error("usage: run_timing.jl <reference dir> [<batch log dir> ...] [--meta <report.json>] [--out <file>] [--embed [<page>]] [--all | --local]")
+    isempty(pos) && error("usage: run_timing.jl <reference dir> [<batch log dir> ...] [--meta <report.json>] [--out <file>] [--embed [<page>]] [--all | --local | --restricted]")
     meta = haskey(opt, "meta") ? JSON.parsefile(opt["meta"])["meta"] : Dict{String,Any}()
-    data = run_timing(pos[1], pos[2:end]; meta, all_models=get(opt, "all", false), only_local=get(opt, "local", false))
+    count(k -> haskey(opt, k), ("all", "local", "restricted")) <= 1 || error("--all, --local and --restricted go alone")
+    haskey(opt, "restricted") && haskey(opt, "embed") && error("--restricted is for the local board; --embed refuses it")
+    restricted = haskey(opt, "restricted") ? :only : (haskey(opt, "all") || haskey(opt, "local")) ? :keep : :drop
+    data = run_timing(pos[1], pos[2:end]; meta, all_models=get(opt, "all", false), only_local=get(opt, "local", false), restricted)
     for r in data.runs, e in r.timing
         p = e.parts
         f(x) = x === nothing ? "      -" : lpad(string(round(x; digits=1)), 7)
