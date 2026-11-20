@@ -135,6 +135,12 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
+### #174 M1.3 (65): total demand fractions given as data, GR_DEMFR (powerflo.vda L40, L107, L131); crafted case demo12_pfdf (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the crafted case demo12_pfdf (demo12 + pf.dd and pfdf.dd, CC BY 4.0) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
+
 ### #173 m13_gate.jl: 24 hours for every HiGHS solve (open)
 
 Asked for by James on 19 Nov 2026 ("allow TIMES-NZ runs on HiGHS 24 hours run time", corrected the same hour to "allow all HiGHS runs 24 hours runtime").

@@ -848,6 +848,22 @@ kind = "run"
 run_file = "{crafted}/demo12_pfcst/demo12_pfcst.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa", "{crafted}/demo12_pfd", "{crafted}/demo12_pfcst"]
 
+# TIMES_Demo demo12_pf + demo12_pfdf/pfdf.dd (19 Nov 2026): a second grid node in REG1 (the line of
+# demo12_pfd) and total demand fractions given as data (GR_DEMFR), with no sectoral fractions, so the
+# total demand path of the allocation rows EQ_GR_DEMALL (powerflo.vda L40, L107, L131, L140, L314-340;
+# M1.3 change 65).
+[[model]]
+name = "TIMES_Demo-demo12_pfdf"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_pfdf/demo12_pfdf.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfdf"]
+
 # TIMES_Demo demo12 + demo12_mkt/mkt.dd (17 Nov 2026): market-based trade through a third region, the
 # gas hub REG3 (eqire.mod L23-38, eqirebnd.mod L46-51; M1.3 change 51).
 [[model]]
