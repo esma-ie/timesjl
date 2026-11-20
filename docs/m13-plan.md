@@ -2437,8 +2437,8 @@ The M1.4 gate's own criteria still pass; it waits for this gate (CLAUDE.md), and
 
 ## Plan: the stochastic extension (approved by James, 20 Nov 2026)
 
-Asked as q2 at the check-in of 19 Nov 2026 ("yes show me the plan"). Nothing
-below starts until James approves it (docs/decisions.md, Open decisions).
+Asked as q2 at the check-in of 19 Nov 2026 ("yes show me the plan"); James
+approved it on 20 Nov 2026 (#178 d1, docs/decisions.md).
 
 ### What GAMS does (TIMES v4.9.7 @ d9a6a25)
 
