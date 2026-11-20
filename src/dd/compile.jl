@@ -399,11 +399,31 @@ function gams_compile!(g::GamsCompile, runfile::AbstractString)
     g
 end
 
+"""
+A source or DD file's text. GAMS reads bytes; a byte that is not part of valid UTF-8 becomes the four
+characters `\\xNN` (lower-case hex), as the label stands in the dumps the harness writes (rptlite.rpt
+L53 `SET PASTCV / '0','¤' /` with the Latin-1 byte 0xA4 is the label `\\xa4` in GAMS's input dump of
+a SENSIS run).
+"""
+function gread(path::AbstractString)
+    s = read(path, String)
+    isvalid(s) && return s
+    io = IOBuffer()
+    for c in s
+        if isvalid(c)
+            print(io, c)
+        else
+            foreach(b -> print(io, "\\x", string(b; base=16, pad=2)), codeunits(string(c)))
+        end
+    end
+    String(take!(io))
+end
+
 function ginclude!(g::GamsCompile, path::AbstractString, args::Vector{String})
     push!(g.stack, GLevel(String(path), args, Dict{String,String}(), Dict{String,String}()))
     push!(g.trace, (length(g.stack) - 1, basename(path)))
     eolcom = g.eolcom                 # $EOLCOM holds for the file that sets it and what it includes
-    lines = split(read(path, String), '\n')
+    lines = split(gread(path), '\n')
     i = 1
     n = length(lines)
     block = IOBuffer()
@@ -452,12 +472,18 @@ function ginclude!(g::GamsCompile, path::AbstractString, args::Vector{String})
                 continue
             end
             if jump !== nothing
-                # $GOTO: to $LABEL name, forward first, then from the top (main_ext.mod's loop goes back)
-                # the label name may be followed by more text ($LABEL EQUA %2, eqobjfix.mod L178)
-                isl(x) = occursin(Regex("^\\\$\\s*label\\s+" * jump * "(\\s|\$)", "i"), rstrip(x, '\r'))
-                j = something(findnext(isl, lines, i + 1), findfirst(isl, lines), 0)
+                # $GOTO: to the first line from the top that is `$LABEL name`, the name substituted
+                # (`$LABEL %P1%`, solsysd.v3 L12); that line is read next, so the dollar commands after
+                # the name run (`$LABEL SYSUC SHIFT`, L8). G63.
+                function isl(x)
+                    m = match(r"^\$\s*label\s+(\S+)"i, rstrip(x, '\r'))
+                    m !== nothing && uppercase(gsubst(g, m[1])) == uppercase(jump)
+                end
+                j = something(findfirst(isl, lines), 0)
                 j == 0 && compile_error(path, i, "\$GOTO $jump: no \$LABEL")
                 i = j
+                bstart = i
+                continue
             end
             i += 1
             bstart = i
@@ -506,8 +532,9 @@ function gdollar!(g::GamsCompile, s::AbstractString, file, line)
         k = uppercase(nm[1])
         target = cmd == "SETGLOBAL" ? g.globals : cmd == "SETLOCAL" ? g.stack[end].locals : g.stack[end].scoped
         target[k] = v
-        # a global of the same name hides no longer behind a scoped one, and vice versa: GAMS keeps one
-        # name in one scope (UNCONFIRMED for a name set in two scopes; none of the TIMES files does)
+        # a name set in several scopes keeps a value in each, and `gvar` takes the local, then the scoped,
+        # then the global one; $SETGLOBAL clears neither of the others (discrepancies G62: STAGES under SENSIS,
+        # initmty.mod L435, initmty.stc L10, maindrv.mod L34)
         isempty(more) || return gdollar!(g, more, file, line)
     elseif cmd in ("IF", "IFI")
         ok, tail = gcondition(g, rest, cmd == "IFI", file, line)
@@ -564,7 +591,16 @@ function gdollar!(g::GamsCompile, s::AbstractString, file, line)
     elseif cmd in G_NOEFFECT
         # listing, layout, environment and compiler settings with no effect on the data
     elseif cmd == "EOLCOM"
-        g.eolcom = String(strip(rest))
+        # one marker; more dollar commands may follow (`$SHIFT SHIFT EOLCOM %P2% GOTO %1`, solsysd.v3 L7)
+        m2 = match(r"^(\S+)\s*(.*)$"s, strip(rest))
+        m2 === nothing && compile_error(file, line, "\$EOLCOM without a marker")
+        g.eolcom = String(m2[1])
+        isempty(m2[2]) || return gdollar!(g, m2[2], file, line)
+    elseif cmd == "LABEL"
+        # the label's name; more dollar commands may follow (`$LABEL SYSUC SHIFT`, solsysd.v3 L8). They run
+        # when the line is reached in order and after a $GOTO to it (G63)
+        m2 = match(r"^\S+\s*(.*)$"s, strip(rest))
+        (m2 === nothing || isempty(m2[1])) || return gdollar!(g, m2[1], file, line)
     elseif cmd == "MACRO"
         # a macro is expanded in executable code only, which TIMES.jl does not compile; its name counts
         # for $IF DECLARED and DEFINED (prepret.dsc L41 VNRET, tested at mod_vars.mod L94, eqobj.mod L39)
@@ -620,10 +656,13 @@ function gdollar!(g::GamsCompile, s::AbstractString, file, line)
 end
 
 const G_NOEFFECT = Set(["OFFLISTING", "ONLISTING", "TITLE", "STITLE", "PHANTOM", "ONSYMLIST", "OFFSYMLIST",
-    "ONUELLIST", "OFFUELLIST", "LABEL", "ONMIXED", "USE999", "SETENV", "ECHO", "ECHON", "ONRECURSE",
+    "ONUELLIST", "OFFUELLIST", "ONMIXED", "USE999", "SETENV", "ECHO", "ECHON", "ONRECURSE",
     "OFFRECURSE", "ONUNI", "OFFUNI", "HIDDEN", "OFFINCLUDE", "ONINCLUDE", "OFFUPPER", "ONUPPER", "LOG", "SHOW",
     "STARS", "SINGLE", "DOUBLE", "EJECT", "LINES", "ONDOLLAR", "OFFDOLLAR", "ONGLOBAL", "OFFGLOBAL", "DROP",
-    "DROPLOCAL", "DROPGLOBAL", "ONVERBATIM", "OFFVERBATIM", "ONECHO", "OFFECHO"])
+    "DROPLOCAL", "DROPGLOBAL", "ONVERBATIM", "OFFVERBATIM", "ONECHO", "OFFECHO",
+    # error 141 on or off (the harness's SENSIS pre-solve run, runfile.py); the implied .L of variables in
+    # executable code (the report writer that solve.stc L7 compiles under SENSIS, rptlite.rpt L171)
+    "ONIMPLICITASSIGN", "OFFIMPLICITASSIGN", "ONDOTL", "OFFDOTL"])
 
 # what follows a true $IF condition: nothing, another dollar command, or TIMES code
 function gtail!(g::GamsCompile, ok::Bool, tail, file, line)
@@ -697,10 +736,11 @@ end
 
 # dollar options without arguments (several may share a line)
 const G_NOARG = Set(["ONTEXT", "ONLISTING", "OFFLISTING", "ONMULTI", "OFFMULTI", "ONEMPTY", "OFFEMPTY", "ONEPS",
-    "OFFEPS", "ONWARNING", "OFFWARNING", "ONSYMLIST", "OFFSYMLIST", "ONUELLIST", "OFFUELLIST"])
+    "OFFEPS", "ONWARNING", "OFFWARNING", "ONSYMLIST", "OFFSYMLIST", "ONUELLIST", "OFFUELLIST",
+    "ONIMPLICITASSIGN", "OFFIMPLICITASSIGN"])
 
 # the files GAMS would include here that TIMES.jl refuses (docs/m14-plan.md)
-const G_REFUSED_INCLUDES = Set(["initmty.stc", "initmty.tm"])
+const G_REFUSED_INCLUDES = Set(["initmty.tm"])
 
 # the arguments of $BATINCLUDE: blank-separated, quoted ones kept whole
 gargs(s) = [m[1] !== nothing ? m[1] : m[2] !== nothing ? m[2] : m[3] for m in eachmatch(r"'([^']*)'|\"([^\"]*)\"|(\S+)", s)]

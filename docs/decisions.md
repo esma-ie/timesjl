@@ -135,6 +135,14 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
+### #PRNUM M1.3 (70): the stochastic extension's DD reader (initmty.stc); eight crafted cases (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the eight crafted cases of the stochastic plan (demo12_stc, demo12_stc3, demo12_stcmx, demo12_stclam, demo12_stcext, demo12_spines, demo12_sensis, demo12_tradeoff; demo12 with DD files of their own or of earlier crafted cases, CC BY 4.0), each with an input and a run fixture (about 1.2 MB each, 10 MB together); their model fixtures come with changes 71-76. demo12_tradeoff follows Example 1c of the TIMES stochastics user note (Example 1b drove the CO2 to zero in phase 1, so its three points were one solve). | Recommended: yes. Built in. | open |
+| 2 | Harness 0.3.7: in the pre-solve run of a SENSIS run only, `$ONIMPLICITASSIGN` before maindrv.mod. Without it GAMS stops on error 141 (solve.stc L7 compiles the report writer, whose solution levels nothing assigns when there is no SOLVE) before any checkpoint. It turns off that check and nothing else; the solve runs are unchanged. | Recommended: yes. Built in. | open |
+| 3 | A run with SPINES or SENSIS YES is refused at init_ext (maindrv.mod L33-36), as one with STAGES YES is, until changes 71-76 translate them; until now the compile refused all three at initmty.stc. | Recommended: yes. Built in. | open |
+
 ### #175 M1.3 (66): shaped availability, NCAP_AFX/AFM/AFSX/AFSM (coef_cpt.mod L42-58, pp_shapr.mod L19-40); crafted case demo12_afshp (open)
 
 | # | Question | Decided | How |

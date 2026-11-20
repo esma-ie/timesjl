@@ -10,7 +10,8 @@
 # are compile-time directives ($KILL, $CLEAR, $GDXIN/$LOAD): their data
 # effects are already in the input dump, taken after compilation. The
 # $GDXIN/$LOAD of an earlier run's trade bounds and prices (GDX_IREBND,
-# GDX_IPRIC) is refused, as are CLI YES (L129) and STAGES YES (L133).
+# GDX_IPRIC) is refused, as are CLI YES (L129) and STAGES YES (L133), and
+# SPINES or SENSIS YES, which turn STAGES on (maindrv.mod L33-36).
 #
 # Index sets: R is REG, T is MILESTONYR, LL and YEAR are ALLYEAR, C is COM;
 # '%DFLBL%' is '0' (initmty.mod L367), and LL--ORD(LL) is the last ALLYEAR
@@ -25,6 +26,11 @@ function init_ext_vda_unported(tm)
     yes(n) = uppercase(gswitch(tm, n, "")) == "YES"
     yes("CLI") && push!(out, "init_ext.vda L129 (CLI YES: climate extension, outside Phase 1)")
     yes("STAGES") && push!(out, "init_ext.vda L133 (STAGES YES)")
+    # SPINES or SENSIS turns the stochastic extension on too (initmty.mod L435-437, maindrv.mod L33-36; `$IFI`,
+    # so any case), though the run file does not set STAGES: translated in M1.3 changes 71-76 (docs/m13-plan.md)
+    for n in ("SPINES", "SENSIS")
+        yes(n) && push!(out, "maindrv.mod L33-36 ($n YES: the stochastic extension)")
+    end
     for n in ("GDX_IREBND", "GDX_IPRIC")
         gswitch(tm, n, "") == "" || push!(out, "init_ext.vda L138-151 ($n set: trade bounds/prices loaded from an earlier run)")
     end

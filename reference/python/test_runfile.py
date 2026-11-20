@@ -68,6 +68,22 @@ class PatchRunTests(unittest.TestCase):
         with self.assertRaises(RunFileError):
             build_dd_run("no placeholder here\n", ["base"], "x")
 
+    def test_sensis_presolve_implicit_assign(self):
+        # only the pre-solve run (SOLVE_NOW NO) of a run that sets SENSIS YES gets $ONIMPLICITASSIGN, just
+        # before maindrv.mod (and before the input checkpoint)
+        sensis = NZ_LIKE.replace("$SET REDUCE   'YES'\n", "$SET REDUCE   'YES'\n$   SET SENSIS   YES\n")
+        for text, ov, want in ((sensis, {"SOLVE_NOW": "NO"}, True), (sensis, {}, False),
+                               (NZ_LIKE, {"SOLVE_NOW": "NO"}, False),
+                               (sensis.replace("$   SET SENSIS", "*$   SET SENSIS"), {"SOLVE_NOW": "NO"}, False)):
+            patched, rep = patch_run(text, ov)
+            lines = patched.splitlines()
+            self.assertEqual(rep.implicit_assign, want)
+            self.assertEqual("$ONIMPLICITASSIGN" in lines, want)
+            if want:
+                k = next(i for i, ln in enumerate(lines) if "batinclude maindrv.mod" in ln.lower())
+                self.assertEqual(lines[k - 1], "$ONIMPLICITASSIGN")
+                self.assertEqual(lines[k - 3], "$IF SET TJL_CHECKPOINTS execute_unload 'tjl_input.gdx';")
+
     def test_crlf_preserved(self):
         patched, _ = patch_run(NZ_LIKE.replace("\n", "\r\n"))
         self.assertIn("\r\n", patched)
