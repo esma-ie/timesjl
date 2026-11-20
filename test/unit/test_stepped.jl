@@ -12,10 +12,10 @@
 # maindrv.mod L40) is M1.5 (test_solve_stp.jl): a stepped run has no single model, `solve_stepped!`
 # generates and solves the model of each step, and `generate!` on the run as a whole says so.
 
-using TIMES: TimesModel, DumpData, layer1, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!,
+using OpenTIMES: TimesModel, DumpData, layer1, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!,
              prepret_decl!, eqobjinv_prep!, eqobjfix_prep!, eqobsalv_prep!, eqmain_prep!, bnd_data!, pp_qack_data!,
              generate!, untranslated_families, stepped, gset, gparam, stp_unported
-using TIMES.Reference: ispass
+using OpenTIMES.Reference: ispass
 import TOML
 
 @testset "demo12_step: TIMESTEP 20" begin

@@ -6,11 +6,11 @@
 #
 # Switches as in m11_probe.jl. After each step, the symbols it writes are
 # compared, less the records a later coefficient file assigns
-# (TIMES.later_overwrites; docs/m12-plan.md).
+# (OpenTIMES.later_overwrites; docs/m12-plan.md).
 
 include(joinpath(@__DIR__, "m11_probe.jl"))      # run_switches, runfile_of, suite_switches, parse_probe_args
-using TIMES: DumpData, layer1, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!, ctst, later_overwrites
-using TIMES.Reference: ispass
+using OpenTIMES: DumpData, layer1, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!, ctst, later_overwrites
+using OpenTIMES.Reference: ispass
 
 "Translated steps in coefmain.mod order: (name, function, symbols to compare, symbols only when the model allows)."
 const M12_STEPS = [
@@ -66,7 +66,7 @@ function probe12(refdir, model; roots=Dict{String,String}(), variant="reduce_off
             bad = filter(!ispass, r)
             # GAMS records left out because a later file (not yet translated) assigns them
             nleft(n) = !haskey(later, n) ? 0 : ref.dump.symbols[n].kind == :set ?
-                       count(later[n], TIMES.gset(ref, n).keys) : count(later[n], keys(TIMES.gparam(ref, n).values))
+                       count(later[n], OpenTIMES.gset(ref, n).keys) : count(later[n], keys(OpenTIMES.gparam(ref, n).values))
             nskip = sum(nleft, names)
             println("== ", model, " ", name, ": ", isempty(bad) ? "PASS" : "FAIL", " (", length(r), " symbols, ",
                     sum(d -> d.n_ref, r), " GAMS records", nskip > 0 ? ", $nskip left to later files" : "", ", ",
@@ -76,7 +76,7 @@ function probe12(refdir, model; roots=Dict{String,String}(), variant="reduce_off
                 foreach(e -> println("        ", e), d.examples)
             end
         catch e
-            e isa TIMES.UnportedError || rethrow()
+            e isa OpenTIMES.UnportedError || rethrow()
             println("== ", model, " ", name, ": not translated: ", sprint(showerror, e))
             return
         end

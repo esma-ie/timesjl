@@ -10,7 +10,7 @@
 # dummy imports (IMPNRGZ, RPC_IRE IMP) produce every commodity too, so
 # pp_reduce.red L154 leaves no single producer (RTCS_SING ends empty).
 
-using TIMES: TimesModel, gvalues, gput!
+using OpenTIMES: TimesModel, gvalues, gput!
 import TOML
 
 """

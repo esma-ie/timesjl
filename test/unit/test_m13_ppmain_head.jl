@@ -4,8 +4,8 @@
 # (scripts/m13_probe.jl does the same on the core reference runs), and on
 # crafted states against GAMS running L1-137 itself.
 
-using TIMES: TimesModel, DumpData, layer1, ppmain_head!, ppmain_head_symbols, gset, gparam
-using TIMES.Reference: ispass
+using OpenTIMES: TimesModel, DumpData, layer1, ppmain_head!, ppmain_head_symbols, gset, gparam
+using OpenTIMES.Reference: ispass
 import TOML
 
 @testset "ppmain.mod L1-137 layer 1, TIMES_Demo demo12" begin

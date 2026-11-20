@@ -30,10 +30,10 @@
 #             seconds, detail (first examples or the refusal), symbols[] (layer 1)
 
 import JSON, TOML, JuMP, HiGHS, Dates, LibGit2
-using TIMES
-using TIMES: TimesModel, DumpData, generate!, untranslated_families, layer1, later_overwrites, ctst, UnportedError, stepped,
+using OpenTIMES
+using OpenTIMES: TimesModel, DumpData, generate!, untranslated_families, layer1, later_overwrites, ctst, UnportedError, stepped,
              coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!
-using TIMES.Reference: canonical_from_jump, canonical_from_dump, compare_lp, evaluate_point, ispass, family, jump_name_key,
+using OpenTIMES.Reference: canonical_from_jump, canonical_from_dump, compare_lp, evaluate_point, ispass, family, jump_name_key,
                        solution_levels
 
 const REPO = dirname(@__DIR__)
@@ -58,7 +58,7 @@ function layer1_checks!(checks, run, ppm, coef, switches)
             later = later_overwrites(tm; after=name)
             r = layer1(tm, ref, names; exclude=later)
             nleft(n) = !haskey(later, n) ? 0 : ref.dump.symbols[n].kind == :set ?
-                       count(later[n], TIMES.gset(ref, n).keys) : count(later[n], keys(TIMES.gparam(ref, n).values))
+                       count(later[n], OpenTIMES.gset(ref, n).keys) : count(later[n], keys(OpenTIMES.gparam(ref, n).values))
             rec["status"] = all(ispass, r) ? "pass" : "fail"
             rec["n_compared"] = sum(d -> d.n_ref, r)
             rec["n_excluded"] = sum(nleft, names)

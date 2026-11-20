@@ -2,7 +2,7 @@
 # Expected values are GAMS 54.6.0's own results for the same expressions
 # (parameter r(k1..k12) of a check program, 20 Oct 2026).
 
-using TIMES: GNum, GZERO, GEPS, gv, gif, gexp, gpower, gpow, gmax, gparam, DumpData
+using OpenTIMES: GNum, GZERO, GEPS, gv, gif, gexp, gpower, gpow, gmax, gparam, DumpData
 
 @testset "GNum arithmetic matches GAMS" begin
     e = GEPS
@@ -99,6 +99,6 @@ end
     cost = gparam(data, "NCAP_COST")
     @test gv(cost, ("REG1", "2020", "ELC01", "EUR")) == GNum(1200.5)
     @test gv(cost, ("REG1", "2020", "NOSUCH", "EUR")) == GZERO
-    eps_entry = TIMES.GamsParam{1}("X", [("a",)], Dict(("a",) => 0.0))
+    eps_entry = OpenTIMES.GamsParam{1}("X", [("a",)], Dict(("a",) => 0.0))
     @test gv(eps_entry, ("a",)) == GEPS
 end

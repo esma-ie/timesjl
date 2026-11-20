@@ -8,7 +8,7 @@
 # rebuilt at L150-155). MILESTONYR is 2005, 2010, 2015, 2020, 2030, 2050 and
 # its periods are contiguous; B(2005) = E(2005) = 2005, E(2050) = 2052.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, gput_scalar!
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, gput_scalar!
 import TOML
 
 """

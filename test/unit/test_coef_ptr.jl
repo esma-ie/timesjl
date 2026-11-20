@@ -5,8 +5,8 @@
 # outside the model years kept by L16). demo12 itself has FLO_SUM only; its
 # layer 1 is in test_public_parity.jl.
 
-using TIMES: DumpData, coef_ptr!, coef_ptr_unported, layer1, gparam, gset, gput!, iseps, UnportedError
-using TIMES.Reference: ispass
+using OpenTIMES: DumpData, coef_ptr!, coef_ptr_unported, layer1, gparam, gset, gput!, iseps, UnportedError
+using OpenTIMES.Reference: ispass
 
 isdefined(@__MODULE__, :PPM_DEMO12) || (const PPM_DEMO12 = joinpath(FIXTURES, "demo12_off_ppm"))
 include("coef_ptr_case.jl")

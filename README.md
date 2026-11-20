@@ -64,8 +64,8 @@ in Julia's package registry yet, so it is added from its GitHub address.
 In Julia:
 
 ```julia
-using TIMES
-r = run_model(joinpath(TIMES.times_demo_dir(), "demo12.run"); out="demo12_out")
+using OpenTIMES
+r = run_model(joinpath(OpenTIMES.times_demo_dir(), "demo12.run"); out="demo12_out")
 ```
 
 The first call downloads the TIMES v4.9.7 source and the TIMES_Demo models
@@ -106,7 +106,7 @@ TIMES.jl does not write TIMES's report parameters or VEDA `.vd` files yet
 ### 4. Run your own model
 
 ```julia
-using TIMES
+using OpenTIMES
 run_model(raw"C:\VEDA\GAMS_WrkTIMES\scenario.run"; dd=[raw"C:\VEDA\GAMS_WrkTIMES"], out="results")
 ```
 
@@ -209,9 +209,9 @@ difference is logged in [`docs/discrepancies.md`](docs/discrepancies.md).
 To read a model's `.run` and `.dd` files, TIMES.jl compiles TIMES's own files as GAMS
 does, so it needs the v4.9.7 source. It downloads that commit's GitHub archive on
 first use and checks it by hash ([`Artifacts.toml`](Artifacts.toml),
-`TIMES.times_source()`). To use a local clone of the same commit instead, set
+`OpenTIMES.times_source()`). To use a local clone of the same commit instead, set
 `TIMESJL_TIMES_SOURCE`. The open demo models (`etsap-TIMES/TIMES_Demo` @ 962db86,
-CC BY 4.0, IEA-ETSAP) come the same way (`TIMES.times_demo_dir()`).
+CC BY 4.0, IEA-ETSAP) come the same way (`OpenTIMES.times_demo_dir()`).
 
 ## Phases
 

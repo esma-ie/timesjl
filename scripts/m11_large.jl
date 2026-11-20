@@ -18,7 +18,7 @@
 # the model, both canonical LPs and the solver at once.
 
 include(joinpath(@__DIR__, "m11_probe.jl"))   # run_switches, runfile_of, suite_switches
-using TIMES.Reference: CanonicalLP, RowData, ColData
+using OpenTIMES.Reference: CanonicalLP, RowData, ColData
 using Serialization, SparseArrays
 
 "The TimesModel of a reference run, generated, with its data caches released."

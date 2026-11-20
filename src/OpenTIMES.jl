@@ -1,14 +1,15 @@
 """
-    TIMES
+    OpenTIMES
 
-Julia/JuMP translation of the IEA-ETSAP TIMES model generator.
+Julia/JuMP translation of the IEA-ETSAP TIMES model generator (OpenTIMES.jl,
+formerly TIMES.jl).
 
 Phase 1 translates TIMES v4.9.7 (`etsap-TIMES/TIMES_model` @ `d9a6a25`) with
-exact numerical parity. The `TIMES.Reference` submodule reads GAMS reference
-dumps and compares them with TIMES.jl output; the model itself is added
+exact numerical parity. The `OpenTIMES.Reference` submodule reads GAMS reference
+dumps and compares them with OpenTIMES.jl output; the model itself is added
 milestone by milestone from M1.1.
 """
-module TIMES
+module OpenTIMES
 
 "TIMES GAMS version this code is translated from."
 const TIMES_GAMS_VERSION = v"4.9.7"
@@ -122,4 +123,4 @@ include("run.jl")                 # run_model: a model from its run and DD files
 
 export run_model
 
-end # module TIMES
+end # module OpenTIMES

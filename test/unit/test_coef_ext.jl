@@ -6,9 +6,9 @@
 # itself (scripts/make_coef_ext_unit.jl): PRC_RCAP, storage availabilities,
 # the ACT_CSTUP annuity, IRE_FLOSUM/RPC_NOFLO/UCU balances, UC_TIME, COEF_ILED.
 
-using TIMES: TimesModel, DumpData, coef_ext!, coef_ext_unported, coef_obj!, coef_alt!, coef_shp!, layer1, gparam, gset,
+using OpenTIMES: TimesModel, DumpData, coef_ext!, coef_ext_unported, coef_obj!, coef_alt!, coef_shp!, layer1, gparam, gset,
              gput!, gvalues, iseps, UnportedError
-using TIMES.Reference: ispass
+using OpenTIMES.Reference: ispass
 
 isdefined(@__MODULE__, :PPM_DEMO12) || (const PPM_DEMO12 = joinpath(FIXTURES, "demo12_off_ppm"))
 isdefined(@__MODULE__, :COEF_DEMO12) || (const COEF_DEMO12 = joinpath(FIXTURES, "demo12_off_coef"))

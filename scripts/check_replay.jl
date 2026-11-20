@@ -11,8 +11,8 @@
 const REPO = dirname(@__DIR__)
 include(joinpath(@__DIR__, "gams_replay.jl"))
 include(joinpath(REPO, "test", "unit", "coef_obj_case.jl"))
-using TIMES: DumpData, layer1, ctst, varcost
-using TIMES.Reference: ispass
+using OpenTIMES: DumpData, layer1, ctst, varcost
+using OpenTIMES.Reference: ispass
 
 function main(times_dir, gams...)
     kw = isempty(gams) ? (;) : (; gams=gams[1])

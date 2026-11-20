@@ -24,7 +24,7 @@
 # are probed.
 
 include(joinpath(@__DIR__, "m11_probe.jl"))      # run_switches, runfile_of, suite_switches, parse_probe_args
-using TIMES: DumpData, layer1, init_ext!, ppmain_head!, ppmain_head_symbols, ppmain_years!, ppmain_years_symbols,
+using OpenTIMES: DumpData, layer1, init_ext!, ppmain_head!, ppmain_head_symbols, ppmain_years!, ppmain_years_symbols,
              timslice!, timslice_symbols, ppmain_rtp!, ppmain_rtp_symbols, preppm!, preppm_symbols,
              prep_ext!, prep_ext_symbols, preppm_shape!, preppm_shape_symbols, ppmain_topo!, ppmain_topo_symbols,
              ppmain_tslvl!, ppmain_tslvl_symbols, ppmain_life!, ppmain_life_symbols,
@@ -38,7 +38,7 @@ using TIMES: DumpData, layer1, init_ext!, ppmain_head!, ppmain_head_symbols, ppm
              prepret_decl!, prepret_decl_symbols, eqobjinv_prep!, eqobjinv_prep_symbols,
              eqobjfix_prep!, eqobjfix_prep_symbols, eqobsalv_prep!, eqobsalv_prep_symbols,
              eqmain_prep!, eqmain_prep_symbols, bnd_data!, pp_qack_data!, pp_clean!, qack_prep_symbols
-using TIMES.Reference: ispass
+using OpenTIMES.Reference: ispass
 
 "The segments: (first checkpoint, next checkpoint)."
 const M13_SEGMENTS = [("input", "init"), ("init", "prep"), ("prep", "prelv"), ("prelv", "ppm"), ("coef", "presolve")]
@@ -49,7 +49,7 @@ all_symbols(tm) = sort([i.name for i in values(tm.data.dump.symbols) if i.kind i
 """
 What each step is compared on (`symbols(tm)`: the symbols it settles that nothing later in its segment
 changes; `all_symbols` for a step that ends its segment). The steps themselves and their order are
-`TIMES.PRESOLVE_STEPS` (src/run.jl), the list `run_model` runs; a step with no entry here stops this
+`OpenTIMES.PRESOLVE_STEPS` (src/run.jl), the list `run_model` runs; a step with no entry here stops this
 script with a KeyError.
 """
 const STEP_SYMBOLS = Dict{String,Function}(
@@ -92,7 +92,7 @@ const STEP_SYMBOLS = Dict{String,Function}(
 
 "Translated steps in execution order: (segment start, name, function, symbols, symbols by model); the M1.2 coefficient stage (ppm -> coef) is left out."
 const M13_STEPS = Tuple{String,String,Function,Vector{String},Function}[
-    (a, n, f, String[], STEP_SYMBOLS[n]) for (a, n, f) in TIMES.PRESOLVE_STEPS if a != "ppm"]
+    (a, n, f, String[], STEP_SYMBOLS[n]) for (a, n, f) in OpenTIMES.PRESOLVE_STEPS if a != "ppm"]
 
 function probe13(refdir, model; roots=Dict{String,String}(), variant="reduce_off", steps=M13_STEPS)
     dir = joinpath(refdir, model, variant)
@@ -111,7 +111,7 @@ function probe13(refdir, model; roots=Dict{String,String}(), variant="reduce_off
             continue
         end
         tm = TimesModel(joinpath(dir, a); switches=sw)
-        TIMES.qa_warnings!(tm, TIMES.gams_warnings(joinpath(dir, "raw", "tjl_presolve.lst")))   # ppmain.mod L35
+        OpenTIMES.qa_warnings!(tm, OpenTIMES.gams_warnings(joinpath(dir, "raw", "tjl_presolve.lst")))   # ppmain.mod L35
         ref = DumpData(joinpath(dir, b))
         for (_, name, f, syms, extra) in seg
             try
@@ -126,7 +126,7 @@ function probe13(refdir, model; roots=Dict{String,String}(), variant="reduce_off
                     foreach(e -> println("        ", e), d.examples)
                 end
             catch e
-                e isa TIMES.UnportedError || rethrow()
+                e isa OpenTIMES.UnportedError || rethrow()
                 println("== ", model, " ", name, ": not translated: ", sprint(showerror, e))
                 break
             end

@@ -5,10 +5,10 @@
 # TIMES.jl's own state; every set and parameter against the pre-solve dump (1e-9), then the model
 # from that state against GAMS's matrix (layer 2).
 
-using TIMES: TimesModel, DumpData, layer1, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!,
+using OpenTIMES: TimesModel, DumpData, layer1, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!,
              prepret_decl!, eqobjinv_prep!, eqobjfix_prep!, eqobsalv_prep!, eqmain_prep!, bnd_data!, pp_qack_data!,
              pp_clean!, generate!, gset, gparam, gv
-using TIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp
+using OpenTIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp
 import TOML
 
 let vx = only(v for v in TOML.parsefile(joinpath(FIXTURES, "variant_fixtures.toml"))["variant"]

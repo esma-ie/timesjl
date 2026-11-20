@@ -4,7 +4,7 @@
 #
 # GAMS: initmty.mod L426-431 (%CTST%, OBLONG) and eqobj.mod L59, v4.9.7.
 
-using TIMES: TimesModel, ctst, objective_switches
+using OpenTIMES: TimesModel, ctst, objective_switches
 
 tiny(sw) = TimesModel(joinpath(FIXTURES, "tiny_dump"); switches=sw)
 

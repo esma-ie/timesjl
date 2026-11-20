@@ -19,7 +19,7 @@
 # 2004 and the milestones 2005, 2010, 2015, 2020, 2030, 2050. No storage,
 # PRC_PKAF, PRC_PKNO, NCAP_AFS or elastic demand data.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, gset
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, gset
 import TOML
 
 """

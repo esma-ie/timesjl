@@ -11,7 +11,7 @@
 # TB_ELC_REG1_REG2_01 trades ELC between REG1 and REG2. No bounds below
 # their level, no IRE_CCVT, no FLO_BDLVL, no CONSRV energy.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, gset
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, gset
 import TOML
 
 """

@@ -5,8 +5,8 @@
 # balance (eqcombal.mod L30-35, L75-80), the peak equation (eqpeak.mod L78) and the objective
 # (coef_obj.mod L93-94, eqobjvar.mod L105-107), and the blending costs in curex.gms (L59-60).
 
-using TIMES: TimesModel, generate!, eq_blnd!, untranslated_families, curex_subr!, gparam, gset, gv
-using TIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp
+using OpenTIMES: TimesModel, generate!, eq_blnd!, untranslated_families, curex_subr!, gparam, gset, gv
+using OpenTIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp
 import TOML
 
 let vx = only(v for v in TOML.parsefile(joinpath(FIXTURES, "variant_fixtures.toml"))["variant"]

@@ -10,13 +10,13 @@
 # objective (layer 3). The model is also checked from the pre-solve dump with
 # REDUCE off and on (test_public_parity.jl: demo12_off, demo12_red).
 
-using TIMES: TimesModel, DumpData, layer1, init_ext!, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, prep_ext!,
+using OpenTIMES: TimesModel, DumpData, layer1, init_ext!, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, prep_ext!,
              preppm_shape!, ppmain_topo!, ppmain_tslvl!, ppmain_life!, pp_prelv!, pp_qafs!, ppmain_dflt!, ppmain_tsattr!,
              ppmain_flo!, ppmain_flofs!, ppmain_ire!, ppmain_bnd!, ppmain_cum!, ppmain_stg!, ppmain_uc!, ppmain_ucmap!,
              ppmain_blend!, ppmain_reduce!, ppm_ext_actef!, ppm_ext!, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!,
              coef_shp!, coef_ext!, prepret_decl!, eqobjinv_prep!, eqobjfix_prep!, eqobsalv_prep!, eqmain_prep!, bnd_data!,
              pp_qack_data!, pp_clean!, generate!, qa_carry!, qa_text, qa_compare
-using TIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp
+using OpenTIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp
 import TOML, JSON, JuMP, HiGHS
 
 "The coef -> pre-solve step (maindrv.mod L76-111), in order (M1.3 change 25)."
@@ -107,8 +107,8 @@ end
 # the model, which is compared with GAMS's matrix and objective (scripts/m13_gate.jl --from-dd).
 # M1.4 change 9: the same for every crafted case with a run fixture (reference/crafted.toml; its DD
 # files are TIMES_Demo's and its own, reference/dd/<case>), in the variant of its fixtures (as run).
-using TIMES: compile_run, write_dump, times_demo_dir, qa_warnings!
-using TIMES.Reference: load_dump, compare_dumps
+using OpenTIMES: compile_run, write_dump, times_demo_dir, qa_warnings!
+using OpenTIMES.Reference: load_dump, compare_dumps
 
 "The DD folders of demo12 or of a crafted case (reference/crafted.toml `idirs`), then reference/gams."
 function chain_dirs(model)

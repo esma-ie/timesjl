@@ -6,10 +6,10 @@
 # pp_qack.mod and pp_clean.mod (25-4); compared on every set and parameter of the pre-solve dump. Compared at 1e-9 on the symbols they settle
 # that nothing later in the step changes.
 
-using TIMES: TimesModel, DumpData, layer1, prepret_decl!, prepret_decl_symbols, eqobjinv_prep!,
+using OpenTIMES: TimesModel, DumpData, layer1, prepret_decl!, prepret_decl_symbols, eqobjinv_prep!,
              eqobjinv_prep_symbols, eqobjfix_prep!, eqobjfix_prep_symbols, eqobsalv_prep!, eqobsalv_prep_symbols, eqmain_prep!,
              eqmain_prep_symbols, bnd_data!, pp_qack_data!, pp_clean!, gset, gparam
-using TIMES.Reference: ispass
+using OpenTIMES.Reference: ispass
 import TOML
 
 let refit = only(v for v in TOML.parsefile(joinpath(FIXTURES, "variant_fixtures.toml"))["variant"]

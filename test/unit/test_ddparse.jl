@@ -2,7 +2,7 @@
 # case in reference/dd (the suite's DD files are parsed by scripts/m14_parse_suite.jl on James's
 # machine: they are not in the repository).
 using Test
-using TIMES: parse_dd, parse_dd_file, DDSymbol, DDDirective, DDOther, DDRecord, DDSyntaxError,
+using OpenTIMES: parse_dd, parse_dd_file, DDSymbol, DDDirective, DDOther, DDRecord, DDSyntaxError,
     LabelTable, intern!, labelpos
 
 syms(items) = filter(x -> x isa DDSymbol, items)

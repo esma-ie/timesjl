@@ -13,9 +13,9 @@
 # local clone instead); --sources gives the models' folders.
 # The DD folders are the suite's (scripts/m14_models.jl). TIM and JRC-EU-TIMES need --local (CLAUDE.md:
 # James's workstation only, their logs kept there).
-using TIMES
-using TIMES: compile_run, grecords, gdx_uels, gdx_symbols
-using TIMES.Reference: load_dump, read_symbol, SV_EPS
+using OpenTIMES
+using OpenTIMES: compile_run, grecords, gdx_uels, gdx_symbols
+using OpenTIMES.Reference: load_dump, read_symbol, SV_EPS
 
 include(joinpath(@__DIR__, "m14_models.jl"))      # REFGAMS, dd_model_dirs, take_local!
 

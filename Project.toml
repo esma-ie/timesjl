@@ -1,6 +1,6 @@
-name = "TIMES"
+name = "OpenTIMES"
 uuid = "2625f1fd-8477-4c68-a6fe-e00cc6f61c53"
-authors = ["ESMA Ltd and TIMES.jl contributors", "IEA-ETSAP (original TIMES GAMS code)"]
+authors = ["ESMA Ltd and OpenTIMES.jl contributors", "IEA-ETSAP (original TIMES GAMS code)"]
 version = "0.0.1"
 
 [deps]

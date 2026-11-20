@@ -7,8 +7,8 @@
 # REG1 ELCTEGAS00 is not vintaged: its capacity is VAR_CAP (RP_UX). REG2 ELCTNGAS01 is vintaged:
 # VAR_NCAP by vintage. Both run at DAYNITE.
 
-using TIMES: TimesModel, generate!, eq_actups!, afs_solve, untranslated_families, gparam, gset, gv
-using TIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp, family
+using OpenTIMES: TimesModel, generate!, eq_actups!, afs_solve, untranslated_families, gparam, gset, gv
+using OpenTIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp, family
 import TOML
 
 let vx = only(v for v in TOML.parsefile(joinpath(FIXTURES, "variant_fixtures.toml"))["variant"]

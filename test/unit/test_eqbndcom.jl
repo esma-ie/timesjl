@@ -4,8 +4,8 @@
 # season. The model from GAMS's pre-solve dump against GAMS's matrix (layer 2), then the six rows,
 # the bound that stays a bound of the variable, and the records that give no row.
 
-using TIMES: TimesModel, generate!, eq_bndcom!, untranslated_families, gparam, gv
-using TIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp
+using OpenTIMES: TimesModel, generate!, eq_bndcom!, untranslated_families, gparam, gv
+using OpenTIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp
 import TOML
 
 let vx = only(v for v in TOML.parsefile(joinpath(FIXTURES, "variant_fixtures.toml"))["variant"]

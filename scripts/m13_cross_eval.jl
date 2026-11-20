@@ -6,14 +6,14 @@
 #
 # Reads the references beside the repository (../timesjl-reference), or TIMESJL_REFERENCE.
 include(joinpath(@__DIR__, "m11_probe.jl"))   # run_switches, runfile_of, as_feasible_as
-using TIMES, TIMES.Reference, JSON
+using OpenTIMES, OpenTIMES.Reference, JSON
 const REF = get(ENV, "TIMESJL_REFERENCE", joinpath(@__DIR__, "..", "..", "timesjl-reference"))
 function cross(model, variant)
     dir = joinpath(REF, model, variant)
     m = JSON.parsefile(joinpath(dir, "manifest.json"))
     si = m["runs"]["solve_cplex"]["solveinfo"]
-    tm = TIMES.TimesModel(joinpath(dir, "presolve"); reduce=(variant == "as_run"), switches=run_switches(runfile_of(REF, model, variant)))
-    t = @elapsed TIMES.generate!(tm)
+    tm = OpenTIMES.TimesModel(joinpath(dir, "presolve"); reduce=(variant == "as_run"), switches=run_switches(runfile_of(REF, model, variant)))
+    t = @elapsed OpenTIMES.generate!(tm)
     mine = canonical_from_jump(tm.model)
     println("$model/$variant: generated in $(round(t; digits=1)) s; ", mine); flush(stdout)
     empty!(tm.cache); empty!(tm.data.sets); empty!(tm.data.params); tm = nothing; GC.gc(true)

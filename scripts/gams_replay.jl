@@ -15,8 +15,8 @@
 # (and ORD, leads, lags) is the one of the reference run. `skip` lists the
 # symbols the included files declare themselves.
 
-using TIMES
-using TIMES: TimesModel, gset_opt, gparam_opt
+using OpenTIMES
+using OpenTIMES: TimesModel, gset_opt, gparam_opt
 
 const GAMS_STMT_WORDS = r"[A-Za-z_][A-Za-z0-9_]*"
 
@@ -145,7 +145,7 @@ function gams_replay(tm, includes, outputs; times_dir, also_scan=String[], skip=
     rc.exitcode == 0 || error("GAMS failed (", rc.exitcode, "); see ", joinpath(workdir, "run.lst"))
     out = joinpath(workdir, "out")
     run(`$(replay_python()) $(joinpath(dirname(@__DIR__), "reference", "python", "gdx2arrow.py")) $(joinpath(workdir, "out.gdx")) $out`)
-    return TIMES.DumpData(out)
+    return OpenTIMES.DumpData(out)
 end
 
 replay_python() = get(ENV, "TJL_PYTHON", "python3")

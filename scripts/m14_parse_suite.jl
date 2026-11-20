@@ -5,7 +5,7 @@
 # With no folders, it reads the open models' scenario folders below --sources (CLAUDE.md: open
 # licences only; never TIM or JRC-EU-TIMES). Prints, per folder, the files, the SET and PARAMETER
 # symbols, the records, and the parse time; a DDSyntaxError stops with the file and line.
-using TIMES: parse_dd_file, DDSymbol, DDDirective
+using OpenTIMES: parse_dd_file, DDSymbol, DDDirective
 
 const OPEN_FOLDERS = [
     "TIMES_Demo/model",

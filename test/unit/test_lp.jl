@@ -1,5 +1,5 @@
-using TIMES.Reference
-import TIMES.Reference: canonical_key, jump_name_key, canonical_from_moi
+using OpenTIMES.Reference
+import OpenTIMES.Reference: canonical_key, jump_name_key, canonical_from_moi
 using JuMP
 import HiGHS
 

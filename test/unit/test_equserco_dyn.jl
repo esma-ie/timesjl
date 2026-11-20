@@ -4,8 +4,8 @@
 # checked against GAMS in test_public_parity.jl; here the pieces: UC_TMAP against GAMS's,
 # the direction rule, and the user-constraint rows alone against the CONVERT export.
 
-using TIMES: TimesModel, DumpData, gset, gset_opt, gput!, uc_tmap, uc_rhsdir, eq_uc!, UnportedError, UC_ATTR_REFUSED
-using TIMES.Reference: canonical_from_jump, canonical_from_dump
+using OpenTIMES: TimesModel, DumpData, gset, gset_opt, gput!, uc_tmap, uc_rhsdir, eq_uc!, UnportedError, UC_ATTR_REFUSED
+using OpenTIMES.Reference: canonical_from_jump, canonical_from_dump
 import TOML
 isdefined(@__MODULE__, :check_family_parity) || include("parity_helpers.jl")
 

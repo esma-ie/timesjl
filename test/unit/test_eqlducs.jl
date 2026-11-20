@@ -12,8 +12,8 @@
 # timeslice is 11.5 or 12.5 hours); each season is its own cycle of the year (RS_UP), so a SEASON
 # process has no neighbouring timeslice in the terms that look across a cycle.
 
-using TIMES: TimesModel, generate!, eq_lducs!, untranslated_families, gparam, gset, gv
-using TIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp, family
+using OpenTIMES: TimesModel, generate!, eq_lducs!, untranslated_families, gparam, gset, gv
+using OpenTIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp, family
 import TOML
 
 let

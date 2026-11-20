@@ -5,9 +5,9 @@
 # removed indexes, lead-time rounding, repeated investments and the
 # non-vintaged FLO_FUNC ratios; NCAP_CPX shapes rescaling COEF_CPT.
 
-using TIMES: TimesModel, DumpData, coef_shp!, coef_shp_unported, coef_obj!, coef_alt!, later_overwrites, layer1, gparam,
+using OpenTIMES: TimesModel, DumpData, coef_shp!, coef_shp_unported, coef_obj!, coef_alt!, later_overwrites, layer1, gparam,
              gset, gput!, gvalues, iseps, UnportedError, ShapeTable, shape
-using TIMES.Reference: ispass
+using OpenTIMES.Reference: ispass
 
 isdefined(@__MODULE__, :PPM_DEMO12) || (const PPM_DEMO12 = joinpath(FIXTURES, "demo12_off_ppm"))
 isdefined(@__MODULE__, :COEF_DEMO12) || (const COEF_DEMO12 = joinpath(FIXTURES, "demo12_off_coef"))

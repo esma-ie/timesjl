@@ -8,9 +8,9 @@
 # symbol written compared at L843 (scripts/m13_replay.jl does the same on
 # the core models' own states).
 
-using TIMES: TimesModel, DumpData, layer1, pp_qafs!, ppmain_dflt!, ppmain_tsattr!, ppmain_flo!, ppmain_flofs!, ppmain_flofs_symbols,
+using OpenTIMES: TimesModel, DumpData, layer1, pp_qafs!, ppmain_dflt!, ppmain_tsattr!, ppmain_flo!, ppmain_flofs!, ppmain_flofs_symbols,
              gset, gparam
-using TIMES.Reference: ispass
+using OpenTIMES.Reference: ispass
 import TOML
 
 @testset "prelv -> ppm: ppmain.mod L823-843 layer 1, TIMES_Demo demo12" begin

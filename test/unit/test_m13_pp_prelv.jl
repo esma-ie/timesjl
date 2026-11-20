@@ -6,9 +6,9 @@
 # GAMS running ppmain.mod L1-247 and L249-615, preppm.mod L1-212 and L218-252,
 # prep_ext.vda and pp_prelv.vda itself.
 
-using TIMES: TimesModel, DumpData, layer1, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, prep_ext!, preppm_shape!,
+using OpenTIMES: TimesModel, DumpData, layer1, ppmain_head!, ppmain_years!, timslice!, ppmain_rtp!, preppm!, prep_ext!, preppm_shape!,
              ppmain_topo!, ppmain_tslvl!, ppmain_life!, pp_prelv!, pp_prelv_symbols, pp_prelv_unported, gset, gparam
-using TIMES.Reference: ispass
+using OpenTIMES.Reference: ispass
 import TOML
 
 const PRELV_STEPS = (preppm_shape!, ppmain_topo!, ppmain_tslvl!, ppmain_life!, pp_prelv!)
@@ -71,7 +71,7 @@ end
     fx = only(filter(f -> f["prefix"] == "demo12_off", TOML.parsefile(joinpath(FIXTURES, "public_fixtures.toml"))["fixture"]))
     tm = TimesModel(joinpath(FIXTURES, "demo12_off_prep"); switches=merge(fx["switches"], Dict("POWERFLO" => "YES")))
     @test isempty(pp_prelv_unported(tm))                              # phase-angle grids: M1.3 change 27a
-    TIMES.gput!(tm, "GR_PTDF", Dict{NTuple{6,String},Float64}(("REG1", "2005", "ELCTECOA00", "ELC", "REG2", "ELC") => 0.5))
+    OpenTIMES.gput!(tm, "GR_PTDF", Dict{NTuple{6,String},Float64}(("REG1", "2005", "ELCTECOA00", "ELC", "REG2", "ELC") => 0.5))
     @test isempty(pp_prelv_unported(tm))                              # the PTDF formulation: M1.3 change 57
     tm.switches["DSC"] = "YES"; tm.switches["SOLMIP"] = "YES"
     @test any(s -> occursin("GR_PTDF", s), pp_prelv_unported(tm))   # its discrete candidate lines stay refused
@@ -84,13 +84,13 @@ end
 @testset "POWERFLO derived from the data (init_ext.vda L134-135)" begin
     fx = only(filter(f -> f["prefix"] == "demo12_off", TOML.parsefile(joinpath(FIXTURES, "public_fixtures.toml"))["fixture"]))
     tm = TimesModel(joinpath(FIXTURES, "demo12_off_prep"); switches=fx["switches"])
-    @test TIMES.gswitch(tm, "POWERFLO", "") == ""                    # demo12 has no PRC_REACT, GR_PTDF or GG_KGF
-    @test "MY_F" in TIMES.preppm_shape_symbols(tm)
-    @test "RXX" in TIMES.ppmain_life_symbols(tm)
-    TIMES.gput!(tm, "PRC_REACT", Dict{NTuple{3,String},Float64}(("REG1", "2005", "ELCTECOA00") => 0.1))
-    TIMES.data_switches!(tm)
-    @test TIMES.gswitch(tm, "POWERFLO", "") == "YES"
+    @test OpenTIMES.gswitch(tm, "POWERFLO", "") == ""                    # demo12 has no PRC_REACT, GR_PTDF or GG_KGF
+    @test "MY_F" in OpenTIMES.preppm_shape_symbols(tm)
+    @test "RXX" in OpenTIMES.ppmain_life_symbols(tm)
+    OpenTIMES.gput!(tm, "PRC_REACT", Dict{NTuple{3,String},Float64}(("REG1", "2005", "ELCTECOA00") => 0.1))
+    OpenTIMES.data_switches!(tm)
+    @test OpenTIMES.gswitch(tm, "POWERFLO", "") == "YES"
     @test isempty(pp_prelv_unported(tm))                              # phase-angle grids are translated (27a)
-    @test !("MY_F" in TIMES.preppm_shape_symbols(tm))               # powerflo.vda L80 assigns it again
-    @test !("RXX" in TIMES.ppmain_life_symbols(tm))                 # powerflo.vda L121-122
+    @test !("MY_F" in OpenTIMES.preppm_shape_symbols(tm))               # powerflo.vda L80 assigns it again
+    @test !("RXX" in OpenTIMES.ppmain_life_symbols(tm))                 # powerflo.vda L121-122
 end

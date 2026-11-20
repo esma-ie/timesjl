@@ -1,4 +1,4 @@
-using TIMES.Reference
+using OpenTIMES.Reference
 
 d = load_dump(joinpath(FIXTURES, "tiny_dump"))
 

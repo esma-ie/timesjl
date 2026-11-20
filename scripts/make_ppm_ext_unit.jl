@@ -17,7 +17,7 @@ const REPO = dirname(@__DIR__)
 include(joinpath(@__DIR__, "make_ppmain_reduce_unit.jl"))
 include(joinpath(REPO, "test", "unit", "ppm_ext_case.jl"))
 include(joinpath(REPO, "test", "unit", "ppmain_flo_case.jl"))   # ppmain_flo_case! for the "chp" case
-using TIMES: PPM_EXT_ACTEF_OUTPUTS, PPM_EXT_OUTPUTS
+using OpenTIMES: PPM_EXT_ACTEF_OUTPUTS, PPM_EXT_OUTPUTS
 
 "What ppmain.mod L616-1357 and ppm_ext.vda L11-58 write (compared at ppm_ext.vda L58, scratch included)."
 const PPM_EXT_ACTEF_ALL = unique(vcat(PPMAIN_REDUCE_OUTPUTS, PPM_EXT_ACTEF_OUTPUTS))

@@ -10,7 +10,7 @@
 # 2004 (life 30) and COTNCOA1 (life 15) is a repeated investment at 2050
 # (COEF_RPTI 2). Both cases are in REG1; REG2 is left alone.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!
 
 const COEF_SHP_CASE_SWITCHES = Dict("OBJ" => "MOD", "VDA" => "YES", "DSCAUTO" => "YES", "VALIDATE" => "NO", "STAGES" => "NO")
 

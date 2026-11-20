@@ -21,11 +21,11 @@
 # LP GAMS solved in step 2 every VAR_BLND of 2030, a period of that step, is fixed at zero, and in
 # step 3 every one of 2050. TIMES.jl follows the code.
 
-using TIMES: TimesModel, DumpData, layer1, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!,
+using OpenTIMES: TimesModel, DumpData, layer1, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!, coef_ext!,
              prepret_decl!, eqobjinv_prep!, eqobjfix_prep!, eqobsalv_prep!, eqmain_prep!, bnd_data!, pp_qack_data!,
              pp_clean!, stp_init!, stp_step_prep!, stp_next!, stp_load_point!, gscalar, gmembers,
              stp_model, stp_is_step, generate!, untranslated_families, solve_stepped!, stp_unported, stepped
-using TIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp, evaluate_point, jump_name_key
+using OpenTIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp, evaluate_point, jump_name_key
 import TOML, JSON, JuMP, HiGHS
 
 @testset "solve.stp: the steps of demo12_step3" begin

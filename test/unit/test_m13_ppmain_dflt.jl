@@ -7,8 +7,8 @@
 # running ppmain.mod L616-682 itself, every symbol written compared at L682
 # (scripts/m13_replay.jl does the same on the core models' own states).
 
-using TIMES: TimesModel, DumpData, layer1, pp_qafs!, pp_qafs_symbols, ppmain_dflt!, ppmain_dflt_symbols, gset, gparam
-using TIMES.Reference: ispass
+using OpenTIMES: TimesModel, DumpData, layer1, pp_qafs!, pp_qafs_symbols, ppmain_dflt!, ppmain_dflt_symbols, gset, gparam
+using OpenTIMES.Reference: ispass
 import TOML
 
 @testset "prelv -> ppm: ppmain.mod L616-682 layer 1, TIMES_Demo demo12" begin

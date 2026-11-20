@@ -12,7 +12,7 @@
 # up to EOH; COM_AGG sums the CO2 commodities into TOTCO2; COA is tracked at
 # ANNUAL, ELC at DAYNITE (RTCS_VARC at SD, SN, WD, WN). OBJ is MOD.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, gset
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, gset
 import TOML
 
 """

@@ -9,7 +9,7 @@
 # (237 singleton ACT_EFF groups) and L81-82; it has no PRC_RCAP, storage
 # availabilities, IRE_FLOSUM, RPC_NOFLO, UCU units, UC_TIME or NCAP_BND 'N'.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, coef_cpt!, coef_nio!, coef_ptr!, coef_obj!, coef_alt!, coef_shp!
 
 const COEF_EXT_CASE_SWITCHES = Dict("OBJ" => "MOD", "VDA" => "YES", "DSCAUTO" => "YES", "VALIDATE" => "NO", "STAGES" => "NO")
 

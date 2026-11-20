@@ -11,8 +11,8 @@
 # Manifest source paths are rewritten to "<reference>/..." so fixtures do not
 # record the machine they were made on.
 
-using TIMES
-using TIMES.Reference: solution_levels, canonical_from_dump
+using OpenTIMES
+using OpenTIMES.Reference: solution_levels, canonical_from_dump
 using JSON
 
 function copy_dump(src, dst, refroot)

@@ -13,7 +13,7 @@
 # No FLO_COST, FLO_DELIV, FLO_SUB, FLO_TAX, FLO_PKCOI, FLO_BDLVL or ACT_FLO
 # data, no CHP.
 
-using TIMES: TimesModel, gvalues, gmembers, gput!, gset
+using OpenTIMES: TimesModel, gvalues, gmembers, gput!, gset
 import TOML
 
 """

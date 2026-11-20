@@ -5,9 +5,9 @@
 # running ppmain.mod L616-1099 itself, every symbol written compared at
 # L1099 (scripts/m13_replay.jl does the same on the core models' own states).
 
-using TIMES: TimesModel, DumpData, layer1, pp_qafs!, ppmain_dflt!, ppmain_tsattr!, ppmain_flo!, ppmain_flofs!, ppmain_ire!,
+using OpenTIMES: TimesModel, DumpData, layer1, pp_qafs!, ppmain_dflt!, ppmain_tsattr!, ppmain_flo!, ppmain_flofs!, ppmain_ire!,
              ppmain_bnd!, ppmain_cum!, ppmain_stg!, ppmain_stg_symbols, gset, gparam
-using TIMES.Reference: ispass
+using OpenTIMES.Reference: ispass
 import TOML
 
 const PPMAIN_TO_STG = (pp_qafs!, ppmain_dflt!, ppmain_tsattr!, ppmain_flo!, ppmain_flofs!, ppmain_ire!, ppmain_bnd!, ppmain_cum!,

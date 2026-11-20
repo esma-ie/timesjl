@@ -5,9 +5,9 @@
 # past capacity of a simulated vintage, a new vintage carried into a later period, the E and G
 # rows, and the flow form of a trade process with a commodity availability.
 
-using TIMES: TimesModel, generate!, eq_capvac!, simv_defined, untranslated_families, gparam, gparam_opt, gset,
+using OpenTIMES: TimesModel, generate!, eq_capvac!, simv_defined, untranslated_families, gparam, gparam_opt, gset,
              gset_opt, gv
-using TIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp
+using OpenTIMES.Reference: ispass, canonical_from_jump, canonical_from_dump, compare_lp
 import TOML
 
 let vx = only(v for v in TOML.parsefile(joinpath(FIXTURES, "variant_fixtures.toml"))["variant"]
