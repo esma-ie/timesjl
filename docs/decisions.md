@@ -135,6 +135,17 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
+### #184 Dashboard: CPLEX timings off the public board, kept on the local board (open)
+
+Asked for by James on 20 Nov 2026, in answer to #182 d6: "can we move the cplex timings out of the public dashboard and only show it in the local dashboard?"
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Every timing entry of a run with CPLEX leaves the public board, GAMS's parts before the solve included (they involve no CPLEX): OTCGEN, OTNYC and OTUS9r show no GAMS time there until they have GAMS/HiGHS reference runs. The alternative keeps GAMS's times up to the LP from the CPLEX runs. | Recommended: as built. Built in. | open |
+| 2 | All of the EULA's Restricted Solvers are left out (COPT, CPLEX, Gurobi, KNITRO, LINDO/LindoGlobal, Xpress; ODHCPLEX), not CPLEX alone. | Recommended: yes. Built in. | open |
+| 3 | Public slides 11 and 12 say "runs with CPLEX: times not published (GAMS EULA, Publication of Benchmarks)". | Recommended: yes. Built in. | open |
+| 4 | Flag: git history keeps the earlier CPLEX timings (older versions of `docs/dashboard/index.html`); removing them would rewrite the public repository's history. | Recommended: leave the history as it is. Nothing built. | open |
+
 ### #173 m13_gate.jl: 24 hours for every HiGHS solve (open)
 
 Asked for by James on 19 Nov 2026 ("allow TIMES-NZ runs on HiGHS 24 hours run time", corrected the same hour to "allow all HiGHS runs 24 hours runtime").
