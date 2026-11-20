@@ -27,7 +27,6 @@ answer yet.
 
 | Asked | Where | Question | Recommended | Status |
 | --- | --- | --- | --- | --- |
-| 19 Nov 2026 | #179 | Known difference K4 (#179 d2): the base prices of elastic demand as Arrow folders in place of GDX files, and no record for a zero marginal where GAMS writes EPS. Rule-level (a known difference). | yes | Open; needs James's explicit yes. |
 | 4 Nov 2026 | #30 | Add `scripts/m13_replay.jl` (needs GAMS, about 7 min) to the nightly run? | none given | Open (#30, decision 3). Checked 14 Nov 2026: the workstation batch does not run it. |
 | 8 Nov 2026 | chat | Harness fix as one small PR: CHECK status for a non-optimal solve; redo `ppm/` and `coef/` made with older GAMS | one small PR | Open; no PR yet. Checked 14 Nov 2026: `make_reference.py` still reports OK for a run that GAMS ends without an optimum. |
 | 10 Nov 2026 | #89 | Keep P2-5 (data and equation schemas) on the Phase 2 backlog, with its three pilots after M1.7? | keep; all pilots after M1.7 | Open (#89, decisions 1 and 2); provisional until James confirms. |
@@ -66,6 +65,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 20 Nov 2026 | #179 d1, d2 and d3: "d1 yes, d2 yes, d3 yes". The crafted cases and fixtures of elastic demand, harness 0.3.6 (`work_files`), and known difference K4 (the base prices as Arrow folders; no record for a zero marginal where GAMS writes EPS). K4 is rule-level (a known difference); explicit yes. | this log (#179); `docs/known-differences.md` (K4) |
 | 19 Nov 2026 | "yes, leave IREAUXBAL refused": %IREAUXBAL% set by the run without %POWERFLO% (cal_ire.mod L30) leaves the M1.3 gate. GAMS pastes the run's own text into the balance there, so there is no GAMS code to translate (#149 d1); TIMES.jl keeps refusing it with its message (eqcombal.jl, eqpeak.jl). Narrows q1 of 18 Nov 2026. Rule-level (the milestone scope); explicit yes. | this log; `docs/m13-plan.md` (Gate, and Gate audit, 18 Nov 2026) |
 | 18 Nov 2026 | q1 of the M1.3 gate audit: yes, as recommended. Still refused linear features count for the M1.3 gate: shaped availability (NCAP_AFM, NCAP_AFX, NCAP_AFSM, NCAP_AFSX; coef_cpt.mod L42-58, pp_shapr.mod L19-40); the rest of dynamic timeslices (the re-interpolation of dynslite.vda L94-102, and the RTS(S) rows of the storage, dispatching, EQ(l)_ASHAR, EQL_CAPFLO, unit commitment, residual load curve and power-flow families); GR_DEMFR as input data (powerflo.vda L107, L131); %IREAUXBAL% set by the run without %POWERFLO% (cal_ire.mod L30). Moved to M1.5 as run options: %OBJANN% YES (eqobjann.tm), %VALIDATE% YES, %VINTOPT% 1 (fillvint.gms), %WAVER% YES (fillwave.gms), %INTEXT_ONLY% YES and %PREP_ANS% YES. Elastic demand (%TIMESED%, its linear form) and the stochastic extension stay in the gate. Rule-level (the milestone scope); explicit yes. | this log; `docs/m13-plan.md` (Gate, and Gate audit, 18 Nov 2026); `docs/m15-plan.md`; `docs/translation-guide.md` (Decisions) |
 | 18 Nov 2026 | q2 of the M1.3 gate audit: move both to M1.5: user constraints with VAR_UC not YES (eqmain.mod L204-207, L229-232; equcwrap.mod L13), and the VDA trade bounds and prices from an earlier run (bnd_ire.vda, equ_ext.vda L67; GDX_IREBND and GDX_IPRIC, init_ext.vda L137-151). The M1.3 gate closes without them; they stay refused with their message until M1.5. Answers the VAR_UC question of 17 Nov 2026 and #150 decision 3. Rule-level (the milestone scope); explicit yes. | this log; `docs/m13-plan.md` (Gate); `docs/m15-plan.md` |
@@ -140,9 +140,20 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Keep the crafted cases demo12_edbase, demo12_ed and demo12_edagg (demo12 with the base prices of demo12_edbase as a GDX file and its Arrow form, CC BY 4.0), with public CI fixtures of demo12_ed and demo12_edagg, the run fixtures included (about 7 MB each). | Recommended: yes. Built in. | open |
-| 2 | Known difference K4: TIMES.jl reads and writes the base prices as Arrow folders, not GDX files (q1, option b), looking for them in the run file's folder and along the include path; a zero marginal is written as no record where GAMS writes EPS. Rule-level (a known difference). | Recommended: yes. Built in; needs your explicit yes. | open (Open decisions) |
-| 3 | Harness 0.3.6: `work_files`, files the harness copies into GAMS's work folder before each run (here the base prices). | Recommended: yes. Built in. | open |
+| 1 | Keep the crafted cases demo12_edbase, demo12_ed and demo12_edagg (demo12 with the base prices of demo12_edbase as a GDX file and its Arrow form, CC BY 4.0), with public CI fixtures of demo12_ed and demo12_edagg, the run fixtures included (about 7 MB each). | Recommended: yes. Built in. | answered by James, 20 Nov 2026: yes ("d1 yes") |
+| 2 | Known difference K4: TIMES.jl reads and writes the base prices as Arrow folders, not GDX files (q1, option b), looking for them in the run file's folder and along the include path; a zero marginal is written as no record where GAMS writes EPS. Rule-level (a known difference). | Recommended: yes. Built in; needs your explicit yes. | answered by James, 20 Nov 2026: yes ("d2 yes"; the explicit yes for K4) |
+| 3 | Harness 0.3.6: `work_files`, files the harness copies into GAMS's work folder before each run (here the base prices). | Recommended: yes. Built in. | answered by James, 20 Nov 2026: yes ("d3 yes") |
+### #175 M1.3 (66): shaped availability, NCAP_AFX/AFM/AFSX/AFSM (coef_cpt.mod L42-58, pp_shapr.mod L19-40); crafted case demo12_afshp (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the crafted case demo12_afshp (demo12 + afshp.dd, CC BY 4.0) with one public CI fixture (as run, about 8.5 MB with the coefficient files, so that CI runs the new code). | Recommended: yes. Built in. | open |
+
+### #174 M1.3 (65): total demand fractions given as data, GR_DEMFR (powerflo.vda L40, L107, L131); crafted case demo12_pfdf (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the crafted case demo12_pfdf (demo12 + pf.dd and pfdf.dd, CC BY 4.0) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
 
 ### #173 m13_gate.jl: 24 hours for every HiGHS solve (open)
 
@@ -153,6 +164,7 @@ Asked for by James on 19 Nov 2026 ("allow TIMES-NZ runs on HiGHS 24 hours run ti
 | 1 | The layer-3 HiGHS solve of `scripts/m13_gate.jl` (the nightly's `dd-<model>` jobs) gets 24 hours on every model (`HIGHS_TIME_LIMIT = 86400`), up from one hour. | Recommended: yes. Built in. | open |
 | 2 | A nightly pass can now run much longer: the TIMES-NZ shift job solves two variants, up to 48 hours on 12 threads in the worst case, and the loop starts no new pass until every job ends. `STOP-nightly` still stops a pass. | Recommended: accept. Built in. | open |
 | 3 | The GAMS reference solves keep `RESLIM=50000` (about 14 hours) from each model's own run file (model input); the CI unit tests keep 600 s; the cuOpt lane is not HiGHS. | Recommended: leave as is. Built in. | open |
+
 ### #171 README: status without the pre-MVP label; probes of the 18-19 Nov nightly (open)
 
 Asked for by James on 19 Nov 2026 ("update the read.me for update probe status. remove the pre MPV status of TIMES.jl. the model now runs well from city, national, multi-regional models.").
