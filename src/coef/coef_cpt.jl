@@ -5,14 +5,14 @@
 # coef_obj.mod), coefmain.mod L11 (SOW, SW_T), coef_cpt.mod L13-63, and
 # pp_shapr.mod L15-46 for its two includes (L48, L59).
 #
-# Shaped availabilities are not translated: pp_shapr.mod shapes an attribute
-# only for (R,V,P) with a shape index >= 1.5 in NCAP_AFX/NCAP_AFSX or
-# NCAP_AFM/NCAP_AFSM (L19-20), and NCAP_AFX also drives TRACKP
-# (coef_cpt.mod L42-47) and NCAP_AFSX (L56-58). No test model has any of the
-# four, so they raise UnportedError (coef_unported); with all four empty,
-# pp_shapr reduces to its base assignment (L23, L43-46) and those coef_cpt
-# lines to the set algebra written out below. %STAGES% (L11) and %VALIDATE%
-# (L23) are refused as in M1.1.
+# Shaped availabilities (M1.3 change 66): pp_shapr.mod shapes an attribute
+# for the (R,V,P) with a shape index >= 1.5 in NCAP_AFX/NCAP_AFSX or a
+# multiplier index in NCAP_AFM/NCAP_AFSM (L19-20), averaging the SHAPE row
+# over the years each vintage still operates in each period, times its MULTI
+# row (L22-40, `pp_shapr!`); NCAP_AFX and NCAP_AFM also drive TRACKP
+# (coef_cpt.mod L42-47) and NCAP_AFSX and NCAP_AFSM (L55-58). Checked on the
+# crafted case demo12_afshp. %STAGES% (L11) and %VALIDATE% (L23) are refused
+# as in M1.1.
 
 """
     ctst(tm) -> String
@@ -42,10 +42,6 @@ function coef_cpt_unported(tm)
     yes(n) = uppercase(gswitch(tm, n, "")) == "YES"
     yes("STAGES") && push!(out, "coefmain.mod L11 (STAGES YES)")
     yes("VALIDATE") && push!(out, "coef_cpt.mod L23 (VALIDATE YES)")
-    for (p, n) in (("NCAP_AFM", 3), ("NCAP_AFX", 3), ("NCAP_AFSM", 3), ("NCAP_AFSX", 4))
-        isempty(gparam_opt(tm.data, p, n)) ||
-            push!(out, "coef_cpt.mod L42-58 and pp_shapr.mod L19-40 (shaped availability: $p has data)")
-    end
     isempty(gset_opt(tm.data, "RTP_ISHPR", 3)) ||
         push!(out, "pp_shapr.mod L19-40 (RTP_ISHPR not empty on entry)")
     return out
@@ -144,30 +140,49 @@ function coef_cpt!(tm)
     gput!(tm, "NCAP_AF", af)
     gput!(tm, "NCAP_AFS", afs)
 
-    # L42-47 with NCAP_AFM and NCAP_AFX empty: TRACKP = PRC_CAP(PRC_VINT) (L43-46),
-    # NCAP_AFBX unchanged (L47).
     prc_cap, prc_vint = S1("PRC_CAP"), S1("PRC_VINT")
-    trackp = Set{NTuple{2,String}}(k for k in prc_vint.keys if k in prc_cap)
+    ax = YearAxis(tm)
+    bds = [k[1] for k in S1("BD").keys]
+    # A value as GAMS reads it (absent 0, a stored 0 EPS)
+    val(d, k) = (x = get(d, k, nothing); x === nothing ? GZERO : x == 0.0 ? GEPS : GNum(x))
+    # L42: NCAP_AFX(R,LL--ORD(LL),P) $= NCAP_AFM(R,LL,P): LL--ORD(LL) lags each LL circularly by its own
+    #   position, onto the last element of ALLYEAR ('0', G31), so NCAP_AFX(R,'0',P) takes the NCAP_AFM of
+    #   the last LL (in ALLYEAR order) that has one (a record is not 0, so $= writes it, G24): a mark of
+    #   the processes with an NCAP_AFM
+    afx = gvalues(tm, "NCAP_AFX", 3)
+    afm = gvalues(tm, "NCAP_AFM", 3)
+    lastll = last(ax.years)
+    for k in sort!(collect(keys(afm)); by=k -> ax.pos[k[2]])
+        afx[(k[1], lastll, k[3])] = afm[k]
+    end
+    gput!(tm, "NCAP_AFX", afx)
+    # L43: OPTION TRACKP < NCAP_AFX; L44: TRACKP(RP)$(NOT PRC_CAP(RP)) = NO; L45: TRACKP(RP)$RP_UPL(RP,'FX') = NO;
+    #   L46: TRACKP(PRC_CAP(PRC_VINT)) = YES
+    rp_upl = S1("RP_UPL")
+    trackp = Set{NTuple{2,String}}((k[1], k[3]) for k in keys(afx))
+    filter!(k -> k in prc_cap && !((k[1], k[2], "FX") in rp_upl), trackp)
+    foreach(k -> k in prc_cap && push!(trackp, k), prc_vint.keys)
     gput!(tm, "TRACKP", trackp)
+    # L47: NCAP_AFBX(RTP(R,V,P),BD)$(RP_AFB(R,P,BD)>0) $= NCAP_AFX(RTP)
+    afb = gparam(tm, "RP_AFB")
+    afbx = gvalues(tm, "NCAP_AFBX", 4)
+    for (r, v, p) in rtp.keys
+        (inV(v) && haskey(afx, (r, v, p))) || continue
+        foreach(bd -> gv(afb, (r, p, bd)).v > 0 && (afbx[(r, v, p, bd)] = afx[(r, v, p)]), bds)
+    end
 
     # L48: pp_shapr.mod NCAP_AF (R,V,P,S,BD) "TRACKP*RP_AFB*PRC_TS" COEF_AF(...) NCAP_AFM B
     coef_af = gvalues(tm, "COEF_AF", 6)
     rtp_cptyr = [k for k in S1("RTP_CPTYR").keys if inV(k[2]) && inT(k[3])]
-    cpt_of_rvp = Dict{NTuple{3,String},Vector{String}}()                  # (r,v,p) -> T of RTP_CPTYR
-    for (r, v, t, p) in rtp_cptyr
-        push!(get!(() -> String[], cpt_of_rvp, (r, v, p)), t)
-    end
     ts_of_rp = indexby(prc_ts, (1, 2))
-    afb = gparam(tm, "RP_AFB")
     bd_of_rp = indexby(afb, (1, 2))
     af_p = gparam(tm, "NCAP_AF")
-    pp_shapr_base!(tm)
-    for (r, v, t, p) in rtp_cptyr                                          # pp_shapr.mod L43-44
-        ((r, v, p) in rtp && (r, p) in trackp) || continue
-        for (_, _, s) in get(ts_of_rp, (r, p), NTuple{3,String}[]), (_, _, bd) in get(bd_of_rp, (r, p), NTuple{3,String}[])
-            gassign!(coef_af, (r, v, t, p, s, bd), gv(af_p, (r, v, p, s, bd)))
-        end
-    end
+    # %3: TRACKP(R,P)*RP_AFB(R,P,BD)*PRC_TS(R,P,S), the (S,BD) each (R,V,P) is assigned at
+    cands_af(r, v, p) = (r, p) in trackp ?
+        [(s, bd) for (_, _, s) in get(ts_of_rp, (r, p), NTuple{3,String}[]) for (_, _, bd) in get(bd_of_rp, (r, p), NTuple{3,String}[])] :
+        NTuple{2,String}[]
+    pp_shapr!(tm, coef_af, rtp_cptyr, afbx, afm, af_p, cands_af; ax, bds)
+    gput!(tm, "NCAP_AFBX", afbx)
 
     # L50-52: non-vintaged processes take the period's NCAP_AF; NCAP_AFA at ANNUAL
     trackp = Set{NTuple{2,String}}(k for k in prc_cap.keys if !(k in trackp))   # TRACKP ⊆ PRC_CAP here
@@ -189,25 +204,42 @@ function coef_cpt!(tm)
         end
     end
 
-    # L55-58 with NCAP_AFM, NCAP_AFSM, NCAP_AFX and NCAP_AFSX empty
-    gput!(tm, "RP_PRC", Set{NTuple{2,String}}())
+    # L55: OPTION RP_PRC < NCAP_AFSM; NCAP_AFSM(R,V,P)$(NOT RP_PRC(R,P)) $= NCAP_AFM(R,V,P)
+    afsm = gvalues(tm, "NCAP_AFSM", 3)
+    rp_prc = Set{NTuple{2,String}}((k[1], k[3]) for k in keys(afsm))
+    reg = S1("R")
+    for (k, x) in afm
+        ((k[1],) in reg && inV(k[2]) && !((k[1], k[3]) in rp_prc)) && (afsm[k] = x)
+    end
+    gput!(tm, "NCAP_AFSM", afsm)
+    # L56: NCAP_AFSX(RTP,BD)$NCAP_AFSM(RTP) = NCAP_AFSX(RTP,BD)+EPS   (an EPS NCAP_AFSM counts, G3)
+    afsx = gvalues(tm, "NCAP_AFSX", 4)
+    for (r, v, p) in rtp.keys
+        (inV(v) && haskey(afsm, (r, v, p))) || continue
+        foreach(bd -> gassign!(afsx, (r, v, p, bd), val(afsx, (r, v, p, bd)) + GEPS), bds)
+    end
+    # L57: RTPS_BD(RTP(R,V,P),S,BD)$((PRC_VINT(R,P)+ANNUAL(S)+YES$NCAP_AFSX(RTP,BD))$NCAP_AFS(RTP,S,BD)) = YES
     afs_p = gparam(tm, "NCAP_AFS")
     rtps_bd = gmembers(tm, "RTPS_BD", 5)
-    for k in afs_p.keys                                                    # L57
+    for k in afs_p.keys
         (r, v, p, s, bd) = k
         ((r, v, p) in rtp && inV(v)) || continue
-        ((r, p) in prc_vint || (s,) in annual) && push!(rtps_bd, k)
+        ((r, p) in prc_vint || (s,) in annual || haskey(afsx, (r, v, p, bd))) && push!(rtps_bd, k)
+    end
+    # L58: OPTION RP_PRC<NCAP_AFSX; NCAP_AFSX(R,V,P,BD)$SUM(RTPS_BD(R,V,P,S,BD),1) $= NCAP_AFX(R,V,P)$(NOT RP_PRC(R,P))
+    rp_prc = Set{NTuple{2,String}}((k[1], k[3]) for k in keys(afsx))
+    gput!(tm, "RP_PRC", rp_prc)
+    for (r, v, p, s, bd) in rtps_bd
+        ((r,) in reg && !((r, p) in rp_prc) && haskey(afx, (r, v, p))) && (afsx[(r, v, p, bd)] = afx[(r, v, p)])
     end
 
     # L59: pp_shapr.mod NCAP_AFS (R,V,P,S,BD) "RTPS_BD(R,V,P,S,BD)" COEF_AF(...) NCAP_AFSM
-    pp_shapr_base!(tm)
-    for k in sort!(collect(rtps_bd))                                      # pp_shapr.mod L43-44
-        (r, v, p, s, bd) = k
-        (r, v, p) in rtp || continue
-        for t in get(cpt_of_rvp, (r, v, p), String[])
-            gassign!(coef_af, (r, v, t, p, s, bd), gv(afs_p, k))
-        end
+    sbd_of = Dict{NTuple{3,String},Vector{NTuple{2,String}}}()
+    for (r, v, p, s, bd) in sort!(collect(rtps_bd))
+        push!(get!(() -> NTuple{2,String}[], sbd_of, (r, v, p)), (s, bd))
     end
+    pp_shapr!(tm, coef_af, rtp_cptyr, afsx, afsm, afs_p, (r, v, p) -> get(sbd_of, (r, v, p), NTuple{2,String}[]); ax, bds)
+    gput!(tm, "NCAP_AFSX", afsx)
 
     # L61-62
     afs_of_rtp = indexby(afs_p, (1, 2, 3))
@@ -234,23 +266,119 @@ function coef_cpt!(tm)
 end
 
 """
-    pp_shapr_base!(tm)
+    pp_shapr!(tm, coef_af, rtp_cptyr, X, M, base, cands; ax, bds)
 
-pp_shapr.mod with no shape index (RTP_ISHPR empty after L19-20, which
-coef_cpt_unported guarantees): FIL2(V) = B(V)-YEARVAL(V) (L23); the
-assignment of the base value (L43-44) is done by the caller, which knows
-%3 and %4; RTP_ISHPR, RTP_SHAPI and PASTSUM end cleared (L46).
+pp_shapr.mod, as coef_cpt.mod L48 and L59 include it: %1%6X is `X`
+(NCAP_AFBX or NCAP_AFSX, by (R,V,P,BD); L27 removes its records in place),
+%5 is `M` (NCAP_AFM or NCAP_AFSM, by (R,V,P)), %1%2 is `base` (NCAP_AF or
+NCAP_AFS at the vintage, by (R,V,P,S,BD)), %4 is COEF_AF over RTP_CPTYR
+(`rtp_cptyr`: the (R,V,T,P) of the model's vintages and periods) and `cands`
+gives, for each (R,V,P), the (S,BD) that %3 admits.
+
+The (R,V,P) with a shape index >= 1.5 in X (any BD) or M are shaped
+(RTP_ISHPR, L19-20). For them PASTSUM is the last year of operation less
+YEARVAL(V) (L24); the shape index is dropped when the vintage operates
+within its own period only (L27); RTP_SHAPI holds, for each BD, the SHAPE
+row J+MAX(0,X-1), the MULTI row J+MAX(0,M-1), and the first and last years
+of operation as leads from V (L30-32; a lead past either end of its set
+gives no entry). COEF_AF of a shaped (R,V,P) in period T is then `base`
+times, over its RTP_SHAPI entry for the BD, EPS + MULTI(JJ,T) times the
+SHAPE row summed over the years of T up to MAX(B(T), the last year), each at
+the age it has then (or at the last year), divided by the years of T it
+operates in, at least 1 (L34-40). The others take `base` (L43-44).
+FIL2(V) = B(V)-YEARVAL(V) (L23); RTP_ISHPR, RTP_SHAPI and PASTSUM end
+cleared (L46).
 
 GAMS: pp_shapr.mod L15-46, v4.9.7.
 """
-function pp_shapr_base!(tm)
-    B, yearval = gparam(tm, "B"), gparam(tm, "YEARVAL")
+function pp_shapr!(tm, coef_af, rtp_cptyr, X, M, base, cands; ax, bds)
+    B, E, D = gparam(tm, "B"), gparam(tm, "E"), gparam(tm, "D")
+    rtp = gset(tm, "RTP")
+    # L19: LOOP(BD,RTP_ISHPR(RTP(R,V,P))$((X(RTP,BD) GE 1.5)$X(RTP,BD)) = YES); L20: the same for %5 = M
+    ishpr = Set{NTuple{3,String}}()
+    foreach(((k, x),) -> (x >= 1.5 && (k[1], k[2], k[3]) in rtp) && push!(ishpr, (k[1], k[2], k[3])), X)
+    foreach(((k, x),) -> (x >= 1.5 && k in rtp) && push!(ishpr, k), M)
+    # L23: OPTION CLEAR=FIL2; FIL2(V) = B(V)-YEARVAL(V)
     fil2 = Dict{NTuple{1,String},Float64}()
     for (v,) in gset(tm, "MODLYEAR").keys
-        gassign!(fil2, (v,), gv(B, (v,)) - gv(yearval, (v,)))
+        gassign!(fil2, (v,), gv(B, (v,)) - GNum(ax.yearval[v]))
     end
     gput!(tm, "FIL2", fil2)
+    isempty(ishpr) || shape_avail!(tm, coef_af, rtp_cptyr, X, M, base, cands, ishpr, fil2; ax, bds, B, E, D)
+    # L43: RTP_ISHPR(RTP(R,V,P)) = (NOT RTP_ISHPR(RTP)); L44: %4$(RTP_ISHPR(R,V,P)$(%3)) = %1%2
+    for (r, v, t, p) in rtp_cptyr
+        ((r, v, p) in rtp && !((r, v, p) in ishpr)) || continue
+        foreach(((s, bd),) -> gassign!(coef_af, (r, v, t, p, s, bd), gv(base, (r, v, p, s, bd))), cands(r, v, p))
+    end
+    # L46: OPTION CLEAR=RTP_SHAPI,CLEAR=RTP_ISHPR,CLEAR=PASTSUM
+    gput!(tm, "RTP_SHAPI", Set{NTuple{8,String}}())
     gput!(tm, "RTP_ISHPR", Set{NTuple{3,String}}())
     gput!(tm, "PASTSUM", Dict{NTuple{3,String},Float64}())
     return tm
+end
+
+"pp_shapr.mod L24-40 for the shaped (R,V,P) `ishpr` (see [`pp_shapr!`](@ref))."
+function shape_avail!(tm, coef_af, rtp_cptyr, X, M, base, cands, ishpr, fil2; ax, bds, B, E, D)
+    tab = ShapeTable(tm)
+    iled, tlife = gparam(tm, "NCAP_ILED"), gparam(tm, "NCAP_TLIFE")
+    multi = gparam(tm, "MULTI")
+    yv(y) = ax.yearval[y]
+    # L24: PASTSUM(RTP_ISHPR(R,V,P)) = FIL2(V)+NCAP_ILED(R,V,P)+NCAP_TLIFE(R,V,P)-1
+    pastsum = Dict{NTuple{3,String},Float64}()
+    for k in ishpr
+        gassign!(pastsum, k, gv(fil2, (k[2],)) + gv(iled, k) + gv(tlife, k) - GNum(1.0))
+    end
+    # L27: X(RTP_ISHPR(R,V,P),BD)$(PASTSUM(R,V,P)-FIL2(V)+1 < D(V)) = 0
+    for k in ishpr
+        (gv(pastsum, k) - gv(fil2, (k[2],)) + GNum(1.0)).v < gv(D, (k[2],)).v || continue
+        foreach(bd -> delete!(X, (k..., bd)), bds)
+    end
+    # L30-32: LOOP(SAMEAS(J,'1'), RTP_SHAPI(RTP_ISHPR(R,V(LL),P),BD,J+MAX(0,X(R,V,P,BD)-1),J+MAX(0,%5-1),
+    #   LL+(FIL2(V)+NCAP_ILED(R,V,P)),LL+PASTSUM(R,V,P)) = YES)   (non-integer leads rounded, G29)
+    j1 = tab.jpos[AGEJ_1[1]]
+    jlab(x) = (i = j1 + glead(max(0.0, x - 1)); 1 <= i <= length(tab.j) ? tab.j[i] : nothing)
+    shapi = Dict{NTuple{4,String},NTuple{4,String}}()                     # (R,V,P,BD) -> (J,JJ,LL,YEAR)
+    for (r, v, p) in ishpr
+        jj = jlab(gv(M, (r, v, p)).v)
+        y0 = lead(ax, v, glead((gv(fil2, (v,)) + gv(iled, (r, v, p))).v))
+        y1 = lead(ax, v, glead(gv(pastsum, (r, v, p)).v))
+        (jj === nothing || y0 === nothing || y1 === nothing) && continue
+        for bd in bds
+            j = jlab(gv(X, (r, v, p, bd)).v)
+            j === nothing || (shapi[(r, v, p, bd)] = (j, jj, y0, y1))
+        end
+    end
+    gput!(tm, "PASTSUM", pastsum)
+    gput!(tm, "RTP_SHAPI", Set{NTuple{8,String}}((k..., e...) for (k, e) in shapi))
+    # L34-40: LOOP(SAMEAS(AGE,'1'), %4$((%3)$RTP_ISHPR(R,V,P)) = %1%2 * SUM(RTP_SHAPI(R,V,P,BD,J,JJ,LL,YEAR),
+    #   EPS+MULTI(JJ,T) * SUM(PERIODYR(T,EOHYEARS)$(YEARVAL(EOHYEARS) LE MAX(B(T),YEARVAL(YEAR))),
+    #   SHAPE(J,AGE+(MIN(YEARVAL(EOHYEARS),YEARVAL(YEAR))-YEARVAL(LL)))) /
+    #   (MAX(1,MIN(E(T),YEARVAL(YEAR))-MAX(B(T),YEARVAL(LL))+1))))
+    eoh = Set(k[1] for k in gset(tm, "EOHYEARS").keys)
+    yrs_of = Dict{String,Vector{String}}()
+    for (t, y) in gset(tm, "PERIODYR").keys
+        y in eoh && push!(get!(() -> String[], yrs_of, t), y)
+    end
+    foreach(ys -> sort!(ys; by=y -> ax.pos[y]), values(yrs_of))
+    for (r, v, t, p) in rtp_cptyr
+        (r, v, p) in ishpr || continue
+        bt, et = gv(B, (t,)).v, gv(E, (t,)).v
+        for (s, bd) in cands(r, v, p)
+            e = get(shapi, (r, v, p, bd), nothing)
+            total = GZERO
+            if e !== nothing
+                (j, jj, y0, y1) = e
+                x = tab.jpos[j] - j1 + 1                                   # SHAPE(J,...) is shape(tab, x, ...)
+                a0, a1 = yv(y0), yv(y1)
+                sh = GZERO
+                for y in get(yrs_of, t, String[])
+                    yv(y) <= max(bt, a1) || continue
+                    sh += shape(tab, x, min(yv(y), a1) - a0)
+                end
+                total = GEPS + gv(multi, (jj, t)) * sh / GNum(max(1.0, min(et, a1) - max(bt, a0) + 1))
+            end
+            gassign!(coef_af, (r, v, t, p, s, bd), gv(base, (r, v, p, s, bd)) * total)
+        end
+    end
+    return nothing
 end
