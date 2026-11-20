@@ -140,6 +140,12 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
 | 1 | Keep the crafted case demo12_tsoff_rint (demo12_tsoff + rint.dd, CC BY 4.0) with its public CI fixtures, the run fixture included so that CI runs it from the DD files (about 7 MB). | Recommended: yes. Built in. | open |
+### #175 M1.3 (66): shaped availability, NCAP_AFX/AFM/AFSX/AFSM (coef_cpt.mod L42-58, pp_shapr.mod L19-40); crafted case demo12_afshp (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the crafted case demo12_afshp (demo12 + afshp.dd, CC BY 4.0) with one public CI fixture (as run, about 8.5 MB with the coefficient files, so that CI runs the new code). | Recommended: yes. Built in. | open |
+
 ### #174 M1.3 (65): total demand fractions given as data, GR_DEMFR (powerflo.vda L40, L107, L131); crafted case demo12_pfdf (open)
 
 | # | Question | Decided | How |

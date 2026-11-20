@@ -1063,3 +1063,18 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_tsoff_rint/demo12_tsoff_rint.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_tsoff", "{crafted}/demo12_tsoff_rint"]
+
+# TIMES_Demo demo12 + demo12_afshp/afshp.dd (19 Nov 2026): shaped availability factors, NCAP_AFX, NCAP_AFM
+# (also as NCAP_AFSM) and NCAP_AFSX, with SHAPE and MULTI rows (coef_cpt.mod L42-62, pp_shapr.mod L19-46;
+# M1.3 change 66).
+[[model]]
+name = "TIMES_Demo-demo12_afshp"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_afshp/demo12_afshp.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_afshp"]

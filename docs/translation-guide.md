@@ -1111,6 +1111,10 @@ those checks, their figures and their crafted cases are not published
 - 19 Nov 2026: M1.3 change 68: dynamic timeslices, the re-interpolation
   of dynslite.vda POSTLEV (L91-103). New crafted case demo12_tsoff_rint:
   layers 1 to 3 PASS in both variants from the DD files.
+- 19 Nov 2026: M1.3 change 66: shaped availability factors (NCAP_AFX,
+  NCAP_AFM, NCAP_AFSX, NCAP_AFSM; coef_cpt.mod L42-58, pp_shapr.mod
+  L19-40). New crafted case demo12_afshp: layers 1 to 3 PASS in both
+  variants from the DD files (objective 23,962,468.09).
 - 19 Nov 2026: M1.3 change 65: total demand fractions given as data
   (GR_DEMFR; powerflo.vda L40, L107, L131), the last linear refusal of
   the power-flow main block (the PTDF candidate lines of a MIP stay
