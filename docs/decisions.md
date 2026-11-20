@@ -141,6 +141,12 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 | --- | --- | --- | --- |
 | 1 | `run_model` (src/run.jl) calls `Highs_resetGlobalScheduler(1)` before and after its HiGHS solve (HiGHS.jl README, Threads). Without it, a later HiGHS solve in the same process that asks for more threads than `run_model`'s 12 stops with OTHER_ERROR; on the workstation (48 CPUs, HiGHS's default 24 threads) the full test suite failed in every solve after `test_run_model.jl` (#167) since 18 Nov 2026, while GitHub's runners have too few CPUs to show it. Run code, not translated GAMS code; the LP is unchanged. | Recommended: yes. Built in. | open |
 
+### #174 M1.3 (65): total demand fractions given as data, GR_DEMFR (powerflo.vda L40, L107, L131); crafted case demo12_pfdf (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the crafted case demo12_pfdf (demo12 + pf.dd and pfdf.dd, CC BY 4.0) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | open |
+
 ### #173 m13_gate.jl: 24 hours for every HiGHS solve (open)
 
 Asked for by James on 19 Nov 2026 ("allow TIMES-NZ runs on HiGHS 24 hours run time", corrected the same hour to "allow all HiGHS runs 24 hours runtime").
