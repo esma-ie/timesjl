@@ -135,7 +135,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
-### #PRNUM M1.3 (70): the stochastic extension's DD reader (initmty.stc); eight crafted cases (open)
+### #185 M1.3 (70): the stochastic extension's DD reader (initmty.stc); eight crafted cases (open)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
