@@ -65,6 +65,10 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 20 Nov 2026 | q1 (solver option files): "q1 yes". `run_model` and `scripts/run_dd.jl` read the solver option file, as GAMS TIMES reads `<solver>.opt` (solve.mod L14-15): `highs.opt` from the run file's folder by default, another file with `optfile=` (`--optfile`), none with `optfile=false` (`--no-optfile`); HiGHS option names, the run's thread limit kept. A departure from the M1.5 plan, which had listed the option file as not reproduced (#130 d3). | #182; `src/solver_options.jl`; README (Tips) |
+| 20 Nov 2026 | #182 d6: "can we move the cplex timings out of the public dashboard and only show it in the local dashboard?" The public board's run timings (slides 11 and 12) leave out every run with CPLEX (the GAMS EULA's Restricted Solvers); the local board shows them. | #184; `scripts/run_timing.jl`; `docs/dashboard/README.md` |
+| 20 Nov 2026 | #182 d5: "d5 (c) HiGHS only for now". Option files are read for HiGHS only; no CPLEX.jl and no GAMS.jl route is built. Asked because q2 (CPLEX.jl) could not be built: the CPLEX in GAMS is licensed for use within GAMS only (GAMS EULA, Exhibit A). | #182; `src/solver_options.jl` |
+| 20 Nov 2026 | q2 (CPLEX.jl as an optional solver, so `cplex.opt` files apply directly): "q2 yes". Not built: the only CPLEX on the workstation is the one in GAMS 54 (`C:\GAMS\54\cplex2220.dll`), and the GAMS EULA licenses GAMS/CPLEX "for use within GAMS/Base" only (Exhibit A; `C:\GAMS\54\EULA.md` L491). Asked again with the ways forward as #182 d5; James chose HiGHS only for now (above). | this log; #182 d5 |
 | 20 Nov 2026 | #179 d1, d2 and d3: "d1 yes, d2 yes, d3 yes". The crafted cases and fixtures of elastic demand, harness 0.3.6 (`work_files`), and known difference K4 (the base prices as Arrow folders; no record for a zero marginal where GAMS writes EPS). K4 is rule-level (a known difference); explicit yes. | this log (#179); `docs/known-differences.md` (K4) |
 | 20 Nov 2026 | #178 d1 (q2 of 19 Nov): "q2-stochastics, yes plan approved". The plan for the stochastic extension (`docs/m13-plan.md`, "Plan: the stochastic extension"; changes 70 to 76, one pull request each, eight crafted demo12 cases) is approved, and its changes start in its order. Rule-level (a plan for major work); explicit yes. | this log (#178); `docs/m13-plan.md` |
 | 19 Nov 2026 | q1 of the 19 Nov check-in: "id go with option b, reading the base prices from the arrow database." Elastic demand (%TIMESED%) reads the base prices of the earlier run from TIMES.jl's own Arrow file, not from a GDX file (readbprice.mod `$GDXIN`/`$LOAD`); TIMES.jl writes that file after a solve, as wrtbprice.mod writes `com_bprice.gdx`. For the checks against GAMS the reference harness converts GAMS's `com_bprice.gdx` to Arrow. No GDX reader is added; one can follow if users need it. The case design is #165 d3. | this log; `docs/m13-plan.md` (gate audit, change 69) |
@@ -139,7 +143,20 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
-### #179 M1.3 (69): elastic demand, the linear form (%TIMESED%); crafted cases demo12_edbase, demo12_ed, demo12_edagg (open)
+### #182 run_model: the solver option file (highs.opt), as GAMS reads <solver>.opt (open)
+
+Asked for by James on 20 Nov 2026 (q1 and q2 of that day, above).
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Option files are read for HiGHS only. Another solver's file in the run folder (VEDA's `cplex.opt`) is not read and its settings are not turned into HiGHS options; the run prints a note naming it. | Recommended: yes. Built in. | open |
+| 2 | A line HiGHS does not take (an unknown name, a wrong type, a value out of range) is left out with a note and the solve goes on, as GAMS's solvers do (GAMS 54 documentation, "The Solver Option File"); the run is not stopped. | Recommended: yes. Built in. | open |
+| 3 | The run's thread limit (`threads`, `TIMESJL_THREADS`, 12 by default) stays: a file may ask for fewer threads, and a file asking for more, or for HiGHS's own choice (`threads 0`), gets the limit. | Recommended: yes. Built in. | open |
+| 4 | `highs.opt` is looked for in the run file's folder (GAMS's working folder), not in the `dd` folders. | Recommended: yes. Built in. | open |
+| 5 | CPLEX (q2 of 20 Nov): which way, given the GAMS licence? (a) an IBM CPLEX licence and CPLEX.jl; (b) GAMS.jl, CPLEX within GAMS; (c) HiGHS only for now. | (c) HiGHS only for now | James, 20 Nov 2026 |
+| 6 | The benchmark clause of the GAMS EULA and the CPLEX times in the public repository. Rule-level. | CPLEX timings off the public dashboard, on the local dashboard only (#184) | James, 20 Nov 2026 |
+
+### #179 M1.3 (69): elastic demand, the linear form (%TIMESED%); crafted cases demo12_edbase, demo12_ed, demo12_edagg (merged 21 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
@@ -147,14 +164,13 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 | 2 | Known difference K4: TIMES.jl reads and writes the base prices as Arrow folders, not GDX files (q1, option b), looking for them in the run file's folder and along the include path; a zero marginal is written as no record where GAMS writes EPS. Rule-level (a known difference). | Recommended: yes. Built in; needs your explicit yes. | answered by James, 20 Nov 2026: yes ("d2 yes"; the explicit yes for K4); confirmed 21 Nov 2026: "pr#179 d2 yes" |
 | 3 | Harness 0.3.6: `work_files`, files the harness copies into GAMS's work folder before each run (here the base prices). | Recommended: yes. Built in. | answered by James, 20 Nov 2026: yes ("d3 yes"); confirmed 21 Nov 2026: "d3 yes" |
 
-### #178 Plan for the stochastic extension; q1 and q2 of 19 Nov 2026 (merged 21 Nov 2026)
-### #181 run_model: reset HiGHS's thread scheduler around its solve (open)
+### #181 run_model: reset HiGHS's thread scheduler around its solve (merged 21 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | `run_model` (src/run.jl) calls `Highs_resetGlobalScheduler(1)` before and after its HiGHS solve (HiGHS.jl README, Threads). Without it, a later HiGHS solve in the same process that asks for more threads than `run_model`'s 12 stops with OTHER_ERROR; on the workstation (48 CPUs, HiGHS's default 24 threads) the full test suite failed in every solve after `test_run_model.jl` (#167) since 18 Nov 2026, while GitHub's runners have too few CPUs to show it. Run code, not translated GAMS code; the LP is unchanged. | Recommended: yes. Built in. | open |
+| 1 | `run_model` (src/run.jl) calls `Highs_resetGlobalScheduler(1)` before and after its HiGHS solve (HiGHS.jl README, Threads). Without it, a later HiGHS solve in the same process that asks for more threads than `run_model`'s 12 stops with OTHER_ERROR; on the workstation (48 CPUs, HiGHS's default 24 threads) the full test suite failed in every solve after `test_run_model.jl` (#167) since 18 Nov 2026, while GitHub's runners have too few CPUs to show it. Run code, not translated GAMS code; the LP is unchanged. | Recommended: yes. Built in. | accepted by merge, 21 Nov 2026 |
 
-### #178 Plan for the stochastic extension; q1 and q2 of 19 Nov 2026 (open)
+### #178 Plan for the stochastic extension; q1 and q2 of 19 Nov 2026 (merged 21 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
