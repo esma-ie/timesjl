@@ -54,24 +54,10 @@ function untranslated_families(tm::TimesModel)
     # the discrete unit commitment (a MIP): eqlducs.vda L128-175, and the DP_UNS term of EQ_ACTPL
     # (eqactups.vda L106-109)
     yes("DUC") && note!("(discrete unit commitment)", "eqlducs.vda L128-175, eqactups.vda L106-109", "switch DUC = YES")
-    # Dynamic timeslices (%RTS% is S+NORTS(R,T,S), M1.3 change 63): the RTS(S) rows of EQ_PEAK, EQ_PTRANS and
-    # EQE_ACTEFF skip the timeslices turned off (checked on demo12_tsoff); user constraints lose them in
-    # dynslite.vda BOUNDS (UC_RHSMAP). The other families with RTS(S) rows are refused until a case has them.
-    if dynslite_bounds_on(tm)
-        for (fam, gams, sym, N, kind) in (
-                ("EQ_STGAUX / EQ_STGTSS / EQ_STSBAL", "eqstgaux.mod L14, eqstgtss.mod L13, L53", "RP_STG", 2, :s),
-                ("EQ_ACTRAMP / EQ(l)_ACTUPS / EQ_ACTPL", "eqactups.vda L50-99", "RP_UPL", 3, :s),
-                ("EQL_ACTUPC / EQ_ACTUPS", "eqactups.vda L65-86", "RP_UPS", 4, :s),
-                ("EQ_SLSIFT", "eqactups.vda L131", "RPC_LS", 3, :s),
-                ("EQ(l)_ASHAR", "eqashar.vda L38", "FLO_ASHAR", 7, :p),
-                ("EQL_CAPFLO (CAFLAC)", "eqcaflac.vda L40", "NCAP_AFC", 5, :p),
-                ("eq_sd* (unit commitment by start-up type)", "eqlducs.vda L67-118", "RP_DPL", 3, :s),
-                ("EQ_RL_*", "resloadc.vda L72-142", "GR_VARGEN", 4, :p),
-                ("EQ_GR_* (power-flow grids)", "powerflo.vda L254-343", "GR_FLOW", 3, :p))
-            ((kind === :p ? P(sym, N) : S(sym, N)) |> isempty) ||
-                note!(fam, gams, "dynamic timeslices (TS_OFF with %DYNTS% YES): RTS(S) rows not yet checked")
-        end
-    end
+    # Dynamic timeslices (%RTS% is S+NORTS(R,T,S)): the RTS(S) rows of every family skip the timeslices turned
+    # off: EQ_PEAK, EQ_PTRANS and EQE_ACTEFF since M1.3 change 63 (demo12_tsoff), the storage, dispatching, load
+    # shifting, activity share, capacity flow, unit commitment, residual load curve, power-flow and gas grid rows
+    # since change 67 (the demo12_tsoff_* cases); user constraints lose them in dynslite.vda BOUNDS (UC_RHSMAP).
     uppercase(gswitch(tm, "MACRO", "NO")) in ("YES", "CSA", "MSA", "MLF") &&
         note!("(MACRO)", "eqmacro.tm, mod_ext.msa/mlf", "switch MACRO = $(gswitch(tm, "MACRO", ""))")
     for (sym, ext) in (("BS_RVT", "ABS"), ("CM_PREDEF", "CLI"), ("TEG", "ETL"), ("ECT_CHP", "IER"), ("NITER", "MSA/MLF"))

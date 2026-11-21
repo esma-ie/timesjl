@@ -209,6 +209,7 @@ function eq_ashar!(tm::TimesModel)
     rpcg_ashar = gparam_opt(d, "RPCG_ASHAR", 5)
     (isempty(flo_ashar) || isempty(rpcg_ashar)) && return 0
     modlyear, tx = gset(tm, "MODLYEAR"), eq_periods(tm)   # %R_V_T%: SUBT in a stepped run (maindrv.mod L38-40)
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     rp_flo, rp_ire, rp_stg = gset(tm, "RP_FLO"), gset(tm, "RP_IRE"), gset(tm, "RP_STG")
     rp_pgflo, rp_pgact, rp_std = gset(tm, "RP_PGFLO"), gset(tm, "RP_PGACT"), gset(tm, "RP_STD")
     no_act = gset(tm, "NO_ACT")
@@ -243,7 +244,7 @@ function eq_ashar!(tm::TimesModel)
             for (_, s, _) in get(tree_of_rts, (r, ts), no3)      # SUM(RS_TREE(R,S,TS)$FLO_ASHAR(...,TS,'%2'),1)
                 rpcg_on((r, p, cg, cg2, s)) || continue
                 for (_, _, t, _) in get(vt_of_rvp, (r, v, p), no4)
-                    (t,) in tx && push!(rows, (r, v, t, p, cg, cg2, s))
+                    (t,) in tx && !off(r, t, s) && push!(rows, (r, v, t, p, cg, cg2, s))   # RTS(S) (M1.3 change 67)
                 end
             end
         end

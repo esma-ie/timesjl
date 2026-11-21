@@ -848,6 +848,22 @@ kind = "run"
 run_file = "{crafted}/demo12_pfcst/demo12_pfcst.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa", "{crafted}/demo12_pfd", "{crafted}/demo12_pfcst"]
 
+# TIMES_Demo demo12_pf + demo12_pfdf/pfdf.dd (19 Nov 2026): a second grid node in REG1 (the line of
+# demo12_pfd) and total demand fractions given as data (GR_DEMFR), with no sectoral fractions, so the
+# total demand path of the allocation rows EQ_GR_DEMALL (powerflo.vda L40, L107, L131, L140, L314-340;
+# M1.3 change 65).
+[[model]]
+name = "TIMES_Demo-demo12_pfdf"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_pfdf/demo12_pfdf.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfdf"]
+
 # TIMES_Demo demo12 + demo12_mkt/mkt.dd (17 Nov 2026): market-based trade through a third region, the
 # gas hub REG3 (eqire.mod L23-38, eqirebnd.mod L46-51; M1.3 change 51).
 [[model]]
@@ -1033,6 +1049,202 @@ kind = "run"
 run_file = "{crafted}/demo12_iled/demo12_iled.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_iled"]
 
+# TIMES_Demo demo12_disp + demo12_tsoff (19 Nov 2026): dynamic timeslice trees (TS_OFF, %DYNTS% YES) with
+# the dispatching rows EQ_ACTRAMP, EQ(l)_ACTUPS, EQL_ACTUPC, EQ_ACTPL (eqactups.vda L50-99), so that their RTS(S) domain (S+NORTS(R,T,S), timslice.mod L31-39) drops the timeslices turned off
+# (M1.3 change 67). No DD file of its own.
+[[model]]
+name = "TIMES_Demo-demo12_tsoff_disp"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_tsoff_disp/demo12_tsoff_disp.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_disp", "{crafted}/demo12_tsoff", "{crafted}/demo12_tsoff2", "{crafted}/demo12_tsoff_disp"]
+
+# TIMES_Demo demo12_uc + demo12_tsoff (19 Nov 2026): dynamic timeslice trees (TS_OFF, %DYNTS% YES) with
+# the unit commitment rows eq_sdlogic to eq_sudpll (eqlducs.vda L67-118), so that their RTS(S) domain (S+NORTS(R,T,S), timslice.mod L31-39) drops the timeslices turned off
+# (M1.3 change 67). No DD file of its own.
+[[model]]
+name = "TIMES_Demo-demo12_tsoff_uc"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_tsoff_uc/demo12_tsoff_uc.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_uc", "{crafted}/demo12_tsoff", "{crafted}/demo12_tsoff2", "{crafted}/demo12_tsoff_uc"]
+
+# TIMES_Demo demo12_stgccl + demo12_tsoff (19 Nov 2026): dynamic timeslice trees (TS_OFF, %DYNTS% YES) with
+# the storage rows EQ_STGAUX, EQ_STGTSS, EQ_STSBAL (eqstgaux.mod L14, eqstgtss.mod L13, L53), so that their RTS(S) domain (S+NORTS(R,T,S), timslice.mod L31-39) drops the timeslices turned off
+# (M1.3 change 67). No DD file of its own.
+[[model]]
+name = "TIMES_Demo-demo12_tsoff_stgccl"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_tsoff_stgccl/demo12_tsoff_stgccl.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_stgccl", "{crafted}/demo12_tsoff", "{crafted}/demo12_tsoff_stgccl"]
+
+# TIMES_Demo demo12_ashar + demo12_tsoff (19 Nov 2026): dynamic timeslice trees (TS_OFF, %DYNTS% YES) with
+# the activity share rows EQ(l)_ASHAR (eqashar.vda L38), so that their RTS(S) domain (S+NORTS(R,T,S), timslice.mod L31-39) drops the timeslices turned off
+# (M1.3 change 67). No DD file of its own.
+[[model]]
+name = "TIMES_Demo-demo12_tsoff_ashar"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_tsoff_ashar/demo12_tsoff_ashar.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_ashar", "{crafted}/demo12_tsoff", "{crafted}/demo12_tsoff_ashar"]
+
+# TIMES_Demo demo12_ls + demo12_tsoff (19 Nov 2026): dynamic timeslice trees (TS_OFF, %DYNTS% YES) with
+# the load shifting rows EQ_SLSIFT (eqactups.vda L131), so that their RTS(S) domain (S+NORTS(R,T,S), timslice.mod L31-39) drops the timeslices turned off
+# (M1.3 change 67). No DD file of its own.
+[[model]]
+name = "TIMES_Demo-demo12_tsoff_ls"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_tsoff_ls/demo12_tsoff_ls.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_ls", "{crafted}/demo12_tsoff", "{crafted}/demo12_tsoff_ls"]
+
+# TIMES_Demo demo12_rldc + demo12_tsoff (19 Nov 2026): dynamic timeslice trees (TS_OFF, %DYNTS% YES) with
+# the residual load curve rows EQ_RL_* (resloadc.vda L72-142), so that their RTS(S) domain (S+NORTS(R,T,S), timslice.mod L31-39) drops the timeslices turned off
+# (M1.3 change 67). No DD file of its own.
+[[model]]
+name = "TIMES_Demo-demo12_tsoff_rldc"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_tsoff_rldc/demo12_tsoff_rldc.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_rldc", "{crafted}/demo12_tsoff", "{crafted}/demo12_tsoff_rldc"]
+
+# TIMES_Demo demo12_pfd + demo12_tsoff (19 Nov 2026): dynamic timeslice trees (TS_OFF, %DYNTS% YES) with
+# the power-flow rows EQ_GR_POWFLO, EQ_GR_GENALL, EQ_GR_DEMALL (powerflo.vda L254, L291, L316), so that their RTS(S) domain (S+NORTS(R,T,S), timslice.mod L31-39) drops the timeslices turned off
+# (M1.3 change 67). No DD file of its own.
+[[model]]
+name = "TIMES_Demo-demo12_tsoff_pfd"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_tsoff_pfd/demo12_tsoff_pfd.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa", "{crafted}/demo12_pfd", "{crafted}/demo12_tsoff", "{crafted}/demo12_tsoff2", "{crafted}/demo12_tsoff_pfd"]
+
+# TIMES_Demo demo12_ptdf + demo12_tsoff (19 Nov 2026): dynamic timeslice trees (TS_OFF, %DYNTS% YES) with
+# the PTDF rows EQ_GR_PTDFLO, EQ_GR_VIRTCAP (powerflo.vda L264, L278), so that their RTS(S) domain (S+NORTS(R,T,S), timslice.mod L31-39) drops the timeslices turned off
+# (M1.3 change 67). No DD file of its own.
+[[model]]
+name = "TIMES_Demo-demo12_tsoff_ptdf"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_tsoff_ptdf/demo12_tsoff_ptdf.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa", "{crafted}/demo12_pfd", "{crafted}/demo12_ptdf", "{crafted}/demo12_tsoff", "{crafted}/demo12_tsoff_ptdf"]
+
+# TIMES_Demo demo12_pfx + demo12_tsoff (19 Nov 2026): dynamic timeslice trees (TS_OFF, %DYNTS% YES) with
+# the grid exchange bound rows EQ_GR_XBND (powerflo.vda L343), so that their RTS(S) domain (S+NORTS(R,T,S), timslice.mod L31-39) drops the timeslices turned off
+# (M1.3 change 67). No DD file of its own.
+[[model]]
+name = "TIMES_Demo-demo12_tsoff_pfx"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_tsoff_pfx/demo12_tsoff_pfx.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa", "{crafted}/demo12_pfd", "{crafted}/demo12_pfx", "{crafted}/demo12_tsoff", "{crafted}/demo12_tsoff2", "{crafted}/demo12_tsoff_pfx"]
+
+# TIMES_Demo demo12_gg2 + demo12_tsoff (19 Nov 2026): dynamic timeslice trees (TS_OFF, %DYNTS% YES) with
+# the gas grid rows EQ_GG_* (gasgrids.vda L154-200), so that their RTS(S) domain (S+NORTS(R,T,S), timslice.mod L31-39) drops the timeslices turned off
+# (M1.3 change 67). No DD file of its own.
+[[model]]
+name = "TIMES_Demo-demo12_tsoff_gg2"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_tsoff_gg2/demo12_tsoff_gg2.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_gg", "{crafted}/demo12_gg2", "{crafted}/demo12_tsoff", "{crafted}/demo12_tsoff_gg2"]
+
+# TIMES_Demo demo12_afc + demo12_tsoff (19 Nov 2026): dynamic timeslice trees (TS_OFF, %DYNTS% YES) with
+# the capacity-flow rows EQL_CAPFLO (eqcaflac.vda L40), so that their RTS(S) domain (S+NORTS(R,T,S), timslice.mod L31-39) drops the timeslices turned off
+# (M1.3 change 67). No DD file of its own.
+[[model]]
+name = "TIMES_Demo-demo12_tsoff_afc"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_tsoff_afc/demo12_tsoff_afc.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_refit", "{crafted}/demo12_refit_afc", "{crafted}/demo12_tsoff", "{crafted}/demo12_tsoff_afc"]
+
+# TIMES_Demo demo12_stsflx + demo12_tsoff (19 Nov 2026): dynamic timeslice trees (TS_OFF, %DYNTS% YES) with
+# storage flexibility (%STSFLX% YES): the storage rows EQ_STGTSS, EQ_STSBAL and EQ_STSLEV (eqstgtss.mod L13,
+# L53, L88), so that their RTS(S) domain drops the timeslices turned off (M1.3 change 67). No DD file of its
+# own. (demo12_tsoff_stgccl, with the storage cycle limit, is infeasible in GAMS.)
+[[model]]
+name = "TIMES_Demo-demo12_tsoff_stsflx"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_tsoff_stsflx/demo12_tsoff_stsflx.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_stsflx", "{crafted}/demo12_tsoff", "{crafted}/demo12_tsoff_stsflx"]
+
+# TIMES_Demo demo12 + demo12_afshp/afshp.dd (19 Nov 2026): shaped availability factors, NCAP_AFX, NCAP_AFM
+# (also as NCAP_AFSM) and NCAP_AFSX, with SHAPE and MULTI rows (coef_cpt.mod L42-62, pp_shapr.mod L19-46;
+# M1.3 change 66).
+[[model]]
+name = "TIMES_Demo-demo12_afshp"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_afshp/demo12_afshp.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_afshp"]
+
 # TIMES_Demo demo12 with %TIMESED% NO (19 Nov 2026): the base run of elastic demand. The model is demo12's;
 # after the solve wrtbprice.mod (maindrv.mod L121-122) writes the base prices (com_bprice.gdx), which
 # demo12_ed reads. M1.3 change 69.
@@ -1079,34 +1291,3 @@ kind = "run"
 run_file = "{crafted}/demo12_edagg/demo12_edagg.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_edagg", "{crafted}/demo12_ed"]
 work_files = ["{crafted}/demo12_ed/com_bprice.gdx"]
-
-# TIMES_Demo demo12_pf + demo12_pfdf/pfdf.dd (19 Nov 2026): a second grid node in REG1 (the line of
-# demo12_pfd) and total demand fractions given as data (GR_DEMFR), with no sectoral fractions, so the
-# total demand path of the allocation rows EQ_GR_DEMALL (powerflo.vda L40, L107, L131, L140, L314-340;
-# M1.3 change 65).
-[[model]]
-name = "TIMES_Demo-demo12_pfdf"
-tier = "crafted"
-source_repo = "etsap-TIMES/TIMES_Demo"
-licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
-licence_checked = "2026-10-27"
-licence = "CC-BY-4.0"
-redistribute = "public"
-kind = "run"
-run_file = "{crafted}/demo12_pfdf/demo12_pfdf.run"
-idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfdf"]
-
-# TIMES_Demo demo12 + demo12_afshp/afshp.dd (19 Nov 2026): shaped availability factors, NCAP_AFX, NCAP_AFM
-# (also as NCAP_AFSM) and NCAP_AFSX, with SHAPE and MULTI rows (coef_cpt.mod L42-62, pp_shapr.mod L19-46;
-# M1.3 change 66).
-[[model]]
-name = "TIMES_Demo-demo12_afshp"
-tier = "crafted"
-source_repo = "etsap-TIMES/TIMES_Demo"
-licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
-licence_checked = "2026-10-27"
-licence = "CC-BY-4.0"
-redistribute = "public"
-kind = "run"
-run_file = "{crafted}/demo12_afshp/demo12_afshp.run"
-idirs = ["{times_demo}/model", "{crafted}/demo12_afshp"]
