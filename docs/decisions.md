@@ -141,6 +141,12 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 | --- | --- | --- | --- |
 | 1 | `run_model` (src/run.jl) calls `Highs_resetGlobalScheduler(1)` before and after its HiGHS solve (HiGHS.jl README, Threads). Without it, a later HiGHS solve in the same process that asks for more threads than `run_model`'s 12 stops with OTHER_ERROR; on the workstation (48 CPUs, HiGHS's default 24 threads) the full test suite failed in every solve after `test_run_model.jl` (#167) since 18 Nov 2026, while GitHub's runners have too few CPUs to show it. Run code, not translated GAMS code; the LP is unchanged. | Recommended: yes. Built in. | open |
 
+### #175 M1.3 (66): shaped availability, NCAP_AFX/AFM/AFSX/AFSM (coef_cpt.mod L42-58, pp_shapr.mod L19-40); crafted case demo12_afshp (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the crafted case demo12_afshp (demo12 + afshp.dd, CC BY 4.0) with one public CI fixture (as run, about 8.5 MB with the coefficient files, so that CI runs the new code). | Recommended: yes. Built in. | open |
+
 ### #174 M1.3 (65): total demand fractions given as data, GR_DEMFR (powerflo.vda L40, L107, L131); crafted case demo12_pfdf (open)
 
 | # | Question | Decided | How |
@@ -156,6 +162,7 @@ Asked for by James on 19 Nov 2026 ("allow TIMES-NZ runs on HiGHS 24 hours run ti
 | 1 | The layer-3 HiGHS solve of `scripts/m13_gate.jl` (the nightly's `dd-<model>` jobs) gets 24 hours on every model (`HIGHS_TIME_LIMIT = 86400`), up from one hour. | Recommended: yes. Built in. | open |
 | 2 | A nightly pass can now run much longer: the TIMES-NZ shift job solves two variants, up to 48 hours on 12 threads in the worst case, and the loop starts no new pass until every job ends. `STOP-nightly` still stops a pass. | Recommended: accept. Built in. | open |
 | 3 | The GAMS reference solves keep `RESLIM=50000` (about 14 hours) from each model's own run file (model input); the CI unit tests keep 600 s; the cuOpt lane is not HiGHS. | Recommended: leave as is. Built in. | open |
+
 ### #171 README: status without the pre-MVP label; probes of the 18-19 Nov nightly (open)
 
 Asked for by James on 19 Nov 2026 ("update the read.me for update probe status. remove the pre MPV status of TIMES.jl. the model now runs well from city, national, multi-regional models.").
