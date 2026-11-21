@@ -141,6 +141,11 @@ function run_model(runfile::AbstractString; dd=String[], out=nothing, solve::Boo
     highs = optimizer === HiGHS.Optimizer
     label = highs ? "HiGHS" : "the solver"
     attrs = highs ? ("threads" => Int(threads),) : ()
+    # HiGHS keeps one thread scheduler per process, sized by the first solve; a later solve that asks
+    # for more threads stops with OTHER_ERROR ("the scheduler has already been initialized"). As the
+    # HiGHS.jl README says (Threads), reset it before a solve with `threads`, so that they apply, and
+    # after it, so that a later solve in the same session with HiGHS's own default is not refused.
+    reset_highs() = highs && HiGHS.Highs_resetGlobalScheduler(1)
     run = abspath(runfile)
     isfile(run) || throw(ArgumentError("no run file $run"))
     dirs = isempty(dd) ? [dirname(run)] : [abspath(d) for d in dd]
@@ -194,13 +199,16 @@ function run_model(runfile::AbstractString; dd=String[], out=nothing, solve::Boo
                                      info.columns, " columns; ", label, " ", info.status, ", objective ", info.objective,
                                      "; prepared, generated, solved in ", round(info.prepare_s; digits=1), ", ",
                                      round(info.generate_s; digits=1), ", ", round(info.solve_s; digits=1), " s")
+        reset_highs()
         steps = try
             solve_stepped!(tm, optimizer; attributes=attrs, step_hook=hook)
         catch e
+            reset_highs()
             e isa Union{UnportedError,ErrorException} || rethrow()
             say("== $name: ", e isa UnportedError ? "not translated, in the stepped solve: " : "", sprint(showerror, e))
             return result(false, e isa UnportedError ? :not_translated : :failed; tm=tm, err=e)
         end
+        reset_highs()
         say("== $name: stepped run solved in ", length(steps), " steps; objective of the last step ", steps[end].objective,
             "; the solution of a stepped run is not written yet (M1.6)")
         return result(true, :solved; tm=tm, obj=steps[end].objective, steps=steps)
@@ -214,7 +222,9 @@ function run_model(runfile::AbstractString; dd=String[], out=nothing, solve::Boo
     JuMP.set_optimizer(m, optimizer)
     JuMP.set_silent(m)
     foreach(((a, v),) -> JuMP.set_attribute(m, a, v), attrs)
+    reset_highs()
     ts = @elapsed JuMP.optimize!(m)
+    reset_highs()
     st = JuMP.termination_status(m)
     obj = st == JuMP.OPTIMAL ? JuMP.objective_value(m) : nothing
     say("== $name: ", JuMP.solver_name(m), " ", st, " in ", round(ts; digits=1), " s", obj === nothing ? "" : ", objective $obj")

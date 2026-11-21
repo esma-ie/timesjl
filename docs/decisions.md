@@ -148,6 +148,13 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 | 3 | Harness 0.3.6: `work_files`, files the harness copies into GAMS's work folder before each run (here the base prices). | Recommended: yes. Built in. | answered by James, 20 Nov 2026: yes ("d3 yes"); confirmed 21 Nov 2026: "d3 yes" |
 
 ### #178 Plan for the stochastic extension; q1 and q2 of 19 Nov 2026 (merged 21 Nov 2026)
+### #181 run_model: reset HiGHS's thread scheduler around its solve (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | `run_model` (src/run.jl) calls `Highs_resetGlobalScheduler(1)` before and after its HiGHS solve (HiGHS.jl README, Threads). Without it, a later HiGHS solve in the same process that asks for more threads than `run_model`'s 12 stops with OTHER_ERROR; on the workstation (48 CPUs, HiGHS's default 24 threads) the full test suite failed in every solve after `test_run_model.jl` (#167) since 18 Nov 2026, while GitHub's runners have too few CPUs to show it. Run code, not translated GAMS code; the LP is unchanged. | Recommended: yes. Built in. | open |
+
+### #178 Plan for the stochastic extension; q1 and q2 of 19 Nov 2026 (open)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
