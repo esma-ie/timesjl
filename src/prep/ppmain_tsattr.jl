@@ -26,16 +26,16 @@
 """
     ppmain_tsattr_unported(tm) -> Vector{String}
 
-What ppmain.mod L683-797 meets that is not translated: TIMES-Micro (L749,
-pp_micro.mod). The dynamic timeslice tree of L742 (`RTS(S)` is
+What ppmain.mod L683-797 meets that is not translated: TIMES-Micro's
+nonlinear form (%MICRO% YES; pp_micro.mod NLP). Elastic demand's linear
+preprocessing (L749, pp_micro.mod PRE) is translated since M1.3 change 69. The dynamic timeslice tree of L742 (`RTS(S)` is
 `S+NORTS(R,T,S)` when %DYNTS% is YES and TS_OFF has data, timslice.mod
 L31-33, L39) is translated since M1.3 change 63.
 """
 function ppmain_tsattr_unported(tm)
     out = String[]
     yes(n) = uppercase(gswitch(tm, n, "")) == "YES"
-    # maindrv.mod L25: %MICRO% YES sets %TIMESED% YES unless the run set it otherwise
-    (yes("TIMESED") || yes("MICRO")) && push!(out, "ppmain.mod L749 (%TIMESED% YES: pp_micro.mod PRE, TIMES-Micro)")
+    yes("MICRO") && push!(out, "eqobjels.mod L10 (%MICRO% YES: pp_micro.mod NLP, TIMES-Micro's nonlinear form)")
     return out
 end
 
@@ -553,6 +553,8 @@ function ppmain_tsattr!(tm)
     # --- L747-754: elastic demands ------------------------------------------------------------------
     # L747: OPTION DEM < COM_PROJ
     gput!(tm, "DEM", project(gparam_opt(tm.data, "COM_PROJ", 3).keys, (1, 3)))
+    # L749: $IF %TIMESED%==YES $BATINCLUDE pp_micro.mod PRE (M1.3 change 69)
+    timesed_on(tm) && pp_micro_pre!(tm)
     # L751-752: COM_ELAST(R,T,C,S,BDNEQ(BD))$COM_ELAST(R,T,C,S,BD) =
     #   -ABS(COM_ELAST(R,T,C,S,BD)-1+1)$SUM(RDCUR(R,CUR),COM_BPRICE(R,T,C,S,CUR)*COM_VOC(R,T,C,BD)>0)
     cel = gvalues(tm, "COM_ELAST", 5)

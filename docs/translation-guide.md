@@ -1108,6 +1108,28 @@ those checks, their figures and their crafted cases are not published
   PRC_RCAP outside RP kept; eqobjinv.mod L219-229, an EPS COEF_ILED gives
   interest during construction). New crafted case demo12_iled: layers 1
   to 3 PASS in both variants from the DD files (objective 23,961,179.22).
+- 19 Nov 2026: M1.3 change 69: elastic demand, the linear form (%TIMESED%
+  YES), with the base prices read from and written to TIMES.jl's own Arrow
+  folder (q1). New crafted cases demo12_edbase, demo12_ed and demo12_edagg:
+  layers 1 to 3 PASS in both variants from the DD files.
+- 19 Nov 2026: M1.3 change 68: dynamic timeslices, the re-interpolation
+  of dynslite.vda POSTLEV (L91-103). New crafted case demo12_tsoff_rint:
+  layers 1 to 3 PASS in both variants from the DD files.
+- 19 Nov 2026: M1.3 change 66: shaped availability factors (NCAP_AFX,
+  NCAP_AFM, NCAP_AFSX, NCAP_AFSM; coef_cpt.mod L42-58, pp_shapr.mod
+  L19-40). New crafted case demo12_afshp: layers 1 to 3 PASS in both
+  variants from the DD files (objective 23,962,468.09).
+- 19 Nov 2026: M1.3 change 65: total demand fractions given as data
+  (GR_DEMFR; powerflo.vda L40, L107, L131), the last linear refusal of
+  the power-flow main block (the PTDF candidate lines of a MIP stay
+  refused until after the gate). New crafted case demo12_pfdf: layers 1 to 3
+  PASS in both variants from the DD files (objective 23,960,685.74).
+
+- 19 Nov 2026: M1.3 change 67: dynamic timeslices, the RTS(S) rows of the
+  storage, dispatching, load shifting, ASHAR, CAPFLO, unit commitment,
+  residual load curve, power-flow and gas grid families. Twelve crafted
+  cases demo12_tsoff_*: layers 1 to 3 PASS from the DD files (layers 1
+  and 2 on the one GAMS finds infeasible). D46 logged.
 - 18 Nov 2026: `run_model` (James: TIMES.jl usable without cloning the
   repository). The run from a run file and DD files moves from
   `scripts/run_dd.jl` into the package (`src/run.jl`), with HiGHS as a

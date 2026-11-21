@@ -109,6 +109,7 @@ function eqobjinv_prep!(tm::TimesModel)
     # OBV('OBJSAL') and the second OBV are the same controlled index: only (OBJSAL,OBJSAL)
     "OBJSAL" in obv && gassign!(sum_obj, ("OBJSAL", "OBJSAL"), -1.0)
     rcj_r = Set(k[1] for k in S("RCJ", 4))
+    isempty(rcj_r) || register_uel!(tm.data, "OBJELS")    # a label of the code, in the dump once a record has it (G36)
     for (r,) in S("REG", 1)
         gassign!(sum_obj, (r, "OBJELS"), r in rcj_r ? 1.0 : 0.0)
     end

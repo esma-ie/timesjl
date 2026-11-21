@@ -371,6 +371,7 @@ function eq_lducs!(tm::TimesModel)
     modlyear, T = S("MODLYEAR", 1), S("MILESTONYR", 1)
     tx = eq_periods(tm)   # %R_V_T%: SUBT in a stepped run (maindrv.mod L38-40)
     vt_ok(v, t) = (v,) in modlyear && (t,) in tx
+    off = rts_off(tm)                    # RTS(s): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     vt_of_rp = indexby(gset(tm, "RTP_VINTYR"), (1, 4))                     # (r,p) -> RTP_VINTYR(r,v,t,p)
     prc_ts, prc_tsl = S("PRC_TS", 3), S("PRC_TSL", 3)
     ts_of_rp = indexby(prc_ts, (1, 2))                                     # (r,p) -> PRC_TS(r,p,ts)
@@ -446,7 +447,7 @@ function eq_lducs!(tm::TimesModel)
     # the rows by timeslice level: (r,v,t,p,tsl,s) with RP_DPL(r,p,tsl) and TS_GROUP(r,tsl,s)
     lvl_rows = NTuple{6,String}[]
     for (r, p, tsl) in rp_dpl, (_, _, s) in get(group_of, (r, tsl), no3), (_, v, t, _) in get(vt_of_rp, (r, p), no4)
-        vt_ok(v, t) && push!(lvl_rows, (r, v, t, p, tsl, s))
+        vt_ok(v, t) && !off(r, t, s) && push!(lvl_rows, (r, v, t, p, tsl, s))
     end
 
     # eq_sdlogic, L67-70
@@ -516,7 +517,7 @@ function eq_lducs!(tm::TimesModel)
     # the rows by timeslice of the process: (r,v,t,p,s) with PRC_TS(r,p,s) and RP_DP(r,p)
     ts_rows = NTuple{5,String}[]
     for (r, p) in rp_dp, (_, _, s) in get(ts_of_rp, (r, p), no3), (_, v, t, _) in get(vt_of_rp, (r, p), no4)
-        vt_ok(v, t) && push!(ts_rows, (r, v, t, p, s))
+        vt_ok(v, t) && !off(r, t, s) && push!(ts_rows, (r, v, t, p, s))
     end
     gams_sort!(ts_rows, d)
 
@@ -556,7 +557,7 @@ function eq_lducs!(tm::TimesModel)
     for (r, p) in rp_dp, (_, _, tsl) in get(tsl_of_rp, (r, p), no3), (_, _, s) in get(group_of, (r, tsl), no3),
         (_, v, t, _) in get(vt_of_rp, (r, p), no4)
 
-        vt_ok(v, t) && push!(own_rows, (r, v, t, p, tsl, s))
+        vt_ok(v, t) && !off(r, t, s) && push!(own_rows, (r, v, t, p, tsl, s))
     end
 
     # eq_sudtime, L107-114

@@ -5,7 +5,7 @@
 # - the objective: GAMS/CPLEX's OBJZ (fixture demo12_off_solution.json; reduce_off and as_run reach
 #   the same optimum, 23960685.737 in both reference runs), at the layer-3 tolerance 1e-6.
 using Test, TOML, JSON
-import JuMP
+import JuMP, HiGHS
 using TIMES: times_demo_dir, run_switches, PRESOLVE_STEPS
 
 let fx = only(filter(f -> f["prefix"] == "demo12_red",
@@ -27,6 +27,17 @@ let fx = only(filter(f -> f["prefix"] == "demo12_red",
     @test isdir(joinpath(out, "solution"))
     @test isfile(joinpath(out, "demo12.run"))       # the patched copy; the run file itself is untouched
     @test !occursin("SOLVE_NOW NO", read(run, String))
+
+    # run_model solves with `threads` (12 by default) and then resets HiGHS's thread scheduler: a later
+    # solve in the same process with HiGHS's default thread count (half the machine's CPUs) is not
+    # refused with OTHER_ERROR. On a machine with more than 24 CPUs it was, before the reset.
+    let t = JuMP.Model(HiGHS.Optimizer)
+        JuMP.set_silent(t)
+        JuMP.@variable(t, x >= 1)
+        JuMP.@objective(t, Min, x)
+        JuMP.optimize!(t)
+        @test JuMP.termination_status(t) == JuMP.OPTIMAL
+    end
 
     g = run_model(run; solve=false, verbose=false)
     @test g.ok && g.status == :generated && g.objective === nothing

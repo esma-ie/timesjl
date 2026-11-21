@@ -458,11 +458,13 @@ function eq_rl!(tm::TimesModel)
     foreach(k -> (k[4] == "OUT" && (k[1], k[2], k[3]) in rpc_stg && (k[1], k[3]) in nrg_elc) &&
                  push!(get!(stg_out_of, k[1], NTuple{2,String}[]), (k[2], k[3])), top.keys)
     rows = [(r, t) for (r, t) in gr_rldc.keys if (t,) in milestonyr && (t,) in tx]
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     fin_of = Dict{String,Vector{String}}()
     foreach(k -> push!(get!(fin_of, k[1], String[]), k[2]), S("FINEST").keys)
     n = 0
     # EQ_RL_LOAD
     for (r, t) in rows, s in get(fin_of, r, String[])
+        off(r, t, s) && continue         # RTS(S) (M1.3 change 67)
         yr = gv(g_yrfr, (r, s))
         lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
         production!(lhs, r, t, s, p -> haskey(genmap.values, (r, p, "RL-DISP")))
@@ -492,6 +494,7 @@ function eq_rl!(tm::TimesModel)
     end
     # EQ_RL_NDIS
     for (r, t) in rows, s in get(fin_of, r, String[]), item in rldc
+        off(r, t, s) && continue         # RTS(S) (M1.3 change 67)
         haskey(vargen.values, (r, "ANNUAL", item, "FX")) || continue
         lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
         production!(lhs, r, t, s, p -> (r, p, item) in gr_rlgt)
@@ -500,6 +503,7 @@ function eq_rl!(tm::TimesModel)
     end
     # EQ_RL_STCAP
     for (r, t) in rows, s in get(fin_of, r, String[])
+        off(r, t, s) && continue         # RTS(S) (M1.3 change 67)
         lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
         for (p, c) in get(stg_out_of, r, NTuple{2,String}[])
             ((r, p) in prc_cap && (r, p, s) in prc_ts) || continue
@@ -522,6 +526,7 @@ function eq_rl!(tm::TimesModel)
     end
     # EQ_RL_PKCAP
     for (r, t) in rows, s in get(fin_of, r, String[])
+        off(r, t, s) && continue         # RTS(S) (M1.3 change 67)
         lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
         for (rr, p, item) in gr_rlgt.keys
             (rr == r && item == "RL-DISP" && (r, p) in prc_cap) || continue
@@ -547,6 +552,7 @@ function eq_rl!(tm::TimesModel)
     end
     # EQ_RL_THMIN
     for (r, t) in rows, ts in get(fin_of, r, String[]), bd in ("LO", "UP")
+        off(r, t, ts) && continue        # RTS(TS) (M1.3 change 67)
         (bd == "LO" || "RL-THMIN" in rldc) || continue                    # BDLOX(BDNEQ)+RLDC('RL-THMIN')
         lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
         rld!(lhs, gv(bdsig, (bd,)), r, t, ts, "RL_THMIN")

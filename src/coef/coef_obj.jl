@@ -17,9 +17,9 @@
 # that reads it later (eqobjinv.mod L86). ACL and RPT_OPT are read by the
 # reports only (cost_ann.rpt L16, L26, L90; rpt_obj.rpt L127).
 #
-# Not translated (UnportedError): VALIDATE (L114,
-# L137, L191-201) and elastic demand shapes under TIMESED/MICRO (L184-189) -
-# no reference run has either. Blending (L93-94): OBJ_BLNDV, the cost of a
+# Not translated (UnportedError): VALIDATE (L114, L137, L191-201); no
+# reference run has it. The elastic demand shapes (L180-189, %TIMESED% YES)
+# are translated since M1.3 change 69 (`elastic_shapes!`). Blending (L93-94): OBJ_BLNDV, the cost of a
 # unit of a stream OPR blended into BLE, the same in every year of Y_EOH:
 # BL_VAROMC plus the delivery cost BL_DELIVC of each other input BL_INP. `$IF
 # DEFINED R_CUREX` (L99) holds exactly when R_CUREX has data at this stage:
@@ -39,8 +39,6 @@ function coef_obj_unported(tm)
     out = String[]
     sw(n) = uppercase(gswitch(tm, n, ""))
     sw("VALIDATE") == "YES" && push!(out, "coef_obj.mod L114, L137, L191-201 (VALIDATE YES)")
-    (sw("TIMESED") == "YES" || sw("MICRO") == "YES") &&
-        push!(out, "coef_obj.mod L184-189 (elastic demand shapes, TIMESED/MICRO)")
     return out
 end
 
@@ -651,5 +649,62 @@ function coef_obj!(tm)
     gput!(tm, "PRC_YMAX", Dict{NTuple{2,String},Float64}())
     gput!(tm, "RPC_CUR", Set{NTuple{4,String}}())
     gput!(tm, "OBJ_FSUB", Dict{NTuple{6,String},Float64}())
+    # L180-181: $IF NOT %VALIDATE%==YES / $IF NOT %TIMESED%==YES $GOTO TCOST (VALIDATE YES is refused)
+    timesed_on(tm) && elastic_shapes!(tm)
+    return tm
+end
+
+"""
+    elastic_shapes!(tm) -> tm
+
+The shaped demand elasticities (%TIMESED% YES): SHEDJ, the shape indexes in use (with '1' for
+both directions); SHAPED, the cumulated price factor of each percent of demand change up to the
+largest COM_VOC with a shape (capped at 100 downwards); BDSIG is used as scratch for those
+limits and set back to 1 and -1.
+
+GAMS: coef_obj.mod L184-189, v4.9.7.
+"""
+function elastic_shapes!(tm)
+    bdneq = [k[1] for k in gset(tm, "BDNEQ").keys]
+    bdupx = Set(k[1] for k in gset(tm, "BDUPX").keys)
+    jlab = [k[1] for k in gset(tm, "J").keys]
+    ages = [k[1] for k in gset(tm, "AGE").keys]
+    shed = gset_opt(tm.data, "RTC_SHED", 5).keys
+    voc = gparam_opt(tm.data, "COM_VOC", 4)
+    shape = gparam_opt(tm.data, "SHAPE", 2)
+    # L184: SHEDJ(BD,J) $= SUM(RTC_SHED(R,T,C,BD,J),1); SHEDJ(BDNEQ,'1') = YES
+    shedj = gmembers(tm, "SHEDJ", 2)
+    foreach(k -> push!(shedj, (k[4], k[5])), shed)
+    foreach(b -> push!(shedj, (b, "1")), bdneq)
+    # L186: BDSIG(BDNEQ)=CEIL(SMAX(RTC_SHED(R,T,C,BDNEQ,J),COM_VOC(R,T,C,BDNEQ))*100); BDSIG('LO')=MIN(100,BDSIG('LO'))
+    lim = Dict{String,Float64}()
+    for b in bdneq
+        m = -Inf                                       # SMAX over nothing is -INF (G31)
+        foreach(k -> k[4] == b && (m = max(m, gv(voc, (k[1], k[2], k[3], b)).v)), shed)
+        lim[b] = ceil(m * 100)
+    end
+    haskey(lim, "LO") && (lim["LO"] = min(100.0, lim["LO"]))
+    # L187: SHAPED(SHEDJ(BDNEQ,J),AGE)$(ORD(AGE) LE BDSIG(BDNEQ)) = (1+.01/(1+(ORD(AGE)-1)/100))**(1/MAX(1E-3,SHAPE(J,AGE)))
+    shaped = gvalues(tm, "SHAPED", 3)
+    for (b, j) in gams_sort!(collect(shedj), tm.data)
+        b in bdneq || continue
+        for (i, a) in enumerate(ages)
+            i <= lim[b] || break
+            sh = gv(shape, (j, a)).v
+            gassign!(shaped, (b, j, a), gpow(GNum(1 + 0.01 / (1 + (i - 1) / 100)), GNum(1 / max(1e-3, sh))))
+        end
+    end
+    # L188: LOOP((AGE,SPAN(AGE-1),BDNEQ(BD))$(ORD(AGE) LE BDSIG(BD)),SHAPED(SHEDJ(BD,J),AGE) = SHAPED(BD,J,AGE)*SHAPED(BD,J,SPAN))
+    for i in 2:length(ages), b in bdneq
+        i <= lim[b] || continue
+        for (bb, j) in shedj
+            bb == b || continue
+            gassign!(shaped, (b, j, ages[i]), gv(shaped, (b, j, ages[i])) * gv(shaped, (b, j, ages[i-1])))
+        end
+    end
+    # L189: BDSIG(BDNEQ) = 1-2$BDUPX(BDNEQ) (as setglobs.gms L248 declares it: the scratch values go)
+    bdsig = gvalues(tm, "BDSIG", 1)
+    foreach(b -> gassign!(bdsig, (b,), b in bdupx ? -1.0 : 1.0), bdneq)
+    gput!(tm, "SHEDJ", shedj); gput!(tm, "SHAPED", shaped); gput!(tm, "BDSIG", bdsig)
     return tm
 end

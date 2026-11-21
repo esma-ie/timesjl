@@ -72,7 +72,7 @@ end
                                 "demo12_ucattr", "demo12_flomrk", "demo12_mrkx", "demo12_cumc", "demo12_ashar",
                                 "demo12_lev", "demo12_levstd", "demo12_bndc", "demo12_flobnd", "demo12_flofr", "demo12_irebnd", "demo12_xbnd", "demo12_disp",
                                 "demo12_blnd", "demo12_capvac", "demo12_bndcst", "demo12_ucv",
-                                "demo12_ls", "demo12_lst", "demo12_pf", "demo12_pfd", "demo12_qa")
+                                "demo12_ls", "demo12_lst", "demo12_pf", "demo12_pfd", "demo12_qa", "demo12_ed", "demo12_edagg", "demo12_tsoff_rint")
     check_dd_case("TIMES_Demo-" * p, p * "_run", p * "_input")
 end
 
