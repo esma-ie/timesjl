@@ -88,7 +88,8 @@ end
 
 """
     run_model(runfile; dd=String[], out=nothing, solve=true, optimizer=HiGHS.Optimizer,
-              threads=TIMESJL_THREADS or 12, licence_level=0, write_solution=true, verbose=true)
+              threads=TIMESJL_THREADS or 12, optfile=nothing, licence_level=0, write_solution=true,
+              verbose=true)
 
 Run a TIMES model from its run file and DD files, without GAMS:
 
@@ -112,6 +113,13 @@ A stepped (myopic) run (`TIMESTEP`) has no single model: with `solve=true` it is
 
 - `dd`: the folders holding the DD files, searched in order; by default the run file's folder.
 - `out`: where the output goes; a new temporary folder by default.
+- `optfile`: the solver option file, as GAMS TIMES reads one (solve.mod L14-15). By default
+  (`nothing`), `highs.opt` in the run file's folder if there is one, as GAMS reads `<solver>.opt`
+  from its working folder; a path names another file; `false` reads none. It is read for HiGHS
+  only (`optimizer=HiGHS.Optimizer`): GAMS option-file lines (`solver ipm`, `run_crossover=off`,
+  `*` comments) with HiGHS's own option names. A line HiGHS does not take is left out with a note,
+  and `threads` stays the limit (`highs_options`). Another solver's file in the run folder, such as
+  VEDA's `cplex.opt`, is not read: the run says so.
 - `licence_level`: GAMS's `%SYSTEM.LICENSELEVEL%`, 0 as a full licence (`docs/known-differences.md` K3).
 - `verbose`: print one line per stage, starting `==` (as `scripts/run_dd.jl` does).
 
@@ -122,7 +130,8 @@ Returns a named tuple: `ok` (true when the run got as far as asked: solved to op
 `solve=true`), `status` (`:not_translated`, `:failed`, `:generated`, `:stepped` (a stepped run not
 solved), `:solved`), `termination_status` (JuMP's, or `nothing`), `objective` (or `nothing`),
 `model` (the `TimesModel`; its JuMP model is `model.model`), `steps` (a stepped run's steps, or
-`nothing`), `out`, `error` (or `nothing`).
+`nothing`), `out`, `error` (or `nothing`), `optfile` (the option file read, or `nothing`) and
+`solver_options` (the `name => value` pairs given to the solver, `threads` among them for HiGHS).
 
 The results come with no comparison with GAMS: `scripts/m13_gate.jl --from-dd` checks a model of
 the reference suite against its GAMS runs.
@@ -135,12 +144,13 @@ r.objective
 ```
 """
 function run_model(runfile::AbstractString; dd=String[], out=nothing, solve::Bool=true, optimizer=HiGHS.Optimizer,
-                   threads::Integer=parse(Int, get(ENV, "TIMESJL_THREADS", "12")), licence_level::Integer=0,
-                   write_solution::Bool=true, verbose::Bool=true)
+                   threads::Integer=parse(Int, get(ENV, "TIMESJL_THREADS", "12")), optfile=nothing,
+                   licence_level::Integer=0, write_solution::Bool=true, verbose::Bool=true)
     say(x...) = verbose && println(x...)
     highs = optimizer === HiGHS.Optimizer
     label = highs ? "HiGHS" : "the solver"
-    attrs = highs ? ("threads" => Int(threads),) : ()
+    attrs = Pair{String,Any}[]
+    highs && push!(attrs, "threads" => Int(threads))
     # HiGHS keeps one thread scheduler per process, sized by the first solve; a later solve that asks
     # for more threads stops with OTHER_ERROR ("the scheduler has already been initialized"). As the
     # HiGHS.jl README says (Threads), reset it before a solve with `threads`, so that they apply, and
@@ -151,8 +161,38 @@ function run_model(runfile::AbstractString; dd=String[], out=nothing, solve::Boo
     dirs = isempty(dd) ? [dirname(run)] : [abspath(d) for d in dd]
     out = out === nothing ? mktempdir() : abspath(out)
     name = splitext(basename(run))[1]
+
+    # The solver option file (solver_options.jl; GAMS: solve.mod L14-15), read before the run starts
+    # so that a wrong path stops it at once. Its options follow `threads`, so a smaller `threads` in
+    # the file wins; highs_options keeps a larger one to the limit.
+    opt, notes = nothing, String[]
+    if optfile === nothing && solve && highs
+        opt, notes = find_optfile(dirname(run), "HiGHS")
+    elseif optfile === nothing && solve        # another solver: its option file is not read
+        for f in sort(readdir(dirname(run)))
+            lf = lowercase(f)
+            endswith(lf, ".opt") && lf != "convert.opt" && push!(notes, "$f not read: option files are read for HiGHS only")
+        end
+    elseif optfile !== nothing && optfile !== false
+        opt = abspath(optfile)
+        isfile(opt) || throw(ArgumentError("no option file $opt"))
+        highs || throw(ArgumentError("option files are read for HiGHS only (optimizer=HiGHS.Optimizer); " *
+                                     "give another solver its options with JuMP.optimizer_with_attributes"))
+    end
+    if opt !== nothing
+        given, bad = highs_options(read_optfile(opt); threads=threads)
+        append!(notes, bad)
+        for p in given
+            filter!(q -> q.first != p.first, attrs)
+            push!(attrs, p)
+        end
+        say("== $name: HiGHS options from $opt: ", join(("$k $v" for (k, v) in attrs), ", "))
+    end
+    foreach(n -> say("== $name: option file: ", n), notes)
+
     result(ok, status; tm=nothing, ts=nothing, obj=nothing, steps=nothing, err=nothing) =
-        (ok=ok, status=status, termination_status=ts, objective=obj, model=tm, steps=steps, out=out, error=err)
+        (ok=ok, status=status, termination_status=ts, objective=obj, model=tm, steps=steps, out=out, error=err,
+         optfile=opt, solver_options=attrs)
 
     # As the reference harness does (make_reference.py, runfile.py): a copy of the run file with
     # SOLVE_NOW NO just before maindrv.mod, so that GAMS's solve and report files (solve.mod L22,
