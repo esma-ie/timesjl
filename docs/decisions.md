@@ -52,6 +52,7 @@ answer yet.
 | 15 Nov 2026 | chat | The workstation batch's DD-file stage: the HiGHS solve of TIMES-NZ shift with REDUCE off hit its one-hour limit on 14 Nov 2026 (3,625.7 s; with REDUCE on it solved in 2,658 s). Solve TIMES-NZ in that stage with REDUCE on only, its REDUCE-off model still compared with GAMS's matrix and cross-evaluated? | yes | Open; the batch keeps its one-hour limit meanwhile. |
 | 17 Nov 2026 | #155 | coef_nio.mod L58 computes COEF_RCOM from COEF_CPT before coef_alt.lin L77 fills COEF_CPT (coefmain.mod order), so COEF_RCOM is empty outside the capacity transfer and the VAR_RCAP term of cal_cap.mod is never reached; TIMES.jl does the same. Report it to the TIMES maintainers (ETSAP) as a possible ordering issue? | yes, as a note to ETSAP | Open (#155, decision 2). Nothing in TIMES.jl depends on it. |
 | 17 Nov 2026 | #156 | resloadc.vda L111 and L144 read VAR_RLD at 'RL_THMIN' (an underscore) beside 'RL-THMIN': two columns, likely a typo (D45). TIMES.jl follows the code. Report it to ETSAP, in one note with #155 d2 (COEF_RCOM)? | yes, in the same note | Open (#156, decision 3). Nothing in TIMES.jl depends on it. |
+| 19 Nov 2026 | #176 | D46 (timslice.mod L121 divides by zero when the regions have different timeslice trees and there is ramping or start-up data): report it to ETSAP, with the other notes (#122, #155 d2, #156)? Rule-level (a report to ETSAP). | yes, with the other reports | Open (#176, decision 2); #176 merged 21 Nov 2026, which does not answer it. |
 
 Reviewed on 14 Nov 2026 against pull requests #1 to #120 (108 merged, six open: #114, #115, #117 to #120). Four questions that James had answered left this list for the log of their pull requests: the demo12 trade case (#68, #104); refused features before v4.9.8 (#109, decision 3); the stepped solve before the gates (#108, decision 3); the M1.4 CI criterion with demo12_uc refused (#118, decision 2). Five questions asked in the chat and never listed were added (issues #97, #100 and #17, the commit trailer, the unused worktree). Every row of the log that is still "open" is either on this list or is a built-in default of an open pull request, which its merge decides. Later the same evening James merged #114 to #125 (eleven pull requests): their built-in defaults are accepted by merge, and his answers on #120 (decision 5), #121 (decision 2) and #125 (decisions 6, 8, 9 and 10) are in the log of those pull requests. Two more pull requests were opened later that evening, #127 (the dashboard changes James asked for on #125) and #128 (M1.5 change 2); #127's choice of the green and the orange joined this list.
 
@@ -138,7 +139,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
-### #178 Plan for the stochastic extension; q1 and q2 of 19 Nov 2026 (open)
+### #178 Plan for the stochastic extension; q1 and q2 of 19 Nov 2026 (merged 21 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
@@ -162,33 +163,33 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 | --- | --- | --- | --- |
 | 1 | Keep the crafted case demo12_pfdf (demo12 + pf.dd and pfdf.dd, CC BY 4.0) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | accepted by merge, 20 Nov 2026 |
 
-### #176 M1.3 (67): dynamic timeslices, the RTS(S) rows of the other families; twelve crafted cases demo12_tsoff_* (open)
+### #176 M1.3 (67): dynamic timeslices, the RTS(S) rows of the other families; twelve crafted cases demo12_tsoff_* (merged 21 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Keep the twelve crafted cases demo12_tsoff_* and tsoff2.dd (run files only, CC BY 4.0), with three public CI fixtures (demo12_tsoff_disp, _ptdf, _gg2; as run, about 13 MB together); the other nine are checked by the gate from their DD files. | Recommended: yes. Built in. | open |
+| 1 | Keep the twelve crafted cases demo12_tsoff_* and tsoff2.dd (run files only, CC BY 4.0), with three public CI fixtures (demo12_tsoff_disp, _ptdf, _gg2; as run, about 13 MB together); the other nine are checked by the gate from their DD files. | Recommended: yes. Built in. | accepted by merge, 21 Nov 2026 |
 | 2 | D46 (timslice.mod L121 divides by zero when the regions have different timeslice trees and there is ramping or start-up data): report it to ETSAP, with the other notes? Rule-level (a report to ETSAP). | yes, with the other reports | open |
-| 3 | prepret.dsc L75 keeps an EPS upper bound EPS (MIN of the VAR_RCAP and VAR_SCAP bounds); only visible under HOLDFIXED. Fixed in this change rather than in its own PR, as the case that shows it is this change's. | Recommended: yes. Built in. | open |
+| 3 | prepret.dsc L75 keeps an EPS upper bound EPS (MIN of the VAR_RCAP and VAR_SCAP bounds); only visible under HOLDFIXED. Fixed in this change rather than in its own PR, as the case that shows it is this change's. | Recommended: yes. Built in. | accepted by merge, 21 Nov 2026 |
 
-### #173 m13_gate.jl: 24 hours for every HiGHS solve (open)
+### #173 m13_gate.jl: 24 hours for every HiGHS solve (merged 19 Nov 2026)
 
 Asked for by James on 19 Nov 2026 ("allow TIMES-NZ runs on HiGHS 24 hours run time", corrected the same hour to "allow all HiGHS runs 24 hours runtime").
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | The layer-3 HiGHS solve of `scripts/m13_gate.jl` (the nightly's `dd-<model>` jobs) gets 24 hours on every model (`HIGHS_TIME_LIMIT = 86400`), up from one hour. | Recommended: yes. Built in. | open |
-| 2 | A nightly pass can now run much longer: the TIMES-NZ shift job solves two variants, up to 48 hours on 12 threads in the worst case, and the loop starts no new pass until every job ends. `STOP-nightly` still stops a pass. | Recommended: accept. Built in. | open |
-| 3 | The GAMS reference solves keep `RESLIM=50000` (about 14 hours) from each model's own run file (model input); the CI unit tests keep 600 s; the cuOpt lane is not HiGHS. | Recommended: leave as is. Built in. | open |
+| 1 | The layer-3 HiGHS solve of `scripts/m13_gate.jl` (the nightly's `dd-<model>` jobs) gets 24 hours on every model (`HIGHS_TIME_LIMIT = 86400`), up from one hour. | Recommended: yes. Built in. | accepted by merge, 19 Nov 2026 |
+| 2 | A nightly pass can now run much longer: the TIMES-NZ shift job solves two variants, up to 48 hours on 12 threads in the worst case, and the loop starts no new pass until every job ends. `STOP-nightly` still stops a pass. | Recommended: accept. Built in. | accepted by merge, 19 Nov 2026 |
+| 3 | The GAMS reference solves keep `RESLIM=50000` (about 14 hours) from each model's own run file (model input); the CI unit tests keep 600 s; the cuOpt lane is not HiGHS. | Recommended: leave as is. Built in. | accepted by merge, 19 Nov 2026 |
 
-### #171 README: status without the pre-MVP label; probes of the 18-19 Nov nightly (open)
+### #171 README: status without the pre-MVP label; probes of the 18-19 Nov nightly (merged 19 Nov 2026)
 
 Asked for by James on 19 Nov 2026 ("update the read.me for update probe status. remove the pre MPV status of TIMES.jl. the model now runs well from city, national, multi-regional models.").
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | The status box drops "pre-MVP", "Not ready for modelling use" and "For analysis, use TIMES in GAMS"; it keeps the facts: no release, no report parameters or VEDA files yet (M1.6), a few features refused, interfaces may change. | Recommended: yes. Built in. | open |
-| 2 | OTNYC and OTCGEN (both New York City) are named as city models, TIMES-NZ as national, OTUS9r as multi-regional, with a Scale column in the probe table; JRC-EU-TIMES is named as multi-regional for preprocessing only (its matrix and optimum are not compared yet). | Recommended: yes. Built in. | open |
-| 3 | JRC-EU-TIMES verdicts: 850 of 850 sets and parameters match to the end of preprocessing (cli_ll, REDUCE off and as run), QA log identical, DD files compile as GAMS in all nine scenarios; verdicts only (`redistribute = "summary"`). | Recommended: yes. Built in. | open |
+| 1 | The status box drops "pre-MVP", "Not ready for modelling use" and "For analysis, use TIMES in GAMS"; it keeps the facts: no release, no report parameters or VEDA files yet (M1.6), a few features refused, interfaces may change. | Recommended: yes. Built in. | accepted by merge, 19 Nov 2026 |
+| 2 | OTNYC and OTCGEN (both New York City) are named as city models, TIMES-NZ as national, OTUS9r as multi-regional, with a Scale column in the probe table; JRC-EU-TIMES is named as multi-regional for preprocessing only (its matrix and optimum are not compared yet). | Recommended: yes. Built in. | accepted by merge, 19 Nov 2026 |
+| 3 | JRC-EU-TIMES verdicts: 850 of 850 sets and parameters match to the end of preprocessing (cli_ll, REDUCE off and as run), QA log identical, DD files compile as GAMS in all nine scenarios; verdicts only (`redistribute = "summary"`). | Recommended: yes. Built in. | accepted by merge, 19 Nov 2026 |
 | 4 | TIMES-NZ shift REDUCE off: HiGHS reaches the one-hour limit in most batches (also 18-19 Nov); the 3e-9 kept in the table is from the daytime batch of 18 Nov, explained in a note. | Nothing to answer. | logged |
 
 ### #148 M1.3 (47): the VDA betting constraints EQG_UCMAX, EQG_UCSUMAX (ucbet.vda L11-125); crafted case demo12_ucbet (merged 18 Nov 2026)
