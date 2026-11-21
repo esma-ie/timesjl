@@ -1245,6 +1245,21 @@ kind = "run"
 run_file = "{crafted}/demo12_afshp/demo12_afshp.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_afshp"]
 
+# TIMES_Demo demo12_tsoff + demo12_tsoff_rint/rint.dd (19 Nov 2026): a vintaged process at the ANNUAL level with
+# ANNUAL ACT_EFF data under dynamic timeslices, so that dynslite.vda POSTLEV re-interpolates it over the vintages
+# (L91-103; M1.3 change 68).
+[[model]]
+name = "TIMES_Demo-demo12_tsoff_rint"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_tsoff_rint/demo12_tsoff_rint.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_tsoff", "{crafted}/demo12_tsoff_rint"]
+
 # TIMES_Demo demo12 with %TIMESED% NO (19 Nov 2026): the base run of elastic demand. The model is demo12's;
 # after the solve wrtbprice.mod (maindrv.mod L121-122) writes the base prices (com_bprice.gdx), which
 # demo12_ed reads. M1.3 change 69.

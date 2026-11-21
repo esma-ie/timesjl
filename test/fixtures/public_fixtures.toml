@@ -840,6 +840,19 @@ rows = 3244
 cols = 4505
 nonzeros = 18511
 
+# Crafted case TIMES_Demo-demo12_tsoff_rint (reference/crafted.toml: demo12_tsoff + rint.dd), 19 Nov 2026 (GAMS
+# 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): the re-interpolation of dynslite.vda
+# POSTLEV (L91-103) for a vintaged ANNUAL-level process, the whole model. Layers 2 and 3 here; with its run fixture
+# (demo12_tsoff_rint_run) test_m13_chain.jl runs it from the DD files to the model and test_ddsource.jl compiles it.
+[[fixture]]
+prefix   = "demo12_tsoff_rint"
+model    = "TIMES_Demo-demo12_tsoff_rint"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", DYNTS = "YES", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3092
+cols = 4330
+nonzeros = 17433
 # Crafted case TIMES_Demo-demo12_ed (reference/crafted.toml: demo12 + ed.dd, %TIMESED% YES), 19 Nov 2026 (GAMS 54.6.1
 # + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): elastic demand, the variant run of a two-run case,
 # with the base prices of demo12_edbase (reference/dd/demo12_ed/com_bprice); readbprice.mod, coef_obj.mod L184-189,

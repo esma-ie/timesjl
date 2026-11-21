@@ -1112,6 +1112,9 @@ those checks, their figures and their crafted cases are not published
   YES), with the base prices read from and written to TIMES.jl's own Arrow
   folder (q1). New crafted cases demo12_edbase, demo12_ed and demo12_edagg:
   layers 1 to 3 PASS in both variants from the DD files.
+- 19 Nov 2026: M1.3 change 68: dynamic timeslices, the re-interpolation
+  of dynslite.vda POSTLEV (L91-103). New crafted case demo12_tsoff_rint:
+  layers 1 to 3 PASS in both variants from the DD files.
 - 19 Nov 2026: M1.3 change 66: shaped availability factors (NCAP_AFX,
   NCAP_AFM, NCAP_AFSX, NCAP_AFSM; coef_cpt.mod L42-58, pp_shapr.mod
   L19-40). New crafted case demo12_afshp: layers 1 to 3 PASS in both
