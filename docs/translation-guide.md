@@ -1120,6 +1120,12 @@ those checks, their figures and their crafted cases are not published
   the power-flow main block (the PTDF candidate lines of a MIP stay
   refused until after the gate). New crafted case demo12_pfdf: layers 1 to 3
   PASS in both variants from the DD files (objective 23,960,685.74).
+
+- 19 Nov 2026: M1.3 change 67: dynamic timeslices, the RTS(S) rows of the
+  storage, dispatching, load shifting, ASHAR, CAPFLO, unit commitment,
+  residual load curve, power-flow and gas grid families. Twelve crafted
+  cases demo12_tsoff_*: layers 1 to 3 PASS from the DD files (layers 1
+  and 2 on the one GAMS finds infeasible). D46 logged.
 - 18 Nov 2026: `run_model` (James: TIMES.jl usable without cloning the
   repository). The run from a run file and DD files moves from
   `scripts/run_dd.jl` into the package (`src/run.jl`), with HiGHS as a

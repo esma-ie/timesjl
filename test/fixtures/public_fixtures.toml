@@ -882,3 +882,42 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 3377
 cols = 4605
 nonzeros = 18687
+
+# Crafted case TIMES_Demo-demo12_tsoff_disp (reference/crafted.toml), 19 Nov 2026 (GAMS 54.6.1 + CPLEX and HiGHS on
+# James's workstation; TIMES v4.9.7 @ d9a6a25): dynamic timeslice trees with the dispatching rows (eqactups.vda L50-99) with REG2 on the same tree (tsoff2.dd): their RTS(S) rows skip the
+# timeslices turned off (M1.3 change 67), the whole model. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_tsoff_disp"
+model    = "TIMES_Demo-demo12_tsoff_disp"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", DYNTS = "YES", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3239
+cols = 4416
+nonzeros = 17811
+
+# Crafted case TIMES_Demo-demo12_tsoff_ptdf (reference/crafted.toml), 19 Nov 2026 (GAMS 54.6.1 + CPLEX and HiGHS on
+# James's workstation; TIMES v4.9.7 @ d9a6a25): dynamic timeslice trees with the PTDF and grid allocation rows (powerflo.vda L264-316): their RTS(S) rows skip the
+# timeslices turned off (M1.3 change 67), the whole model. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_tsoff_ptdf"
+model    = "TIMES_Demo-demo12_tsoff_ptdf"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", DYNTS = "YES", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3379
+cols = 4613
+nonzeros = 18451
+
+# Crafted case TIMES_Demo-demo12_tsoff_gg2 (reference/crafted.toml), 19 Nov 2026 (GAMS 54.6.1 + CPLEX and HiGHS on
+# James's workstation; TIMES v4.9.7 @ d9a6a25): dynamic timeslice trees with the gas grid rows (gasgrids.vda L154-200): their RTS(S) rows skip the
+# timeslices turned off (M1.3 change 67), the whole model. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_tsoff_gg2"
+model    = "TIMES_Demo-demo12_tsoff_gg2"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", DYNTS = "YES", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3703
+cols = 5985
+nonzeros = 23315

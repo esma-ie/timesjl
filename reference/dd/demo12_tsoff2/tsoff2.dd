@@ -1,0 +1,73 @@
+* TIMES.jl crafted case data (reference/crafted.toml, 19 Nov 2026): the second timeslice tree of
+* demo12_tsoff/tsoff.dd (the season A with AD and AN up to 2015; S and W from 2020) for REG2 too, every
+* REG1 record copied to REG2 (the two regions have the same year fractions). With different trees in the
+* two regions, timslice.mod L121 divides by G_YRFR(R,S) = 0: JS(J,S) is not indexed by region, so
+* JS_CCL(R,JS(J,S)) takes REG1's slices AD and AN in REG2 too, which GAMS stops at as a division by zero
+* when there is ramping or start-up data (RP_UPR, RP_UPT); and powerflo.vda L90-95 drops the grid nodes
+* of regions whose trees differ. Used by demo12_tsoff_disp, _uc, _pfd and _pfx.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET ALL_TS
+/
+A
+AD
+AN
+/
+
+SET TS_GROUP
+/
+REG2.SEASON.A
+REG2.DAYNITE.AD
+REG2.DAYNITE.AN
+/
+
+SET TS_MAP
+/
+REG2.A.AD
+REG2.A.AN
+/
+
+PARAMETER G_YRFR /
+REG2.AD 0.499143835616438
+REG2.AN 0.500856164383561
+/;
+
+PARAMETER COM_FR /
+REG2.2005.DCAP.AD 0.5
+REG2.2005.DCAP.AN 0.5
+REG2.2005.DCOT.AD 0.5
+REG2.2005.DCOT.AN 0.5
+REG2.2005.DCSH.AD 0.5
+REG2.2005.DCSH.AN 0.5
+REG2.2005.DIDM1.AD 0.59
+REG2.2005.DIDM1.AN 0.41
+REG2.2005.DRAP.AD 0.5
+REG2.2005.DRAP.AN 0.45
+REG2.2005.DROT.AD 0.5
+REG2.2005.DROT.AN 0.5
+REG2.2005.DRSH.AD 0.6
+REG2.2005.DRSH.AN 0.4
+REG2.2005.DTCAR.AD 0.5
+REG2.2005.DTCAR.AN 0.5
+REG2.2005.DTPUB.AD 0.5
+REG2.2005.DTPUB.AN 0.5
+/;
+
+PARAMETER NCAP_AF /
+REG2.2010.ELCRESOL00.AD.UP 0.3
+REG2.2010.ELCRESOL00.AN.UP 0.2
+REG2.2010.ELCREWIN00.AD.UP 0.389994282447113
+REG2.2010.ELCREWIN00.AN.UP 0.304131054131054
+REG2.2010.ELCRNSOL01.AD.UP 0.325014293882218
+REG2.2010.ELCRNSOL01.AN.UP 0.25
+REG2.2010.ELCRNWIN01.AD.UP 0.409994282447113
+REG2.2010.ELCRNWIN01.AN.UP 0.327065527065527
+/;
+
+SET TS_OFF
+/
+REG2.A.2018.2050
+REG2.S.2000.2017
+REG2.W.2000.2017
+/

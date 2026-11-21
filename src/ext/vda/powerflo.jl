@@ -908,6 +908,7 @@ number of rows.
 GAMS: powerflo.vda L250-258, v4.9.7.
 """
 function eq_gr_powflo!(tm)
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     uppercase(strip(gswitch(tm, "POWERFLO", ""), ['\'', '"'])) == "YES" || return 0
     powerflo_vars!(tm)
     admit = gparam(tm, "GR_ADMIT")
@@ -926,6 +927,7 @@ function eq_gr_powflo!(tm)
     for ((r, t, c, reg, com), a) in sort(collect(admit.values); by=first)
         ((r, t, c) in rc_grid && (t,) in tx) || continue             # RC_GRID(%R_T%,C): SUBT in a stepped run (maindrv.mod L38-40)
         for (_, _, _, s) in get(varc_of, (r, t, c), no4)
+            off(r, t, s) && continue                                 # RTS(S), L254 (M1.3 change 67)
             lhs = JuMP.AffExpr(0.0)
             for (_, _, _, _, p) in get(top_of, (r, c, reg, com), no5)
                 iszero(gv(react, (r, t, p))) && continue                 # $PRC_REACT(R,T,P)
@@ -970,6 +972,7 @@ links to S. Returns the number of rows.
 GAMS: powerflo.vda L262-274, v4.9.7.
 """
 function eq_gr_ptdflo!(tm)
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     powerflo_on(tm) || return 0
     rp_grid = gset(tm, "RP_GRID")
     isempty(rp_grid) && return 0
@@ -994,6 +997,7 @@ function eq_gr_ptdflo!(tm)
     for (r, p) in gams_sort!(collect(rp_grid.keys), d), t in (k[1] for k in gset(tm, "MILESTONYR").keys)
         (t,) in tx || continue
         for (c,) in gams_sort!([(c,) for c in get(c_of, (r, p), String[])], d), (_, _, s) in get(s1_of, (r, p), NTuple{3,String}[])
+            off(r, t, s) && continue                                 # RTS(S), L264 (M1.3 change 67)
             lhs = JuMP.AffExpr(0.0)
             for (_, v, _, _) in get(vint_of, (r, t, p), nok), (_, _, _, _, ts) in get(varf_of, (r, t, p, c), NTuple{5,String}[])
                 fr = gv(rs_fr, (r, s, ts))
@@ -1030,6 +1034,7 @@ Returns the number of rows.
 GAMS: powerflo.vda L276-279, v4.9.7.
 """
 function eq_gr_virtcap!(tm)
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     powerflo_on(tm) || return 0
     d = tm.data
     candid = gset_opt(d, "GR_CANDID", 3)
@@ -1048,6 +1053,7 @@ function eq_gr_virtcap!(tm)
         (t,) in tx || continue
         for (c,) in gams_sort!([(c,) for c in get(cs_of, (r, p), String[])], d), (_, _, s) in get(s1_of, (r, p), NTuple{3,String}[]),
                 (bd, sig) in (("LO", 1.0), ("UP", -1.0))                     # BDSIG: LO 1, UP -1 (setglobs.gms L248)
+            off(r, t, s) && continue                                 # RTS(S), L278 (M1.3 change 67)
             lhs = JuMP.AffExpr(0.0)
             m = get(ntop, (r, c, p), 0)
             m == 0 || grvirt!(lhs, GNum(Float64(m)) * GNum(sig), tm, r, t, p, s)
@@ -1220,6 +1226,7 @@ of rows.
 GAMS: powerflo.vda L290-313, v4.9.7.
 """
 function eq_gr_genall!(tm)
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     powerflo_on(tm) || return 0
     x = gralloc_context(tm)
     isempty(x.gnall) && return 0
@@ -1236,6 +1243,7 @@ function eq_gr_genall!(tm)
     tx = eq_periods(tm)
     for (r, t, c) in x.gnall, (_, _, _, s) in get(varc_of, (r, t, c), no4), cg in get(x.cg_of_r, r, String[])
         (t,) in tx || continue                                       # GR_GNALL(%R_T%,C): SUBT in a stepped run (maindrv.mod L38-40)
+        off(r, t, s) && continue                                     # RTS(S), L291 (M1.3 change 67)
         lhs = JuMP.AffExpr(0.0)
         for (_, p, com, item) in get(x.prcmap_of_r, (r,), no4)
             (r, cg, com) in x.algmap || continue                     # GR_ALGMAP(R,CG,COM), all three parts
@@ -1322,6 +1330,7 @@ Returns the number of rows.
 GAMS: powerflo.vda L314-340, v4.9.7.
 """
 function eq_gr_demall!(tm)
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     powerflo_on(tm) || return 0
     x = gralloc_context(tm)
     isempty(x.demfr) && return 0
@@ -1338,6 +1347,7 @@ function eq_gr_demall!(tm)
     tx = eq_periods(tm)
     for (r, t, c) in x.rc_grid, (_, _, _, s) in get(varc_of, (r, t, c), no4)
         ((t,) in tx && haskey(x.demfr, (r, t, c, s))) || continue    # RC_GRID(%R_T%,C), $GR_DEMFR(R,T,C,S) (EPS is true, G3)
+        off(r, t, s) && continue                                     # RTS(S), L316 (M1.3 change 67)
         demfr = gv(x.demfr, (r, t, c, s))
         ado = (r, t, c) in x.ado
         for (_, g, _) in get(x.gmapc_by_13, (r, c), no3)             # GR_GMAPC(R,NRG_GRID,C)
@@ -1431,6 +1441,7 @@ them. In a stepped run %R_T% is `R,SUBT(T)` (`eq_periods`). The grid note's form
 GAMS: powerflo.vda L341-359, v4.9.7.
 """
 function eq_gr_xbnd!(tm)
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     powerflo_on(tm) || return 0
     d = tm.data
     xbnd = gparam_opt(d, "GR_XBND", 2)
@@ -1474,6 +1485,7 @@ function eq_gr_xbnd!(tm)
             a == "ACT" || continue                                    # $GR_GRID(J,R,'ACT')
             nodes = [c for (jj, _, c) in get(grid_of_r, (r,), no3) if jj == j && (r, t, c) in x.rc_grid]
             for (ie,) in ie_set, (_, s) in get(finest_of_r, (r,), no2)
+                off(r, t, s) && continue                             # RTS(S), L343 (M1.3 change 67)
                 sgn = (ie,) in xpt ? GNum(-1.0) : GNum(1.0)            # PROD(XPT(IE),-1)
                 k = gv(xbnd, (r, t)) * gv(yrfr, (r, s))
                 lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)

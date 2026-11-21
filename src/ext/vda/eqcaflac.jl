@@ -23,7 +23,7 @@
 # controls MODLYEAR together with K, so it is -VAR_SCAP(R,K,T,P) for
 # VNTRT(K,T) in each K term (docs/discrepancies.md G48; `rcapsub!`, M1.3
 # change 20b-2); %RTS% ->
-# S (timslice.mod L31; S+NORTS(R,T,S) only with dynamic timeslices, refused);
+# S (timslice.mod L31; S+NORTS(R,T,S) with dynamic timeslices, M1.3 change 67);
 # %UPSCAP0% -> (%UPSCAPS%$PRC_TS(R,P,S))$RP_UPL(R,P,'FX') (equ_ext.vda L75), the
 # capacity of a dispatched process that is off-line (`upscap0!`; %UPSCAPS%:
 # eqactups.jl header). No test case reaches it yet: it is translated, not
@@ -68,8 +68,6 @@ function eq_caflac!(tm::TimesModel)
     rps_caflac = gset_opt(d, "RPS_CAFLAC", 4)
     ncap_afc = gparam_opt(d, "NCAP_AFC", 5)
     (isempty(rps_caflac) && isempty(ncap_afc)) && return 0
-    isempty(gparam_opt(d, "NORTS", 3)) || throw(UnportedError(
-        "dynamic timeslices: %RTS% = S+NORTS(R,T,S) in eqcaflac.vda L40 (timslice.mod L31-39)"))
     capact_unported_afs_changes(tm)   # AFS changes not translated
     n = 0
     for (eqtype, bd) in CAFLAC_VARIANTS
@@ -285,6 +283,7 @@ VAR_STS has terms only with %STSFLX% (`var_sts!`).
 GAMS: eqcaflac.vda L40-60, v4.9.7.
 """
 function eq_capflo!(tm::TimesModel, ncap_afc::GamsParam{5})
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     isempty(ncap_afc) && return 0
     d = tm.data
     modlyear, tx = gset(tm, "MODLYEAR"), eq_periods(tm)   # %R_V_T%: SUBT in a stepped run (maindrv.mod L38-40)
@@ -309,6 +308,7 @@ function eq_capflo!(tm::TimesModel, ncap_afc::GamsParam{5})
         ((v,) in modlyear && (t,) in tx) || continue
         for (_, _, _, cg, s) in get(afc_of_rvp, (r, v, p), no5)
             haskey(rs_tslvl, (r, s)) || continue                   # RS_TSLVL(R,S); S in STL
+            off(r, t, s) && continue                               # SL(STL(%RTS%)): S+NORTS(R,T,S) (M1.3 change 67)
             lhs = JuMP.AffExpr(0.0)
             if (r, p) in rp_flo
                 for (_, _, c) in get(gmap_of_rcg, (r, cg), no3)
