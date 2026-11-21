@@ -457,8 +457,10 @@ three steps, as GAMS does.
   kept: the loop does not read them. The reports of a stepped run need them
   (M1.6).
 - **Solver settings not reproduced**: the advanced basis between the steps
-  (`BRATIO=1`, L285), the solver option file and PRIOROPT (solve.mod
-  L14-15), TOLPROJ (L18). None changes an LP or its optimum value.
+  (`BRATIO=1`, L285), PRIOROPT (solve.mod L15), TOLPROJ (L18). None changes
+  an LP or its optimum value. The solver option file (solve.mod L14) is read
+  since 20 Nov 2026, for HiGHS only (q1 of that day; `src/solver_options.jl`),
+  in every step as in a single solve.
 - **Not translated**: L330 (MY_FYEAR, for FIXBOH).
 - **Not checked against GAMS**: every branch demo12_step does not reach
   (the lists under changes 2 and 3, and below), now also on TIMES.jl's own

@@ -131,6 +131,21 @@ check a model against GAMS, see [`reference/README.md`](reference/README.md).
   `run_model`, or set `TIMESJL_THREADS` before starting Julia:
   `$env:TIMESJL_THREADS = "4"` in PowerShell, `set TIMESJL_THREADS=4` in
   Command Prompt, `export TIMESJL_THREADS=4` on macOS and Linux.
+- **Solver options.** As GAMS TIMES reads `<solver>.opt`, `run_model` reads
+  `highs.opt` from the `.run` file's folder if there is one. It is written as
+  a GAMS option file, one HiGHS option per line, with `*` for comment lines:
+
+  ```
+  * HiGHS's interior point method, with crossover
+  solver ipm
+  run_crossover on
+  ```
+
+  Pass `optfile="path\to\file.opt"` to read another file, or `optfile=false`
+  to read none (`--optfile <file>` and `--no-optfile` for `scripts/run_dd.jl`).
+  The run prints the options it used and a note for any line HiGHS does not
+  take. VEDA's `cplex.opt` is not read: CPLEX's option names are not HiGHS's,
+  and the run says so. The thread limit above still applies.
 - **Updating.** `using Pkg; Pkg.update("TIMES")` fetches the latest `main`.
 - **Offline or behind a firewall.** Clone
   [etsap-TIMES/TIMES_model](https://github.com/etsap-TIMES/TIMES_model) at
@@ -354,6 +369,7 @@ learn from closed or proprietary models.
 ```
 src/            TIMES module (one Julia file per GAMS file, same stems)
   run.jl        run_model and PRESOLVE_STEPS: a model from its run and DD files
+  solver_options.jl  the solver option file run_model reads (highs.opt)
   dd/           the reader of .run and DD files (M1.4)
   prep/         preprocessing (M1.3)
   coef/         coefficients (M1.2)
