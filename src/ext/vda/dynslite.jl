@@ -215,25 +215,51 @@ dynslite.vda POSTLEV (ppm_ext.vda L169), when %RTS% is S+NORTS(R,T,S) and NORTS 
     OPTION DATAYEAR<FIL;
 
 then the CLEAR block (`dynslite_clear!`). The re-interpolation of the ANNUAL data of vintaged
-processes at the ANNUAL level is not translated: such data is refused. Without it the fillparm
-calls have no rows and leave UNCD7 empty; FIL keeps the data years.
+processes at the ANNUAL level (M1.3 change 68): each such row of FLO_FUNC, ACT_EFF, ACT_FLO and
+FLO_SUM gets option 3 at year '0' and is interpolated and extrapolated again over the vintages of
+RVP by fillparm.gms with a write cache; L54 then resets the options (MIN(0,3), so they go). With
+no such row the fillparm calls leave UNCD7 empty; FIL keeps the data years.
 
-GAMS: dynslite.vda L88-104, L39-73, v4.9.7.
+GAMS: dynslite.vda L88-104, L39-73; fillparm.gms L20-56, v4.9.7.
 """
 function dynslite_postlev!(tm)
     dynts_on(tm) || return tm
     isempty(gparam(tm, "NORTS").values) && return tm
-    d = tm.data
     vint, tsl = gset(tm, "PRC_VINT").members, gset(tm, "PRC_TSL").members
-    rvp = Set(k for k in gset(tm, "RTP").keys if (k[1], k[3]) in vint && (k[1], k[3], "ANNUAL") in tsl)
-    rps_s1 = gset(tm, "RPS_S1").members
-    for (name, N, si, s1) in (("FLO_FUNC", 6, 6, false), ("ACT_EFF", 5, 5, true), ("ACT_FLO", 5, 5, true), ("FLO_SUM", 7, 7, true))
-        any(k -> k[si] == "ANNUAL" && (k[1], k[2], k[3]) in rvp && (!s1 || (k[1], k[3], "ANNUAL") in rps_s1),
-            keys(gparam_opt(d, name, N).values)) &&
-            throw(UnportedError("dynslite.vda L94-102 ($name of vintaged ANNUAL-level processes: the re-interpolation)"))
+    # L92: RVP(RTP(R,V,P))$PRC_VINT(R,P)$=PRC_TSL(R,P,'ANNUAL')
+    rvp = Set{NTuple{3,String}}(k for k in gset(tm, "RTP").keys if (k[1], k[3]) in vint && (k[1], k[3], "ANNUAL") in tsl)
+    # L93: OPTION FIL<DATAYEAR; DATAYEAR(LL)=LASTLL(LL): the macros below take as rows only the records at the
+    #   last ALLYEAR element ('0', initmty.mod L369), the options the lines L94, L97-99 set
+    datayear = Set{String}(k[1] for k in gset(tm, "DATAYEAR").keys)
+    gput!(tm, "FIL", Set{Tuple{String}}((y,) for y in datayear))
+    st = InterpState(tm; reset=0.0)                                                      # $SET RESET 0 (L91)
+    lastll = last(st.ax.years)
+    st.datayear = Set([lastll])
+    V = [k[1] for k in gset(tm, "MODLYEAR").keys]
+    cond(k) = (k[1], k[2], k[3]) in rvp                                                  # %6: RVP(R,V,P)
+    pos = (d, k) -> d > 0                                                                # %7: '>0'
+    # X(R,LL--ORD(LL),P,...,ANNUAL)$(X(R,LL,P,...,ANNUAL)$RVP(R,LL,P)) = 3: option 3 (interpolation and
+    #   extrapolation, fillparm.gms L45-50) on each row with ANNUAL data at a vintage of RVP
+    function mark!(name, N)
+        P = gvalues(tm, name, N)
+        put = [Base.setindex(k, lastll, 2) for k in keys(P) if k[N] == "ANNUAL" && (k[1], k[2], k[3]) in rvp]
+        isempty(put) && return
+        foreach(k -> (P[k] = 3.0), put)
+        gput!(tm, name, P)
     end
-    gput!(tm, "FIL", Set{Tuple{String}}((k[1],) for k in gset(tm, "DATAYEAR").keys))   # OPTION FIL<DATAYEAR
-    gput!(tm, "UNCD7", Set{NTuple{7,String}}())                                          # fillparm with no rows
+    # L94-95: FLO_FUNC, then fillparm with the write cache X_RPGGS
+    mark!("FLO_FUNC", 6)
+    fillparm!(st, "FLO_FUNC", "R", "P,CG,CG2,ANNUAL", ["", ""], V, cond, pos; cache=true)
+    # L96: RVP(R,V,P)$(NOT RPS_S1(R,P,'ANNUAL')) = NO
+    rps_s1 = gset(tm, "RPS_S1").members
+    filter!(k -> (k[1], k[3], "ANNUAL") in rps_s1, rvp)
+    # L97-99: the options of ACT_EFF, ACT_FLO and FLO_SUM; L100-102: fillparm on each (X_RPGS, X_RPGCGS)
+    mark!("ACT_EFF", 5); mark!("ACT_FLO", 5); mark!("FLO_SUM", 7)
+    fillparm!(st, "ACT_EFF", "R", "P,CG,ANNUAL", ["", "", ""], V, cond, pos; cache=true)
+    fillparm!(st, "ACT_FLO", "R", "P,CG,ANNUAL", ["", "", ""], V, cond, pos; cache=true)
+    fillparm!(st, "FLO_SUM", "R", "P,CG1,C,CG2,ANNUAL", [""], V, cond, pos; cache=true)
+    put_interp_scratch!(st)
+    # L103: OPTION DATAYEAR<FIL (DATAYEAR as it was; FIL keeps it)
     dynslite_clear!(tm)                                                                  # $GOTO CLEAR
     return tm
 end

@@ -1,0 +1,16 @@
+* TIMES.jl crafted case demo12_tsoff_rint (reference/crafted.toml, 19 Nov 2026): demo12_tsoff (dynamic
+* timeslice trees, TS_OFF with %DYNTS% YES) plus a vintaged process at the ANNUAL level with ANNUAL data, so
+* that dynslite.vda POSTLEV re-interpolates it over the vintages (L91-103; M1.3 change 68), which no open model
+* reaches: CSHNGAS1 in REG1 (commercial space heating, gas; ANNUAL) becomes vintaged, and its efficiency
+* ACT_EFF at ANNUAL, 0.93 in 2005 in demo12, rises to 0.97 for the 2030 vintage.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET PRC_VINT
+/
+REG1.CSHNGAS1
+/
+
+PARAMETER ACT_EFF /
+REG1.2030.CSHNGAS1.ACT.ANNUAL 0.97
+/;
