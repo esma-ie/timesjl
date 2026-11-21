@@ -52,6 +52,7 @@ GAMS: maindrv.mod L55, main_ext.mod, v4.9.7.
 function init_ext!(tm)
     u = init_ext_unported(tm)
     isempty(u) || throw(UnportedError(join(u, "; ")))
+    readbprice!(tm)                                   # maindrv.mod L28-29 (M1.3 change 69)
     dsc_loaded(tm) && init_ext_dsc!(tm)
     init_ext_vda!(tm)
     return tm

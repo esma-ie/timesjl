@@ -74,12 +74,14 @@ mutable struct GamsCompile
     trace::Vector{Tuple{Int,String}}  # the files included: level, name (the listing's Include File Summary)
     macros::Set{String}               # $MACRO names (upper case): DECLARED and DEFINED hold for them (VNRET)
     refs::Set{String}                 # names compiled code refers to (G57: GDX leaves out unreferenced variables)
+    gdxin::String                     # readbprice.mod: the base-price folder $GDXIN opened ("" when none; q1, 19 Nov 2026)
+    errors::Int                       # compile errors not yet cleared ($LOAD without a file; ERRORFREE, $CLEARERROR)
 end
 
 function GamsCompile(; dirs=String[], licencelevel::Int=0, full::Bool=false)
     GamsCompile(Dict{String,String}(), GLevel[], Dict{String,GSym}(), 0, LabelTable(),
         false, false, false, false, 0, String[], Tuple{GSym,Vector{String}}[], Tuple{String,Int,String}[], String.(dirs), false, licencelevel,
-        full, false, "", 0, "", Tuple{Int,String}[], Set{String}(), Set{String}())
+        full, false, "", 0, "", Tuple{Int,String}[], Set{String}(), Set{String}(), "", 0)
 end
 
 compile_error(file, line, msg) = throw(DDSyntaxError(file, line, msg))
@@ -633,6 +635,18 @@ function gdollar!(g::GamsCompile, s::AbstractString, file, line)
         compile_error(file, line, "\$$cmd $(strip(rest))")
     elseif cmd in ("GDXOUT", "UNLOAD") || (cmd == "GDXIN" && isempty(strip(rest)))
         # writing a GDX file at compile time (setglobs.gms L9-13) changes no data; $GDXIN alone closes one
+        cmd == "GDXIN" && (g.gdxin = "")
+    elseif cmd == "GDXIN" && lowercase(basename(file)) == "readbprice.mod"
+        # readbprice.mod L11: the base prices of elastic demand. TIMES.jl reads them from its own Arrow
+        # folder of the same name (q1, 19 Nov 2026; docs/known-differences.md K4); a missing one is a
+        # compile error that L12 tests (ERRORFREE) and L37 clears, as GAMS's missing GDX file is
+        p = bprice_find(g, strip(rest), file)
+        g.gdxin = p === nothing ? "" : p
+        p === nothing && (g.errors += 1)
+    elseif cmd == "LOAD" && lowercase(basename(file)) == "readbprice.mod"
+        gload_bprice!(g, rest, file, line)
+    elseif cmd == "CLEARERROR"
+        g.errors = 0
     elseif cmd in ("EVAL", "EVALGLOBAL", "EVALLOCAL")
         nm = match(r"^(\S+)\s*(.*)$"s, rest)
         nm === nothing && compile_error(file, line, "\$$cmd without a name")
@@ -739,6 +753,65 @@ const G_NOARG = Set(["ONTEXT", "ONLISTING", "OFFLISTING", "ONMULTI", "OFFMULTI",
     "OFFEPS", "ONWARNING", "OFFWARNING", "ONSYMLIST", "OFFSYMLIST", "ONUELLIST", "OFFUELLIST",
     "ONIMPLICITASSIGN", "OFFIMPLICITASSIGN"])
 
+"""
+    bprice_find(g, name, from) -> String or nothing
+
+The folder of base prices that readbprice.mod names (L8-11: `com_bprice`, or `%GDXPATH%%TIMESED%`
+with `_DP`): TIMES.jl's Arrow form of the GDX file write_bprice writes (a dump folder with
+`manifest.json`; q1, 19 Nov 2026). A `.gdx` ending is dropped. GAMS reads the file from its working
+folder; TIMES.jl looks in the run file's folder, then along the include path (docs/known-differences.md K4).
+"""
+function bprice_find(g::GamsCompile, name::AbstractString, from::AbstractString)
+    n = String(strip(name, ['"', ''']))
+    endswith(lowercase(n), ".gdx") && (n = n[1:end-4])
+    isempty(n) && return nothing
+    top = isempty(g.stack) ? from : g.stack[1].file
+    for d in (isabspath(n) ? [""] : unique([dirname(top); dirname(from); g.dirs]))
+        p = isempty(d) ? n : joinpath(d, n)
+        isfile(joinpath(p, "manifest.json")) && return abspath(p)
+    end
+    nothing
+end
+
+"""
+    gload_bprice!(g, rest, file, line)
+
+readbprice.mod L14-20: `\$LOAD` of the base prices (SOL_BPRICE) and, under DAM_ELAST, DAM_COEF and
+DAM_TVOC, from the folder `\$GDXIN` opened. Without an open folder each `\$LOAD` is a compile error, as
+in GAMS (L15 then skips the rest). A record outside the symbol's domain is left out, as GAMS's
+`\$LOAD` filters it (UNCONFIRMED: no base price falls outside its domain in the crafted cases).
+"""
+function gload_bprice!(g::GamsCompile, rest::AbstractString, file, line)
+    if isempty(g.gdxin)
+        g.errors += 1
+        return
+    end
+    d = Reference.load_dump(g.gdxin)
+    for n in split(rest, r"[\s,]+"; keepempty=false)
+        s = gsym(g, n)
+        s === nothing && compile_error(file, line, "\$LOAD $n: no such symbol")
+        if !Reference.has_symbol(d, n)
+            g.errors += 1                 # GAMS: the symbol is not in the GDX file
+            continue
+        end
+        r = Reference.read_symbol(d, n)
+        doms = [guniverse(g, x) ? nothing : gmembers1(gsym(g, x)) for x in s.domain]
+        s.dim < 0 && (s.dim = r.info.dimension)
+        s.hasdata = true
+        for (i, k) in enumerate(r.keys)
+            key = [intern!(g.labels, l) for l in k]
+            any(j -> doms[j] !== nothing && !(key[j] in doms[j]), eachindex(doms)) && continue
+            if s.kind === :set
+                s.members[key] = isempty(r.text) ? "" : r.text[i]
+            else
+                sv = r.special["value"][i]
+                s.vals[key] = sv == Reference.SV_EPS ? (0.0, :eps) : sv == Reference.SV_NONE ? (r.values["value"][i], :none) :
+                              compile_error(file, line, "\$LOAD $n: a special value TIMES.jl does not read")
+            end
+        end
+    end
+end
+
 # the files GAMS would include here that TIMES.jl refuses (docs/m14-plan.md)
 const G_REFUSED_INCLUDES = Set(["initmty.tm"])
 
@@ -772,6 +845,9 @@ function gcondition1(g::GamsCompile, s::AbstractString, ci::Bool, file, line)
              (x !== nothing && (lowercase(m[1]) == "declared" || x.kind === :alias || x.hasdata || x.assigned))
         return (ok, m[3])
     elseif (m = match(r"^exist\s+(\S+)\s*(.*)$"is, s)) !== nothing
+        # readbprice.mod L8-9 test the base-price GDX files, which TIMES.jl reads as Arrow folders (K4)
+        lowercase(basename(file)) == "readbprice.mod" && endswith(lowercase(m[1]), ".gdx") &&
+            return (bprice_find(g, m[1], file) !== nothing, m[2])
         return (gfind(g, m[1], file) !== nothing, m[2])
     elseif (m = match(r"^gamsversion\s+(\d+)\s*(.*)$"is, s)) !== nothing
         return (true, m[2])          # GAMS 54 (CLAUDE.md): later than every version TIMES tests
@@ -791,7 +867,7 @@ function gcondition1(g::GamsCompile, s::AbstractString, ci::Bool, file, line)
     elseif (m = match(r"^warnings\s*(.*)$"is, s)) !== nothing
         return (g.warnings > 0, m[1])     # compile warnings so far (G54)
     elseif (m = match(r"^errorfree\s*(.*)$"is, s)) !== nothing
-        return (true, m[1])
+        return (g.errors == 0, m[1])
     end
     # a == b: each side quoted, or a run of non-blank characters
     tok = r"^\s*('([^']*)'|\"([^\"]*)\"|([^\s=]*))\s*==\s*('([^']*)'|\"([^\"]*)\"|(\S*))\s*(.*)$"s

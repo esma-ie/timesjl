@@ -77,7 +77,7 @@ function objective_unported(tm::TimesModel)
     yes("ETL") && throw(UnportedError("ETL terms in the objective (eqobjinv.mod L292, eqobsalv.mod L102-103)"))
     yes("VALIDATE") && throw(UnportedError("VALIDATE branches of the objective"))
     yes("STAGES") && throw(UnportedError("stochastic objective (STAGES)"))
-    isempty(gset_opt(d, "RCJ", 4)) || throw(UnportedError("elastic demand costs (eqobjels.mod, EQ_OBJ L89-90)"))
+    yes("MICRO") && throw(UnportedError("TIMES-Micro's term of the objective (EQ_OBJ L90, %MICRO% YES)"))
     return nothing
 end
 
@@ -174,13 +174,21 @@ L182-225; eqobjvar.mod L14-113; eqobsalv.mod L92-140, v4.9.7.
 function eq_obj!(tm::TimesModel)
     objective_unported(tm)
     n = eq_objinv!(tm) + eq_objfix!(tm) + eq_objvar!(tm) + eq_objsalv!(tm)
+    timesed_on(tm) && (n += eq_objels!(tm))          # eqobj.mod L49: eqobjels.mod (M1.3 change 69)
     so = sum_obj(tm)
     x = objective_context(tm)
     lhs = JuMP.AffExpr(0.0)
     addterm!(lhs, GNum(-1.0), tm, "OBJZ")
-    for (r, cur) in x.rdcur, ((_, obv), w) in sort!(collect(so))
-        (obv,) in x.obv || continue
-        addterm!(lhs, GNum(w), tm, "VAR_OBJ", r, obv, cur)
+    bd = [k[1] for k in gset(tm, "BD").keys]
+    for (r, cur) in x.rdcur
+        for ((_, obv), w) in sort!(collect(so))
+            (obv,) in x.obv || continue
+            addterm!(lhs, GNum(w), tm, "VAR_OBJ", r, obv, cur)
+        end
+        # L89: +SUM(BD,VAR_OBJELS(R,BD,CUR)*BDSIG(BD))$SUM_OBJ(R,'OBJELS')  (%TIMESED% YES)
+        if timesed_on(tm) && get(so, (r, "OBJELS"), 0.0) != 0
+            foreach(b -> addterm!(lhs, GNum(bdsig(b)), tm, "VAR_OBJELS", r, b, cur), bd)
+        end
     end
     gconstraint!(tm, "EQ_OBJ", (), "E", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
     return n
