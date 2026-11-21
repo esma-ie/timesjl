@@ -135,6 +135,11 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
+### #177 M1.3 (68): dynamic timeslices, the re-interpolation of dynslite.vda POSTLEV; crafted case demo12_tsoff_rint (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the crafted case demo12_tsoff_rint (demo12_tsoff + rint.dd, CC BY 4.0) with its public CI fixtures, the run fixture included so that CI runs it from the DD files (about 7 MB). | Recommended: yes. Built in. | open |
 ### #175 M1.3 (66): shaped availability, NCAP_AFX/AFM/AFSX/AFSM (coef_cpt.mod L42-58, pp_shapr.mod L19-40); crafted case demo12_afshp (open)
 
 | # | Question | Decided | How |
