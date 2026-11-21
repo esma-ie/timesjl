@@ -6,6 +6,8 @@ __pycache__/
 /reference-output/
 /_work/
 *.gdx
+# the base prices of the elastic demand cases, which GAMS reads from its work folder (reference/dd/README.md)
+!reference/dd/demo12_ed/com_bprice.gdx
 *.lst
 
 # Claude Code: personal, machine-local files (paths, folder access) and the

@@ -65,6 +65,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 20 Nov 2026 | #179 d1, d2 and d3: "d1 yes, d2 yes, d3 yes". The crafted cases and fixtures of elastic demand, harness 0.3.6 (`work_files`), and known difference K4 (the base prices as Arrow folders; no record for a zero marginal where GAMS writes EPS). K4 is rule-level (a known difference); explicit yes. | this log (#179); `docs/known-differences.md` (K4) |
 | 20 Nov 2026 | #178 d1 (q2 of 19 Nov): "q2-stochastics, yes plan approved". The plan for the stochastic extension (`docs/m13-plan.md`, "Plan: the stochastic extension"; changes 70 to 76, one pull request each, eight crafted demo12 cases) is approved, and its changes start in its order. Rule-level (a plan for major work); explicit yes. | this log (#178); `docs/m13-plan.md` |
 | 19 Nov 2026 | q1 of the 19 Nov check-in: "id go with option b, reading the base prices from the arrow database." Elastic demand (%TIMESED%) reads the base prices of the earlier run from TIMES.jl's own Arrow file, not from a GDX file (readbprice.mod `$GDXIN`/`$LOAD`); TIMES.jl writes that file after a solve, as wrtbprice.mod writes `com_bprice.gdx`. For the checks against GAMS the reference harness converts GAMS's `com_bprice.gdx` to Arrow. No GDX reader is added; one can follow if users need it. The case design is #165 d3. | this log; `docs/m13-plan.md` (gate audit, change 69) |
 | 19 Nov 2026 | q2 of the 19 Nov check-in: "yes show me the plan". The plan for the stochastic extension is in `docs/m13-plan.md` ("Plan: the stochastic extension"); nothing of it starts until James approves it (Open decisions). | this log; `docs/m13-plan.md` |
@@ -138,6 +139,15 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
+### #179 M1.3 (69): elastic demand, the linear form (%TIMESED%); crafted cases demo12_edbase, demo12_ed, demo12_edagg (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the crafted cases demo12_edbase, demo12_ed and demo12_edagg (demo12 with the base prices of demo12_edbase as a GDX file and its Arrow form, CC BY 4.0), with public CI fixtures of demo12_ed and demo12_edagg, the run fixtures included (about 7 MB each). | Recommended: yes. Built in. | answered by James, 20 Nov 2026: yes ("d1 yes") |
+| 2 | Known difference K4: TIMES.jl reads and writes the base prices as Arrow folders, not GDX files (q1, option b), looking for them in the run file's folder and along the include path; a zero marginal is written as no record where GAMS writes EPS. Rule-level (a known difference). | Recommended: yes. Built in; needs your explicit yes. | answered by James, 20 Nov 2026: yes ("d2 yes"; the explicit yes for K4); confirmed 21 Nov 2026: "pr#179 d2 yes" |
+| 3 | Harness 0.3.6: `work_files`, files the harness copies into GAMS's work folder before each run (here the base prices). | Recommended: yes. Built in. | answered by James, 20 Nov 2026: yes ("d3 yes"); confirmed 21 Nov 2026: "d3 yes" |
+
+### #178 Plan for the stochastic extension; q1 and q2 of 19 Nov 2026 (merged 21 Nov 2026)
 ### #181 run_model: reset HiGHS's thread scheduler around its solve (open)
 
 | # | Question | Decided | How |

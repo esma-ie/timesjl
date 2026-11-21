@@ -67,7 +67,6 @@ function untranslated_families(tm::TimesModel)
     # --- eqmain.mod families ---------------------------------------------------
     # Families whose domain needs a parameter or set that is empty in a model without them.
     for (fam, gams, sym, N, kind) in (
-            ("EQ_OBJELS / EQL_COMCES", "eqobjels.mod, mod_equa.mod L30/L80", "RCJ", 4, :s),
             # VDA (always loaded, initmty.mod L458) and DSC extensions
             # the dispatching equations of eqactups.vda L39-117 (eq_actups!) and the unit commitment by
             # start-up type of eqlducs.vda L67-124 (eq_lducs!) are translated; so is EQL_STGCCL (L121-125, eql_stgccl!)
@@ -123,6 +122,7 @@ function generate!(tm::TimesModel)
     n += eq_cumcom!(tm)              # L89-90
     n += eq_cumflo!(tm)              # L92
     n += eq_combal!(tm)              # L98-106
+    timesed_on(tm) && (n += eql_comces!(tm))   # mod_equa.mod L80: EQL_COMCES (eqobjels.mod L46-49; M1.3 change 69)
     n += eq_flobnd!(tm)              # L111-113
     n += eq_flofr!(tm)               # L118-120
     n += eq_floshr!(tm)              # L125-134

@@ -15,8 +15,8 @@
 # L233-240: the IRE checks), as in GAMS. `x.TE(x)` of an assigned record is
 # its labels joined by '.' (G53).
 #
-# Not translated: %TIMESED% YES (L95-110, refused by `pp_qack_data!`) and
-# RD_SHAR data (L127, MICRO); the EXECERROR block (L183-201) assumes no
+# %TIMESED% YES (L95-110) and RD_SHAR data (L127) are translated since M1.3
+# change 69. Not translated: the EXECERROR block (L183-201) assumes no
 # execution error, as TIMES.jl stops at the first one. L148
 # (`IF(ERRLEV=33,SOLVESTAT(J)$=QASTAT(J))`) changes only the text of
 # SOLVESTAT('1'), which err_stat.mod declares with that member.
@@ -98,6 +98,35 @@ function qack_checks!(tm, part::Symbol)
         z === nothing || gput_scalar!(tm, "Z", z)                                       # the scratch Z, as the loop leaves it
         qa_group!(tm)                                                                   # L91
     elseif part == :commodity
+        if timesed_on(tm)                                                               # L95-110: IF(%TIMESED%, ...)
+            T = [k[1] for k in Sk("MILESTONYR", 1)]
+            # L97-98: FORWARD(T)=YES; $IF DEFINED SOL_BPRICE OPTION FORWARD < SOL_BPRICE (DEFINED: the base prices
+            #   were loaded, readbprice.mod L14)
+            sb = P("SOL_BPRICE", 5)
+            fwd = gmembers(tm, "FORWARD", 1)
+            foreach(t -> push!(fwd, (t,)), T)
+            isempty(sb.keys) || (fwd = project(sb.keys, (2,)))
+            gput!(tm, "FORWARD", fwd)
+            # L99-101: LOOP(T$(NOT FORWARD(T)), pp_qaput 09 '...'; ' WARNING       -  Missing BPRICE, MILESTONYR=',T.TL)
+            for t in T
+                (t,) in fwd || put(9, "Elastic Demand but missing BPRICE for some MILESTONYR - using tail extrapolation",
+                                   " WARNING       -  Missing BPRICE, MILESTONYR=" * t)
+            end
+            qa_group!(tm)                                                               # L102
+            # L103-109: LOOP(DEM(R,C)$SUM(BD$COM_STEP(R,C,BD),1), IF(no COM_BPRICE + no COM_VOC + no COM_ELAST over T, pp_qaput 10 ...))
+            tset = Set(T)
+            bd = Set(k[1] for k in Sk("BD", 1))
+            cstep = P("COM_STEP", 3).values
+            has(name, n, keep) = Set((k[1], k[3]) for k in keys(P(name, n).values) if k[2] in tset && keep(k))
+            hp = has("COM_BPRICE", 5, k -> true)
+            hv = has("COM_VOC", 4, k -> k[4] in bd)
+            he = has("COM_ELAST", 5, k -> k[5] in bd)
+            for (r, c) in sorted(S("DEM", 2))
+                any(b -> haskey(cstep, (r, c, b)), bd) || continue
+                ((r, c) in hp && (r, c) in hv && (r, c) in he) && continue
+                put(10, "Elastic Demand but either COM_BPRICE/ELAST/VOC missing", " WARNING       -     R=" * q12(r) * " C=" * q12(c))
+            end
+        end
         qa_group!(tm)                                                                   # L111 (after the %TIMESED% block)
         rc = Sk("RC", 2)
         comtype = S("COM_TYPE", 1)
@@ -119,10 +148,10 @@ function qack_checks!(tm, part::Symbol)
         qa_group!(tm)                                                                   # L123
     elseif part == :demand
         # L127-128: OPTION TRACKC < RD_SHAR; LOOP((R,T,C)$COM_PROJ(R,T,C),TRACKC(R,C) = YES)
-        isempty(P("RD_SHAR", 4)) || throw(UnportedError("pp_qack.mod L127: RD_SHAR data (MICRO)"))
         T = S("MILESTONYR", 1)
         com = S("COM", 1)
-        trackc = Set{NTuple{2,String}}((r, c) for (r, t, c) in keys(P("COM_PROJ", 3).values) if r in regset && (t,) in T && (c,) in com)
+        trackc = project(keys(P("RD_SHAR", 4).values), (1, 4))      # TRACKC(R,C) < RD_SHAR(R,T,C,C): the last C (G26)
+        union!(trackc, ((r, c) for (r, t, c) in keys(P("COM_PROJ", 3).values) if r in regset && (t,) in T && (c,) in com))
         # L129-131: LOOP(COM_GMAP(DEM(R,C),C)$(NOT TRACKC(R,C)), pp_qaput 01 'Demand: DEM commodity with missing COM_PROJ Projection'; ...)
         dem = S("DEM", 2)
         for (r, c, _) in sorted(k for k in Sk("COM_GMAP", 3) if k[2] == k[3] && (k[1], k[2]) in dem && !((k[1], k[2]) in trackc))

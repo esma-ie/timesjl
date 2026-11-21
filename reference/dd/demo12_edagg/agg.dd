@@ -1,0 +1,73 @@
+* TIMES.jl crafted case demo12_edagg (reference/crafted.toml, 19 Nov 2026): elastic demand with a demand
+* aggregate under its CES form (%TIMESED% YES; M1.3 change 69): pp_micro.mod L9-40 (MI_DMAS, RD_AGG, DDF_PREF,
+* DDF_QREF, RD_SHAR), bnd_elas.mod L10-35 (MI_DOPE, MI_RHO, MI_AGC), eqobjels.mod L44-49 (EQL_COMCES) and
+* eqcombal.mod L101. Added to demo12, in REG1:
+* - DRES, a residential demand aggregate (no process makes it) of space heating DRSH and appliances DRAP
+*   (COM_AGG), with an elasticity of substitution (COM_ELAST 'N') and its own price elasticities and steps;
+* - own price elasticities of the components (COM_ELAST 'FX') with their steps;
+* - the tax on REG1's transport and residential CO2 of demo12_ed, from 2020.
+* The base prices are demo12_edbase's (com_bprice.gdx, as for demo12_ed).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET COM_GRP
+/
+DRES
+/;
+SET COM
+/
+DRES
+/;
+SET COM_GMAP
+/
+REG1.DEM.DRES
+/;
+SET COM_TMAP
+/
+REG1.DEM.DRES
+/;
+SET COM_TSL
+/
+REG1.DRES.ANNUAL
+/;
+SET COM_UNIT
+/
+REG1.DRES.PJ
+/;
+SET COM_DESC
+/
+ REG1.DRES 'Residential demand aggregate'
+/;
+PARAMETER COM_AGG /
+REG1.2005.DRSH.DRES 1
+REG1.2005.DRAP.DRES 1
+/;
+PARAMETER COM_ELAST /
+REG1.2005.DRES.ANNUAL.N 0.5
+REG1.2005.DRES.ANNUAL.LO 0.6
+REG1.2005.DRES.ANNUAL.UP 0.4
+REG1.2005.DRSH.ANNUAL.FX 0.7
+REG1.2005.DRAP.ANNUAL.FX 0.8
+/;
+PARAMETER COM_STEP /
+REG1.DRES.LO 4
+REG1.DRES.UP 2
+REG1.DRSH.FX 3
+REG1.DRAP.FX 3
+/;
+PARAMETER COM_VOC /
+REG1.2005.DRES.LO 0.3
+REG1.2005.DRES.UP 0.2
+REG1.2005.DRSH.LO 0.3
+REG1.2005.DRSH.UP 0.3
+REG1.2005.DRAP.LO 0.3
+REG1.2005.DRAP.UP 0.3
+/;
+PARAMETER COM_TAXNET /
+REG1.2020.TRACO2.ANNUAL.MEuro05 0.1
+REG1.2030.TRACO2.ANNUAL.MEuro05 0.1
+REG1.2050.TRACO2.ANNUAL.MEuro05 0.1
+REG1.2020.RSDCO2.ANNUAL.MEuro05 0.1
+REG1.2030.RSDCO2.ANNUAL.MEuro05 0.1
+REG1.2050.RSDCO2.ANNUAL.MEuro05 0.1
+/;
