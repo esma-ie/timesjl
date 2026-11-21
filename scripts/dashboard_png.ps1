@@ -20,7 +20,7 @@
 param(
     [string]$Out = "",
     [ValidateSet("light", "dark")][string]$Theme = "light",
-    [int]$Slides = 12
+    [int]$Slides = 11   # the public page: 11 slides since #184 (slide 10, GAMS timings, is on the local board only)
 )
 $ErrorActionPreference = "Stop"
 if (-not $Out) { $Out = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) "timesjl-slides" }
