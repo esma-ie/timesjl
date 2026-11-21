@@ -1,0 +1,44 @@
+* TIMES.jl crafted case demo12_tradeoff (20 Nov 2026): two-phase tradeoff analysis (stages.stc L49-84,
+* solve.stc), as Example 1c of the TIMES stochastics user note: three tradeoff points (SW_SUBS). Phase 1
+* minimises a composite objective, the system cost (OBJZ) plus a weight of 0.05, 0.2 or 1.0 on UCEXT, REG1's
+* transport CO2 over all periods (S_UCOBJ); phase 2 minimises cost and keeps the phase-1 optimum of that
+* composite objective (UC_RHS OBJ1 'N' EPS).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET UC_N /
+UCEXT 'REG1 transport CO2, all periods'
+/;
+SET UC_R_SUM /
+REG1.UCEXT
+/;
+SET UC_T_SUM /
+REG1.UCEXT.2005
+REG1.UCEXT.2010
+REG1.UCEXT.2015
+REG1.UCEXT.2020
+REG1.UCEXT.2030
+REG1.UCEXT.2050
+/;
+PARAMETER UC_COMNET /
+UCEXT.LHS.REG1.2005.TRACO2.ANNUAL 1
+UCEXT.LHS.REG1.2010.TRACO2.ANNUAL 1
+UCEXT.LHS.REG1.2015.TRACO2.ANNUAL 1
+UCEXT.LHS.REG1.2020.TRACO2.ANNUAL 1
+UCEXT.LHS.REG1.2030.TRACO2.ANNUAL 1
+UCEXT.LHS.REG1.2050.TRACO2.ANNUAL 1
+/;
+PARAMETER SW_SUBS /
+1.1 3
+/;
+PARAMETER S_UCOBJ /
+OBJZ.1 1
+UCEXT.1 0.05
+OBJZ.2 1
+UCEXT.2 0.2
+OBJZ.3 1
+UCEXT.3 1
+/;
+PARAMETER UC_RHS /
+OBJ1.N EPS
+/;

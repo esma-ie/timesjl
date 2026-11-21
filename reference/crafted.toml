@@ -1259,3 +1259,109 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_tsoff_rint/demo12_tsoff_rint.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_tsoff", "{crafted}/demo12_tsoff_rint"]
+
+# TIMES_Demo demo12 + demo12_stc/stc.dd with %STAGES% YES (20 Nov 2026): the stochastic extension, a two-stage
+# event tree (three SOWs from 2020) with uncertain demand, investment cost, a CO2 tax, a capacity bound and a
+# user-constraint limit (initmty.stc, stages.stc, fillsow.stc). M1.3 changes 70-74.
+[[model]]
+name = "TIMES_Demo-demo12_stc"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_stc/demo12_stc.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_stc"]
+
+# TIMES_Demo demo12 + stc3.dd with %STAGES% YES (20 Nov 2026): a three-stage event tree (stage 2 from 2015, stage 3 from 2030) with children and probabilities copied from the first parent (SW_COPY), and cumulative limits by stage and SOW (S_COM_CUMNET, S_FLO_CUM; SUPERYR). M1.3 changes 70-76.
+[[model]]
+name = "TIMES_Demo-demo12_stc3"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_stc3/demo12_stc3.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_stc3"]
+
+# TIMES_Demo demo12 + stcmx.dd with %STAGES% YES (20 Nov 2026): the uncertain attributes of the MX macros and the FLO_FUNC remapping (S_FLO_FUNC, S_NCAP_AFS, S_COM_FR; recurrin.stc L18-50, stages.stc L213-272) on demo12_stc's tree. M1.3 changes 70-76.
+[[model]]
+name = "TIMES_Demo-demo12_stcmx"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_stcmx/demo12_stcmx.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_stcmx"]
+
+# TIMES_Demo demo12 + stc.dd and lam.dd with %STAGES% YES (20 Nov 2026): risk aversion (SW_LAMBDA 0.5: EQ_UPDEV, eqobj.mod L103-121) on demo12_stc's tree and data. M1.3 changes 70-76.
+[[model]]
+name = "TIMES_Demo-demo12_stclam"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_stclam/demo12_stclam.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_stc", "{crafted}/demo12_stclam"]
+
+# TIMES_Demo demo12 + disp.dd and uconl.dd and stgccl.dd and stc.dd with %STAGES% YES (20 Nov 2026): demo12_stc's tree and data with extension families of the gate together: dispatching (disp.dd), a user constraint by timeslice on the online gas capacity (uconl.dd) and a DAYNITE storage (stgccl.dd). M1.3 changes 70-76.
+[[model]]
+name = "TIMES_Demo-demo12_stcext"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_stcext/demo12_stcext.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_disp", "{crafted}/demo12_uconl", "{crafted}/demo12_stgccl", "{crafted}/demo12_stc", "{crafted}/demo12_stcext"]
+
+# TIMES_Demo demo12 + stc.dd with %SPINES% YES (20 Nov 2026): the spines form (%SPINES% YES: recurrin.stc L52-182, eqmain.mod L30-37) on demo12_stc's tree and data. M1.3 changes 70-76.
+[[model]]
+name = "TIMES_Demo-demo12_spines"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_spines/demo12_spines.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_stc", "{crafted}/demo12_spines"]
+
+# TIMES_Demo demo12 + stc.dd with %SENSIS% YES (20 Nov 2026): sensitivity analysis (%SENSIS% YES: sensis.stc, solve.stc): demo12_stc's three SOWs solved one by one as deterministic runs, each with its own data. M1.3 changes 70-76.
+[[model]]
+name = "TIMES_Demo-demo12_sensis"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_sensis/demo12_sensis.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_stc", "{crafted}/demo12_sensis"]
+
+# TIMES_Demo demo12 + tradeoff.dd with %STAGES% YES (20 Nov 2026): two-phase tradeoff analysis (S_UCOBJ, S_UC_RHS N: stages.stc L49-84, solve.stc) over three points. M1.3 changes 70-76.
+[[model]]
+name = "TIMES_Demo-demo12_tradeoff"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_tradeoff/demo12_tradeoff.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_tradeoff"]

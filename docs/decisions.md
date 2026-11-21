@@ -65,6 +65,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 21 Nov 2026 | #176 (merged 21 Nov 2026): "pr#176 q2 dp46 - yes log this discrepancy" and "yes, build in the other changes from pr#176". D46 (timslice.mod L121, division by zero with different timeslice trees and ramping or start-up data) is reported to ETSAP with the other reports (#176 d2, rule-level, explicit yes); the twelve demo12_tsoff_* cases (d1) and the prepret.dsc L75 fix (d3) are confirmed. | this log (#176); `docs/discrepancies.md` (D46) |
 | 20 Nov 2026 | #178 d1 (q2 of 19 Nov): "q2-stochastics, yes plan approved". The plan for the stochastic extension (`docs/m13-plan.md`, "Plan: the stochastic extension"; changes 70 to 76, one pull request each, eight crafted demo12 cases) is approved, and its changes start in its order. Rule-level (a plan for major work); explicit yes. | this log (#178); `docs/m13-plan.md` |
 | 19 Nov 2026 | q1 of the 19 Nov check-in: "id go with option b, reading the base prices from the arrow database." Elastic demand (%TIMESED%) reads the base prices of the earlier run from TIMES.jl's own Arrow file, not from a GDX file (readbprice.mod `$GDXIN`/`$LOAD`); TIMES.jl writes that file after a solve, as wrtbprice.mod writes `com_bprice.gdx`. For the checks against GAMS the reference harness converts GAMS's `com_bprice.gdx` to Arrow. No GDX reader is added; one can follow if users need it. The case design is #165 d3. | this log; `docs/m13-plan.md` (gate audit, change 69) |
 | 19 Nov 2026 | q2 of the 19 Nov check-in: "yes show me the plan". The plan for the stochastic extension is in `docs/m13-plan.md` ("Plan: the stochastic extension"); nothing of it starts until James approves it (Open decisions). | this log; `docs/m13-plan.md` |
@@ -138,7 +139,15 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
-### #178 Plan for the stochastic extension; q1 and q2 of 19 Nov 2026 (open)
+### #185 M1.3 (70): the stochastic extension's DD reader (initmty.stc); eight crafted cases (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the eight crafted cases of the stochastic plan (demo12_stc, demo12_stc3, demo12_stcmx, demo12_stclam, demo12_stcext, demo12_spines, demo12_sensis, demo12_tradeoff; demo12 with DD files of their own or of earlier crafted cases, CC BY 4.0), each with an input and a run fixture (about 1.2 MB each, 10 MB together); their model fixtures come with changes 71-76. demo12_tradeoff follows Example 1c of the TIMES stochastics user note (Example 1b drove the CO2 to zero in phase 1, so its three points were one solve). | Recommended: yes. Built in. | open |
+| 2 | Harness 0.3.7: in the pre-solve run of a SENSIS run only, `$ONIMPLICITASSIGN` before maindrv.mod. Without it GAMS stops on error 141 (solve.stc L7 compiles the report writer, whose solution levels nothing assigns when there is no SOLVE) before any checkpoint. It turns off that check and nothing else; the solve runs are unchanged. | Recommended: yes. Built in. | open |
+| 3 | A run with SPINES or SENSIS YES is refused at init_ext (maindrv.mod L33-36), as one with STAGES YES is, until changes 71-76 translate them; until now the compile refused all three at initmty.stc. | Recommended: yes. Built in. | open |
+
+### #178 Plan for the stochastic extension; q1 and q2 of 19 Nov 2026 (merged 21 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
@@ -162,13 +171,13 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 | --- | --- | --- | --- |
 | 1 | Keep the crafted case demo12_pfdf (demo12 + pf.dd and pfdf.dd, CC BY 4.0) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | accepted by merge, 20 Nov 2026 |
 
-### #176 M1.3 (67): dynamic timeslices, the RTS(S) rows of the other families; twelve crafted cases demo12_tsoff_* (open)
+### #176 M1.3 (67): dynamic timeslices, the RTS(S) rows of the other families; twelve crafted cases demo12_tsoff_* (merged 21 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Keep the twelve crafted cases demo12_tsoff_* and tsoff2.dd (run files only, CC BY 4.0), with three public CI fixtures (demo12_tsoff_disp, _ptdf, _gg2; as run, about 13 MB together); the other nine are checked by the gate from their DD files. | Recommended: yes. Built in. | open |
-| 2 | D46 (timslice.mod L121 divides by zero when the regions have different timeslice trees and there is ramping or start-up data): report it to ETSAP, with the other notes? Rule-level (a report to ETSAP). | yes, with the other reports | open |
-| 3 | prepret.dsc L75 keeps an EPS upper bound EPS (MIN of the VAR_RCAP and VAR_SCAP bounds); only visible under HOLDFIXED. Fixed in this change rather than in its own PR, as the case that shows it is this change's. | Recommended: yes. Built in. | open |
+| 1 | Keep the twelve crafted cases demo12_tsoff_* and tsoff2.dd (run files only, CC BY 4.0), with three public CI fixtures (demo12_tsoff_disp, _ptdf, _gg2; as run, about 13 MB together); the other nine are checked by the gate from their DD files. | Recommended: yes. Built in. | James, 21 Nov 2026: yes ("yes, build in the other changes from pr#176"); merged 21 Nov 2026 |
+| 2 | D46 (timslice.mod L121 divides by zero when the regions have different timeslice trees and there is ramping or start-up data): report it to ETSAP, with the other notes? Rule-level (a report to ETSAP). | yes, with the other reports | James, 21 Nov 2026: yes ("pr#176 q2 dp46 - yes log this discrepancy"); D46 goes to ETSAP with the other reports |
+| 3 | prepret.dsc L75 keeps an EPS upper bound EPS (MIN of the VAR_RCAP and VAR_SCAP bounds); only visible under HOLDFIXED. Fixed in this change rather than in its own PR, as the case that shows it is this change's. | Recommended: yes. Built in. | James, 21 Nov 2026: yes ("yes, build in the other changes from pr#176"); merged 21 Nov 2026 |
 
 ### #173 m13_gate.jl: 24 hours for every HiGHS solve (open)
 
