@@ -144,6 +144,12 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 | 2 | Harness 0.3.7: in the pre-solve run of a SENSIS run only, `$ONIMPLICITASSIGN` before maindrv.mod. Without it GAMS stops on error 141 (solve.stc L7 compiles the report writer, whose solution levels nothing assigns when there is no SOLVE) before any checkpoint. It turns off that check and nothing else; the solve runs are unchanged. | Recommended: yes. Built in. | open |
 | 3 | A run with SPINES or SENSIS YES is refused at init_ext (maindrv.mod L33-36), as one with STAGES YES is, until changes 71-76 translate them; until now the compile refused all three at initmty.stc. | Recommended: yes. Built in. | open |
 
+### #177 M1.3 (68): dynamic timeslices, the re-interpolation of dynslite.vda POSTLEV; crafted case demo12_tsoff_rint (merged 21 Nov 2026)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the crafted case demo12_tsoff_rint (demo12_tsoff + rint.dd, CC BY 4.0) with its public CI fixtures, the run fixture included so that CI runs it from the DD files (about 7 MB). | Recommended: yes. Built in. | accepted by merge, 21 Nov 2026 |
+
 ### #175 M1.3 (66): shaped availability, NCAP_AFX/AFM/AFSX/AFSM (coef_cpt.mod L42-58, pp_shapr.mod L19-40); crafted case demo12_afshp (open)
 
 | # | Question | Decided | How |
