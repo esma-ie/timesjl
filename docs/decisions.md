@@ -142,7 +142,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Approve the plan for the stochastic extension (changes 70 to 76, eight crafted cases, about four to five working days). | Approved. | answered by James, 20 Nov 2026: "q2-stochastics, yes plan approved" |
+| 1 | Approve the plan for the stochastic extension (changes 70 to 76, eight crafted cases, about four to five working days). | Approved. | answered by James, 20 Nov 2026: "q2-stochastics, yes plan approved"; confirmed 21 Nov 2026: "pr#178 d=yes" |
 
 ### #177 M1.3 (68): dynamic timeslices, the re-interpolation of dynslite.vda POSTLEV; crafted case demo12_tsoff_rint (merged 21 Nov 2026)
 
