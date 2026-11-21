@@ -273,7 +273,7 @@ Every refusal left in `src/` was listed (`UnportedError`, the `*_unported` lists
 | Refused feature | Where it goes |
 | --- | --- |
 | Elastic demand, linear form (%TIMESED%: readbprice.mod, ppmain.mod L747-755, pp_micro.mod PRE, bnd_elas.mod, eqobjels.mod) | translated: change 69 (19 Nov 2026); the base prices from TIMES.jl's own Arrow folder (q1, 19 Nov 2026) |
-| The stochastic extension (%STAGES%, SPINES, SENSIS) | M1.3 gate |
+| The stochastic extension (%STAGES%, SPINES, SENSIS) | M1.3 gate; plan below ("Plan: the stochastic extension"), approved by James on 20 Nov 2026 (#178 d1): changes 70 to 76 |
 | Shaped availability (NCAP_AFM, NCAP_AFX, NCAP_AFSM, NCAP_AFSX; coef_cpt.mod L42-58, pp_shapr.mod L19-40) | translated: change 66 (19 Nov 2026) |
 | Dynamic timeslices: the re-interpolation (dynslite.vda L94-102) and the RTS(S) rows of the other families | translated: the RTS(S) rows in change 67, the re-interpolation in change 68 (19 Nov 2026) |
 | GR_DEMFR as input data (powerflo.vda L107, L131) | translated: change 65 (19 Nov 2026) |
@@ -2437,6 +2437,102 @@ The M1.4 gate's own criteria still pass; it waits for this gate (CLAUDE.md), and
   no entry for VAR_UPT; the separate document is not in the documentation repository
   (its User_Notes folder has no unit-commitment note). The translation follows the GAMS
   source alone (discrepancies.md D40).
+
+## Plan: the stochastic extension (approved by James, 20 Nov 2026)
+
+Asked as q2 at the check-in of 19 Nov 2026 ("yes show me the plan"); James
+approved it on 20 Nov 2026 (#178 d1, docs/decisions.md).
+
+### What GAMS does (TIMES v4.9.7 @ d9a6a25)
+
+Three run switches turn the extension on (maindrv.mod L33-36):
+
+- `STAGES YES`: a multi-stage stochastic model. One LP holds every state of
+  the world (SOW) of an event tree; each variable and equation gets a SOW
+  index, and the objective is the expected cost, optionally with a penalty
+  on upward deviations (risk aversion, `SW_LAMBDA`).
+- `SPINES YES`: sets `STAGES YES` and adds the "spines" form (recurrin.stc
+  L52-182): the objective components and the dynamic user constraints are
+  written through GAMS macros over the SOWs (`Z`, the `Q` equations,
+  `EQ_OBW1`).
+- `SENSIS YES`: sets `STAGES` to `Yes` (lower case). The case-blind `$IFI`
+  tests run the stochastic preprocessing, but the case-exact `$IF` tests do
+  not switch the tags, so the model stays deterministic; solve.stc then
+  solves it once per SOW with that SOW's data (sensis.stc), a sensitivity
+  analysis.
+
+The GAMS code, file by file:
+
+| Step | GAMS | Lines | What it does |
+| --- | --- | --- | --- |
+| Declarations | initmty.stc (from initmty.mod L437) | 81 | the tree parameters (`SW_START`, `SW_SUBS`, `SW_SPROB`, `SW_PROB`, `SW_LAMBDA`), the uncertain attributes (`S_COM_PROJ`, `S_NCAP_COST`, `S_COM_TAX`, `S_CAP_BND`, `S_FLO_CUM`, `S_COM_CUMPRD`/`NET`, `S_FLO_FUNC`, `S_NCAP_AFS`, `S_COM_FR`, `S_DAM_COST`, `S_UC_RHS*`, `S_UCOBJ`, `S_CM_*`) and the internal maps |
+| Preprocessing | prep_ext.stc (preppm.mod L216), recurrin.stc MXPAR | 55 + 50 | interpolation of the uncertain attributes, the user-constraint set-up (`OBJZ`, `OBJ1`), and the `MX` macros that multiply `COEF_AF`, `COM_FR` and `RTCS_FR` by their uncertain factors |
+| The event tree | stages.stc (maindrv.mod L65), fillsow.stc | 272 + 47 | from the stages, children and probabilities to `SW_T` (the SOWs alive in each period), `SW_TSW` (the map from each SOW to the node it shares in a period), `SW_TPROB`, `SW_MAP`; each uncertain attribute copied down the tree; then `OBJ_SIC`, `RTP_FFCS`, `RTP_SAFS`, `RCS_SSFR` |
+| Coefficients | coefmain.mod L11 | 1 | (deterministic runs: one SOW, '1') |
+| The model | `SW_TAGS` (stages.stc L12-15) in mod_vars.mod, eqdeclr.mod, eqmain.mod and the other equation and bound files of the core and of the extensions in the gate (vda, dsc, ier, lin): 81 files | 1,057 SOW-index macros and 706 `%VAR%`/`%EQ%` name tags | `EQ` becomes `ES` and `VAR` becomes `VAS`; every row gets the index `SOW` where `SW_T(T,SOW)` holds; a variable is read through `SUM(SW_TSW(SOW,T,W),VAS_x(...,W))`, so SOWs share a variable until their branches part; the uncertain data enter where the files name them (eqcombal.mod L109, eqpeak.mod L81, eqcumflo.mod L16-31, eqbndcst.mod L78-83, equcwrap.mod L16, equserco.mod L55, eqobjvar.mod L24-48, eqdamage.mod L95-132, the bnd_*.mod files) |
+| The objective | eqobj.mod L75-121 | 47 | `ES_ROBJ` (each region's cost per SOW), `ES_SOBJ`, `EQ_EXPOBJ` (the expected value), `EQ_UPDEV` (upward deviation), and `EQ_OBJ` over them; the tradeoff phases with `S_UCOBJ` |
+| The solve | solve.stc, sensis.stc, clearsol.stc | 134 + 43 + 40 | one solve, or a loop of solves when several SOWs start at the first period (decomposed deterministic runs), for the tradeoff phases (`S_UCOBJ`), and for SENSIS |
+| Reports | rptmain.stc, pextlevs.stc | 189 | M1.6, not this plan |
+
+STAGES stops a run with MACRO (stages.stc L9), the stepped solve
+(solve.stc L24, in the solve loops) and the nonlinear TIMES-Micro (pp_micro.mod L56), and it
+sets `VAR_UC YES` (stages.stc L19).
+
+### How TIMES.jl will do it
+
+One idea carries the whole extension: a small object built once per run,
+the SOW tags, that answers three questions for every equation builder: what
+the row is called (`EQ_x` or `ES_x`), which SOWs a row is made for at
+period T (`SW_T`), and which column a variable reference means
+(`VAR_x(...)`, or `VAS_x(...,W)` with W from `SW_TSW`). In a run without
+stochastics the tags give back exactly what the builders use today, so the
+deterministic model cannot change; every existing fixture checks that at
+layer 2. The equations are not reformulated: each builder takes the SOW
+index where its GAMS file has `%SOW%`, `%SWT%`, `%SWS%`, `%VART%`, `%VARV%`
+or `%VARM%`, as written.
+
+### Changes, one pull request each
+
+| Change | What | GAMS | Check |
+| --- | --- | --- | --- |
+| 70 | The DD reader takes the stochastic attributes and tree parameters (today `initmty.stc` stops it, src/dd/compile.jl); the declarations of initmty.stc. The crafted cases below, with their GAMS references (CPLEX and HiGHS). | initmty.stc; initmty.mod L435-437 | layer 1 at the input dump, every case |
+| 71 | Preprocessing of the uncertain attributes and the `MX` macros | prep_ext.stc; recurrin.stc L18-50 | layer 1 at ppm |
+| 72 | The event tree and the uncertain attributes copied down it | stages.stc; fillsow.stc | layer 1 at coef |
+| 73 | The SOW tags, used by every equation and bound builder. No stochastic model yet: a pure restructuring that leaves every deterministic LP identical (#35, #54) | setglobs.gms L348; stages.stc L12-15 | layer 2 at 1e-9 on every fixture and crafted case, same rows, columns and order |
+| 74 | The stochastic model: `ES_`/`VAS_` rows and columns of the core families and the extension families in the gate, the uncertain data in the equations and bounds, the stochastic objective | the files in the table above; eqobj.mod L75-121 | layers 1 to 3 on the STAGES cases |
+| 75 | SPINES | recurrin.stc L52-182; eqmain.mod L30-37; mod_equa.mod L213 | layers 1 to 3 on demo12_spines |
+| 76 | The solve loops: decomposed deterministic runs, the tradeoff phases, SENSIS. The harness exports GAMS's matrix of each solve, as it does for the steps of a stepped run (harness 0.3.4) | solve.stc; sensis.stc; clearsol.stc | layers 2 and 3 for each solve |
+
+Change 74 may be split in two (core families first, then the extension
+families) if its pull request grows past what one check-in can review.
+
+### Crafted cases
+
+All are demo12 (CC BY 4.0) with one added DD file each, and are run in
+GAMS 54.6.1 with CPLEX and HiGHS, both variants, on James's workstation.
+
+| Case | What it reaches |
+| --- | --- |
+| demo12_stc | two stages, three SOWs from 2020: uncertain demand (`S_COM_PROJ`), investment cost (`S_NCAP_COST`), a commodity tax (`S_COM_TAX`), a capacity bound (`S_CAP_BND`) and a user-constraint limit (`S_UC_RHSRT`), with probabilities |
+| demo12_stc3 | three stages, children copied from the first parent (`SW_COPY`), missing probabilities filled, cumulative limits (`S_COM_CUMNET`, `S_FLO_CUM`; `SUPERYR`) |
+| demo12_stcmx | the `MX` macros: `S_FLO_FUNC`, `S_NCAP_AFS`, `S_COM_FR` |
+| demo12_stclam | risk aversion: `SW_LAMBDA` above zero (`EQ_UPDEV`) |
+| demo12_stcext | demo12_stc with the extension families of the gate switched on together (storage, dispatching, unit commitment, user constraints), as the dynamic-timeslice cases were combined |
+| demo12_spines | `SPINES YES` on demo12_stc's tree |
+| demo12_sensis | `SENSIS YES`: three solves |
+| demo12_tradeoff | `S_UCOBJ`: the tradeoff phases |
+
+No suite model uses the extension, so these cases are its only check, in CI
+as for every crafted case.
+
+### Time
+
+About four to five working days, longer than the two to three given at the
+check-in of 19 Nov 2026: reading the files showed the solve loops (change
+76) and SPINES (change 75), which need their own harness and macro work.
+Elastic demand (change 69) comes first, about half a day. With them done,
+every item of the gate is translated, and the gate question is asked again
+after a nightly pass on the merged stack.
 
 ## Open items
 
