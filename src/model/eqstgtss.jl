@@ -28,8 +28,8 @@
 #
 # Macro expansions: %EQ% -> EQ, %VAR% -> VAR, %SOW%/%SWT% -> '' (setglobs.gms
 # L348); %R_V_T% -> 'R,V,T' (maindrv.mod L39); %PGPRIM% -> 'ACT' (initmty.mod
-# L138); RTS(S) -> S (timslice.mod L39; S+NORTS(R,T,S) only with dynamic
-# timeslices, refused).
+# L138); RTS(S) -> S, or S+NORTS(R,T,S) with dynamic timeslices (timslice.mod
+# L31-39; M1.3 change 67: the rows at timeslices turned off are skipped).
 #
 # The previous timeslice of the cycle, S--RS_STG(R,S) (a circular lag on
 # ALL_TS by the lead RS_STG, timslice.mod L93-95), is read from RS_PREV
@@ -49,7 +49,6 @@
 #   EQ_STSBAL (L56, L62-63, L73) and EQ_STSLEV (L88-93);
 # (The PRC_STGIPS charging terms of EQ_STSBAL at ANNUAL, L78-81, are
 #   translated in M1.3 change 45; no row of v4.9.7 reaches them, see eq_stsbal!.)
-# - dynamic timeslices (NORTS).
 
 """
     stg_context(tm) -> NamedTuple
@@ -132,9 +131,7 @@ function var_sts!(expr::JuMP.AffExpr, coef::GNum, tm, r, v, t, p, ts, bd)
 end
 
 function stgtss_unported(tm::TimesModel)
-    isempty(gparam(tm, "NORTS")) || throw(UnportedError(
-        "dynamic timeslices: RTS(S) = S+NORTS(R,T,S) in eqstgtss.mod L13/L53 (timslice.mod L31-39)"))
-    return nothing
+    return nothing                       # dynamic timeslices: RTS(S) rows translated (M1.3 change 67)
 end
 
 """
@@ -160,6 +157,7 @@ GAMS: eqstgtss.mod L13-48, v4.9.7.
 """
 function eq_stgtss_rows!(tm::TimesModel)
     x = stg_context(tm)
+    off = rts_off(tm)
     one = GNum(1.0)
     vx, tx = gset(tm, "MODLYEAR"), eq_periods(tm)                 # %R_V_T%: V, and SUBT in a stepped run (maindrv.mod L38-40)
     n = 0
@@ -169,6 +167,7 @@ function eq_stgtss_rows!(tm::TimesModel)
         nst = (r, "NST", p) in x.prc_map
         sts = (r, p) in x.rp_sts
         for (_, _, s) in get(x.stg_of_rp, (r, p), NTuple{3,String}[])
+            off(r, t, s) && continue     # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
             lhs = JuMP.AffExpr(0.0)
             addterm!(lhs, one, tm, "VAR_ACT", r, v, t, p, s)                                 # L16
             rhs = JuMP.AffExpr(0.0)
@@ -265,6 +264,7 @@ GAMS: eqstgtss.mod L53-83, v4.9.7.
 """
 function eq_stsbal!(tm::TimesModel)
     x = stg_context(tm)
+    off = rts_off(tm)
     one = GNum(1.0)
     rp_stl = gset(tm, "RP_STL")
     stl_of_rp = indexby(rp_stl, (1, 2))                     # (r,p) -> RP_STL(r,p,tsl,l)
@@ -279,6 +279,7 @@ function eq_stsbal!(tm::TimesModel)
         isempty(stls) && continue
         for (_, _, tsl, l) in stls, (_, _, s) in get(group_of, (r, tsl), NTuple{3,String}[])
             (r, p, s) in x.prc_ts || continue
+            off(r, t, s) && continue     # RTS(S) (M1.3 change 67)
             up = (r, p, tsl, "UP") in rp_stl                                                 # $RP_STL(R,P,TSL,'UP')
             lhs = JuMP.AffExpr(0.0)
             if (r, "ANNUAL", s) in x.rs_below                                                # L56
@@ -357,6 +358,7 @@ function eq_stslev!(tm::TimesModel)
     rp_stl = gset(tm, "RP_STL")
     any(k -> k[4] == "UP", rp_stl) || return 0
     x = stg_context(tm)
+    off = rts_off(tm)
     one = GNum(1.0)
     stoal, prc_sgl, stoa = gparam(tm, "STOAL"), gparam(tm, "PRC_SGL"), gparam(tm, "STOA")
     rs_stgprd = gparam(tm, "RS_STGPRD")
@@ -374,6 +376,7 @@ function eq_stslev!(tm::TimesModel)
         sgl = gv(prc_sgl, (r, p)).v
         for tsl in tsls, (_, _, s) in get(group_of, (r, tsl), NTuple{3,String}[])
             gv(stoal, (r, s)).v == sgl || continue
+            off(r, t, s) && continue     # RTS(S) (M1.3 change 67)
             lhs = JuMP.AffExpr(0.0)
             for (_, ts, _) in get(tsmap_to, (r, s), NTuple{3,String}[])
                 haskey(stoa.values, (ts,)) || continue                                   # $STOA(TS)

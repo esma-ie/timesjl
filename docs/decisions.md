@@ -143,6 +143,13 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
 | 1 | Approve the plan for the stochastic extension (changes 70 to 76, eight crafted cases, about four to five working days). | Approved. | answered by James, 20 Nov 2026: "q2-stochastics, yes plan approved" |
+
+### #177 M1.3 (68): dynamic timeslices, the re-interpolation of dynslite.vda POSTLEV; crafted case demo12_tsoff_rint (merged 21 Nov 2026)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the crafted case demo12_tsoff_rint (demo12_tsoff + rint.dd, CC BY 4.0) with its public CI fixtures, the run fixture included so that CI runs it from the DD files (about 7 MB). | Recommended: yes. Built in. | accepted by merge, 21 Nov 2026 |
+
 ### #175 M1.3 (66): shaped availability, NCAP_AFX/AFM/AFSX/AFSM (coef_cpt.mod L42-58, pp_shapr.mod L19-40); crafted case demo12_afshp (merged 20 Nov 2026)
 
 | # | Question | Decided | How |
@@ -154,6 +161,14 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
 | 1 | Keep the crafted case demo12_pfdf (demo12 + pf.dd and pfdf.dd, CC BY 4.0) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | accepted by merge, 20 Nov 2026 |
+
+### #176 M1.3 (67): dynamic timeslices, the RTS(S) rows of the other families; twelve crafted cases demo12_tsoff_* (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the twelve crafted cases demo12_tsoff_* and tsoff2.dd (run files only, CC BY 4.0), with three public CI fixtures (demo12_tsoff_disp, _ptdf, _gg2; as run, about 13 MB together); the other nine are checked by the gate from their DD files. | Recommended: yes. Built in. | open |
+| 2 | D46 (timslice.mod L121 divides by zero when the regions have different timeslice trees and there is ramping or start-up data): report it to ETSAP, with the other notes? Rule-level (a report to ETSAP). | yes, with the other reports | open |
+| 3 | prepret.dsc L75 keeps an EPS upper bound EPS (MIN of the VAR_RCAP and VAR_SCAP bounds); only visible under HOLDFIXED. Fixed in this change rather than in its own PR, as the case that shows it is this change's. | Recommended: yes. Built in. | open |
 
 ### #173 m13_gate.jl: 24 hours for every HiGHS solve (open)
 
