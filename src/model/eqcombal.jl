@@ -18,7 +18,7 @@
 # Not translated yet; data that needs them raises UnportedError:
 # - capacity-related flows, cal_cap.mod (NCAP_COM, RPC_CAPFLO), which also
 #   carries early retirement (VAR_SCAP/VAR_RCAP);
-# - elastic demand, L67 and L101 under %TIMESED% (COM_ELAST);
+# Elastic demand (L67, L101, %TIMESED% YES) is translated since M1.3 change 69.
 # - non-linear demand VAR_DEM, L110 (RD_NLP);
 # - cal_ire.mod L30 when %IREAUXBAL% is set other than by powerflo.vda DECL (whose
 #   IREAUX terms, L84, are `ireaux!`: M1.3 change 27b-2).
@@ -35,8 +35,6 @@ function combal_unported(tm::TimesModel)
     d = tm.data
     nonempty_set(name, N) = !isempty(gset_opt(d, name, N))
     nonempty_par(name, N) = !isempty(gparam_opt(d, name, N))
-    nonempty_par("COM_ELAST", 5) &&
-        throw(UnportedError("eqcombal.mod L67/L101 elastic demand under %TIMESED% (COM_ELAST)"))
     nonempty_par("RD_NLP", 2) && throw(UnportedError("eqcombal.mod L110 non-linear demand VAR_DEM (RD_NLP)"))
     # %IREAUXBAL% comes from powerflo.vda DECL (L221) under %POWERFLO% (`ireaux!`); set any other way, refused
     haskey(tm.switches, "IREAUXBAL") && !powerflo_on(tm) && throw(UnportedError("cal_ire.mod L30 under %IREAUXBAL% without %POWERFLO%"))
@@ -467,6 +465,14 @@ function eq_combal!(tm::TimesModel, eqtype::String, lim::String, kind::String)
     dmas_of_rc = indexby(gset(tm, "MI_DMAS"), (1, 3))   # (r,c) -> MI_DMAS(r,com,c)
     nstts, prc_map = gset(tm, "PRC_NSTTS"), gset(tm, "PRC_MAP")
     one = GNum(1.0)
+    # elastic demand (L67, L101; %TIMESED% YES, M1.3 change 69)
+    ted = timesed_on(tm)
+    com_elast = gparam_opt(tm.data, "COM_ELAST", 5)
+    rcj_of = indexby(gset_opt(tm.data, "RCJ", 4), (1, 2))
+    bdneq = Set(k[1] for k in gset(tm, "BDNEQ").keys)
+    pref, agc = gparam_opt(tm.data, "DDF_PREF", 3), gparam_opt(tm.data, "MI_AGC", 6)
+    dmas_by_agg = indexby(gset(tm, "MI_DMAS"), (1, 2))   # (r,c) -> MI_DMAS(r,c,com)
+    varc_of = indexby(gset(tm, "RTCS_VARC"), (1, 2, 3))
 
     n = 0
     for (r, t, c, s, l) in rcs
@@ -489,6 +495,13 @@ function eq_combal!(tm::TimesModel, eqtype::String, lim::String, kind::String)
             combal_aggregation!(lhs, tm, ie, r, t, c, s)
             cal_cap!(lhs, tm, ie, "OUT", r, t, c, s)                                       # L51: cal_cap.mod OUT O
         end
+        # L67: + SUM(RCJ(R,C,J,BDNEQ(BD))$COM_ELAST(R,T,C,S,BD),BDSIG(BD)*VAR_ELAST(R,T,C,S,J,BD)), BAL only
+        if ted && kind == "BAL"
+            for (_, _, j, b) in get(rcj_of, (r, c), NTuple{4,String}[])
+                (b in bdneq && !iszero(gv(com_elast, (r, t, c, s, b)))) || continue
+                addterm!(lhs, GNum(bdsig(b)), tm, "VAR_ELAST", r, t, c, s, j, b)
+            end
+        end
         # Consumption (L69-93), BAL only.
         if kind == "BAL"
             cal_fflo!(lhs, tm, GNum(-1.0), "IN", r, t, c, s)
@@ -504,6 +517,17 @@ function eq_combal!(tm::TimesModel, eqtype::String, lim::String, kind::String)
         rhs = JuMP.AffExpr(0.0)
         if kind == "PRD"
             addterm!(rhs, GNum(1.0), tm, "VAR_COMPRD", r, t, c, s)    # L100, row exists only under RHS_COMPRD
+            # L101: +(SUM(RCJ(R,COM,J,BD)$MI_DMAS(R,C,COM),(DDF_PREF(R,T,COM)*(MI_AGC(R,T,C,COM,J,BD)-1)+RD_SHAR(R,T,COM,C))*
+            #   BDSIG(BD)*SUM(RTCS_VARC(R,T,COM,TS),VAR_ELAST(R,T,COM,TS,J,BD)))-VAR_COMPRD(R,T,C,S))$(COM_ELAST(R,T,C,S,'N')>0)$RD_AGG(R,C)
+            if ted && gv(com_elast, (r, t, c, s, "N")).v > 0 && (r, c) in rd_agg
+                for (_, _, com) in get(dmas_by_agg, (r, c), NTuple{3,String}[]), (_, _, j, b) in get(rcj_of, (r, com), NTuple{4,String}[])
+                    k = (gv(pref, (r, t, com)) * (gv(agc, (r, t, c, com, j, b)) - one) + gv(rd_shar, (r, t, com, c))) * GNum(bdsig(b))
+                    for (_, _, _, ts) in get(varc_of, (r, t, com), NTuple{4,String}[])
+                        addterm!(rhs, k, tm, "VAR_ELAST", r, t, com, ts, j, b)
+                    end
+                end
+                addterm!(rhs, GNum(-1.0), tm, "VAR_COMPRD", r, t, c, s)
+            end
         else
             if lim == "FX" && (r, t, c, s) in rhs_combal              # L106
                 addterm!(rhs, GNum(1.0), tm, "VAR_COMNET", r, t, c, s)

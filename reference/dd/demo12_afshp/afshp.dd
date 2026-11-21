@@ -1,0 +1,173 @@
+* TIMES.jl crafted case demo12_afshp (reference/crafted.toml, 19 Nov 2026): demo12 plus shaped
+* availability factors in REG1 (coef_cpt.mod L42-62, pp_shapr.mod L19-46; M1.3 change 66), which no
+* open model has:
+* - SHAPE rows 2 (decline with age) and 3 (a first year at 0.8), MULTI row 2 (0.95 in 2030, 0.9 in 2050);
+* - NCAP_AFX 2 on the vintaged gas plant ELCTNGAS01 (NCAP_AF by DAYNITE slice) and NCAP_AFX 3 with
+*   NCAP_AFM 2 on the existing wind plant ELCREWIN00, not vintaged, which NCAP_AFX makes
+*   vintage-dependent (L43-47, the NCAP_AF shape of L48);
+* - NCAP_AFS at ANNUAL with NCAP_AFSX 2 on the nuclear plant ELCNNNUC01; seasonal NCAP_AFS with
+*   NCAP_AFSX 3 and NCAP_AFM 2 on the solar plant ELCRNSOL01, which L42 marks for the NCAP_AF
+*   shape and L55 copies into NCAP_AFSM (setglobs.gms declares NCAP_AFSM after the data, so it
+*   cannot be given; life 15 years: its 2050 vintage is around for one period only, L27); a seasonal NCAP_AFS on ELCTNGAS01, which takes its
+*   NCAP_AFX as NCAP_AFSX (L58) (the NCAP_AFS shape of L59).
+* The year-0 records (3) extend each index back and forward to every vintage (preshape.gms).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER SHAPE /
+2.1 1.0
+2.2 1.0
+2.3 1.0
+2.4 1.0
+2.5 1.0
+2.6 1.0
+2.7 1.0
+2.8 1.0
+2.9 1.0
+2.10 1.0
+2.11 0.95
+2.12 0.95
+2.13 0.95
+2.14 0.95
+2.15 0.95
+2.16 0.95
+2.17 0.95
+2.18 0.95
+2.19 0.95
+2.20 0.95
+2.21 0.9
+2.22 0.9
+2.23 0.9
+2.24 0.9
+2.25 0.9
+2.26 0.9
+2.27 0.9
+2.28 0.9
+2.29 0.9
+2.30 0.9
+2.31 0.9
+2.32 0.9
+2.33 0.9
+2.34 0.9
+2.35 0.9
+2.36 0.9
+2.37 0.9
+2.38 0.9
+2.39 0.9
+2.40 0.9
+2.41 0.85
+2.42 0.85
+2.43 0.85
+2.44 0.85
+2.45 0.85
+2.46 0.85
+2.47 0.85
+2.48 0.85
+2.49 0.85
+2.50 0.85
+2.51 0.85
+2.52 0.85
+2.53 0.85
+2.54 0.85
+2.55 0.85
+2.56 0.85
+2.57 0.85
+2.58 0.85
+2.59 0.85
+2.60 0.85
+3.1 0.8
+3.2 1
+3.3 1
+3.4 1
+3.5 1
+3.6 1
+3.7 1
+3.8 1
+3.9 1
+3.10 1
+3.11 1
+3.12 1
+3.13 1
+3.14 1
+3.15 1
+3.16 1
+3.17 1
+3.18 1
+3.19 1
+3.20 1
+3.21 1
+3.22 1
+3.23 1
+3.24 1
+3.25 1
+3.26 1
+3.27 1
+3.28 1
+3.29 1
+3.30 1
+3.31 1
+3.32 1
+3.33 1
+3.34 1
+3.35 1
+3.36 1
+3.37 1
+3.38 1
+3.39 1
+3.40 1
+3.41 1
+3.42 1
+3.43 1
+3.44 1
+3.45 1
+3.46 1
+3.47 1
+3.48 1
+3.49 1
+3.50 1
+3.51 1
+3.52 1
+3.53 1
+3.54 1
+3.55 1
+3.56 1
+3.57 1
+3.58 1
+3.59 1
+3.60 1
+/;
+PARAMETER MULTI /
+2.2005 1
+2.2030 0.95
+2.2050 0.9
+/;
+PARAMETER NCAP_AF /
+REG1.2005.ELCTNGAS01.SD.UP 0.92
+REG1.2005.ELCTNGAS01.SN.UP 0.9
+REG1.2005.ELCTNGAS01.WD.UP 0.92
+REG1.2005.ELCTNGAS01.WN.UP 0.9
+/;
+PARAMETER NCAP_AFX /
+REG1.0.ELCTNGAS01 3
+REG1.0.ELCREWIN00 3
+REG1.2005.ELCTNGAS01 2
+REG1.2005.ELCREWIN00 3
+/;
+PARAMETER NCAP_AFM /
+REG1.0.ELCREWIN00 3
+REG1.0.ELCRNSOL01 3
+REG1.2005.ELCREWIN00 2
+REG1.2005.ELCRNSOL01 2
+/;
+PARAMETER NCAP_AFS /
+REG1.2005.ELCNNNUC01.ANNUAL.UP 0.9
+REG1.2005.ELCRNSOL01.S.UP 0.3
+REG1.2005.ELCRNSOL01.W.UP 0.25
+REG1.2005.ELCTNGAS01.W.UP 0.85
+/;
+PARAMETER NCAP_AFSX /
+REG1.0.ELCNNNUC01.UP 3
+REG1.0.ELCRNSOL01.UP 3
+REG1.2005.ELCNNNUC01.UP 2
+REG1.2005.ELCRNSOL01.UP 3
+/;

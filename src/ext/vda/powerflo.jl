@@ -70,9 +70,9 @@ ptdf_mip(tm) = hasdata(tm, "GR_PTDF", 6) &&
     powerflo_main_unported(tm) -> Vector{String}
 
 The powerflo.vda main-block paths this model would take that are not
-translated: total demand fractions given as data (GR_DEMFR: the levelization
-of L107 and L131) and the PTDF formulation's discrete-capacity path
-(`ptdf_mip`), besides the gas grids. The allocation of generation and
+translated: the PTDF formulation's discrete-capacity path (`ptdf_mip`),
+besides the gas grids. Total demand fractions given as data (GR_DEMFR: L40,
+the levelization of L107 and L131) are translated since M1.3 change 65. The allocation of generation and
 sectoral demand to grid nodes (GR_ENDFR, GR_GENFR, GR_GENMAP, GR_GENLEV:
 L40-47, L109-162) is translated (M1.3 change 27a-2), and so is the PTDF
 formulation (GR_PTDF: L43-44, L59-64, L70, L86, L98-99, L172-177; change 57).
@@ -80,7 +80,6 @@ formulation (GR_PTDF: L43-44, L59-64, L70, L86, L98-99, L172-177; change 57).
 function powerflo_main_unported(tm)
     out = powerflo_unported(tm)
     ptdf_mip(tm) && push!(out, "powerflo.vda L165-170, L177 (GR_PTDF with %DSC% and %SOLMIP% YES: discrete candidate lines)")
-    hasdata(tm, "GR_DEMFR", 4) && push!(out, "powerflo.vda L107, L131 (GR_DEMFR has data: levelization of total demand fractions)")
     return out
 end
 
@@ -93,9 +92,8 @@ macros GR_DUNIT, GR_DNCAP and VAR_PTDNCAP, L165-170, L227). The allocation of su
 to grid nodes (EQ_GR_GENALL, EQ_GR_DEMALL and the IREAUX terms of the balance and peak rows) is
 translated since M1.3 change 27b-2, and the PTDF formulation (the candidate lines of L229-247,
 EQ_GR_PTDFLO, EQ_GR_VIRTCAP, EQ_GR_VIRTBND) since change 57. GR_DEMFR is not tested here: at
-this stage it holds the fractions the main block computed from the sectoral ones (L133-162),
-which the equations read; GR_DEMFR given as input data is refused by the main block
-(`powerflo_main_unported`).
+this stage it holds the fractions the main block computed from the sectoral ones (L133-162)
+or levelled from input data (L107, L131), which the equations read.
 """
 function powerflo_model_unported(tm)
     out = powerflo_unported(tm)
@@ -196,7 +194,8 @@ line reactances synchronised between regions, the admittance GR_ADMIT
 grid maps GR_GMAPC and GR_ENDC, the allocation of generation and sectoral
 demand to the grid nodes (GR_ENDFR, GR_GENFR, GR_GENMAP, GR_GENLEV
 normalised; GR_ALLMAP, GR_ALGMAP, GR_DEMMAP, GR_PRCMAP, GR_GENP, GR_GNALL,
-GR_DEMFR from the sectoral fractions: change 27a-2), the reference nodes
+GR_DEMFR from the sectoral fractions: change 27a-2; GR_DEMFR given as data,
+levelled to the commodity timeslices: change 65), the reference nodes
 GR_ADO, and COM_LIM FX on the grid nodes. Loops run in GAMS order; the scratch (F, Z, CNT, DFUNC,
 MY_F, DONE) is left as GAMS leaves it.
 
@@ -207,7 +206,7 @@ their reactance (L70), the reactance nodes are the grid nodes without PTDF
 (L86), RP_GRID holds the lines of the PTDF grids (L98-99) and the PTDF branch
 L172-177 runs (`ptdf_complete!`).
 
-GAMS: powerflo.vda L11-204 (without GR_DEMFR data), v4.9.7.
+GAMS: powerflo.vda L11-204, v4.9.7.
 """
 function powerflo_main!(tm)
     u = powerflo_main_unported(tm)
@@ -232,10 +231,12 @@ function powerflo_main!(tm)
     foreach(k -> (k[1] in reg && (k[1], k[3]) in nrgelc) && push!(trackp, (k[1], k[2])), rpc_ire)
     react = gvalues(tm, "PRC_REACT", 3)
     filter!(((k, _),) -> !(k[1] in reg && !((k[1], k[3]) in trackp)), react)
-    # L40: OPTION TRACKC <= GR_DEMFR (no GR_DEMFR data: powerflo_main_unported), GR_GID <= GR_ENDFR, which projects
-    #   GR_ENDFR(R,ALLYEAR,C,CG) on R and C (positions 1 and 3; only nonzero matters until L70 resets GR_GID)
+    # L40: OPTION TRACKC <= GR_DEMFR, GR_GID <= GR_ENDFR, which project GR_DEMFR(R,ALLYEAR,C,S) and
+    #   GR_ENDFR(R,ALLYEAR,C,CG) on R and C (positions 1 and 3, from the left; an EPS record counts;
+    #   only nonzero matters until L70 resets GR_GID)
     gid_add = Set{NTuple{2,String}}((k[1], k[3]) for k in keys(gvalues(tm, "GR_ENDFR", 4)))
-    # L41: GR_GID(TRACKC)=1 (TRACKC empty); OPTION TRACKC < GG_PRBD (R,YEAR,C,LIM: positions 1 and 3); GR_GID(TRACKC)=1
+    # L41: GR_GID(TRACKC)=1 (TRACKC from GR_DEMFR); OPTION TRACKC < GG_PRBD (R,YEAR,C,LIM: positions 1 and 3); GR_GID(TRACKC)=1
+    foreach(k -> push!(gid_add, (k[1], k[3])), keys(gvalues(tm, "GR_DEMFR", 4)))
     foreach(k -> push!(gid_add, (k[1], k[3])), keys(gparam_opt(d, "GG_PRBD", 4).values))
     # L42: LOOP((R,LL,C,ITEM)$GR_GENFR(R,LL,C,ITEM),GR_GID(R,C)=1)
     foreach(k -> push!(gid_add, (k[1], k[3])), keys(gvalues(tm, "GR_GENFR", 4)))
@@ -404,8 +405,16 @@ function powerflo_main!(tm)
         x == 0 ? delete!(sus, (r, t, c, r, c)) : (sus[(r, t, c, r, c)] = x)
     end
     gput!(tm, "GR_SUS", sus)
-    # L107: pp_lvlfc.mod GR_DEMFR: no GR_DEMFR data (powerflo_main_unported), so only its OPTION CLEAR=UNCD7
-    gput!(tm, "UNCD7", Set{NTuple{7,String}}())
+    # L107: $BATINCLUDE pp_lvlfc.mod GR_DEMFR C COM_TS '' ",'0','0','0','0'" ALL_TS T RTC(R,T,C): the demand
+    #   fractions given as data levelled to the commodity timeslices of their node, at the milestone years (%7 = T),
+    #   for the RTC rows (%8); %9-%12 empty, so no weighting and no record off the targets is removed
+    comts_of = indexby(gset(tm, "COM_TS"), (1, 2))
+    rtc_set = gset(tm, "RTC").members
+    uncd7, ts_array = pp_lvlfc!(tm, TsTree(tm), "GR_DEMFR", 4; sp=4, years=tset, keyok=k -> true,
+                                targets=k -> [x[3] for x in get(comts_of, (k[1], k[3]), NTuple{3,String}[])],
+                                qual=k -> (k[1], k[2], k[3]) in rtc_set)
+    gput!(tm, "UNCD7", uncd7)
+    ts_array === nothing || gput!(tm, "TS_ARRAY", Dict{Tuple{String},Float64}((s,) => v for (s, v) in ts_array))
     # --- L109-162: the allocation of generation and sectoral demand to the grid nodes (M1.3 change 27a-2) ------
     # A parameter value is read as GAMS does (absent 0, a stored 0 EPS) and stored back with set!.
     val(p, k) = (x = get(p, k, nothing); x === nothing ? GZERO : x == 0.0 ? GEPS : GNum(x))
@@ -499,12 +508,18 @@ function powerflo_main!(tm)
     union!(algmap, add)
     # L130: GR_DEMMAP(GR_ALLMAP(R,C,COM))$(GR_GENLEV(R,COM) < 3) = YES
     foreach(k -> (iscom(k[2]) && val(genlev, (k[1], k[3])).v < 3) && push!(demmap, k), allmap)
-    # L131: IF(CARD(GR_DEMFR), ...): GR_DEMFR has no data here (powerflo_main_unported)
+    # L131: IF(CARD(GR_DEMFR),GR_DEMFR(RTCS_VARC(RC_GRID(R,T,C),S)) = GR_DEMFR(R,T,C,S)+EPS): every node's
+    #   commodity timeslices of a model year get a record, EPS where it had none (CARD counts EPS records)
     demfr = gvalues(tm, "GR_DEMFR", 4)
+    varc_of = indexby(gset(tm, "RTCS_VARC"), (1, 2, 3))
+    if !isempty(demfr)
+        for k3 in rc_grid, k in get(varc_of, k3, NTuple{4,String}[])
+            set!(demfr, k, val(demfr, k) + GEPS)
+        end
+    end
     # L132: GR_ENDC(R,NRG_GRID,'DEM')$SUM(GR_ENDC(R,NRG_GRID,C),1) = YES
     foreach(k -> iscom(k[3]) && push!(endc, (k[1], k[2], "DEM")), collect(endc))
     # L134-138: LOOP((R,NRG_GRID)$GR_ENDC(R,NRG_GRID,'DEM'), ...): demand fractions from the sectoral ones
-    varc_of = indexby(gset(tm, "RTCS_VARC"), (1, 2, 3))
     rcg_sorted = sorted(rc_grid)
     rtc_sorted = sorted(Sk("RTC", 3))
     for r in regs, g in gridl
@@ -893,6 +908,7 @@ number of rows.
 GAMS: powerflo.vda L250-258, v4.9.7.
 """
 function eq_gr_powflo!(tm)
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     uppercase(strip(gswitch(tm, "POWERFLO", ""), ['\'', '"'])) == "YES" || return 0
     powerflo_vars!(tm)
     admit = gparam(tm, "GR_ADMIT")
@@ -911,6 +927,7 @@ function eq_gr_powflo!(tm)
     for ((r, t, c, reg, com), a) in sort(collect(admit.values); by=first)
         ((r, t, c) in rc_grid && (t,) in tx) || continue             # RC_GRID(%R_T%,C): SUBT in a stepped run (maindrv.mod L38-40)
         for (_, _, _, s) in get(varc_of, (r, t, c), no4)
+            off(r, t, s) && continue                                 # RTS(S), L254 (M1.3 change 67)
             lhs = JuMP.AffExpr(0.0)
             for (_, _, _, _, p) in get(top_of, (r, c, reg, com), no5)
                 iszero(gv(react, (r, t, p))) && continue                 # $PRC_REACT(R,T,P)
@@ -955,6 +972,7 @@ links to S. Returns the number of rows.
 GAMS: powerflo.vda L262-274, v4.9.7.
 """
 function eq_gr_ptdflo!(tm)
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     powerflo_on(tm) || return 0
     rp_grid = gset(tm, "RP_GRID")
     isempty(rp_grid) && return 0
@@ -979,6 +997,7 @@ function eq_gr_ptdflo!(tm)
     for (r, p) in gams_sort!(collect(rp_grid.keys), d), t in (k[1] for k in gset(tm, "MILESTONYR").keys)
         (t,) in tx || continue
         for (c,) in gams_sort!([(c,) for c in get(c_of, (r, p), String[])], d), (_, _, s) in get(s1_of, (r, p), NTuple{3,String}[])
+            off(r, t, s) && continue                                 # RTS(S), L264 (M1.3 change 67)
             lhs = JuMP.AffExpr(0.0)
             for (_, v, _, _) in get(vint_of, (r, t, p), nok), (_, _, _, _, ts) in get(varf_of, (r, t, p, c), NTuple{5,String}[])
                 fr = gv(rs_fr, (r, s, ts))
@@ -1015,6 +1034,7 @@ Returns the number of rows.
 GAMS: powerflo.vda L276-279, v4.9.7.
 """
 function eq_gr_virtcap!(tm)
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     powerflo_on(tm) || return 0
     d = tm.data
     candid = gset_opt(d, "GR_CANDID", 3)
@@ -1033,6 +1053,7 @@ function eq_gr_virtcap!(tm)
         (t,) in tx || continue
         for (c,) in gams_sort!([(c,) for c in get(cs_of, (r, p), String[])], d), (_, _, s) in get(s1_of, (r, p), NTuple{3,String}[]),
                 (bd, sig) in (("LO", 1.0), ("UP", -1.0))                     # BDSIG: LO 1, UP -1 (setglobs.gms L248)
+            off(r, t, s) && continue                                 # RTS(S), L278 (M1.3 change 67)
             lhs = JuMP.AffExpr(0.0)
             m = get(ntop, (r, c, p), 0)
             m == 0 || grvirt!(lhs, GNum(Float64(m)) * GNum(sig), tm, r, t, p, s)
@@ -1205,6 +1226,7 @@ of rows.
 GAMS: powerflo.vda L290-313, v4.9.7.
 """
 function eq_gr_genall!(tm)
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     powerflo_on(tm) || return 0
     x = gralloc_context(tm)
     isempty(x.gnall) && return 0
@@ -1221,6 +1243,7 @@ function eq_gr_genall!(tm)
     tx = eq_periods(tm)
     for (r, t, c) in x.gnall, (_, _, _, s) in get(varc_of, (r, t, c), no4), cg in get(x.cg_of_r, r, String[])
         (t,) in tx || continue                                       # GR_GNALL(%R_T%,C): SUBT in a stepped run (maindrv.mod L38-40)
+        off(r, t, s) && continue                                     # RTS(S), L291 (M1.3 change 67)
         lhs = JuMP.AffExpr(0.0)
         for (_, p, com, item) in get(x.prcmap_of_r, (r,), no4)
             (r, cg, com) in x.algmap || continue                     # GR_ALGMAP(R,CG,COM), all three parts
@@ -1307,6 +1330,7 @@ Returns the number of rows.
 GAMS: powerflo.vda L314-340, v4.9.7.
 """
 function eq_gr_demall!(tm)
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     powerflo_on(tm) || return 0
     x = gralloc_context(tm)
     isempty(x.demfr) && return 0
@@ -1323,6 +1347,7 @@ function eq_gr_demall!(tm)
     tx = eq_periods(tm)
     for (r, t, c) in x.rc_grid, (_, _, _, s) in get(varc_of, (r, t, c), no4)
         ((t,) in tx && haskey(x.demfr, (r, t, c, s))) || continue    # RC_GRID(%R_T%,C), $GR_DEMFR(R,T,C,S) (EPS is true, G3)
+        off(r, t, s) && continue                                     # RTS(S), L316 (M1.3 change 67)
         demfr = gv(x.demfr, (r, t, c, s))
         ado = (r, t, c) in x.ado
         for (_, g, _) in get(x.gmapc_by_13, (r, c), no3)             # GR_GMAPC(R,NRG_GRID,C)
@@ -1416,6 +1441,7 @@ them. In a stepped run %R_T% is `R,SUBT(T)` (`eq_periods`). The grid note's form
 GAMS: powerflo.vda L341-359, v4.9.7.
 """
 function eq_gr_xbnd!(tm)
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     powerflo_on(tm) || return 0
     d = tm.data
     xbnd = gparam_opt(d, "GR_XBND", 2)
@@ -1459,6 +1485,7 @@ function eq_gr_xbnd!(tm)
             a == "ACT" || continue                                    # $GR_GRID(J,R,'ACT')
             nodes = [c for (jj, _, c) in get(grid_of_r, (r,), no3) if jj == j && (r, t, c) in x.rc_grid]
             for (ie,) in ie_set, (_, s) in get(finest_of_r, (r,), no2)
+                off(r, t, s) && continue                             # RTS(S), L343 (M1.3 change 67)
                 sgn = (ie,) in xpt ? GNum(-1.0) : GNum(1.0)            # PROD(XPT(IE),-1)
                 k = gv(xbnd, (r, t)) * gv(yrfr, (r, s))
                 lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
