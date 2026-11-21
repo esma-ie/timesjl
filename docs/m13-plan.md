@@ -166,6 +166,11 @@ GAMS 54.6.1):
 | 62 | Two-way gas pipelines (GG_LINK both ways), refused with change 61: the rows EQ_GG_PDIF1, EQ_GG_PDIF2, EQ_GG_STEP, the FX rows of EQ_GG_MBND (with the flow-direction variable VAR_GG_Y, continuous in the LP formulation) and the second term of VAR_GG_WSLAC | gasgrids.vda 141-205 | layers 1 to 3 on the crafted case demo12_gg2 (demo12_gg's pipeline made two-way), both variants, from the DD files; objective 23,960,157.73 (CI: demo12_gg2 public fixture); demo12_gg unchanged |
 | 63 | Dynamic timeslice trees (%DYNTS% YES with TS_OFF data: %RTS% is S+NORTS(R,T,S)), refused since M1.3 (8b): dynslite.vda PRELEV with its CLEAR block (pp_prelv.vda L125: the season storage leads RS_STG and RS_STGAV, the QA check, the data of timeslices turned off removed), REDUCE (pp_reduce.red L188), POSTLEV (ppm_ext.vda L169; its re-interpolation of vintaged ANNUAL-level data refused) and BOUNDS (bndmain.mod L87: RTC_NET, RTC_PRD, UC_RHSMAP, the variables of timeslices turned off fixed at 0, and HOLDFIXED: every fixed variable held as a constant, EPS bounds not counted as fixed); ppmain.mod L742; the RTS(S) rows of EQ_PEAK, EQ_PTRANS and EQE_ACTEFF. The bound table records EPS bounds. Still refused with timeslices turned off: the other RTS(S) families (storage, dispatching, ASHAR, CAFLAC, unit commitment by start-up type, residual load, power-flow grids) | dynslite.vda 8-121; pp_prelv.vda 125; pp_reduce.red 188; ppm_ext.vda 169; bndmain.mod 87; ppmain.mod 742 | layers 1 to 3 on the crafted case demo12_tsoff (an alternative timeslice tree in REG1: one season A up to 2015, S and W from 2020), both variants, from the DD files; objective 23,960,685.74 (CI: demo12_tsoff public fixture) |
 | 64 | Two fixes found by the nightly on a local model (layer 1 at presolve, unchanged since 15 Nov 2026), reproduced on open data: prepret.dsc L49 `PRC_RCAP(PRC_RCAP(RP)) = PRC_CAP(RP)` leaves a record outside RP (TIMES.jl dropped it); eqobjinv.mod L219-229, the interest during construction, takes the `IF(Z, ...)` branch for an EPS COEF_ILED too (an EPS lead time is half a year's interest; TIMES.jl gave OBJ_DIVI 1, so OBJ_DIVI and OBJSCC and the investment and salvage costs of such vintages were off) | prepret.dsc 49; eqobjinv.mod 219-229 | layers 1 to 3 on the crafted case demo12_iled (an EPS NCAP_ILED and PRC_RCAP on ELCTNGAS01 in REG1, PRC_RCAP on a process of no region in REG2), both variants, from the DD files; without the fixes the case fails like the local model; objective 23,961,179.22 (CI: demo12_iled public fixture) |
+| 65 | Total demand fractions given as data (GR_DEMFR), refused since M1.3 (27a): L40 projects GR_DEMFR on (R,C) into GR_GID (an EPS record counts); L107 levels it to the commodity timeslices of its node with pp_lvlfc.mod (%7 = T, %8 = RTC; an ANNUAL value alone is copied down, otherwise a target without a value of its own is aggregated or inherited; no record off the targets is removed) and leaves UNCD7 and TS_ARRAY; L131 gives every grid node its commodity timeslices, EPS where it had none, so a region with one node gets EQ_GR_DEMALL rows too. With no sectoral fractions (no GR_ENDFR) the grid takes the total demand path GR_ENDC(R,NRG_GRID,'NRG') (L140) with nonzero fractions, which no case reached before. pp_prelv.vda now stores its own UNCD7 and TS_ARRAY before L114, so that powerflo.vda's are the ones left (found by the gate: UNCD7 at prelv). New crafted case demo12_pfdf (19 Nov 2026) | powerflo.vda 40-41, 107, 131; pp_prelv.vda 114 | layers 1 to 3 on demo12_pfdf, both variants, from the DD files: 72 EQ_GR_DEMALL rows, 24 of them in REG2; objective 23,960,685.74 (CI: demo12_pfdf public fixture); the five earlier power-flow cases unchanged |
+| 66 | Shaped availability factors, refused since M1.2: NCAP_AFX and NCAP_AFSX (the SHAPE row by age) and NCAP_AFM and NCAP_AFSM (the MULTI row by year). coef_cpt.mod L42 marks the processes with an NCAP_AFM in NCAP_AFX(R,'0',P) (LL--ORD(LL) lands on the last ALLYEAR element, G31); L43-47 TRACKP and NCAP_AFBX; L55-58 NCAP_AFSM from NCAP_AFM, the EPS NCAP_AFSX that adds RTPS_BD, NCAP_AFSX from NCAP_AFX; pp_shapr.mod L19-40 (`pp_shapr!`): the vintages with a shape index >= 1.5, PASTSUM, the index dropped for a vintage within its own period (L27), RTP_SHAPI, and COEF_AF as the SHAPE row averaged over the years each vintage operates in each period, times MULTI. NCAP_AFSM cannot be given as data (setglobs.gms declares it after the data), so the case gives NCAP_AFM. New crafted case demo12_afshp (19 Nov 2026) | coef_cpt.mod 42-62; pp_shapr.mod 15-46 | layers 1 to 3 on demo12_afshp, both variants, from the DD files: COEF_AF of four plants shaped (e.g. ELCTNGAS01 v2020 in 2050 at SD 0.828 against 0.92 unshaped); objective 23,962,468.09 (CI: demo12_afshp public fixture); demo12 and demo12_iled unchanged |
+| 67 | Dynamic timeslices, the RTS(S) rows of the other families, refused since M1.3 (63): with %DYNTS% YES and TS_OFF, `RTS(S)` is the macro `S+NORTS(R,T,S)` (timslice.mod L31-39), a lead of -INF at a timeslice turned off in period T, so the row is not generated there. The filter (`rts_off`) now skips those rows in EQ_STGAUX, EQ_STGTSS, EQ_STSBAL, EQ_STSLEV, EQ_ACTRAMP, EQ(l)_ACTUPS, EQL_ACTUPC, EQ_ACTPL, EQ_SLSIFT, EQ(l)_ASHAR, EQL_CAPFLO, the seven eq_sd*/eq_sud* rows, EQ_RL_*, EQ_GR_POWFLO, EQ_GR_PTDFLO, EQ_GR_VIRTCAP, EQ_GR_GENALL, EQ_GR_DEMALL, EQ_GR_XBND and the ten EQ_GG_* rows. A fix found on the way: prepret.dsc L75 (`MIN(VAR_RCAP.UP,VAR_SCAP.UP)`) keeps an EPS bound EPS, which HOLDFIXED (dynslite.vda L111) needs to hold the column. D46: timslice.mod L121 divides by zero when the regions have different trees and there is ramping or start-up data (GAMS and TIMES.jl both stop). Not in this change: the re-interpolation of dynslite.vda L94-102. Twelve crafted cases demo12_tsoff_* (19 Nov 2026), each demo12_tsoff with one earlier case, and tsoff2.dd (REG2 on the same tree) | timslice.mod 31-39; eqstgaux.mod 14; eqstgtss.mod 13, 53, 88; eqactups.vda 50-131; eqashar.vda 38; eqcaflac.vda 40; eqlducs.vda 67-118; resloadc.vda 72-142; powerflo.vda 254-343; gasgrids.vda 154-200; prepret.dsc 75 | layers 1 to 3 on eleven cases and layers 1 and 2 on demo12_tsoff_stgccl (infeasible in GAMS), both variants, from the DD files; every family's rows at the timeslices turned off absent on both sides (CI: demo12_tsoff_disp, demo12_tsoff_ptdf, demo12_tsoff_gg2 public fixtures); demo12_tsoff and the early-retirement cases unchanged |
+| 68 | Dynamic timeslices, the re-interpolation of dynslite.vda POSTLEV, refused since M1.3 (63): for the vintaged processes at the ANNUAL level (RVP), each row of FLO_FUNC, then (for those with RPS_S1 at ANNUAL) ACT_EFF, ACT_FLO and FLO_SUM with ANNUAL data at a vintage gets option 3 at year '0' (`LL--ORD(LL)`, the last ALLYEAR element), and fillparm.gms re-interpolates and extrapolates it over the vintages through a write cache, with DATAYEAR set to '0' alone so that only those rows are taken; RESET 0 then removes the options. `fillparm!` with `cache=true`. New crafted case demo12_tsoff_rint (19 Nov 2026) | dynslite.vda 88-104; fillparm.gms 20-56 | layers 1 to 3 on demo12_tsoff_rint, both variants, from the DD files (CSHNGAS1's ANNUAL ACT_EFF: the 2005 record goes, the vintages keep 0.938 to 0.97) (CI: demo12_tsoff_rint public and run fixtures, test_m13_chain.jl and test_ddsource.jl); demo12_tsoff unchanged |
+| 69 | Elastic demand, the linear form (%TIMESED% YES), refused since M1.1: the base prices of an earlier run (readbprice.mod; read from TIMES.jl's own Arrow folder in place of the GDX file, q1 of 19 Nov 2026: `$GDXIN`/`$LOAD` in the compile step, L22-36 in `readbprice!`), TIMES-Micro's linear preprocessing (pp_micro.mod PRE: the demand aggregates, MI_DMAS, RD_AGG, DDF_PREF, DDF_QREF, RD_SHAR, MI_ESUB), the shaped elasticities (coef_obj.mod L184-189: SHEDJ, SHAPED), the QA checks (pp_qack.mod L95-110, L127), bnd_elas.mod (its data statements and the step bounds), the rows EQ_OBJELS and EQL_COMCES, the elastic terms of EQ(l)_COMBAL (L67, L101) and EQ_PEAK (L85) and of EQ_OBJ (L89); after a base run (%TIMESED% neither 0 nor YES) `run_model` writes the base prices (wrtbprice.mod, `write_bprice`). Harness 0.3.6: `work_files`. New crafted cases demo12_edbase, demo12_ed and demo12_edagg (19 Nov 2026) | readbprice.mod 1-48; wrtbprice.mod 1-35; pp_micro.mod 9-40; coef_obj.mod 180-189; bnd_elas.mod 10-35; eqobjels.mod 12-49; eqcombal.mod 67, 101; eqpeak.mod 85; eqobj.mod 49, 89; pp_qack.mod 95-110, 127 | layers 1 to 3 on demo12_ed and demo12_edagg, both variants, from the DD files (objectives 25,331,722.63 and 25,333,565.50); demo12_edbase (the base run, demo12's model) the same; the base prices TIMES.jl writes from GAMS/CPLEX's own marginals equal GAMS's `com_bprice.gdx` (120 of 120, difference 0, both variants) (CI: demo12_ed and demo12_edagg public and run fixtures, test_m13_chain.jl and test_ddsource.jl) |
 
 ## Parity (per change)
 
@@ -267,11 +272,11 @@ Every refusal left in `src/` was listed (`UnportedError`, the `*_unported` lists
 
 | Refused feature | Where it goes |
 | --- | --- |
-| Elastic demand, linear form (%TIMESED%: readbprice.mod, ppmain.mod L747-755, pp_micro.mod PRE, bnd_elas.mod, eqobjels.mod) | M1.3 gate, next |
-| The stochastic extension (%STAGES%, SPINES, SENSIS) | M1.3 gate |
-| Shaped availability (NCAP_AFM, NCAP_AFX, NCAP_AFSM, NCAP_AFSX; coef_cpt.mod L42-58, pp_shapr.mod L19-40) | M1.3 gate (q1) |
-| Dynamic timeslices: the re-interpolation (dynslite.vda L94-102) and the RTS(S) rows of the other families | M1.3 gate (q1) |
-| GR_DEMFR as input data (powerflo.vda L107, L131) | M1.3 gate (q1) |
+| Elastic demand, linear form (%TIMESED%: readbprice.mod, ppmain.mod L747-755, pp_micro.mod PRE, bnd_elas.mod, eqobjels.mod) | translated: change 69 (19 Nov 2026); the base prices from TIMES.jl's own Arrow folder (q1, 19 Nov 2026) |
+| The stochastic extension (%STAGES%, SPINES, SENSIS) | M1.3 gate; plan below ("Plan: the stochastic extension"), approved by James on 20 Nov 2026 (#178 d1): changes 70 to 76 |
+| Shaped availability (NCAP_AFM, NCAP_AFX, NCAP_AFSM, NCAP_AFSX; coef_cpt.mod L42-58, pp_shapr.mod L19-40) | translated: change 66 (19 Nov 2026) |
+| Dynamic timeslices: the re-interpolation (dynslite.vda L94-102) and the RTS(S) rows of the other families | translated: the RTS(S) rows in change 67, the re-interpolation in change 68 (19 Nov 2026) |
+| GR_DEMFR as input data (powerflo.vda L107, L131) | translated: change 65 (19 Nov 2026) |
 | %IREAUXBAL% set by the run without %POWERFLO% (cal_ire.mod L30) | stays refused: no GAMS code to translate (#149 d1); out of the gate (James, 19 Nov 2026) |
 | %OBJANN%, %VALIDATE%, %VINTOPT% 1, %WAVER%, %INTEXT_ONLY%, %PREP_ANS% | M1.5 (q1) |
 | VAR_UC not YES; bnd_ire.vda with GDX_IREBND and GDX_IPRIC | M1.5 (q2) |
@@ -2432,6 +2437,102 @@ The M1.4 gate's own criteria still pass; it waits for this gate (CLAUDE.md), and
   no entry for VAR_UPT; the separate document is not in the documentation repository
   (its User_Notes folder has no unit-commitment note). The translation follows the GAMS
   source alone (discrepancies.md D40).
+
+## Plan: the stochastic extension (approved by James, 20 Nov 2026)
+
+Asked as q2 at the check-in of 19 Nov 2026 ("yes show me the plan"); James
+approved it on 20 Nov 2026 (#178 d1, docs/decisions.md).
+
+### What GAMS does (TIMES v4.9.7 @ d9a6a25)
+
+Three run switches turn the extension on (maindrv.mod L33-36):
+
+- `STAGES YES`: a multi-stage stochastic model. One LP holds every state of
+  the world (SOW) of an event tree; each variable and equation gets a SOW
+  index, and the objective is the expected cost, optionally with a penalty
+  on upward deviations (risk aversion, `SW_LAMBDA`).
+- `SPINES YES`: sets `STAGES YES` and adds the "spines" form (recurrin.stc
+  L52-182): the objective components and the dynamic user constraints are
+  written through GAMS macros over the SOWs (`Z`, the `Q` equations,
+  `EQ_OBW1`).
+- `SENSIS YES`: sets `STAGES` to `Yes` (lower case). The case-blind `$IFI`
+  tests run the stochastic preprocessing, but the case-exact `$IF` tests do
+  not switch the tags, so the model stays deterministic; solve.stc then
+  solves it once per SOW with that SOW's data (sensis.stc), a sensitivity
+  analysis.
+
+The GAMS code, file by file:
+
+| Step | GAMS | Lines | What it does |
+| --- | --- | --- | --- |
+| Declarations | initmty.stc (from initmty.mod L437) | 81 | the tree parameters (`SW_START`, `SW_SUBS`, `SW_SPROB`, `SW_PROB`, `SW_LAMBDA`), the uncertain attributes (`S_COM_PROJ`, `S_NCAP_COST`, `S_COM_TAX`, `S_CAP_BND`, `S_FLO_CUM`, `S_COM_CUMPRD`/`NET`, `S_FLO_FUNC`, `S_NCAP_AFS`, `S_COM_FR`, `S_DAM_COST`, `S_UC_RHS*`, `S_UCOBJ`, `S_CM_*`) and the internal maps |
+| Preprocessing | prep_ext.stc (preppm.mod L216), recurrin.stc MXPAR | 55 + 50 | interpolation of the uncertain attributes, the user-constraint set-up (`OBJZ`, `OBJ1`), and the `MX` macros that multiply `COEF_AF`, `COM_FR` and `RTCS_FR` by their uncertain factors |
+| The event tree | stages.stc (maindrv.mod L65), fillsow.stc | 272 + 47 | from the stages, children and probabilities to `SW_T` (the SOWs alive in each period), `SW_TSW` (the map from each SOW to the node it shares in a period), `SW_TPROB`, `SW_MAP`; each uncertain attribute copied down the tree; then `OBJ_SIC`, `RTP_FFCS`, `RTP_SAFS`, `RCS_SSFR` |
+| Coefficients | coefmain.mod L11 | 1 | (deterministic runs: one SOW, '1') |
+| The model | `SW_TAGS` (stages.stc L12-15) in mod_vars.mod, eqdeclr.mod, eqmain.mod and the other equation and bound files of the core and of the extensions in the gate (vda, dsc, ier, lin): 81 files | 1,057 SOW-index macros and 706 `%VAR%`/`%EQ%` name tags | `EQ` becomes `ES` and `VAR` becomes `VAS`; every row gets the index `SOW` where `SW_T(T,SOW)` holds; a variable is read through `SUM(SW_TSW(SOW,T,W),VAS_x(...,W))`, so SOWs share a variable until their branches part; the uncertain data enter where the files name them (eqcombal.mod L109, eqpeak.mod L81, eqcumflo.mod L16-31, eqbndcst.mod L78-83, equcwrap.mod L16, equserco.mod L55, eqobjvar.mod L24-48, eqdamage.mod L95-132, the bnd_*.mod files) |
+| The objective | eqobj.mod L75-121 | 47 | `ES_ROBJ` (each region's cost per SOW), `ES_SOBJ`, `EQ_EXPOBJ` (the expected value), `EQ_UPDEV` (upward deviation), and `EQ_OBJ` over them; the tradeoff phases with `S_UCOBJ` |
+| The solve | solve.stc, sensis.stc, clearsol.stc | 134 + 43 + 40 | one solve, or a loop of solves when several SOWs start at the first period (decomposed deterministic runs), for the tradeoff phases (`S_UCOBJ`), and for SENSIS |
+| Reports | rptmain.stc, pextlevs.stc | 189 | M1.6, not this plan |
+
+STAGES stops a run with MACRO (stages.stc L9), the stepped solve
+(solve.stc L24, in the solve loops) and the nonlinear TIMES-Micro (pp_micro.mod L56), and it
+sets `VAR_UC YES` (stages.stc L19).
+
+### How TIMES.jl will do it
+
+One idea carries the whole extension: a small object built once per run,
+the SOW tags, that answers three questions for every equation builder: what
+the row is called (`EQ_x` or `ES_x`), which SOWs a row is made for at
+period T (`SW_T`), and which column a variable reference means
+(`VAR_x(...)`, or `VAS_x(...,W)` with W from `SW_TSW`). In a run without
+stochastics the tags give back exactly what the builders use today, so the
+deterministic model cannot change; every existing fixture checks that at
+layer 2. The equations are not reformulated: each builder takes the SOW
+index where its GAMS file has `%SOW%`, `%SWT%`, `%SWS%`, `%VART%`, `%VARV%`
+or `%VARM%`, as written.
+
+### Changes, one pull request each
+
+| Change | What | GAMS | Check |
+| --- | --- | --- | --- |
+| 70 | The DD reader takes the stochastic attributes and tree parameters (today `initmty.stc` stops it, src/dd/compile.jl); the declarations of initmty.stc. The crafted cases below, with their GAMS references (CPLEX and HiGHS). | initmty.stc; initmty.mod L435-437 | layer 1 at the input dump, every case |
+| 71 | Preprocessing of the uncertain attributes and the `MX` macros | prep_ext.stc; recurrin.stc L18-50 | layer 1 at ppm |
+| 72 | The event tree and the uncertain attributes copied down it | stages.stc; fillsow.stc | layer 1 at coef |
+| 73 | The SOW tags, used by every equation and bound builder. No stochastic model yet: a pure restructuring that leaves every deterministic LP identical (#35, #54) | setglobs.gms L348; stages.stc L12-15 | layer 2 at 1e-9 on every fixture and crafted case, same rows, columns and order |
+| 74 | The stochastic model: `ES_`/`VAS_` rows and columns of the core families and the extension families in the gate, the uncertain data in the equations and bounds, the stochastic objective | the files in the table above; eqobj.mod L75-121 | layers 1 to 3 on the STAGES cases |
+| 75 | SPINES | recurrin.stc L52-182; eqmain.mod L30-37; mod_equa.mod L213 | layers 1 to 3 on demo12_spines |
+| 76 | The solve loops: decomposed deterministic runs, the tradeoff phases, SENSIS. The harness exports GAMS's matrix of each solve, as it does for the steps of a stepped run (harness 0.3.4) | solve.stc; sensis.stc; clearsol.stc | layers 2 and 3 for each solve |
+
+Change 74 may be split in two (core families first, then the extension
+families) if its pull request grows past what one check-in can review.
+
+### Crafted cases
+
+All are demo12 (CC BY 4.0) with one added DD file each, and are run in
+GAMS 54.6.1 with CPLEX and HiGHS, both variants, on James's workstation.
+
+| Case | What it reaches |
+| --- | --- |
+| demo12_stc | two stages, three SOWs from 2020: uncertain demand (`S_COM_PROJ`), investment cost (`S_NCAP_COST`), a commodity tax (`S_COM_TAX`), a capacity bound (`S_CAP_BND`) and a user-constraint limit (`S_UC_RHSRT`), with probabilities |
+| demo12_stc3 | three stages, children copied from the first parent (`SW_COPY`), missing probabilities filled, cumulative limits (`S_COM_CUMNET`, `S_FLO_CUM`; `SUPERYR`) |
+| demo12_stcmx | the `MX` macros: `S_FLO_FUNC`, `S_NCAP_AFS`, `S_COM_FR` |
+| demo12_stclam | risk aversion: `SW_LAMBDA` above zero (`EQ_UPDEV`) |
+| demo12_stcext | demo12_stc with the extension families of the gate switched on together (storage, dispatching, unit commitment, user constraints), as the dynamic-timeslice cases were combined |
+| demo12_spines | `SPINES YES` on demo12_stc's tree |
+| demo12_sensis | `SENSIS YES`: three solves |
+| demo12_tradeoff | `S_UCOBJ`: the tradeoff phases |
+
+No suite model uses the extension, so these cases are its only check, in CI
+as for every crafted case.
+
+### Time
+
+About four to five working days, longer than the two to three given at the
+check-in of 19 Nov 2026: reading the files showed the solve loops (change
+76) and SPINES (change 75), which need their own harness and macro work.
+Elastic demand (change 69) comes first, about half a day. With them done,
+every item of the gate is translated, and the gate question is asked again
+after a nightly pass on the merged stack.
 
 ## Open items
 

@@ -839,3 +839,113 @@ switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DU
 rows = 3244
 cols = 4505
 nonzeros = 18511
+
+# Crafted case TIMES_Demo-demo12_tsoff_rint (reference/crafted.toml: demo12_tsoff + rint.dd), 19 Nov 2026 (GAMS
+# 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): the re-interpolation of dynslite.vda
+# POSTLEV (L91-103) for a vintaged ANNUAL-level process, the whole model. Layers 2 and 3 here; with its run fixture
+# (demo12_tsoff_rint_run) test_m13_chain.jl runs it from the DD files to the model and test_ddsource.jl compiles it.
+[[fixture]]
+prefix   = "demo12_tsoff_rint"
+model    = "TIMES_Demo-demo12_tsoff_rint"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", DYNTS = "YES", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3092
+cols = 4330
+nonzeros = 17433
+# Crafted case TIMES_Demo-demo12_ed (reference/crafted.toml: demo12 + ed.dd, %TIMESED% YES), 19 Nov 2026 (GAMS 54.6.1
+# + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): elastic demand, the variant run of a two-run case,
+# with the base prices of demo12_edbase (reference/dd/demo12_ed/com_bprice); readbprice.mod, coef_obj.mod L184-189,
+# eqobjels.mod, bnd_elas.mod, the elastic terms of EQ(l)_COMBAL and EQ_PEAK. Layers 2 and 3 here; with its run fixture
+# (demo12_ed_run) test_m13_chain.jl runs it from the DD files to the model and test_ddsource.jl compiles it.
+[[fixture]]
+prefix   = "demo12_ed"
+model    = "TIMES_Demo-demo12_ed"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", TIMESED = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3239
+cols = 4683
+nonzeros = 18781
+
+# Crafted case TIMES_Demo-demo12_edagg (reference/crafted.toml: demo12 + agg.dd, %TIMESED% YES), 19 Nov 2026 (as
+# demo12_ed): elastic demand with a demand aggregate in its CES form (pp_micro.mod PRE, bnd_elas.mod L10-35,
+# EQL_COMCES, eqcombal.mod L101). Layers 2 and 3 here; with its run fixture (demo12_edagg_run) test_m13_chain.jl runs it
+# from the DD files to the model and test_ddsource.jl compiles it.
+[[fixture]]
+prefix   = "demo12_edagg"
+model    = "TIMES_Demo-demo12_edagg"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", TIMESED = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3271
+cols = 4614
+nonzeros = 18770
+# Crafted case TIMES_Demo-demo12_afshp (reference/crafted.toml: demo12 + afshp.dd), 19 Nov 2026 (GAMS 54.6.1 +
+# CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): shaped availability factors (NCAP_AFX, NCAP_AFM,
+# NCAP_AFSX; coef_cpt.mod L42-58, pp_shapr.mod L19-40), the whole model. Layer 1 on the coefficient
+# stage (the symbols coef_cpt.mod's shape paths set), layers 2 and 3.
+[[fixture]]
+prefix   = "demo12_afshp"
+model    = "TIMES_Demo-demo12_afshp"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3257
+cols = 4485
+nonzeros = 18457
+coef_symbols = ["NCAP_AF", "NCAP_AFS", "COEF_AF", "RTPS_BD", "NCAP_AFBX", "RTP_ISHPR", "RTP_SHAPI", "NCAP_AFX",
+                "NCAP_AFSX", "NCAP_AFSM"]
+
+# Crafted case TIMES_Demo-demo12_pfdf (reference/crafted.toml: demo12 + pf.dd and pfdf.dd), 19 Nov 2026 (GAMS
+# 54.6.1 + CPLEX and HiGHS on James's workstation; TIMES v4.9.7 @ d9a6a25): total demand fractions given as data
+# (GR_DEMFR) on a grid with two nodes in REG1, the total demand path of EQ_GR_DEMALL (powerflo.vda L40, L107, L131),
+# the whole model. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_pfdf"
+model    = "TIMES_Demo-demo12_pfdf"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3377
+cols = 4605
+nonzeros = 18687
+
+# Crafted case TIMES_Demo-demo12_tsoff_disp (reference/crafted.toml), 19 Nov 2026 (GAMS 54.6.1 + CPLEX and HiGHS on
+# James's workstation; TIMES v4.9.7 @ d9a6a25): dynamic timeslice trees with the dispatching rows (eqactups.vda L50-99) with REG2 on the same tree (tsoff2.dd): their RTS(S) rows skip the
+# timeslices turned off (M1.3 change 67), the whole model. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_tsoff_disp"
+model    = "TIMES_Demo-demo12_tsoff_disp"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", DYNTS = "YES", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3239
+cols = 4416
+nonzeros = 17811
+
+# Crafted case TIMES_Demo-demo12_tsoff_ptdf (reference/crafted.toml), 19 Nov 2026 (GAMS 54.6.1 + CPLEX and HiGHS on
+# James's workstation; TIMES v4.9.7 @ d9a6a25): dynamic timeslice trees with the PTDF and grid allocation rows (powerflo.vda L264-316): their RTS(S) rows skip the
+# timeslices turned off (M1.3 change 67), the whole model. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_tsoff_ptdf"
+model    = "TIMES_Demo-demo12_tsoff_ptdf"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", DYNTS = "YES", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3379
+cols = 4613
+nonzeros = 18451
+
+# Crafted case TIMES_Demo-demo12_tsoff_gg2 (reference/crafted.toml), 19 Nov 2026 (GAMS 54.6.1 + CPLEX and HiGHS on
+# James's workstation; TIMES v4.9.7 @ d9a6a25): dynamic timeslice trees with the gas grid rows (gasgrids.vda L154-200): their RTS(S) rows skip the
+# timeslices turned off (M1.3 change 67), the whole model. Layers 2 and 3 only.
+[[fixture]]
+prefix   = "demo12_tsoff_gg2"
+model    = "TIMES_Demo-demo12_tsoff_gg2"
+variant  = "as_run"
+reduce   = true
+switches = { BOTIME = "1960", DATAGDX = "YES", DEBUG = "NO", DSCAUTO = "YES", DUMPSOL = "NO", DYNTS = "YES", OBJ = "MOD", REDUCE = "YES", RUN_NAME = "demo12", SOLVEDA = "YES", SOLVE_NOW = "YES", VAR_UC = "YES", VDA = "YES", VEDAVDD = "YES", XTQA = "YES" }
+rows = 3703
+cols = 5985
+nonzeros = 23315

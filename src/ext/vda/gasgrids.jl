@@ -511,9 +511,11 @@ function eq_gg!(tm)
     tx = eq_periods(tm)
     n = 0
     put(name, key, sense, lhs, rhs) = (gconstraint!(tm, name, key, sense, lhs, rhs) === nothing || (n += 1))
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     for (r, t, p, c) in x.rtpc
         (t,) in tx || continue
         for (reg, com) in get(x.links_of, (r, p, c), no2), s in get(x.ts_of, (r, p), String[])
+            off(r, t, s) && continue     # RTS(S) of every EQ_GG_* row, L154-200 (M1.3 change 67)
             # EQ_GG_MFLO
             lhs = JuMP.AffExpr(0.0)
             addterm!(lhs, gv(x.dens, (r, c)) * gv(x.g_yrfr, (r, s)) * GNum(8760.0), tm, "VAR_GG_MF", r, t, p, c, reg, com, s)

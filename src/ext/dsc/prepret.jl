@@ -238,8 +238,12 @@ function ret_bounds!(bt::BoundTable, tm::TimesModel)
     for (r, v, t, p) in vnret
         ((r, v, p) in rvp && !((r, v, p) in done)) || continue
         push!(done, (r, v, p))
-        up = min(bounds(bt, tm, "VAR_RCAP", (r, v, t, p))[2], bounds(bt, tm, "VAR_SCAP", (r, v, t, p))[2])
-        setbound!(bt, tm, "VAR_SCAP", (r, v, t, p), :up, GNum(up))
+        # MIN of the two upper bounds as GAMS takes it: an EPS bound stays EPS (MIN(EPS,x) = EPS for x > 0),
+        # which matters under HOLDFIXED, where (EPS,EPS) is fixed and (EPS,0) is not (dynslite.vda L111;
+        # found on demo12_tsoff_afc, M1.3 change 67)
+        upg(name) = GNum(bounds(bt, tm, name, (r, v, t, p))[2],
+                         get(get(bt.eps, name, Dict{Tuple,Tuple{Bool,Bool}}()), (r, v, t, p), (false, false))[2])
+        setbound!(bt, tm, "VAR_SCAP", (r, v, t, p), :up, gmin(upg("VAR_RCAP"), upg("VAR_SCAP")))
     end
     # L76: VAR_SCAP fixed to RTFORC where the PASTSUM test holds.
     for (r, v, t, p) in rtp_cptyr

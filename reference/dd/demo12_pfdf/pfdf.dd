@@ -1,0 +1,59 @@
+* TIMES.jl crafted case demo12_pfdf (reference/crafted.toml, 19 Nov 2026): demo12_pf (the
+* REG1-REG2 power-flow grid, ELC the node of each region) plus a second grid node in REG1 (the
+* line TU_ELC_TRA1 from ELC to TRAELC, as in demo12_pfd) and total demand fractions given as
+* data, GR_DEMFR, with no sectoral fractions (no GR_ENDFR), so that powerflo.vda takes the total
+* demand path GR_ENDC(R,NRG_GRID,'NRG') (L140) with nonzero fractions (M1.3 change 65), which no
+* open model reaches:
+* - L40-41: GR_DEMFR projected on (R,C) marks GR_GID, also for RSDELC, which is not a grid node;
+* - L107: pp_lvlfc.mod levels GR_DEMFR to the DAYNITE timeslices of each node: an ANNUAL value
+*   alone (ELC) is copied down; TRAELC has ANNUAL, the season W and the slice SD, so SD keeps its
+*   own value, WD and WN take W's and SN inherits ANNUAL's; ELC is interpolated between 2005 and
+*   2030 (fillparm, L194);
+* - L131: every grid node gets its commodity timeslices in GR_DEMFR, EPS where there was none
+*   (REG2's ELC), so EQ_GR_DEMALL rows exist there too;
+* - L149-154 normalise the REG1 fractions over the two nodes; L155-162 pick the reference node.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+SET PRC
+/
+TU_ELC_TRA1
+/
+
+SET PRC_MAP
+/
+REG1.IRE.TU_ELC_TRA1
+/
+
+SET PRC_TSL
+/
+REG1.TU_ELC_TRA1.DAYNITE
+/
+
+SET PRC_ACTUNT
+/
+REG1.TU_ELC_TRA1.NRG.PJ
+/
+
+SET TOP_IRE
+/
+ REG1.ELC.REG1.TRAELC.TU_ELC_TRA1
+/
+
+SET PRC_DESC
+/
+ REG1.TU_ELC_TRA1 'Crafted: line from ELC to the transport electricity node (TIMES.jl demo12_pfdf)'
+/
+
+PARAMETER PRC_REACT /
+REG1.2005.TU_ELC_TRA1 0.1
+/;
+
+PARAMETER GR_DEMFR /
+REG1.2005.ELC.ANNUAL 0.7
+REG1.2030.ELC.ANNUAL 0.6
+REG1.2005.TRAELC.ANNUAL 0.3
+REG1.2005.TRAELC.W 0.4
+REG1.2005.TRAELC.SD 0.25
+REG1.2005.RSDELC.ANNUAL 0.5
+/;

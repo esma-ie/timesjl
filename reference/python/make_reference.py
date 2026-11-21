@@ -71,7 +71,7 @@ from runfile import build_dd_run, patch_run  # noqa: E402
 from runlimits import RunSlot, default_max_parallel, default_slot_dir, default_threads, limit_threads  # noqa: E402
 from gdx2arrow import convert_gdx, gams_system_directory  # noqa: E402
 
-HARNESS_VERSION = "0.3.5"  # 0.3.5 (15 Nov 2026): parse_solves reads MODEL STATISTICS with "N projected"; 0.3.4 (14 Nov 2026): steps/<k>/ of stepped runs (www_in.cgi, www_out.cgi); 0.3.3 (14 Nov 2026): equ/, the checkpoint of stepped runs (equ_ext.tjlref); 0.3.2 (9 Nov 2026): raw/tjl_presolve_qa_check.log; 0.3.1 (5 Nov 2026): --only convert; 0.3.0 (31 Oct 2026): M1.3 checkpoints, --only presolve; 0.2.4 (29 Oct 2026): run limits (threads, parallel runs); 0.2.3: model overrides; 0.2.2: raw/tjl_<run>.run; 0.2.1: extra_dd_dirs; 0.2.0: pre-solve run
+HARNESS_VERSION = "0.3.6"  # 0.3.6 (19 Nov 2026): work_files, files copied into the work folder (the base prices of elastic demand); 0.3.5 (15 Nov 2026): parse_solves reads MODEL STATISTICS with "N projected"; 0.3.4 (14 Nov 2026): steps/<k>/ of stepped runs (www_in.cgi, www_out.cgi); 0.3.3 (14 Nov 2026): equ/, the checkpoint of stepped runs (equ_ext.tjlref); 0.3.2 (9 Nov 2026): raw/tjl_presolve_qa_check.log; 0.3.1 (5 Nov 2026): --only convert; 0.3.0 (31 Oct 2026): M1.3 checkpoints, --only presolve; 0.2.4 (29 Oct 2026): run limits (threads, parallel runs); 0.2.3: model overrides; 0.2.2: raw/tjl_<run>.run; 0.2.1: extra_dd_dirs; 0.2.0: pre-solve run
 EXPECTED_TIMES_VERSION = "4.9.7"
 EXPECTED_TIMES_COMMIT = "d9a6a25"
 VARIANTS = {"reduce_off": {"REDUCE": "NO"}, "as_run": {}}
@@ -238,6 +238,10 @@ def prepare_workdir(work: Path, model: dict, overrides: dict, solver_opts: dict,
         text = Path(model["run_file"]).read_text(errors="replace")
     patched, report = patch_run(text, overrides)
     (work / "tjl_reference.run").write_text(patched)
+    # work_files (harness 0.3.6): files a run reads from GAMS's working folder, such as the base prices of
+    # elastic demand (com_bprice.gdx, readbprice.mod L8-12), copied in before each run
+    for f in model.get("work_files", []):
+        shutil.copy(f, work / Path(f).name)
     report = report.__dict__
     for name, path in solver_opts.items():
         opt = Path(path).read_text(errors="replace")

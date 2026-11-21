@@ -109,7 +109,7 @@ function bounds_unported(tm::TimesModel)
     yes(name) = uppercase(gswitch(tm, name, "")) == "YES"
     notempty_set(name, N) = !isempty(gset_opt(d, name, N))
     notempty_par(name, N) = !isempty(gparam_opt(d, name, N))
-    (yes("TIMESED") || yes("MICRO")) && throw(UnportedError("bnd_elas.mod (elastic demand steps)"))
+    yes("MICRO") && throw(UnportedError("pp_micro.mod NLP (TIMES-Micro's VAR_DEM bounds, %MICRO% YES)"))
     yes("MACRO") && throw(UnportedError("bnd_macro.tm (MACRO)"))
     yes("STAGES") && throw(UnportedError("stochastic bounds (STAGES)"))
     for sw in ("SPOINT", "LPOINT", "FIXBOH", "STEPPED")
@@ -722,6 +722,7 @@ function bndmain(tm::TimesModel)
         bnd_gasgrids!(bt, tm)     #   powerflo.vda L249: gasgrids.vda DECL L115-126
         bnd_rld!(bt, tm)          # equ_ext.vda L102: resloadc.vda L69 (VAR_RLD at RL-DISP is free)
         bnd_dam!(bt, tm)          # eqmain.mod L262: eqdamage.mod L138-142 (damage steps)
+        timesed_on(tm) && bnd_elas!(bt, tm)   # L19-21: bnd_elas.mod L19-24 (M1.3 change 69)
         bnd_act!(bt, tm)          # L26
         bnd_flo!(bt, tm)          # L31
         bnd_stg!(bt, tm, "VAR_SIN", "IN", GNum(0.0))       # L36
