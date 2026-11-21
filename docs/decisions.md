@@ -52,7 +52,6 @@ answer yet.
 | 15 Nov 2026 | chat | The workstation batch's DD-file stage: the HiGHS solve of TIMES-NZ shift with REDUCE off hit its one-hour limit on 14 Nov 2026 (3,625.7 s; with REDUCE on it solved in 2,658 s). Solve TIMES-NZ in that stage with REDUCE on only, its REDUCE-off model still compared with GAMS's matrix and cross-evaluated? | yes | Open; the batch keeps its one-hour limit meanwhile. |
 | 17 Nov 2026 | #155 | coef_nio.mod L58 computes COEF_RCOM from COEF_CPT before coef_alt.lin L77 fills COEF_CPT (coefmain.mod order), so COEF_RCOM is empty outside the capacity transfer and the VAR_RCAP term of cal_cap.mod is never reached; TIMES.jl does the same. Report it to the TIMES maintainers (ETSAP) as a possible ordering issue? | yes, as a note to ETSAP | Open (#155, decision 2). Nothing in TIMES.jl depends on it. |
 | 17 Nov 2026 | #156 | resloadc.vda L111 and L144 read VAR_RLD at 'RL_THMIN' (an underscore) beside 'RL-THMIN': two columns, likely a typo (D45). TIMES.jl follows the code. Report it to ETSAP, in one note with #155 d2 (COEF_RCOM)? | yes, in the same note | Open (#156, decision 3). Nothing in TIMES.jl depends on it. |
-| 19 Nov 2026 | #176 | D46 (timslice.mod L121 divides by zero when the regions have different timeslice trees and there is ramping or start-up data): report it to ETSAP, with the other notes (#122, #155 d2, #156)? Rule-level (a report to ETSAP). | yes, with the other reports | Open (#176, decision 2); #176 merged 21 Nov 2026, which does not answer it. |
 
 Reviewed on 14 Nov 2026 against pull requests #1 to #120 (108 merged, six open: #114, #115, #117 to #120). Four questions that James had answered left this list for the log of their pull requests: the demo12 trade case (#68, #104); refused features before v4.9.8 (#109, decision 3); the stepped solve before the gates (#108, decision 3); the M1.4 CI criterion with demo12_uc refused (#118, decision 2). Five questions asked in the chat and never listed were added (issues #97, #100 and #17, the commit trailer, the unused worktree). Every row of the log that is still "open" is either on this list or is a built-in default of an open pull request, which its merge decides. Later the same evening James merged #114 to #125 (eleven pull requests): their built-in defaults are accepted by merge, and his answers on #120 (decision 5), #121 (decision 2) and #125 (decisions 6, 8, 9 and 10) are in the log of those pull requests. Two more pull requests were opened later that evening, #127 (the dashboard changes James asked for on #125) and #128 (M1.5 change 2); #127's choice of the green and the orange joined this list.
 
@@ -66,6 +65,8 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 21 Nov 2026 | #176 (merged 21 Nov 2026): "pr#176 q2 dp46 - yes log this discrepancy" and "yes, build in the other changes from pr#176". D46 (timslice.mod L121, division by zero with different timeslice trees and ramping or start-up data) is reported to ETSAP with the other reports (#176 d2, rule-level, explicit yes); the twelve demo12_tsoff_* cases (d1) and the prepret.dsc L75 fix (d3) are confirmed. | this log (#176); `docs/discrepancies.md` (D46) |
+| 20 Nov 2026 | #179 d1, d2 and d3: "d1 yes, d2 yes, d3 yes". The crafted cases and fixtures of elastic demand, harness 0.3.6 (`work_files`), and known difference K4 (the base prices as Arrow folders; no record for a zero marginal where GAMS writes EPS). K4 is rule-level (a known difference); explicit yes. | this log (#179); `docs/known-differences.md` (K4) |
 | 20 Nov 2026 | #178 d1 (q2 of 19 Nov): "q2-stochastics, yes plan approved". The plan for the stochastic extension (`docs/m13-plan.md`, "Plan: the stochastic extension"; changes 70 to 76, one pull request each, eight crafted demo12 cases) is approved, and its changes start in its order. Rule-level (a plan for major work); explicit yes. | this log (#178); `docs/m13-plan.md` |
 | 19 Nov 2026 | q1 of the 19 Nov check-in: "id go with option b, reading the base prices from the arrow database." Elastic demand (%TIMESED%) reads the base prices of the earlier run from TIMES.jl's own Arrow file, not from a GDX file (readbprice.mod `$GDXIN`/`$LOAD`); TIMES.jl writes that file after a solve, as wrtbprice.mod writes `com_bprice.gdx`. For the checks against GAMS the reference harness converts GAMS's `com_bprice.gdx` to Arrow. No GDX reader is added; one can follow if users need it. The case design is #165 d3. | this log; `docs/m13-plan.md` (gate audit, change 69) |
 | 19 Nov 2026 | q2 of the 19 Nov check-in: "yes show me the plan". The plan for the stochastic extension is in `docs/m13-plan.md` ("Plan: the stochastic extension"); nothing of it starts until James approves it (Open decisions). | this log; `docs/m13-plan.md` |
@@ -139,6 +140,20 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
+### #179 M1.3 (69): elastic demand, the linear form (%TIMESED%); crafted cases demo12_edbase, demo12_ed, demo12_edagg (merged 21 Nov 2026)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the crafted cases demo12_edbase, demo12_ed and demo12_edagg (demo12 with the base prices of demo12_edbase as a GDX file and its Arrow form, CC BY 4.0), with public CI fixtures of demo12_ed and demo12_edagg, the run fixtures included (about 7 MB each). | Recommended: yes. Built in. | answered by James, 20 Nov 2026: yes ("d1 yes") |
+| 2 | Known difference K4: TIMES.jl reads and writes the base prices as Arrow folders, not GDX files (q1, option b), looking for them in the run file's folder and along the include path; a zero marginal is written as no record where GAMS writes EPS. Rule-level (a known difference). | Recommended: yes. Built in; needs your explicit yes. | answered by James, 20 Nov 2026: yes ("d2 yes"; the explicit yes for K4); confirmed 21 Nov 2026: "pr#179 d2 yes" |
+| 3 | Harness 0.3.6: `work_files`, files the harness copies into GAMS's work folder before each run (here the base prices). | Recommended: yes. Built in. | answered by James, 20 Nov 2026: yes ("d3 yes"); confirmed 21 Nov 2026: "d3 yes" |
+
+### #181 run_model: reset HiGHS's thread scheduler around its solve (merged 21 Nov 2026)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | `run_model` (src/run.jl) calls `Highs_resetGlobalScheduler(1)` before and after its HiGHS solve (HiGHS.jl README, Threads). Without it, a later HiGHS solve in the same process that asks for more threads than `run_model`'s 12 stops with OTHER_ERROR; on the workstation (48 CPUs, HiGHS's default 24 threads) the full test suite failed in every solve after `test_run_model.jl` (#167) since 18 Nov 2026, while GitHub's runners have too few CPUs to show it. Run code, not translated GAMS code; the LP is unchanged. | Recommended: yes. Built in. | accepted by merge, 21 Nov 2026 |
+
 ### #178 Plan for the stochastic extension; q1 and q2 of 19 Nov 2026 (merged 21 Nov 2026)
 
 | # | Question | Decided | How |
@@ -167,9 +182,9 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Keep the twelve crafted cases demo12_tsoff_* and tsoff2.dd (run files only, CC BY 4.0), with three public CI fixtures (demo12_tsoff_disp, _ptdf, _gg2; as run, about 13 MB together); the other nine are checked by the gate from their DD files. | Recommended: yes. Built in. | accepted by merge, 21 Nov 2026 |
-| 2 | D46 (timslice.mod L121 divides by zero when the regions have different timeslice trees and there is ramping or start-up data): report it to ETSAP, with the other notes? Rule-level (a report to ETSAP). | yes, with the other reports | open |
-| 3 | prepret.dsc L75 keeps an EPS upper bound EPS (MIN of the VAR_RCAP and VAR_SCAP bounds); only visible under HOLDFIXED. Fixed in this change rather than in its own PR, as the case that shows it is this change's. | Recommended: yes. Built in. | accepted by merge, 21 Nov 2026 |
+| 1 | Keep the twelve crafted cases demo12_tsoff_* and tsoff2.dd (run files only, CC BY 4.0), with three public CI fixtures (demo12_tsoff_disp, _ptdf, _gg2; as run, about 13 MB together); the other nine are checked by the gate from their DD files. | Recommended: yes. Built in. | James, 21 Nov 2026: yes ("yes, build in the other changes from pr#176"); merged 21 Nov 2026 |
+| 2 | D46 (timslice.mod L121 divides by zero when the regions have different timeslice trees and there is ramping or start-up data): report it to ETSAP, with the other notes? Rule-level (a report to ETSAP). | yes, with the other reports | James, 21 Nov 2026: yes ("pr#176 q2 dp46 - yes log this discrepancy"); D46 goes to ETSAP with the other reports |
+| 3 | prepret.dsc L75 keeps an EPS upper bound EPS (MIN of the VAR_RCAP and VAR_SCAP bounds); only visible under HOLDFIXED. Fixed in this change rather than in its own PR, as the case that shows it is this change's. | Recommended: yes. Built in. | James, 21 Nov 2026: yes ("yes, build in the other changes from pr#176"); merged 21 Nov 2026 |
 
 ### #173 m13_gate.jl: 24 hours for every HiGHS solve (merged 19 Nov 2026)
 

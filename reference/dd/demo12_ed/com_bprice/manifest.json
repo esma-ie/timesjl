@@ -1,0 +1,68 @@
+{
+ "format": "timesjl-dump",
+ "format_version": 1,
+ "source": "..\\dd\\demo12_ed\\com_bprice.gdx",
+ "uels": "uels.arrow",
+ "symbols": [
+  {
+   "name": "SOL_BPRICE",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 5,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "ALL_TS",
+    "CUR"
+   ],
+   "description": "",
+   "records": 120,
+   "file": "SOL_BPRICE.arrow"
+  },
+  {
+   "name": "DAM_COEF",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "S"
+   ],
+   "description": "Coefficient from commodity to damage",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "DAM_TVOC",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 4,
+   "domain": [
+    "REG",
+    "ALLYEAR",
+    "COM",
+    "LIM"
+   ],
+   "description": "Variance of emissions by year",
+   "records": 0,
+   "file": null
+  },
+  {
+   "name": "SOL_ACFR",
+   "kind": "parameter",
+   "type": "",
+   "dimension": 3,
+   "domain": [
+    "R",
+    "UC_COST",
+    "YEAR"
+   ],
+   "description": "",
+   "records": 0,
+   "file": null
+  }
+ ]
+}

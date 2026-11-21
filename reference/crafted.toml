@@ -1259,3 +1259,50 @@ redistribute = "public"
 kind = "run"
 run_file = "{crafted}/demo12_tsoff_rint/demo12_tsoff_rint.run"
 idirs = ["{times_demo}/model", "{crafted}/demo12_tsoff", "{crafted}/demo12_tsoff_rint"]
+
+# TIMES_Demo demo12 with %TIMESED% NO (19 Nov 2026): the base run of elastic demand. The model is demo12's;
+# after the solve wrtbprice.mod (maindrv.mod L121-122) writes the base prices (com_bprice.gdx), which
+# demo12_ed reads. M1.3 change 69.
+[[model]]
+name = "TIMES_Demo-demo12_edbase"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_edbase/demo12_edbase.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_edbase"]
+
+# TIMES_Demo demo12 + demo12_ed/ed.dd with %TIMESED% YES (19 Nov 2026): elastic demand, the variant run of the
+# two-run case (#165 d3). com_bprice.gdx holds the base prices of demo12_edbase's CPLEX solve (REDUCE NO), which
+# readbprice.mod loads from GAMS's working folder (work_files). M1.3 change 69.
+[[model]]
+name = "TIMES_Demo-demo12_ed"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_ed/demo12_ed.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_ed"]
+work_files = ["{crafted}/demo12_ed/com_bprice.gdx"]
+
+# TIMES_Demo demo12 + demo12_edagg/agg.dd with %TIMESED% YES (19 Nov 2026): elastic demand with a demand aggregate
+# in its CES form (pp_micro.mod PRE, bnd_elas.mod, EQL_COMCES, eqcombal.mod L101); the base prices of
+# demo12_edbase, as for demo12_ed (TIMES.jl finds their Arrow form, demo12_ed/com_bprice, on the include path). M1.3 change 69.
+[[model]]
+name = "TIMES_Demo-demo12_edagg"
+tier = "crafted"
+source_repo = "etsap-TIMES/TIMES_Demo"
+licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
+licence_checked = "2026-10-27"
+licence = "CC-BY-4.0"
+redistribute = "public"
+kind = "run"
+run_file = "{crafted}/demo12_edagg/demo12_edagg.run"
+idirs = ["{times_demo}/model", "{crafted}/demo12_edagg", "{crafted}/demo12_ed"]
+work_files = ["{crafted}/demo12_ed/com_bprice.gdx"]

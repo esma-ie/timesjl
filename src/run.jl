@@ -101,7 +101,11 @@ Run a TIMES model from its run file and DD files, without GAMS:
 4. with `solve=true`, solve it (HiGHS by default, with `threads` threads; another JuMP optimizer
    takes its own options, e.g. `JuMP.optimizer_with_attributes`) and, with
    `write_solution=true`, write the level and marginal of every variable and equation to
-   `out/solution/` (Arrow files).
+   `out/solution/` (Arrow files);
+5. after an optimal solve with %TIMESED% neither 0 nor YES (an elastic demand base run, maindrv.mod
+   L121-122), write the base prices to `out/com_bprice` and `out/%GDXPATH%%RUN_NAME%_DP`, Arrow
+   folders that a later run with %TIMESED% YES reads in place of GAMS's GDX files (`write_bprice`;
+   docs/known-differences.md K4).
 
 A stepped (myopic) run (`TIMESTEP`) has no single model: with `solve=true` it is solved step by step
 (`solve_stepped!`), and its solution is not written yet (M1.6).
@@ -137,6 +141,11 @@ function run_model(runfile::AbstractString; dd=String[], out=nothing, solve::Boo
     highs = optimizer === HiGHS.Optimizer
     label = highs ? "HiGHS" : "the solver"
     attrs = highs ? ("threads" => Int(threads),) : ()
+    # HiGHS keeps one thread scheduler per process, sized by the first solve; a later solve that asks
+    # for more threads stops with OTHER_ERROR ("the scheduler has already been initialized"). As the
+    # HiGHS.jl README says (Threads), reset it before a solve with `threads`, so that they apply, and
+    # after it, so that a later solve in the same session with HiGHS's own default is not refused.
+    reset_highs() = highs && HiGHS.Highs_resetGlobalScheduler(1)
     run = abspath(runfile)
     isfile(run) || throw(ArgumentError("no run file $run"))
     dirs = isempty(dd) ? [dirname(run)] : [abspath(d) for d in dd]
@@ -190,13 +199,16 @@ function run_model(runfile::AbstractString; dd=String[], out=nothing, solve::Boo
                                      info.columns, " columns; ", label, " ", info.status, ", objective ", info.objective,
                                      "; prepared, generated, solved in ", round(info.prepare_s; digits=1), ", ",
                                      round(info.generate_s; digits=1), ", ", round(info.solve_s; digits=1), " s")
+        reset_highs()
         steps = try
             solve_stepped!(tm, optimizer; attributes=attrs, step_hook=hook)
         catch e
+            reset_highs()
             e isa Union{UnportedError,ErrorException} || rethrow()
             say("== $name: ", e isa UnportedError ? "not translated, in the stepped solve: " : "", sprint(showerror, e))
             return result(false, e isa UnportedError ? :not_translated : :failed; tm=tm, err=e)
         end
+        reset_highs()
         say("== $name: stepped run solved in ", length(steps), " steps; objective of the last step ", steps[end].objective,
             "; the solution of a stepped run is not written yet (M1.6)")
         return result(true, :solved; tm=tm, obj=steps[end].objective, steps=steps)
@@ -210,7 +222,9 @@ function run_model(runfile::AbstractString; dd=String[], out=nothing, solve::Boo
     JuMP.set_optimizer(m, optimizer)
     JuMP.set_silent(m)
     foreach(((a, v),) -> JuMP.set_attribute(m, a, v), attrs)
+    reset_highs()
     ts = @elapsed JuMP.optimize!(m)
+    reset_highs()
     st = JuMP.termination_status(m)
     obj = st == JuMP.OPTIMAL ? JuMP.objective_value(m) : nothing
     say("== $name: ", JuMP.solver_name(m), " ", st, " in ", round(ts; digits=1), " s", obj === nothing ? "" : ", objective $obj")
@@ -219,6 +233,11 @@ function run_model(runfile::AbstractString; dd=String[], out=nothing, solve::Boo
         tw = @elapsed TIMES.write_solution(tm, sdir; source="$name: solved by TIMES.jl from its DD files",
                                            solver=highs ? "HiGHS.jl $(pkgversion(HiGHS))" : JuMP.solver_name(m))
         say("== $name: solution written to $sdir in ", round(tw; digits=1), " s")
+    end
+    # maindrv.mod L121-122: the base prices for a later elastic demand run (%TIMESED% neither 0 nor YES)
+    if st == JuMP.OPTIMAL && JuMP.has_duals(m)
+        bp = write_bprice_after_solve(tm, out)
+        isempty(bp) || say("== $name: base prices written to ", join(bp, " and "))
     end
     return result(st == JuMP.OPTIMAL, :solved; tm=tm, ts=st, obj=obj)
 end

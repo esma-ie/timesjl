@@ -83,7 +83,7 @@ end
     mk(sw) = TimesModel(PPM_DEMO12; switches=merge(COEF_OBJ_CASE_SWITCHES, sw))
     @test isempty(coef_obj_unported(mk(Dict("ANNCOST" => "lev"))))      # translated: M1.3 change 29
     @test occursin("VALIDATE", only(coef_obj_unported(mk(Dict("VALIDATE" => "YES")))))
-    @test occursin("TIMESED", only(coef_obj_unported(mk(Dict("MICRO" => "YES")))))
+    @test isempty(coef_obj_unported(mk(Dict("TIMESED" => "YES"))))     # translated: M1.3 change 69 (L180-189)
     # blending is translated (M1.3, with eqblnd.mod). L93-94: OBJ_BLNDV in every year of Y_EOH, in the
     # currencies of RDCUR, for the streams of a blend: BL_VAROMC plus BL_INP * BL_DELIVC of each input
     tm = mk(Dict{String,String}())

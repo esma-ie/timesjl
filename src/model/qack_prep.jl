@@ -11,7 +11,7 @@
 # FLO_SUM, FLO_FUNC, NCAP_AF, NCAP_AFA, NCAP_AFS and the cost attributes to free memory unless
 # MEMCLEAN is NO. The QA log (PUT QLOG, pp_qaput.mod, PUTOUT/PUTGRP/ERRLEV) is written by qack_log.jl (change 25b-2).
 #
-# Not translated (UnportedError): %TIMESED% (L97); stochastic or stepped runs. (Nested user
+# Not translated (UnportedError): stochastic or stepped runs. (Nested user
 # constraints, L53 with UC_UCN data: M1.3 change 46.)
 
 """
@@ -64,6 +64,8 @@ function bnd_data!(tm::TimesModel; cum::Bool=true)
     nz(x::GNum) = x.v != 0 || x.eps
     T = S("MILESTONYR", 1)
     rtp = S("RTP", 3)
+    # bndmain.mod L21: $IF %TIMESED%==YES $BATINCLUDE bnd_elas (its data statements; M1.3 change 69)
+    timesed_on(tm) && bnd_elas_data!(tm)
     # bnd_flo.mod L16-24
     flo_bnd = gvalues(tm, "FLO_BND", 6)
     rpc_emis, rp_flo = S("RPC_EMIS", 3), S("RP_FLO", 2)
@@ -221,7 +223,6 @@ function pp_qack_data!(tm::TimesModel)
     S(name, n) = gset_opt(d, name, n)
     P(name, n) = gparam_opt(d, name, n)
     nz(x::GNum) = x.v != 0 || x.eps
-    uppercase(gswitch(tm, "TIMESED", "")) == "YES" && throw(UnportedError("pp_qack.mod L97: %TIMESED%"))
     qack_open!(tm)                                                             # L37-41
     T = S("MILESTONYR", 1)
     # L45-47
