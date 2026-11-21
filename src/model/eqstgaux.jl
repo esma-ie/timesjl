@@ -76,6 +76,7 @@ function eq_stgaux!(tm::TimesModel)
     ipx = (pM = gparam(tm, "M"), pD = gparam(tm, "D"), pE = gparam(tm, "E"), yearval = gparam(tm, "YEARVAL"),
            periodyr_of_t = indexby(gset(tm, "PERIODYR"), (1,)), y_eoh = gset(tm, "Y_EOH"))
     vx, tx = gset(tm, "MODLYEAR"), eq_periods(tm)                 # %R_V_T%: V, and SUBT in a stepped run (maindrv.mod L38-40)
+    off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
     n = 0
     for (r, v, t, p) in gset(tm, "RTP_VINTYR")
         ((v,) in vx && (t,) in tx) || continue
@@ -84,6 +85,7 @@ function eq_stgaux!(tm::TimesModel)
         nst = (r, "NST", p) in x.prc_map
         for (_, _, c, s) in get(aux_of_rp, (r, p), NTuple{4,String}[])
             ((r, p, c) in x.rpc_stg_set || (r, p, c) in rpc_emis) && continue
+            off(r, t, s) && continue
             lhs = JuMP.AffExpr(0.0)
             addterm!(lhs, one, tm, "VAR_FLO", r, v, t, p, c, s)                              # L17
             rhs = JuMP.AffExpr(0.0)
