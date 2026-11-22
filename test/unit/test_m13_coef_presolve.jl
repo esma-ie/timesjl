@@ -42,6 +42,10 @@ let refit = only(v for v in TOML.parsefile(joinpath(FIXTURES, "variant_fixtures.
             if prefix == "demo12_refit"
                 # prepret.dsc L62 forces the retiring refit vintages into investment case 2a
                 @test ("REG1", "2010", "ELCRFCOA01") in gset(tm, "OBJ_2A")
+                # the step probe checks what prepret.dsc EQOBJ changes (L120-131, RVPRL at L129) after
+                # eqobjinv_prep!, which runs it, not after the DECL step
+                eqobj = ["RVPRL", "RCAP_BLK", "NCAP_OLIFE", "RCAP_OCAP", "COEF_CAP"]
+                @test isempty(intersect(eqobj, prepret_decl_symbols(tm))) && issubset(eqobj, eqobjinv_prep_symbols(tm))
             end
         end
     end
