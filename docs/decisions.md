@@ -152,7 +152,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
-### #PRNUM cuOpt lane: no GPU runner test until it passes locally; issue #100 to the 9:00 check-in (open)
+### #197 cuOpt lane: no GPU runner test until it passes locally; issue #100 to the 9:00 check-in (open)
 
 No new decisions: it records James's two answers of 22 Nov 2026 (above, Decisions in the chat). The open question of the same day (whether the pause includes the scheduled nightly) is on the open list.
 
