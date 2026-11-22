@@ -1108,6 +1108,12 @@ those checks, their figures and their crafted cases are not published
   PRC_RCAP outside RP kept; eqobjinv.mod L219-229, an EPS COEF_ILED gives
   interest during construction). New crafted case demo12_iled: layers 1
   to 3 PASS in both variants from the DD files (objective 23,961,179.22).
+- 20 Nov 2026: M1.3 change 70, the first of the stochastic extension's plan
+  (approved by James, 20 Nov 2026): the DD reader reads initmty.stc and the
+  stochastic data, and under SENSIS the report writer that solve.stc L7
+  compiles (G62, G63). Eight crafted cases (demo12_stc, _stc3, _stcmx,
+  _stclam, _stcext, _spines, _sensis, _tradeoff): layer 1 at the input dump
+  in both variants from the DD files. Harness 0.3.7.
 - 19 Nov 2026: M1.3 change 69: elastic demand, the linear form (%TIMESED%
   YES), with the base prices read from and written to TIMES.jl's own Arrow
   folder (q1). New crafted cases demo12_edbase, demo12_ed and demo12_edagg:

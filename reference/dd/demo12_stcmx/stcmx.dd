@@ -1,0 +1,27 @@
+* TIMES.jl crafted case demo12_stcmx (20 Nov 2026): the uncertain attributes that the MX macros and the
+* FLO_FUNC remapping carry (recurrin.stc L18-50; stages.stc L213-272), on demo12_stc's tree (stage 2 from
+* 2020, three SOWs): S_FLO_FUNC on REG1's gas into industry (ACT to GAS, an ACT_EFF process), S_NCAP_AFS
+* on REG1's existing wind in summer days, S_COM_FR on REG1's car demand in summer days.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER SW_START /
+2 2020
+/;
+PARAMETER SW_SUBS /
+1.1 3
+/;
+PARAMETER SW_SPROB /
+2.1 0.3
+2.2 0.5
+2.3 0.2
+/;
+PARAMETER S_FLO_FUNC /
+REG1.2030.FTE-INDGAS.ACT.GAS.2.1 1.1
+/;
+PARAMETER S_NCAP_AFS /
+REG1.2030.ELCREWIN00.SD.2.2 0.3
+/;
+PARAMETER S_COM_FR /
+REG1.2030.DTCAR.SD.2.3 1.2
+/;
