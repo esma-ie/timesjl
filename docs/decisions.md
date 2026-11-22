@@ -52,7 +52,6 @@ answer yet.
 | 17 Nov 2026 | #155 | coef_nio.mod L58 computes COEF_RCOM from COEF_CPT before coef_alt.lin L77 fills COEF_CPT (coefmain.mod order), so COEF_RCOM is empty outside the capacity transfer and the VAR_RCAP term of cal_cap.mod is never reached; TIMES.jl does the same. Report it to the TIMES maintainers (ETSAP) as a possible ordering issue? | yes, as a note to ETSAP | Open (#155, decision 2). Nothing in TIMES.jl depends on it. |
 | 17 Nov 2026 | #156 | resloadc.vda L111 and L144 read VAR_RLD at 'RL_THMIN' (an underscore) beside 'RL-THMIN': two columns, likely a typo (D45). TIMES.jl follows the code. Report it to ETSAP, in one note with #155 d2 (COEF_RCOM)? | yes, in the same note | Open (#156, decision 3). Nothing in TIMES.jl depends on it. |
 | 21 Nov 2026 | #184 | GAMS timings in other public files (`docs/timings.md`; ratios to GAMS in `docs/translation-guide.md` and `docs/m13-plan.md`): move them off the public repository too, as on the dashboard? Rule-level. | yes, one follow-up PR | Open (#184, decision 6) |
-| 22 Nov 2026 | #193 | Known difference K4: its line numbers corrected (readbprice.mod L8-20 to L12-27, wrtbprice.mod L21-22 to L33-34); the difference, its cases and its justification unchanged. Rule-level (a known difference). | yes | Open (#193, decision 1); built in, needs James's explicit yes. |
 
 Reviewed on 14 Nov 2026 against pull requests #1 to #120 (108 merged, six open: #114, #115, #117 to #120). Four questions that James had answered left this list for the log of their pull requests: the demo12 trade case (#68, #104); refused features before v4.9.8 (#109, decision 3); the stepped solve before the gates (#108, decision 3); the M1.4 CI criterion with demo12_uc refused (#118, decision 2). Five questions asked in the chat and never listed were added (issues #97, #100 and #17, the commit trailer, the unused worktree). Every row of the log that is still "open" is either on this list or is a built-in default of an open pull request, which its merge decides. Later the same evening James merged #114 to #125 (eleven pull requests): their built-in defaults are accepted by merge, and his answers on #120 (decision 5), #121 (decision 2) and #125 (decisions 6, 8, 9 and 10) are in the log of those pull requests. Two more pull requests were opened later that evening, #127 (the dashboard changes James asked for on #125) and #128 (M1.5 change 2); #127's choice of the green and the orange joined this list.
 
@@ -155,7 +154,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Known difference K4: its line numbers corrected; the difference itself unchanged. Rule-level. | Recommended: yes. Built in. | open (needs James's explicit yes; a merge does not count) |
+| 1 | Known difference K4: its line numbers corrected; the difference itself unchanged. Rule-level. | Yes | James, 22 Nov 2026, in the chat: "#193 d1 yes" (explicit yes) |
 
 ### #191 cuOpt lane: download the reference runs with curl (the GPU image has no gh) (open)
 
