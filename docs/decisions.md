@@ -150,6 +150,10 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
+### #PRNUM cuOpt lane: download the reference runs with curl (the GPU image has no gh) (open)
+
+No decisions: a fix to #189, whose first run (22 Nov 2026, run 45015140242) stopped in every job at the download (`gh: command not found`).
+
 ### #189 cuOpt lane: the open reference runs on the GitHub GPU runner, from a release (open)
 
 | # | Question | Decided | How |

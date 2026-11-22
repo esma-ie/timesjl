@@ -187,14 +187,17 @@ jobs:
       - name: Instantiate scripts/cuopt
         run: julia --project=scripts/cuopt -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
 
+      # The GPU image has no gh (and may have no unzip): the release's public
+      # download URLs with curl, and Python's zipfile.
       - name: Reference run from release ${{ inputs.ref_release }}
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p bundle ref
-          gh release download "$REL" --repo "$GITHUB_REPOSITORY" -D bundle -p "$MODEL-reduce_off.zip" -p SHA256SUMS
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$REL"
+          for f in "$MODEL-reduce_off.zip" SHA256SUMS; do
+            curl -fsSL --retry 3 -o "bundle/$f" "$url/$f"
+          done
           (cd bundle && sha256sum -c --ignore-missing SHA256SUMS)
-          unzip -q "bundle/$MODEL-reduce_off.zip" -d ref
+          python -I -c "import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])" "bundle/$MODEL-reduce_off.zip" ref
           rm -rf bundle
           cat "ref/$MODEL/reduce_off/NOTICE.md"
 
