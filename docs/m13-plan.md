@@ -205,6 +205,21 @@ James, 18 Nov 2026 (q1 and q2 of the gate audit below): also in the gate are sha
 
 James, 22 Nov 2026 (the chat, after the M1.3 audit of that day: "option 2, move stochastics out of the gate, but do not start tests with v4.9.8 until Monday's nightly's not todays"): the stochastic extension leaves the gate. Change 70 (its DD reader, #185) is merged; changes 71-76 come after the gate, as MACRO and the mixed-integer features do, and STAGES, SPINES and SENSIS runs stay refused at init_ext with their message until then. The move of the baseline to TIMES v4.9.8 (CLAUDE.md, "Baseline") follows the gate, and no v4.9.8 test runs before the nightly of Monday 23 Nov 2026: the nightly of Sunday 22 Nov runs on v4.9.7, on the merged stack, as the gate's last evidence.
 
+James, 22 Nov 2026 (#192 d1 and d2): damage costs as elastic supply curves carried from a base run (DAM_ELAST with an 'N' record: wrtbprice.mod L21-25, readbprice.mod L24-25 and L37-45) leave the gate too, "listed for completion before phase 1 close"; they stay refused with their message until then. Changes 71-76 of the stochastic extension resume after the move to v4.9.8; change 73 (the SOW tags) finishes and merges first.
+
+### After the gate, before Phase 1 closes
+
+Each stays refused with its message until its change merges, and each is translated and checked as the gate's features were (layers 1 to 3, a crafted case where no suite model reaches it). Phase 1 does not close (M1.7) until every item here is done or James moves it.
+
+| Item | Decided | Note |
+| --- | --- | --- |
+| Damage costs from a base run (DAM_ELAST 'N': DAM_COEF and DAM_TVOC written by wrtbprice.mod L21-25, read by readbprice.mod L24-25 and L37-45) | James, 22 Nov 2026 (#192 d1) | change 69b: carried in the base-price Arrow folder, with a crafted case and its GAMS reference; about half a day |
+| The stochastic extension (%STAGES%, SPINES, SENSIS): changes 71-76 | James, 22 Nov 2026 (the chat; #192 d2) | after the move to v4.9.8; change 73 first ("Plan: the stochastic extension") |
+| DSC lumpy investments and block retirements, the discrete unit commitment, ETL, TIMES-Micro (RD_NLP, MICRO), %DAMAGE% NLP, gas-grid pressure points and %SOLMIP%, the PTDF candidate lines | James, 17 Nov 2026 (q5) | mixed-integer or nonlinear |
+| MACRO (with MSA) | James, 17 Nov 2026 | checked with IPOPT on both sides |
+
+The ECB, CLI, ABS, MCA and IER extensions come after M1.7 (15 Nov 2026), and the M1.5 and M1.6 items stay in their milestones; neither is on this list.
+
 - Input dump to `ppm/` at 1e-9 on every core model, reduce_off and as_run
   (TIM-bau locally).
 - In CI on demo12: input, preprocessing, coefficients and the model, with the
@@ -284,6 +299,7 @@ Every refusal left in `src/` was listed (`UnportedError`, the `*_unported` lists
 | %OBJANN%, %VALIDATE%, %VINTOPT% 1, %WAVER%, %INTEXT_ONLY%, %PREP_ANS% | M1.5 (q1) |
 | VAR_UC not YES; bnd_ire.vda with GDX_IREBND and GDX_IPRIC | M1.5 (q2) |
 | Restart points (SPOINT, LPOINT, RPOINT, FIXBOH), REG_FIXT | M1.5 |
+| Damage costs from a base run (DAM_ELAST 'N'; wrtbprice.mod L21-25, readbprice.mod L24-25 and L37-45), refused since change 69 and not listed on 18 Nov 2026 | after the gate, before Phase 1 closes (James, 22 Nov 2026, #192 d1) |
 | DSC lumpy investments and block retirements, the discrete unit commitment, ETL, TIMES-Micro (RD_NLP, MICRO), %DAMAGE% NLP, gas-grid pressure points and %SOLMIP%, the PTDF candidate lines | after the gate, Phase 1 (17 Nov 2026) |
 | MACRO (with MSA) | after the gate, checked with IPOPT (17 Nov 2026) |
 | The ECB, CLI, ABS, MCA and IER extensions | after M1.7 (15 Nov 2026) |
@@ -296,7 +312,7 @@ With the stochastic extension out of the gate (James, 22 Nov 2026, above), every
 
 | Criterion | Evidence | Result |
 | --- | --- | --- |
-| Every refused linear feature in the gate translated and tested | Every refusal left in `src/` (`UnportedError`, the `*_unported` lists, `untranslated_families`) listed again on db5d3d7 and sorted by the scope above: all are after the gate, in M1.5 or M1.6, or stay refused by decision, except one, which the audit of 18 Nov 2026 did not list because change 69 added it: damage costs as elastic supply curves carried from a base run (DAM_ELAST with an 'N' record: wrtbprice.mod L21-25 writes DAM_COEF and DAM_TVOC, readbprice.mod L24-25 and L37-45 read them back). Refused with its message (TIMES.jl's messages and comments cited readbprice.mod, wrtbprice.mod and pp_micro.mod a few lines early; corrected by #193); no suite model or crafted case reaches it. Linear, so in the gate unless James moves it out (Open decisions, 22 Nov 2026). | one item open |
+| Every refused linear feature in the gate translated and tested | Every refusal left in `src/` (`UnportedError`, the `*_unported` lists, `untranslated_families`) listed again on db5d3d7 and sorted by the scope above: all are after the gate, in M1.5 or M1.6, or stay refused by decision, except one, which the audit of 18 Nov 2026 did not list because change 69 added it: damage costs as elastic supply curves carried from a base run (DAM_ELAST with an 'N' record: wrtbprice.mod L21-25 writes DAM_COEF and DAM_TVOC, readbprice.mod L24-25 and L37-45 read them back). Refused with its message (TIMES.jl's messages and comments cited readbprice.mod, wrtbprice.mod and pp_micro.mod a few lines early; corrected by #193); no suite model or crafted case reaches it. Linear, so in the gate as it stood; James moved it out on 22 Nov 2026 (#192 d1), listed for completion before Phase 1 closes ("After the gate, before Phase 1 closes"). | PASS (the one item moved out) |
 | Input dump to `ppm/` and on to presolve at 1e-9, every core model, reduce_off and as_run | Workstation batch, the pass of 21-22 Nov 2026 on `b112c93` (started 21 Nov 16:34; `scripts/m13_gate.jl`): demo12, TIMES-NZ steady and shift, OTCGEN, OTNYC, OTUS9r reference and tax1_wo_mou, both variants; every set and parameter at init, prep, prelv, ppm, coef and presolve, and the QA log at ppm and presolve. | PASS, 14 of 14 |
 | The same from the DD files (M1.4), with the model against GAMS's matrix | Same nightly (`scripts/m14_probe.jl`): the chain from the DD files to presolve, then layer 2 against GAMS's CONVERT matrix, the same 14 runs (OTUS9r tax1_wo_mou reduce_off: 2,528,996 rows, 3,233,253 columns, 11,599,301 nonzeros). | PASS, 14 of 14 |
 | Parity report (dashboard) | Same nightly: layers 1 to 3 on the public suite, 281 checks. | PASS, 281 of 281 |
@@ -2468,9 +2484,10 @@ Asked as q2 at the check-in of 19 Nov 2026 ("yes show me the plan"); James
 approved it on 20 Nov 2026 (#178 d1, docs/decisions.md).
 
 James, 22 Nov 2026: the stochastic extension leaves the M1.3 gate (see
-"Gate"). Change 70 is merged (#185); changes 71-76 come after the gate. When
-they resume (before or after the move to v4.9.8) is on the Open decisions
-list of docs/decisions.md.
+"Gate"). Change 70 is merged (#185); changes 71-76 come after the gate. They
+resume after the move to v4.9.8, so that their GAMS references are made once,
+on v4.9.8; change 73 (the SOW tags) finishes and merges before the move
+(James, 22 Nov 2026, #192 d2).
 
 ### What GAMS does (TIMES v4.9.7 @ d9a6a25)
 
