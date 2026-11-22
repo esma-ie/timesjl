@@ -31,7 +31,6 @@ answer yet.
 | 8 Nov 2026 | chat | Harness fix as one small PR: CHECK status for a non-optimal solve; redo `ppm/` and `coef/` made with older GAMS | one small PR | Open; no PR yet. Checked 14 Nov 2026: `make_reference.py` still reports OK for a run that GAMS ends without an optimum. |
 | 10 Nov 2026 | #89 | Keep P2-5 (data and equation schemas) on the Phase 2 backlog, with its three pilots after M1.7? | keep; all pilots after M1.7 | Open (#89, decisions 1 and 2); provisional until James confirms. |
 | 10 Nov 2026 | #90 | Which other outcomes turn the cuOpt nightly red? | proposed in the chat | Open (#90, decision 3) |
-| 10 Nov 2026 | #90 | Where to test GPU scaling: open core-model reference runs as a release asset, or a sweep on native Linux? | none given | Open (#90, decision 4). Since asked: the local nightly also solves the open reference runs (James, 13 Nov 2026), and the MPS files of the open models are release assets in their own repositories (12 Nov 2026); the choice for a scaling test is still James's. |
 | 10 Nov 2026 | #90 | Wednesday's full cuOpt suite: set `CUOPT_FIXTURES=all` and `CUOPT_GPU_SHARES=100`? | yes | Open (#90, decision 2); a GitHub setting only James can make. Checked 14 Nov 2026: the repository has no Actions variable set, so the nightly runs demo12_off at 25, 50 and 100%. |
 | 14 Nov 2026 | chat (issue #97) | After #101 (the early part of #97: the solution of a solve written for downstream tools): may more of #97 start before M1.5 closes, beyond the levels and marginals approved on 12 Nov 2026? Rule-level (milestone order). | no; the rest waits for M1.6 in its order | Open; added to the list at the review of 14 Nov 2026. |
 | 14 Nov 2026 | chat | Remove the unused git worktree `TIMESjl-m14` on the workstation? M1.4 has been developed in the main working copy; the worktree is 213 commits behind `main` and has no commits of its own. | yes | Open; added to the list at the review of 14 Nov 2026. Nothing is removed without James's word. |
@@ -66,6 +65,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 22 Nov 2026 | q1 and q2 of the 22 Nov chat (asked as "d1" and "d2"): "d1 yes, d2 100% only first". q1, rule-level (test data): the reduce_off reference runs of the six open probe runs (TIMES-NZ steady and shift, OTCGEN, OTNYC, OTUS9r reference and tax1_wo_mou) are published as assets of a pre-release of this repository, so the GitHub GPU runner can solve them with cuOpt; each zip carries its model's licence and a notice, and no paths, host, commands or GAMS timings. q2: the first pass runs at 100% of the GPU only, barrier and PDLP; the GPU-share sweep follows on the models that solve. This answers #90 decision 4 (release asset of open core-model references), which leaves the open list. TIM and JRC-EU-TIMES stay off the runner. | #189; `scripts/cuopt/make_ref_bundle.py`; `.github/workflows/nightly-gpu.yml` (input `ref_release`); `scripts/cuopt/README.md` |
 | 21 Nov 2026 | q1 of the 21 Nov check-in (review of the M1.3 close-out): "q1 yes". Change 73 of the stochastic plan (the SOW tags, a pure restructuring checked by layer 2) is built in parallel with changes 71 and 72, in a second tab and its own worktree; change 74 starts once 72 and 73 are both merged. A departure from the order of the approved plan; explicit yes. | this log; `docs/m13-plan.md` (Plan: the stochastic extension) |
 | 21 Nov 2026 | q2 of the 21 Nov check-in: "q2 yes". The preprocessing timings against GAMS (`scripts/m13_timing.jl`, `docs/timings.md`, last of 13 Nov 2026) are rerun on the final stack after change 76 merges, as evidence for the M1.3 gate (on James's workstation, within the run limits). | this log; `docs/m13-plan.md` (Gate) |
 | 21 Nov 2026 | "close #183 and delete the merge": #183 (rename the package, module and repository to OpenTIMES, opened 20 Nov 2026) is closed unmerged. The decision of 18 Nov 2026 stands: no rename and no General-registry registration until the December 2026 ETSAP ExCo in Paris has chosen the name; the rename is then redone in one PR. | this log; #183 (closed) |
@@ -149,6 +149,13 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 | 11 Nov 2026 | Keep this decision log, with its rule. | `docs/decisions.md` |
 
 ## Log by pull request
+
+### #189 cuOpt lane: the open reference runs on the GitHub GPU runner, from a release (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Each solve on the runner is capped at 1800 s (input `time_limit`), and at most 3 model jobs run at once (each on its own runner, so timings do not share a GPU). | Recommended: yes. Built in. | open |
+| 2 | Keep the pre-release `cuopt-ref-2026-11-22` and its assets until the cuOpt review of 8 Dec 2026, then decide whether to keep refreshing it. | Recommended: yes. Built in (nothing deletes it). | open |
 
 ### #185 M1.3 (70): the stochastic extension's DD reader (initmty.stc); eight crafted cases (merged 22 Nov 2026)
 
@@ -883,7 +890,7 @@ No decisions: a parity fix inside 27a-2 (#93).
 | 1 | Set up the GitHub T4 runner for the nightly | Nightly on a GitHub T4 runner (`CLAUDE.md`, cuOpt lane). | James, 10 Nov 2026 |
 | 2 | Wednesday's full suite: set `CUOPT_FIXTURES=all` and `CUOPT_GPU_SHARES=100`? | Not known whether set. | open |
 | 3 | Which other outcomes turn the nightly red? | Not decided. | open |
-| 4 | GPU scaling: release asset of open core-model references, or native Linux? | Not decided. | open |
+| 4 | GPU scaling: release asset of open core-model references, or native Linux? | Release asset: the open reference runs as pre-release assets, solved on the GitHub GPU runner, at 100% first (#189). | James, 22 Nov 2026 (chat, q1 and q2) |
 
 ### #89 Phase 2 notes: P2-5 schemas for data and equations (merged 2026-11-10)
 
