@@ -153,6 +153,14 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
+### #192 M1.3 gate: the stochastic extension out of the gate; gate audit of 22 Nov 2026 (open)
+
+| # | Decision | Default | Outcome |
+| --- | --- | --- | --- |
+| 1 | Damage costs as elastic supply curves from a base run (DAM_ELAST 'N'; wrtbprice.mod L21-25, readbprice.mod L24-25 and L37-45): translate before the gate (change 69b) or move out with the stochastic extension? Rule-level. | Recommended: move them out. Not built in. | Open decisions (22 Nov 2026) |
+| 2 | Changes 71-76 resume after the move to v4.9.8; change 73 finishes and merges first | Recommended: yes. Not built in. | Open decisions (22 Nov 2026) |
+| 3 | The timing rerun of q2 (21 Nov 2026) moves to now, on the merged stack, figures on the local board only (#184 d5) | Recommended: yes. Built in. | pending merge |
+
 ### #191 cuOpt lane: download the reference runs with curl (the GPU image has no gh) (open)
 
 No decisions: a fix to #189, whose first run (22 Nov 2026, run 45015140242) stopped in every job at the download (`gh: command not found`).
