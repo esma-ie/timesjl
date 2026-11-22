@@ -65,7 +65,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
-| 22 Nov 2026 | q1 and q2 of the 22 Nov chat (asked as "d1" and "d2"): "d1 yes, d2 100% only first". q1, rule-level (test data): the reduce_off reference runs of the six open probe runs (TIMES-NZ steady and shift, OTCGEN, OTNYC, OTUS9r reference and tax1_wo_mou) are published as assets of a pre-release of this repository, so the GitHub GPU runner can solve them with cuOpt; each zip carries its model's licence and a notice, and no paths, host, commands or GAMS timings. q2: the first pass runs at 100% of the GPU only, barrier and PDLP; the GPU-share sweep follows on the models that solve. This answers #90 decision 4 (release asset of open core-model references), which leaves the open list. TIM and JRC-EU-TIMES stay off the runner. | #PRNUM; `scripts/cuopt/make_ref_bundle.py`; `.github/workflows/nightly-gpu.yml` (input `ref_release`); `scripts/cuopt/README.md` |
+| 22 Nov 2026 | q1 and q2 of the 22 Nov chat (asked as "d1" and "d2"): "d1 yes, d2 100% only first". q1, rule-level (test data): the reduce_off reference runs of the six open probe runs (TIMES-NZ steady and shift, OTCGEN, OTNYC, OTUS9r reference and tax1_wo_mou) are published as assets of a pre-release of this repository, so the GitHub GPU runner can solve them with cuOpt; each zip carries its model's licence and a notice, and no paths, host, commands or GAMS timings. q2: the first pass runs at 100% of the GPU only, barrier and PDLP; the GPU-share sweep follows on the models that solve. This answers #90 decision 4 (release asset of open core-model references), which leaves the open list. TIM and JRC-EU-TIMES stay off the runner. | #189; `scripts/cuopt/make_ref_bundle.py`; `.github/workflows/nightly-gpu.yml` (input `ref_release`); `scripts/cuopt/README.md` |
 | 21 Nov 2026 | q2 of the 21 Nov evening chat: "lets keep both the github gpu runner and local gpu test." Both cuOpt lanes stay: the GitHub GPU nightly (`nightly-gpu.yml`, larger runner `gpu-t4`) and the local WSL2 nightly (until 8 Dec 2026). The GitHub nightly had never run (11-20 Nov: every job cancelled after 24 hours in the queue): the runner is in the org's Default runner group, which does not allow public repositories, and the org's Actions budget is $0 with usage stopped, while larger runners are always billed. Fixed the same evening, at James's choice: runner group `gpu` (TIMESjl only, workflow `nightly-gpu.yml` on main only, public repositories allowed) holds `gpu-t4`, and the org's Actions budget is $100 a month (usage stops there; alert to James). The queued nightly of 21 Nov started on `gpu-t4` at 21:20. | this log; `.github/workflows/nightly-gpu.yml`; `scripts/cuopt/README.md` |
 | 21 Nov 2026 | #184 d1 and d4: "#184 d1 as built, d4 leave history", and #184 d5: "keep all gams timings only on the local dashboard". Every GAMS timing, whatever the solver, leaves the public board (slide 10 with them) and is shown on the local board only. Rule-level (what the public repository shows); James's explicit instruction. Whether other public files with GAMS timings follow is #184 d6 (Open decisions). | #184; `scripts/run_timing.jl`; `docs/dashboard/README.md` |
 | 20 Nov 2026 | q1 (solver option files): "q1 yes". `run_model` and `scripts/run_dd.jl` read the solver option file, as GAMS TIMES reads `<solver>.opt` (solve.mod L14-15): `highs.opt` from the run file's folder by default, another file with `optfile=` (`--optfile`), none with `optfile=false` (`--no-optfile`); HiGHS option names, the run's thread limit kept. A departure from the M1.5 plan, which had listed the option file as not reproduced (#130 d3). | #182; `src/solver_options.jl`; README (Tips) |
@@ -146,7 +146,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
-### #PRNUM cuOpt lane: the open reference runs on the GitHub GPU runner, from a release (open)
+### #189 cuOpt lane: the open reference runs on the GitHub GPU runner, from a release (open)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
@@ -878,7 +878,7 @@ No decisions: a parity fix inside 27a-2 (#93).
 | 1 | Set up the GitHub T4 runner for the nightly | Nightly on a GitHub T4 runner (`CLAUDE.md`, cuOpt lane). | James, 10 Nov 2026 |
 | 2 | Wednesday's full suite: set `CUOPT_FIXTURES=all` and `CUOPT_GPU_SHARES=100`? | Not known whether set. | open |
 | 3 | Which other outcomes turn the nightly red? | Not decided. | open |
-| 4 | GPU scaling: release asset of open core-model references, or native Linux? | Release asset: the open reference runs as pre-release assets, solved on the GitHub GPU runner, at 100% first (#PRNUM). | James, 22 Nov 2026 (chat, q1 and q2) |
+| 4 | GPU scaling: release asset of open core-model references, or native Linux? | Release asset: the open reference runs as pre-release assets, solved on the GitHub GPU runner, at 100% first (#189). | James, 22 Nov 2026 (chat, q1 and q2) |
 
 ### #89 Phase 2 notes: P2-5 schemas for data and equations (merged 2026-11-10)
 
