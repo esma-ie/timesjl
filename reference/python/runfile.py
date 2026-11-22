@@ -80,6 +80,7 @@ class PatchReport:
     removed_lp_options: list = field(default_factory=list)
     solveinfo_after: str = ""
     input_before: str = ""
+    implicit_assign: bool = False
 
 
 class RunFileError(ValueError):
@@ -104,7 +105,14 @@ def patch_run(text: str, overrides: dict | None = None, strip_lp_option: bool = 
       command line is used (TIMES-NZ hard-codes ``option LP=cplex;``);
     - appends the solve-information block after ``$BATINCLUDE maindrv.mod``;
     - puts the M1.3 input checkpoint (``execute_unload 'tjl_input.gdx'`` under
-      ``$IF SET TJL_CHECKPOINTS``) just before ``$BATINCLUDE maindrv.mod``.
+      ``$IF SET TJL_CHECKPOINTS``) just before ``$BATINCLUDE maindrv.mod``;
+    - in the pre-solve run (override ``SOLVE_NOW NO``) of a run that sets SENSIS
+      YES, puts ``$ONIMPLICITASSIGN`` just before ``$BATINCLUDE maindrv.mod``:
+      SENSIS sets STAGES to ``Yes`` (maindrv.mod L34), so maindrv.mod L110 takes
+      solve.stc, whose L7 (case-exact ``$IF NOT %STAGES%==YES``) compiles the
+      report file rptlite.rpt; with no SOLVE statement compiled (solve.mod L22)
+      its solution levels are never assigned, which GAMS stops on (error 141)
+      before any checkpoint is written. The directive only turns that check off.
 
     Overrides only reach ``$SET`` lines in the run file itself, not in files it
     includes (for example a scenario file).
@@ -152,6 +160,14 @@ def patch_run(text: str, overrides: dict | None = None, strip_lp_option: bool = 
     # 5. input checkpoint before maindrv
     report.input_before = lines[k].strip()
     lines[k:k] = INPUT_BLOCK.format(mark=MARK).splitlines()
+
+    # 6. the pre-solve run of a SENSIS run: no error 141 for the report's levels (docstring)
+    sensis = _set_line("SENSIS")
+    if str(overrides.get("SOLVE_NOW", "")).upper() == "NO" and any(
+            not _COMMENT.match(ln) and sensis.match(ln) and ln.split()[-1].strip("'\"").upper() == "YES" for ln in lines):
+        k = _find_unique(lines, _MAINDRV, "$BATINCLUDE maindrv.mod")
+        lines[k:k] = [f"{MARK} pre-solve run of a SENSIS run: rptlite.rpt in solve.stc L7 has no solve", "$ONIMPLICITASSIGN"]
+        report.implicit_assign = True
 
     return newline.join(lines) + newline, report
 

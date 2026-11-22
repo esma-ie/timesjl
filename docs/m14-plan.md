@@ -48,7 +48,7 @@ Refused (UnportedError), as in M1.1-M1.3:
 
 - the DATAGDX branch, initmty.mod L489-508 (`%RUN_NAME%~data.gdx` or
   `_dd_.gdx`). Change 4 checks whether any suite run takes it.
-- `%STAGES%` (initmty.stc);
+- `%STAGES%` (initmty.stc), read since M1.3 change 70 (20 Nov 2026);
 - MACRO (initmty.tm);
 - `INTEXT_ONLY`.
 

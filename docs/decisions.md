@@ -66,6 +66,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 21 Nov 2026 | #176 (merged 21 Nov 2026): "pr#176 q2 dp46 - yes log this discrepancy" and "yes, build in the other changes from pr#176". D46 (timslice.mod L121, division by zero with different timeslice trees and ramping or start-up data) is reported to ETSAP with the other reports (#176 d2, rule-level, explicit yes); the twelve demo12_tsoff_* cases (d1) and the prepret.dsc L75 fix (d3) are confirmed. | this log (#176); `docs/discrepancies.md` (D46) |
 | 21 Nov 2026 | q2 of the 21 Nov evening chat: "lets keep both the github gpu runner and local gpu test." Both cuOpt lanes stay: the GitHub GPU nightly (`nightly-gpu.yml`, larger runner `gpu-t4`) and the local WSL2 nightly (until 8 Dec 2026). The GitHub nightly had never run (11-20 Nov: every job cancelled after 24 hours in the queue): the runner is in the org's Default runner group, which does not allow public repositories, and the org's Actions budget is $0 with usage stopped, while larger runners are always billed. Fixed the same evening, at James's choice: runner group `gpu` (TIMESjl only, workflow `nightly-gpu.yml` on main only, public repositories allowed) holds `gpu-t4`, and the org's Actions budget is $100 a month (usage stops there; alert to James). The queued nightly of 21 Nov started on `gpu-t4` at 21:20. | this log; `.github/workflows/nightly-gpu.yml`; `scripts/cuopt/README.md` |
 | 21 Nov 2026 | #184 d1 and d4: "#184 d1 as built, d4 leave history", and #184 d5: "keep all gams timings only on the local dashboard". Every GAMS timing, whatever the solver, leaves the public board (slide 10 with them) and is shown on the local board only. Rule-level (what the public repository shows); James's explicit instruction. Whether other public files with GAMS timings follow is #184 d6 (Open decisions). | #184; `scripts/run_timing.jl`; `docs/dashboard/README.md` |
 | 20 Nov 2026 | q1 (solver option files): "q1 yes". `run_model` and `scripts/run_dd.jl` read the solver option file, as GAMS TIMES reads `<solver>.opt` (solve.mod L14-15): `highs.opt` from the run file's folder by default, another file with `optfile=` (`--optfile`), none with `optfile=false` (`--no-optfile`); HiGHS option names, the run's thread limit kept. A departure from the M1.5 plan, which had listed the option file as not reproduced (#130 d3). | #182; `src/solver_options.jl`; README (Tips) |
@@ -146,15 +147,23 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
-### #184 Dashboard: GAMS timings on the local board only (open)
+### #185 M1.3 (70): the stochastic extension's DD reader (initmty.stc); eight crafted cases (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Keep the eight crafted cases of the stochastic plan (demo12_stc, demo12_stc3, demo12_stcmx, demo12_stclam, demo12_stcext, demo12_spines, demo12_sensis, demo12_tradeoff; demo12 with DD files of their own or of earlier crafted cases, CC BY 4.0), each with an input and a run fixture (about 1.2 MB each, 10 MB together); their model fixtures come with changes 71-76. demo12_tradeoff follows Example 1c of the TIMES stochastics user note (Example 1b drove the CO2 to zero in phase 1, so its three points were one solve). | Recommended: yes. Built in. | open |
+| 2 | Harness 0.3.7: in the pre-solve run of a SENSIS run only, `$ONIMPLICITASSIGN` before maindrv.mod. Without it GAMS stops on error 141 (solve.stc L7 compiles the report writer, whose solution levels nothing assigns when there is no SOLVE) before any checkpoint. It turns off that check and nothing else; the solve runs are unchanged. | Recommended: yes. Built in. | open |
+| 3 | A run with SPINES or SENSIS YES is refused at init_ext (maindrv.mod L33-36), as one with STAGES YES is, until changes 71-76 translate them; until now the compile refused all three at initmty.stc. | Recommended: yes. Built in. | open |
+
+### #184 Dashboard: GAMS timings on the local board only (merged 22 Nov 2026)
 
 Asked for by James on 20 Nov 2026, in answer to #182 d6: "can we move the cplex timings out of the public dashboard and only show it in the local dashboard?"; widened on 21 Nov 2026: "keep all gams timings only on the local dashboard" (d5).
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
 | 1 | Every timing entry of a run with CPLEX leaves the public board, GAMS's parts before the solve included (they involve no CPLEX): OTCGEN, OTNYC and OTUS9r show no GAMS time there until they have GAMS/HiGHS reference runs. The alternative keeps GAMS's times up to the LP from the CPLEX runs. | Recommended: as built. Built in. Since d5 every GAMS entry leaves, so the question no longer arises. | answered by James, 21 Nov 2026: as built ("#184 d1 as built") |
-| 2 | All of the EULA's Restricted Solvers are left out (COPT, CPLEX, Gurobi, KNITRO, LINDO/LindoGlobal, Xpress; ODHCPLEX), not CPLEX alone, for TIMES.jl's entries too (today HiGHS only, #182 d5). | Recommended: yes. Built in. | open |
-| 3 | The public run-time slides say "GAMS's run times are not published on this board" (before d5: "runs with CPLEX: times not published (GAMS EULA, Publication of Benchmarks)"). | Recommended: yes. Built in. | open |
+| 2 | All of the EULA's Restricted Solvers are left out (COPT, CPLEX, Gurobi, KNITRO, LINDO/LindoGlobal, Xpress; ODHCPLEX), not CPLEX alone, for TIMES.jl's entries too (today HiGHS only, #182 d5). | Recommended: yes. Built in. | accepted by merge, 22 Nov 2026 |
+| 3 | The public run-time slides say "GAMS's run times are not published on this board" (before d5: "runs with CPLEX: times not published (GAMS EULA, Publication of Benchmarks)"). | Recommended: yes. Built in. | accepted by merge, 22 Nov 2026 |
 | 4 | Flag: git history keeps the earlier GAMS and CPLEX timings (older versions of `docs/dashboard/index.html`); removing them would rewrite the public repository's history. | Recommended: leave the history as it is. Nothing built. | answered by James, 21 Nov 2026: leave the history ("d4 leave history") |
 | 5 | Every GAMS timing leaves the public board, whatever the solver: GAMS/HiGHS too (demo12 and TIMES-NZ steady), and slide 10 (the coefficient stage against GAMS), which the public page drops; its slides 11 and 12 become 10 and 11. The local board shows them all: `run_timing.jl --unpublished` (block `run-timing-unpublished`) and a `timing-coef` block for slide 10, both added by `build_dashboard_local.ps1`. Rule-level (what the public repository shows). | Asked for by James. Built in. | answered by James, 21 Nov 2026: "keep all gams timings only on the local dashboard" |
 | 6 | Other public files hold GAMS timings: `docs/timings.md` (GAMS's seconds and TIMES.jl's ratio to them), and ratios to GAMS in `docs/translation-guide.md` and `docs/m13-plan.md`. Do they move off the public repository too (to a local file, in their own PR), with the 5x speed target (P2-6) then reported without GAMS's figures? Rule-level. | none built; recommended: yes, one follow-up PR | open (Open decisions) |
@@ -210,13 +219,13 @@ Asked for by James on 20 Nov 2026 (q1 and q2 of that day, above).
 | --- | --- | --- | --- |
 | 1 | Keep the crafted case demo12_pfdf (demo12 + pf.dd and pfdf.dd, CC BY 4.0) with one public CI fixture (as run, about 4 MB). | Recommended: yes. Built in. | accepted by merge, 20 Nov 2026 |
 
-### #176 M1.3 (67): dynamic timeslices, the RTS(S) rows of the other families; twelve crafted cases demo12_tsoff_* (open)
+### #176 M1.3 (67): dynamic timeslices, the RTS(S) rows of the other families; twelve crafted cases demo12_tsoff_* (merged 21 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Keep the twelve crafted cases demo12_tsoff_* and tsoff2.dd (run files only, CC BY 4.0), with three public CI fixtures (demo12_tsoff_disp, _ptdf, _gg2; as run, about 13 MB together); the other nine are checked by the gate from their DD files. | Recommended: yes. Built in. | open |
-| 2 | D46 (timslice.mod L121 divides by zero when the regions have different timeslice trees and there is ramping or start-up data): report it to ETSAP, with the other notes? Rule-level (a report to ETSAP). | yes, with the other reports | open |
-| 3 | prepret.dsc L75 keeps an EPS upper bound EPS (MIN of the VAR_RCAP and VAR_SCAP bounds); only visible under HOLDFIXED. Fixed in this change rather than in its own PR, as the case that shows it is this change's. | Recommended: yes. Built in. | open |
+| 1 | Keep the twelve crafted cases demo12_tsoff_* and tsoff2.dd (run files only, CC BY 4.0), with three public CI fixtures (demo12_tsoff_disp, _ptdf, _gg2; as run, about 13 MB together); the other nine are checked by the gate from their DD files. | Recommended: yes. Built in. | James, 21 Nov 2026: yes ("yes, build in the other changes from pr#176"); merged 21 Nov 2026 |
+| 2 | D46 (timslice.mod L121 divides by zero when the regions have different timeslice trees and there is ramping or start-up data): report it to ETSAP, with the other notes? Rule-level (a report to ETSAP). | yes, with the other reports | James, 21 Nov 2026: yes ("pr#176 q2 dp46 - yes log this discrepancy"); D46 goes to ETSAP with the other reports |
+| 3 | prepret.dsc L75 keeps an EPS upper bound EPS (MIN of the VAR_RCAP and VAR_SCAP bounds); only visible under HOLDFIXED. Fixed in this change rather than in its own PR, as the case that shows it is this change's. | Recommended: yes. Built in. | James, 21 Nov 2026: yes ("yes, build in the other changes from pr#176"); merged 21 Nov 2026 |
 
 ### #173 m13_gate.jl: 24 hours for every HiGHS solve (open)
 
