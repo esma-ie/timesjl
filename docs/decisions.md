@@ -52,6 +52,9 @@ answer yet.
 | 17 Nov 2026 | #155 | coef_nio.mod L58 computes COEF_RCOM from COEF_CPT before coef_alt.lin L77 fills COEF_CPT (coefmain.mod order), so COEF_RCOM is empty outside the capacity transfer and the VAR_RCAP term of cal_cap.mod is never reached; TIMES.jl does the same. Report it to the TIMES maintainers (ETSAP) as a possible ordering issue? | yes, as a note to ETSAP | Open (#155, decision 2). Nothing in TIMES.jl depends on it. |
 | 17 Nov 2026 | #156 | resloadc.vda L111 and L144 read VAR_RLD at 'RL_THMIN' (an underscore) beside 'RL-THMIN': two columns, likely a typo (D45). TIMES.jl follows the code. Report it to ETSAP, in one note with #155 d2 (COEF_RCOM)? | yes, in the same note | Open (#156, decision 3). Nothing in TIMES.jl depends on it. |
 | 21 Nov 2026 | #184 | GAMS timings in other public files (`docs/timings.md`; ratios to GAMS in `docs/translation-guide.md` and `docs/m13-plan.md`): move them off the public repository too, as on the dashboard? Rule-level. | yes, one follow-up PR | Open (#184, decision 6) |
+| 22 Nov 2026 | #190 | The decision log as one file per PR (`docs/decisions/pr/<n>.md`) and one per chat answer, `docs/decisions.md` built from them by a script; only the integrator tab records outcomes and keeps this list (`docs/merge-conflicts-plan.md`, Proposal 1). Changes the last sentence of CLAUDE.md's Decision log rule. Rule-level. | yes | Open (#190, decision 1); needs James's explicit yes. Nothing is built until then. |
+| 22 Nov 2026 | #190 | The shared status lines of `docs/m13-plan.md` and `docs/translation-guide.md` (the refused-features table, the status paragraph) updated by the integrator after each check-in; change PRs edit only their own rows (Proposal 2). | yes | Open (#190, decision 2). |
+| 22 Nov 2026 | #190 | The lists that only grow (`reference/crafted.toml`, `test/fixtures/public_fixtures.toml`, `reference/dd/README.md`): (a) Git's union merge, or (b) one file per case (Proposal 3). | (a) now; (b) only if (a) causes trouble | Open (#190, decision 3). |
 
 Reviewed on 14 Nov 2026 against pull requests #1 to #120 (108 merged, six open: #114, #115, #117 to #120). Four questions that James had answered left this list for the log of their pull requests: the demo12 trade case (#68, #104); refused features before v4.9.8 (#109, decision 3); the stepped solve before the gates (#108, decision 3); the M1.4 CI criterion with demo12_uc refused (#118, decision 2). Five questions asked in the chat and never listed were added (issues #97, #100 and #17, the commit trailer, the unused worktree). Every row of the log that is still "open" is either on this list or is a built-in default of an open pull request, which its merge decides. Later the same evening James merged #114 to #125 (eleven pull requests): their built-in defaults are accepted by merge, and his answers on #120 (decision 5), #121 (decision 2) and #125 (decisions 6, 8, 9 and 10) are in the log of those pull requests. Two more pull requests were opened later that evening, #127 (the dashboard changes James asked for on #125) and #128 (M1.5 change 2); #127's choice of the green and the orange joined this list.
 
@@ -65,6 +68,7 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 22 Nov 2026 | Asked in the chat how to have fewer merge conflicts with several Claude tabs at once: "yes, do a, b and c". (a) A written proposal (`docs/merge-conflicts-plan.md`; its three proposals are #190 d1 to d3, Open decisions). (b) The 38 worktrees whose PRs had merged and the scratch worktree `TIMESjl-ws-stack1120` removed, with their local branches, after James saw the list (none held uncommitted work, and every commit in them was on main). (c) The `/sync-prs` command (#190). | this log; #190; the workstation's worktrees |
 | 22 Nov 2026 | q1 and q2 of the 22 Nov chat (asked as "d1" and "d2"): "d1 yes, d2 100% only first". q1, rule-level (test data): the reduce_off reference runs of the six open probe runs (TIMES-NZ steady and shift, OTCGEN, OTNYC, OTUS9r reference and tax1_wo_mou) are published as assets of a pre-release of this repository, so the GitHub GPU runner can solve them with cuOpt; each zip carries its model's licence and a notice, and no paths, host, commands or GAMS timings. q2: the first pass runs at 100% of the GPU only, barrier and PDLP; the GPU-share sweep follows on the models that solve. This answers #90 decision 4 (release asset of open core-model references), which leaves the open list. TIM and JRC-EU-TIMES stay off the runner. | #189; `scripts/cuopt/make_ref_bundle.py`; `.github/workflows/nightly-gpu.yml` (input `ref_release`); `scripts/cuopt/README.md` |
 | 21 Nov 2026 | q1 of the 21 Nov check-in (review of the M1.3 close-out): "q1 yes". Change 73 of the stochastic plan (the SOW tags, a pure restructuring checked by layer 2) is built in parallel with changes 71 and 72, in a second tab and its own worktree; change 74 starts once 72 and 73 are both merged. A departure from the order of the approved plan; explicit yes. | this log; `docs/m13-plan.md` (Plan: the stochastic extension) |
 | 21 Nov 2026 | q2 of the 21 Nov check-in: "q2 yes". The preprocessing timings against GAMS (`scripts/m13_timing.jl`, `docs/timings.md`, last of 13 Nov 2026) are rerun on the final stack after change 76 merges, as evidence for the M1.3 gate (on James's workstation, within the run limits). | this log; `docs/m13-plan.md` (Gate) |
@@ -150,12 +154,22 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 ## Log by pull request
 
-### #189 cuOpt lane: the open reference runs on the GitHub GPU runner, from a release (open)
+### #190 Workflow: a proposal for fewer merge conflicts, and the /sync-prs command (open)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Each solve on the runner is capped at 1800 s (input `time_limit`), and at most 3 model jobs run at once (each on its own runner, so timings do not share a GPU). | Recommended: yes. Built in. | open |
-| 2 | Keep the pre-release `cuopt-ref-2026-11-22` and its assets until the cuOpt review of 8 Dec 2026, then decide whether to keep refreshing it. | Recommended: yes. Built in (nothing deletes it). | open |
+| 1 | The decision log as one file per PR and one per chat answer, built into `docs/decisions.md` by a script; outcomes and the Open decisions list kept by the integrator tab only (`docs/merge-conflicts-plan.md`, Proposal 1). Changes CLAUDE.md's Decision log rule. Rule-level. | Recommended: yes. Not built; needs your explicit yes. | open (Open decisions) |
+| 2 | The shared status lines of `m13-plan.md` and `translation-guide.md` updated by the integrator after each check-in; change PRs edit only their own rows (Proposal 2). | Recommended: yes. Not built. | open (Open decisions) |
+| 3 | The lists that only grow: (a) Git's union merge, or (b) one file per case (Proposal 3). | Recommended: (a) now, (b) only if (a) causes trouble. Not built. | open (Open decisions) |
+| 4 | `/sync-prs` committed as a project command (`.claude/skills/sync-prs/`), run only when typed. | Recommended: yes. Built in. | open |
+| 5 | `/sync-prs` ends by listing the worktrees whose PRs have merged and removes them only on James's yes (never `--force`; a worktree with work not on GitHub is kept). | Recommended: yes. Built in. | open |
+
+### #189 cuOpt lane: the open reference runs on the GitHub GPU runner, from a release (merged 22 Nov 2026)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Each solve on the runner is capped at 1800 s (input `time_limit`), and at most 3 model jobs run at once (each on its own runner, so timings do not share a GPU). | Recommended: yes. Built in. | accepted by merge, 22 Nov 2026 |
+| 2 | Keep the pre-release `cuopt-ref-2026-11-22` and its assets until the cuOpt review of 8 Dec 2026, then decide whether to keep refreshing it. | Recommended: yes. Built in (nothing deletes it). | accepted by merge, 22 Nov 2026 |
 
 ### #185 M1.3 (70): the stochastic extension's DD reader (initmty.stc); eight crafted cases (merged 22 Nov 2026)
 
