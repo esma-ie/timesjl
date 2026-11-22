@@ -695,7 +695,8 @@ const RT_PARTS = [
   ["prep","Preprocessing","maindrv.mod from init_ext to the end of ppm_ext (GAMS's profile)","the steps input → init → prep → prelv → ppm"],
   ["coef","Coefficients","from the end of preprocessing to the SOLVE statement (GAMS's profile)","the steps ppm → coef → presolve"],
   ["generate","Generation","GAMS generates the LP (its own figure, resgen)","generate!: the JuMP model is built"],
-  ["solve","Solve","the solver's time as GAMS reports it (etsolver)","JuMP.optimize! with HiGHS"],
+  ["solve","Solve","the solver's time as GAMS reports it (etsolver)","JuMP.optimize! with HiGHS",
+   "CPLEX inside GAMS (GAMS.jl; James, 22 Nov 2026): CPLEX's own time as GAMS reports it (etSolver), as for GAMS · the handover through GAMS is in Whole run"],
   ["reports","Reports","the statements after the solve (GAMS's profile)","TIMES.jl does not write reports yet (milestone M1.6)"],
 ];
 // one series per language and solver: the colour is the language (GAMS orange, TIMES.jl dark green or yellow), the shape is
@@ -726,8 +727,9 @@ const rtIcon = (sr,o) => `<svg viewBox="-10 -10 20 20" style="display:inline-blo
 
 function renderRunTime(){
   const A=[], B=[];
+  const firstA=e=>e.language==='TIMES.jl'&&e.solver==='HIGHS'?0:1;
   for(const r of RUNTIME){ const seen={};
-    for(const e of r.timing){ const sr=rtSeries(e), lp=rtToLP(e);
+    for(const e of [...r.timing].sort((a,b)=>a.language===b.language?firstA(a)-firstA(b):0)){ const sr=rtSeries(e), lp=rtToLP(e);
       if(lp!=null&&!seen[e.language]){seen[e.language]=1; A.push({r,e,sr,v:lp,filled:true,faint:e.cold});}
       if(e.parts.solve!=null) B.push({r,e,sr,v:e.parts.solve,limit:e.status==='time limit'}); } }
   const all=[...A,...B];
@@ -808,9 +810,9 @@ function renderRunParts(id='runparts', keep=r=>r.variant==='as_run', rows=e=>tru
     const part=([k,label,...what])=>{const v=e.parts[k];
       if(v==null) return `<td class="nm" data-tip="${esc(tipHead+label+': '+why(e,k))}">${none(e,k)}</td>`;
       const lim=k==='solve'&&e.status==='time limit';
-      return `<td class="num" style="background:color-mix(in srgb,var(--ink) ${Math.round(v/tot*30)}%,transparent)" data-tip="${esc(tipHead+`${label}: ${rtSec(v,d)} s, ${fmt(v/tot*100)}% of the ${rtSec(tot,d)} s measured${lim?' · stopped at the time limit, no optimum':''}<br>${what[gi-2]}`)}">${lim?'↑ ':''}${rtSec(v,d)}</td>`;};
+      return `<td class="num" style="background:color-mix(in srgb,var(--ink) ${Math.round(v/tot*30)}%,transparent)" data-tip="${esc(tipHead+`${label}: ${rtSec(v,d)} s, ${fmt(v/tot*100)}% of the ${rtSec(tot,d)} s measured${lim?' · stopped at the time limit, no optimum':''}<br>${e.language!=='GAMS'&&e.solver!=='HIGHS'&&what[2]?what[2]:what[gi-2]}`)}">${lim?'↑ ':''}${rtSec(v,d)}</td>`;};
     const wallTip=e.language==='GAMS'?`Wall time of the whole GAMS job: ${rtSec(e.wall||0)} s`+(e.other!=null?`<br>${rtSec(Math.max(e.other,0))} s of it are outside the parts: the harness's dumps (${rtSec(e.harness.dumps||0)} s), GAMS's start and exit`:'')
-      :`Wall time of this run in the batch: ${rtSec(e.wall||0,d)} s`+(e.other!=null?`<br>${rtSec(Math.max(e.other,0),d)} s of it are outside the parts: its checks against GAMS, and writing and reading the harness's copy of the input`+(e.cold?'; as the first run of its Julia process, also loading and compiling TIMES.jl':''):'');
+      :`Wall time of this run in the batch: ${rtSec(e.wall||0,d)} s`+(e.other!=null?`<br>${rtSec(Math.max(e.other,0),d)} s of it are outside the parts: its checks against GAMS, and writing and reading the harness's copy of the input`+(e.handover!=null?`; the handover of the LP to CPLEX through GAMS (GAMS.jl writes it as a GAMS model, GAMS compiles and generates it, the solution is read back), ${rtSec(e.handover,d)} s`:'')+(e.cold?'; as the first run of its Julia process, also loading and compiling TIMES.jl':''):'');
     const whole=e.wall!=null?`<td class="num sum" data-tip="${esc(tipHead+wallTip)}">${rtSec(e.wall,e.language==='GAMS'?2:d)}</td>`
       :`<td class="nm" data-tip="${esc(tipHead+(e.language==='GAMS'?'Whole run: not timed in this run':'Whole run: this batch ran before scripts/m13_gate.jl timed each run'))}">not measured</td>`;
     body+=`<tr${i===0?' class="g"':''} style="height:${rh}px">${i===0?`<td class="m" rowspan="${es.length}" style="padding-top:${(rh-16)/2}px">${rtName(r.model)}</td>`:''}<td class="s" data-tip="${esc(tipHead+`${fmt(r.cols)} variables · ${fmt(r.rows)} rows<br>${dateShort(e.date)} · ${e.version} · ${e.commit} · ${e.threads||'?'} threads`)}">${rtIcon(sr)}${sr.label}</td>`
@@ -819,7 +821,7 @@ function renderRunParts(id='runparts', keep=r=>r.variant==='as_run', rows=e=>tru
   set(id+'-sub',`Seconds per part, ${runs.every(r=>r.variant==='as_run')?'as-run variant, ':''}one row per language and solver · shading: the part's share of the run's time`);
   set(id+'-body',`<table class="rt"><thead><tr><th style="width:176px">Model and scenario</th><th style="width:150px">Run</th>${[...th.slice(0,4),'To the LP',...th.slice(4),'Whole run'].map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>
 <div class="legend" style="margin-top:12px;font-size:14px"><span><b>To the LP</b> = the four parts before it</span><span>↑ stopped at its time limit without an optimum</span><span><b>not measured</b>: never timed (hover for why)</span></div>`);
-  set(id+'-foot',`The runs of slide ${SLIDES.findIndex(s=>s.id==='runtime')+1} · Whole run: wall time; ${runs.some(r=>r.timing.some(e=>e.language==='GAMS'&&rows(e)))?"GAMS's holds the harness's dumps, ":''}TIMES.jl's its checks against GAMS · TIMES.jl's parts also read the harness's copy of the input · TIMES.jl with CPLEX was never run${rtNotPublished()} · scripts/run_timing.jl`);
+  set(id+'-foot',`The runs of slide ${SLIDES.findIndex(s=>s.id==='runtime')+1} · Whole run: wall time; ${runs.some(r=>r.timing.some(e=>e.language==='GAMS'&&rows(e)))?"GAMS's holds the harness's dumps, ":''}TIMES.jl's its checks against GAMS · TIMES.jl's parts also read the harness's copy of the input${runs.some(r=>r.timing.some(e=>e.language==='TIMES.jl'&&e.solver==='CPLEX'&&rows(e)))?" · TIMES.jl · CPLEX: TIMES.jl's own LP, solved by CPLEX inside GAMS (GAMS.jl)":rtNotPublished()?'':' · TIMES.jl · CPLEX: not run in this batch (m13_gate.jl --solver cplex)'}${rtNotPublished()} · scripts/run_timing.jl`);
 }
 
 // ---- page ---------------------------------------------------------------------------------------

@@ -11,7 +11,10 @@
 #
 # Option files are read for HiGHS only (James, 20 Nov 2026, #182 d5: "HiGHS only for now"). CPLEX.jl
 # was asked for (q2 of 20 Nov) but not built: the CPLEX in GAMS is licensed for use within GAMS only
-# (GAMS EULA, Exhibit A), and this machine has no other CPLEX (docs/decisions.md).
+# (GAMS EULA, Exhibit A), and this machine has no other CPLEX (docs/decisions.md). On 22 Nov 2026
+# James chose option (b) of #182 d5 for the timings: scripts/gams_cplex.jl solves TIMES.jl's LP with
+# CPLEX inside GAMS through GAMS.jl (scripts/m13_gate.jl --solver cplex). run_model is unchanged:
+# it takes no CPLEX option file.
 
 """
     read_optfile(path) -> Vector{Pair{String,String}}
