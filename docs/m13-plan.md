@@ -2504,6 +2504,11 @@ or `%VARM%`, as written.
 | 75 | SPINES | recurrin.stc L52-182; eqmain.mod L30-37; mod_equa.mod L213 | layers 1 to 3 on demo12_spines |
 | 76 | The solve loops: decomposed deterministic runs, the tradeoff phases, SENSIS. The harness exports GAMS's matrix of each solve, as it does for the steps of a stepped run (harness 0.3.4) | solve.stc; sensis.stc; clearsol.stc | layers 2 and 3 for each solve |
 
+James, 21 Nov 2026 (q1): change 73 is built in parallel with 71 and 72, in a
+second tab and its own worktree; change 74 starts once 72 and 73 are merged.
+After change 76, the preprocessing timings are rerun on the final stack for
+the gate (q2).
+
 Change 74 may be split in two (core families first, then the extension
 families) if its pull request grows past what one check-in can review.
 
