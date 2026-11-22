@@ -37,6 +37,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "Model: mod_vars (M1.1)" begin
         include("unit/test_mod_vars.jl")
     end
+    @testset "Model: the SOW tags of the stochastic extension (M1.3 change 73)" begin
+        include("unit/test_sow_tags.jl")
+    end
     @testset "Model: GAMS EPS arithmetic" begin
         include("unit/test_gnum.jl")
     end

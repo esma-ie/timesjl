@@ -343,5 +343,6 @@ function stp_model(tm::TimesModel)
     for k in ("QLOG", "GAMS_WARNINGS")
         haskey(tm.cache, k) && (cache[k] = tm.cache[k])
     end
-    return TimesModel(model, VariableStore(model), EquationStore(), tm.data, tm.reduce, tm.switches, cache)
+    return TimesModel(model, VariableStore(model), EquationStore(), tm.data, tm.reduce, tm.switches, cache,
+                      sow_tags(tm.data, tm.switches))
 end
