@@ -1,0 +1,6 @@
+* TIMES.jl crafted case demo12_stclam (20 Nov 2026): risk aversion on demo12_stc's tree and data, an
+* upward-deviation penalty SW_LAMBDA above zero (eqobj.mod L103-121, EQ_UPDEV).
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER SW_LAMBDA / 0.5 /;

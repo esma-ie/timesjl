@@ -22,7 +22,7 @@ against the GAMS code for numerical parity.
 
 Try TIMES.jl on your own machine with the open TIMES demo model (demo12): it
 reads the model's `.run` and DD files, preprocesses it, builds the LP and
-solves it with the open-source solver HiGHS. No GAMS, no solver licence.
+solves it with the open-source solver HiGHS. No GAMS, no solver licence, no cost.
 
 ### What you need
 

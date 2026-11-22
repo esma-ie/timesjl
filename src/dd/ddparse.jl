@@ -309,7 +309,10 @@ end
 const SETREF_TAG = " SET."
 
 # `SET.` followed by a name, at the cursor (any case)
-ddsetref(c::DDCursor) = c.i + 4 <= length(c.b) && lowercase(String(c.b[c.i:c.i+3])) == "set." && ddidentchar(c.b[c.i+4])
+# (byte by byte: the four bytes may cut through a character of more than one byte)
+ddsetref(c::DDCursor) = c.i + 4 <= length(c.b) &&
+    all(k -> (UInt8('A') <= c.b[c.i+k] <= UInt8('Z') ? c.b[c.i+k] + 0x20 : c.b[c.i+k]) == codeunit("set.", k + 1), 0:3) &&
+    ddidentchar(c.b[c.i+4])
 
 # element text after a set record's key: quoted, or unquoted up to a comma, a '/' or the end of the line
 function ddtext!(c::DDCursor)
