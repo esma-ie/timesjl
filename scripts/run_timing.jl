@@ -38,15 +38,16 @@
 # Only models with redistribute = "public" in reference/suite.toml are read, unless --all (every
 # model) or --local (only the others); both are for a local board, and --embed then refuses.
 #
-# Timings the public page does not show (rt_public):
-#   - every GAMS entry, whatever its solver: GAMS's timings are shown on the local board only
-#     (James, 21 Nov 2026; #184);
-#   - every entry of a solver in RT_RESTRICTED (CPLEX among them): the GAMS EULA's "Publication of
-#     Benchmarks" (C:\GAMS\54\EULA.md L362-376) forbids publishing performance comparisons of its
-#     Restricted Solvers without the consent of GAMS and the solver vendor (James, 20 Nov 2026; #182 d6).
+# Timings the public page does not show (rt_public): every entry of a solver in RT_RESTRICTED (CPLEX
+# among them), GAMS's and TIMES.jl's alike, with every part of such a run, the parts before the solve
+# included. The GAMS EULA's "Publication of Benchmarks" (C:\GAMS\54\EULA.md L362-377) forbids
+# publishing performance comparisons of its Restricted Solvers without the consent of GAMS and the
+# solver vendor (James, 20 Nov 2026, #182 d6). GAMS's timings with other solvers, such as GAMS/HiGHS,
+# stay on the public page (James, 22 Nov 2026, #184 d6).
 # By default they are dropped, and --embed refuses any of them. --unpublished writes only those
 # entries, of the public models, for the local board (C:\git\esma\build_dashboard_local.ps1 embeds
-# them as the block run-timing-unpublished); --all and --local keep every entry, as they are local already.
+# them as the block run-timing-unpublished) and the private repository esma-ie/timesjl-unpublished;
+# --all and --local keep every entry, as they are local already.
 # No path, host name or log line goes into the output.
 
 import JSON, TOML
@@ -59,8 +60,8 @@ const RT_GAMS_MAJOR = 54                          # CLAUDE.md: every reference r
 # The GAMS EULA's Restricted Solvers (C:\GAMS\54\EULA.md L362-376), ODHCPLEX with CPLEX as its subsolver:
 # their timings are kept off the public page (#182 d6; the header above)
 const RT_RESTRICTED = ("COPT", "CPLEX", "GUROBI", "KNITRO", "LINDO", "LINDOGLOBAL", "XPRESS", "ODHCPLEX")
-"Whether the public page may show a timing entry: not GAMS's (#184) and not a Restricted Solver's (#182 d6)."
-rt_public(e) = e.language != "GAMS" && !(e.solver in RT_RESTRICTED)
+"Whether the public page may show a timing entry: not a Restricted Solver's, whatever its language (#182 d6, #184 d6)."
+rt_public(e) = !(e.solver in RT_RESTRICTED)
 
 r3(x) = x === nothing ? nothing : round(Float64(x); digits=3)
 int(x) = x === nothing ? nothing : round(Int, x)
@@ -253,7 +254,7 @@ function embed_timing!(page, data; id="run-timing")
     all(r -> r.redistribute == "public", data.runs) ||
         error("only models with redistribute = \"public\" go into the page")
     all(r -> all(rt_public, r.timing), data.runs) ||
-        error("no GAMS timing (#184) and no timing of a solver in RT_RESTRICTED (#182 d6) goes into the page")
+        error("no timing of a solver in RT_RESTRICTED (#182 d6, #184 d6) goes into the page")
     html = read(page, String)
     open_tag = "<script id=\"$id\" type=\"application/json\">"
     a = findfirst(open_tag, html)
