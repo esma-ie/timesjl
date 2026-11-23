@@ -5,10 +5,12 @@
 usual ESMA slide layout: a title and one-line message, a Dark Yellow accent
 line, then the chart, with the source in the footer.
 
-GAMS's timings are shown on the local board only (James, 21 Nov 2026; #184):
-the public page has no slide 10, and its slides 11 and 12 show TIMES.jl's
-times alone, as its slides 10 and 11. The numbers below are those of the
-local board, which adds GAMS's timings back (see Run timings).
+Timings of CPLEX and the GAMS EULA's other Restricted Solvers are shown on
+the local board only (James, 20 and 22 Nov 2026; #182 d6, #184 d6). GAMS's
+timings with other solvers (GAMS/HiGHS) are on the public page. Slide 10's
+GAMS times come from CPLEX runs, so the public page has no slide 10, and its
+slides 11 and 12 are its slides 10 and 11. The numbers below are those of the
+local board, which adds the CPLEX timings back (see Run timings).
 
 1. at a glance: headline figures and the milestones;
 2. translation coverage by stage of the GAMS code;
@@ -129,17 +131,21 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
     profile (`raw/tjl_solve_<solver>_profile.txt`, seconds per statement),
     cut at the files of the Include File Summary. Only numbers are read; no
     line of a listing or log is copied.
-  - No GAMS timings on the public board (James, 21 Nov 2026; #184), and no
-    timing of CPLEX or the GAMS EULA's other Restricted Solvers (Gurobi,
-    Xpress, ...), whose performance comparisons the EULA's "Publication of
-    Benchmarks" forbids publishing without the consent of GAMS and the
-    solver vendor (James, 20 Nov 2026; #182 d6). `run_timing.jl` leaves
-    every such entry out of the block, and `--embed` refuses one. The slides
-    then say "GAMS's run times are not published on this board". The local
-    board adds them back (`run_timing.jl --unpublished`, block
-    `run-timing-unpublished`, merged into the same runs by the page), and
-    with them slide 10, whose data it holds in a `timing-coef` block
-    (`C:\git\esma\build_dashboard_local.ps1`).
+  - No timing of CPLEX or the GAMS EULA's other Restricted Solvers (Gurobi,
+    Xpress, ...) on the public board, GAMS's or TIMES.jl's, nor any part of
+    such a run: the EULA's "Publication of Benchmarks" forbids publishing
+    their performance comparisons without the consent of GAMS and the
+    solver vendor (James, 20 Nov 2026; #182 d6). GAMS's timings with other
+    solvers, such as GAMS/HiGHS, are shown (James, 22 Nov 2026; #184 d6,
+    which reverses #184 d5's "every GAMS timing on the local board only").
+    `run_timing.jl` leaves every Restricted Solver's entry out of the block,
+    and `--embed` refuses one. The slides then say "CPLEX's run times are
+    not published on this board". The local board adds them back
+    (`run_timing.jl --unpublished`, block `run-timing-unpublished`, merged
+    into the same runs by the page), and with them slide 10, whose data it
+    holds in a `timing-coef` block (`C:\git\esma\build_dashboard_local.ps1`).
+    The CPLEX timings of the open models are also kept in the private
+    repository `esma-ie/timesjl-unpublished`.
   - TIMES.jl, one entry per model and variant of a workstation batch
     (`scripts/m13_gate.jl --from-dd`): the seconds the gate prints for each
     step in the batch's `dd-<model>.log`, and the wall time of the whole run
@@ -207,9 +213,9 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
   is run on the core tier or the suite changes.
   `M13_PROBE` holds the GAMS records each probe step compares (counts only).
   Only open models go in `M13_PROBE`: TIM's results stay on James's machine.
-  The coefficient-stage timings of slide 10 (M1.2, workstation) are no
-  longer in the page: the local board supplies them (`TIMINGS` reads its
-  `timing-coef` block; #184).
+  The coefficient-stage timings of slide 10 (M1.2, workstation; GAMS's from
+  its CPLEX runs) are not in the page: the local board supplies them
+  (`TIMINGS` reads its `timing-coef` block; #184, #184 d6).
 
 ## Encoding
 

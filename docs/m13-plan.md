@@ -234,8 +234,7 @@ James, 18 Nov 2026 (q1 and q2 of the gate audit below): also in the gate are sha
   pp_qack.mod) is not part of M1.3, so the model is generated from the
   pre-solve dump, as in M1.1.
 - Preprocessing timed against GAMS (`scripts/m13_timing.jl`,
-  docs/timings.md): TIMES.jl warm 3.0x GAMS on demo12 and 4.8x to 5.5x on
-  the four large core models.
+  docs/timings.md; the ratios, to CPLEX runs, in `esma-ie/timesjl-unpublished`).
 
 ### Gate close-out, 14 Nov 2026 (changes 0-29)
 
@@ -249,7 +248,7 @@ The gate is passed when James says so (a rule-level decision, #109).
 | The same chain beyond the gate: coef, presolve | Same run: every set and parameter at coef (949 to 953 symbols) and presolve. | PASS, 10 of 10 |
 | TIM-bau | Checked locally (results stay on James's machine). | local |
 | CI on demo12: input, preprocessing, coefficients and the model, layers 2 and 3, REDUCE off and on | `test/unit/test_m13_chain.jl` (input dump to ppm, coef, presolve, then the model against GAMS's matrix and objective, `demo12_off`); `demo12_red` for REDUCE YES; the crafted demo12 cases as fixtures. GitHub CI: Julia 1, Julia lts and the reference harness. | PASS |
-| Preprocessing timed against GAMS | docs/timings.md, 13 Nov 2026: TIMES.jl warm 3.4 times GAMS on demo12 and 5.4 to 6.3 times on the four large core models. James, 14 Nov 2026: close enough to pass the gate. | timed; accepted |
+| Preprocessing timed against GAMS | docs/timings.md, 13 Nov 2026 (the ratios, to CPLEX runs, in `esma-ie/timesjl-unpublished`; #184 d6). James, 14 Nov 2026: close enough to pass the gate. | timed; accepted |
 | QA log and ERRLEV abort as GAMS (change 25b) | Changes 25b-1 to 25b-3 (#75-#77). In the chain, QA_CHECK.LOG, PUTOUT, PUTGRP and ERRLEV are compared at every checkpoint, and the log text at ppm and at presolve; crafted cases with warnings and a FATAL abort are in CI. | PASS, 10 of 10 |
 | JRC-EU-TIMES-cli_ll: input dump to ppm, both variants (verdicts only) | Batches of 12 Nov and 14 Nov (`c04c8ab`): init, prep, prelv, ppm and the QA log at ppm; 850 symbols; chain in 933 s (reduce_off) and 833 s (as_run). | PASS, 2 of 2 |
 | OTUS9r layer 3, one way (CLAUDE.md, #61) | Parity report of 12 Nov: the CPLEX optimum of the GAMS run cross-evaluated in TIMES.jl's model. OTUS9r-reference reduce_off: objective 192,206,392,884.7 on both sides, relative difference 0; the largest row violation, 2.5e-4 at EQ_OBJVAR(R5,USD05), is the same in GAMS's own matrix. | PASS |

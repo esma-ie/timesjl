@@ -169,6 +169,14 @@ Any mismatch blocks the merge. Justified differences go in
   licence. Keep the public repository so: no branch, commit, pull request,
   issue, release asset or tag may hold anything derived from a model without
   an open licence, and TIM material never enters it.
+- Solver timings (James, 20 and 22 Nov 2026; #182 d6, #184 d6): no timing of
+  CPLEX or another Restricted Solver of the GAMS EULA ("Publication of
+  Benchmarks": COPT, Gurobi, KNITRO, LINDO, Xpress, ODHCPLEX), GAMS's or
+  TIMES.jl's, nor any figure taken from such a run or a ratio to one, goes
+  into the public repository, its issues or its pull requests. They go to
+  the local board and the private repository `esma-ie/timesjl-unpublished`
+  (open models only). GAMS's timings with other solvers (GAMS/HiGHS) and
+  from runs that call no solver may be published, with the method stated.
 - Commit messages end with the session attribution lines Claude Code
   supplies. Keep them: the README points readers to the `Co-Authored-By`
   line to see which model wrote each commit.
