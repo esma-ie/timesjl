@@ -251,8 +251,7 @@ The ECB, CLI, ABS, MCA and IER extensions come after M1.7 (15 Nov 2026), and the
   pp_qack.mod) is not part of M1.3, so the model is generated from the
   pre-solve dump, as in M1.1.
 - Preprocessing timed against GAMS (`scripts/m13_timing.jl`,
-  docs/timings.md): TIMES.jl warm 3.0x GAMS on demo12 and 4.8x to 5.5x on
-  the four large core models.
+  docs/timings.md; the ratios, to CPLEX runs, in `esma-ie/timesjl-unpublished`).
 
 ### Gate close-out, 14 Nov 2026 (changes 0-29)
 
@@ -266,7 +265,7 @@ The gate is passed when James says so (a rule-level decision, #109).
 | The same chain beyond the gate: coef, presolve | Same run: every set and parameter at coef (949 to 953 symbols) and presolve. | PASS, 10 of 10 |
 | TIM-bau | Checked locally (results stay on James's machine). | local |
 | CI on demo12: input, preprocessing, coefficients and the model, layers 2 and 3, REDUCE off and on | `test/unit/test_m13_chain.jl` (input dump to ppm, coef, presolve, then the model against GAMS's matrix and objective, `demo12_off`); `demo12_red` for REDUCE YES; the crafted demo12 cases as fixtures. GitHub CI: Julia 1, Julia lts and the reference harness. | PASS |
-| Preprocessing timed against GAMS | docs/timings.md, 13 Nov 2026: TIMES.jl warm 3.4 times GAMS on demo12 and 5.4 to 6.3 times on the four large core models. James, 14 Nov 2026: close enough to pass the gate. | timed; accepted |
+| Preprocessing timed against GAMS | docs/timings.md, 13 Nov 2026 (the ratios, to CPLEX runs, in `esma-ie/timesjl-unpublished`; #184 d6). James, 14 Nov 2026: close enough to pass the gate. | timed; accepted |
 | QA log and ERRLEV abort as GAMS (change 25b) | Changes 25b-1 to 25b-3 (#75-#77). In the chain, QA_CHECK.LOG, PUTOUT, PUTGRP and ERRLEV are compared at every checkpoint, and the log text at ppm and at presolve; crafted cases with warnings and a FATAL abort are in CI. | PASS, 10 of 10 |
 | JRC-EU-TIMES-cli_ll: input dump to ppm, both variants (verdicts only) | Batches of 12 Nov and 14 Nov (`c04c8ab`): init, prep, prelv, ppm and the QA log at ppm; 850 symbols; chain in 933 s (reduce_off) and 833 s (as_run). | PASS, 2 of 2 |
 | OTUS9r layer 3, one way (CLAUDE.md, #61) | Parity report of 12 Nov: the CPLEX optimum of the GAMS run cross-evaluated in TIMES.jl's model. OTUS9r-reference reduce_off: objective 192,206,392,884.7 on both sides, relative difference 0; the largest row violation, 2.5e-4 at EQ_OBJVAR(R5,USD05), is the same in GAMS's own matrix. | PASS |
@@ -306,26 +305,26 @@ Every refusal left in `src/` was listed (`UnportedError`, the `*_unported` lists
 
 The M1.4 gate's own criteria still pass; it waits for this gate (CLAUDE.md), and elastic demand adds `$GDXIN`/`$LOAD` of a GDX file to the reader before it closes.
 
-### Gate audit, 22 Nov 2026 (main db5d3d7, #169 to #191 merged, #183 closed)
+### Gate audit, 22 Nov 2026 (main db5d3d7, #169 to #191 merged, #183 closed; evidence updated 23 Nov 2026)
 
 With the stochastic extension out of the gate (James, 22 Nov 2026, above), every item of the gate is translated. Each criterion with its evidence; the gate is passed when James says so (a rule-level decision, #109; the M1.4 gate is #117).
 
 | Criterion | Evidence | Result |
 | --- | --- | --- |
-| Every refused linear feature in the gate translated and tested | Every refusal left in `src/` (`UnportedError`, the `*_unported` lists, `untranslated_families`) listed again on db5d3d7 and sorted by the scope above: all are after the gate, in M1.5 or M1.6, or stay refused by decision, except one, which the audit of 18 Nov 2026 did not list because change 69 added it: damage costs as elastic supply curves carried from a base run (DAM_ELAST with an 'N' record: wrtbprice.mod L21-25 writes DAM_COEF and DAM_TVOC, readbprice.mod L24-25 and L37-45 read them back). Refused with its message (TIMES.jl's messages and comments cited readbprice.mod, wrtbprice.mod and pp_micro.mod a few lines early; corrected by #193); no suite model or crafted case reaches it. Linear, so in the gate as it stood; James moved it out on 22 Nov 2026 (#192 d1), listed for completion before Phase 1 closes ("After the gate, before Phase 1 closes"). | PASS (the one item moved out) |
-| Input dump to `ppm/` and on to presolve at 1e-9, every core model, reduce_off and as_run | Workstation batch, the pass of 21-22 Nov 2026 on `b112c93` (started 21 Nov 16:34; `scripts/m13_gate.jl`): demo12, TIMES-NZ steady and shift, OTCGEN, OTNYC, OTUS9r reference and tax1_wo_mou, both variants; every set and parameter at init, prep, prelv, ppm, coef and presolve, and the QA log at ppm and presolve. | PASS, 14 of 14 |
-| The same from the DD files (M1.4), with the model against GAMS's matrix | Same nightly (`scripts/m14_probe.jl`): the chain from the DD files to presolve, then layer 2 against GAMS's CONVERT matrix, the same 14 runs (OTUS9r tax1_wo_mou reduce_off: 2,528,996 rows, 3,233,253 columns, 11,599,301 nonzeros). | PASS, 14 of 14 |
-| Parity report (dashboard) | Same nightly: layers 1 to 3 on the public suite, 281 checks. | PASS, 281 of 281 |
+| Every refused linear feature in the gate translated and tested | Every refusal left in `src/` (`UnportedError`, the `*_unported` lists, `untranslated_families`) listed again on db5d3d7, and every refusal added to `src/` since the audit of 18 Nov 2026 (`git diff 7fcdd05`: TIMES-Micro's nonlinear form, VALIDATE, SOL_ACFR under ANNCOST LEV, DAM_ELAST), and sorted by the scope above: all are after the gate, in M1.5 or M1.6, or stay refused by decision, except one, which the audit of 18 Nov 2026 did not list because change 69 added it: damage costs as elastic supply curves carried from a base run (DAM_ELAST with an 'N' record: wrtbprice.mod L21-25 writes DAM_COEF and DAM_TVOC, readbprice.mod L24-25 and L37-45 read them back). Refused with its message (TIMES.jl's messages and comments cited readbprice.mod, wrtbprice.mod and pp_micro.mod a few lines early; corrected by #193); no suite model or crafted case reaches it. Linear, so in the gate as it stood; James moved it out on 22 Nov 2026 (#192 d1), listed for completion before Phase 1 closes ("After the gate, before Phase 1 closes"). | PASS (the one item moved out) |
+| Input dump to `ppm/` and on to presolve at 1e-9, every core model, reduce_off and as_run | Workstation batch, the pass started 23 Nov 2026 00:54 on `db5d3d7`, the merged stack (src/ and test/ are the same on `4091d41`, main of 23 Nov; only `scripts/run_timing.jl`, a dashboard script, differs) (`scripts/m13_gate.jl`): demo12, TIMES-NZ steady and shift, OTCGEN, OTNYC, OTUS9r reference and tax1_wo_mou, both variants; every set and parameter at init, prep, prelv, ppm, coef and presolve, and the QA log at ppm and presolve. The pass of 21-22 Nov on `b112c93` and the pass of 22 Nov on `1a729a0` gave the same. | PASS, 14 of 14 |
+| The same from the DD files (M1.4), with the model against GAMS's matrix | Same pass (`scripts/m14_probe.jl`): the chain from the DD files to presolve, then layer 2 against GAMS's CONVERT matrix, the same 14 runs (OTUS9r tax1_wo_mou reduce_off: 2,528,996 rows, 3,233,253 columns, 11,599,301 nonzeros). | PASS, 14 of 14 |
+| Parity report (dashboard) | Same pass: layers 1 to 3 on the public suite, 281 checks. | PASS, 281 of 281 |
 | TIM-bau | Checked locally (results stay on James's machine). | local |
-| JRC-EU-TIMES (verdicts only) | Same nightly: cli_ll and cli_mh, the chain to presolve, both variants. | PASS, 4 of 4 |
-| CI on demo12: input, preprocessing, coefficients and the model, layers 2 and 3, REDUCE off and on, and every crafted case | GitHub CI on main (`9098b71` passed; each later merge runs it). | PASS |
-| The merged stack since that pass | `b112c93` predates #179 (elastic demand, change 69), #181 (HiGHS threads), #182 (the solver option file), #185 (the stochastic DD reader, with GAMS's `$GOTO`/`$LABEL`/`$EOLCOM` rules, G63) and #184-#191 (dashboard, documents, cuOpt lane). The pass started on 22 Nov 08:25 runs on `1a729a0` (#179, #181, #182); the next pass, on the merged main, reruns every check above on v4.9.7. | after the next pass |
-| Preprocessing timed against GAMS | Timed on 13 Nov 2026 and accepted (James, 14 Nov 2026). Rerun on the merged stack (q2 of 21 Nov 2026, which asked for it after change 76: with 71-76 out of the gate, the merged stack is the gate's final one); the figures go to the local board only (#184 d5; #184 d6 is open). | rerun pending |
+| JRC-EU-TIMES (verdicts only) | Same pass: cli_ll and cli_mm (the second scenario rotates by day; cli_mh in the pass of 21-22 Nov), the chain to presolve, both variants. | PASS, 4 of 4 |
+| CI on demo12: input, preprocessing, coefficients and the model, layers 2 and 3, REDUCE off and on, and every crafted case | GitHub CI on main: `db5d3d7` and `4091d41` passed. | PASS |
+| The merged stack | The pass above runs on `db5d3d7`, after #179 (elastic demand, change 69), #181 (HiGHS threads), #182 (the solver option file) and #185 (the stochastic DD reader, with GAMS's `$GOTO`/`$LABEL`/`$EOLCOM` rules, G63). On v4.9.7. | PASS |
+| Preprocessing timed against GAMS | Timed on 13 Nov 2026 and accepted (James, 14 Nov 2026). Rerun on the merged stack before the gate question (q2 of 21 Nov 2026; #192 d3). `scripts/m13_timing.jl` compares with the GAMS profile of each model's CPLEX reference solve, so its figures and the ratios to them stay off the public repository (#195 d2) and go to the local board. | rerun pending |
 | OTUS9r layer 3, one way (CLAUDE.md, #61) | Cross-evaluated on 12 Nov 2026 (relative difference 0). Not rerun since; the model has matched GAMS's matrix at layer 2 in every nightly since, so the same optimum evaluates the same. | PASS (12 Nov) |
 
-The step probe (`scripts/m13_probe.jl`), not a gate criterion, passes 490 of 490 steps on the public suite in the same nightly.
+The step probe (`scripts/m13_probe.jl`), not a gate criterion, passes 490 of 490 steps on the public suite in the same pass.
 
-The M1.4 gate (#117): its criteria of 14 Nov 2026 pass in the same nightly (the chain from DD files above; every DD file of the public suite compiles as GAMS's input dump), and the two additions since are merged: `$GDXIN`/`$LOAD` of readbprice.mod (change 69, #179) and the stochastic declarations (change 70, #185).
+The M1.4 gate (#117): its criteria of 14 Nov 2026 pass in the same pass (the chain from DD files above; every DD file of the public suite compiles as GAMS's input dump), and the two additions since are merged: `$GDXIN`/`$LOAD` of readbprice.mod (change 69, #179) and the stochastic declarations (change 70, #185).
 
 ## Findings so far
 

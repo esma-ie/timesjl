@@ -196,8 +196,9 @@ those checks, their figures and their crafted cases are not published
   demo12). The reduced-flow conversion (L38-40, L42) is refused until REDUCE
   (M1.3). `OPTION` projection semantics confirmed (discrepancies G26-G28).
 - 21 Oct 2026: M1.1 timings on one machine (James's workstation, Julia
-  1.13.2 against GAMS 52.1.0; docs/timings.md): TIMES.jl generation is 6.8x
-  GAMS equations + hand-over on demo12.
+  1.13.2 against GAMS 52.1.0; docs/timings.md): TIMES.jl generation timed
+  against GAMS's equations and hand-over on demo12 (GAMS's figures, from a
+  CPLEX run: `esma-ie/timesjl-unpublished`; #184 d6).
 - 21 Oct 2026: M1.2 (4): coef_obj.mod with filparam.gms and fillcost.gms,
   with a crafted state replayed through coef_obj.mod by GAMS
   (scripts/gams_replay.jl). Refused: ANNCOST LEV, VALIDATE, elastic demand
@@ -294,8 +295,8 @@ those checks, their figures and their crafted cases are not published
   with no mismatch; OTCGEN and OTNYC, after the YK1 fix (coef_alt.lin L32),
   also cover the OBLONG NO path of coef_cpt.mod (L19-21, G23)
   (docs/dashboard/suite-public-weekend.json). The coefficient stage is timed
-  against GAMS on James's workstation (docs/timings.md): 75x on demo12 (one
-  1/64 s step of the GAMS profile) to 359x on OTCGEN, a Phase 2 matter.
+  against GAMS on James's workstation (docs/timings.md; the ratios, to
+  CPLEX runs, in `esma-ie/timesjl-unpublished`), a Phase 2 matter.
 - 31 Oct 2026: **M1.2 gate PASS** (James). Every translated coefficient file
   passes layer 1 at 1e-9 on demo12 with nothing excluded and on the crafted
   states (CI), on every public reference run of the core tier and on
@@ -529,8 +530,9 @@ those checks, their figures and their crafted cases are not published
   chain from the input dump PASS at every checkpoint on the five core
   models, both variants (`scripts/m13_gate.jl`); in CI the demo12 chain
   through the coefficients (`test/unit/test_m13_chain.jl`) and the model
-  with REDUCE off and on; preprocessing 3.0x GAMS on demo12, 4.8x to 5.5x
-  on the large core models (`scripts/m13_timing.jl`, docs/timings.md).
+  with REDUCE off and on; preprocessing timed against GAMS
+  (`scripts/m13_timing.jl`, docs/timings.md; the ratios in
+  `esma-ie/timesjl-unpublished`).
   Outstanding for the gate: TIM-bau on James's machine, and the merge of
   #44-#47.
 - 5 Nov 2026: M1.3 (17c): the two REDUCE paths demo12 does not reach (an
@@ -732,8 +734,8 @@ those checks, their figures and their crafted cases are not published
   with changes 0-29 the chain from the input dump PASS at every checkpoint
   to presolve on the five core models, both variants, with the QA log;
   JRC-EU-TIMES-cli_ll PASS to ppm in both variants; OTUS9r layer 3 by
-  cross-evaluation PASS; preprocessing 3.4x GAMS on demo12 and 5.4x to 6.3x
-  on the large core models (13 Nov, docs/timings.md), accepted for the gate
+  cross-evaluation PASS; preprocessing timed against GAMS (13 Nov,
+  docs/timings.md; the ratios in `esma-ie/timesjl-unpublished`), accepted for the gate
   by James on 14 Nov. The gate is passed when James says so (#109).
   Refused features are translated after it, one PR each.
 - 14 Nov 2026: M1.3 change 30: stepped (myopic) runs before solve.stp:
