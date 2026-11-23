@@ -108,9 +108,9 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
   update embeds the newest finished pass as `report-suite-<mmdd>-solve` and
   `report-suite-<mmdd>-nosolve`, in place of the blocks of the pass before,
   with `meta.host` set to `"workstation"`; the files themselves are not
-  committed. Now embedded: `report-suite-1117-solve` and
-  `report-suite-1117-nosolve`, the pass of 17 Nov 2026 on main 3114b67
-  (to #145): 281 checks, all pass. They supersede the reports above for all
+  committed. Now embedded: `report-suite-1122-solve` and
+  `report-suite-1122-nosolve`, the pass of 22 Nov 2026 on main 1a729a0
+  (to #182): 281 checks, all pass. They supersede the reports above for all
   seven runs.
 
   `--no-solve` records layer 3 without the HiGHS solve: each GAMS optimum
