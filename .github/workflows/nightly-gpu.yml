@@ -24,7 +24,8 @@ name: Nightly GPU (cuOpt)
 # runner has no GAMS). One job per model, each on its own GPU runner, at 100%
 # of the GPU unless the input shares says otherwise. Start such a run only
 # after the same models pass in the local WSL2 nightly (James, 22 Nov 2026;
-# scripts/cuopt/README.md).
+# scripts/cuopt/README.md). The scheduled nightly is not paused (James,
+# 25 Nov 2026).
 
 on:
   schedule:
