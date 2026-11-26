@@ -49,6 +49,11 @@
 Generate every EQ_STGIPS row (eqmain.mod L169) from `tm.data`. Returns the
 number of rows generated.
 
+The SOW tags (sow_tags.jl): the row is `%EQ%_STGIPS(... %SWT%)` (L13); the
+level of the period before is `%VARTT%_ACT(R,V,TT,... %SWS%)` with TT(T-1)
+(L25-26, `at = tt`); every other term is `%VAR%_X(... %SOW%)` (L16, L18, L28,
+L36).
+
 GAMS: eqstgips.mod L13-44, v4.9.7.
 """
 function eq_stgips!(tm::TimesModel)
@@ -87,51 +92,54 @@ function eq_stgips!(tm::TimesModel)
         for ips in ("IN", "N")                                          # IPS / IN, N / (setglobs.gms L154)
             lim = ips == "N"                                            # LIM(IPS)
             (first_vt || lim) || continue
-            lhs = JuMP.AffExpr(0.0)
-            rhs = JuMP.AffExpr(0.0)
-            if lim
-                addterm!(lhs, one, tm, "VAR_ACT", r, v, t, p, "ANNUAL")                       # L15
-                # Level at the end of T-1, or the charge before the first period (L21-27).
-                keep = gpower(one - gv(x.stg_loss, (r, v, p, "ANNUAL")), gv(pD, (t,)))     # L30
-                tt = get(t_prev, t, nothing)
-                if tt !== nothing
-                    if (r, p) in prc_vint
-                        (r, v, tt, p) in rtp_vintyr && addterm!(rhs, keep, tm, "VAR_ACT", r, v, tt, p, "ANNUAL")
-                    else
-                        (r, tt, tt, p) in rtp_vintyr && addterm!(rhs, keep, tm, "VAR_ACT", r, tt, tt, p, "ANNUAL")
+            for sow in sw_rows(tm, t)   # %SWT% (L13)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                rhs = JuMP.AffExpr(0.0)
+                if lim
+                    addterm!(lhs, one, tm, "VAR_ACT", r, v, t, p, "ANNUAL")                       # L15
+                    # Level at the end of T-1, or the charge before the first period (L21-27).
+                    keep = gpower(one - gv(x.stg_loss, (r, v, p, "ANNUAL")), gv(pD, (t,)))     # L30
+                    tt = get(t_prev, t, nothing)
+                    if tt !== nothing
+                        if (r, p) in prc_vint
+                            (r, v, tt, p) in rtp_vintyr && addterm!(rhs, keep, tm, "VAR_ACT", r, v, tt, p, "ANNUAL"; at=tt)    # %VARTT%_ACT(R,V,TT,... %SWS%) (L25)
+                        else
+                            (r, tt, tt, p) in rtp_vintyr && addterm!(rhs, keep, tm, "VAR_ACT", r, tt, tt, p, "ANNUAL"; at=tt)  # %VARTT%_ACT(R,TT,TT,... %SWS%) (L26)
+                        end
                     end
-                end
-                if t in miyr1
+                    if t in miyr1
+                        for ll in miyr1
+                            y0 = before_first(ll)
+                            y0 === nothing || addterm!(rhs, keep, tm, "VAR_ACT", r, v, y0, p, "ANNUAL")
+                        end
+                    end
+                    # Charging and discharging over the period (L34-39).
+                    base = one - gv(x.stg_loss, (r, v, p, "ANNUAL"))
+                    w = GZERO
+                    for (_, y) in get(periodyr_of_t, (t,), NTuple{2,String}[])
+                        (y,) in y_eoh || continue                                  # PERIODYR(T,Y_EOH)
+                        w = w + gpow(base, gv(pE, (t,)) - gv(yearval, (y,)) + half)
+                    end
+                    for (_, _, c) in x.stgips_of_rp[(r, p)], io in ("IN", "OUT")
+                        (r, p, c, io) in x.top || continue
+                        k = w / gv(x.prc_actflo, (r, v, p, c))
+                        io == "IN" ? addterm!(rhs, k, tm, "VAR_SIN", r, v, t, p, c, "ANNUAL") :
+                                     addterm!(rhs, -k, tm, "VAR_SOUT", r, v, t, p, c, "ANNUAL")
+                    end
+                else
+                    # IPS = IN is in IO: the level before the first period = STG_CHRG (L16-17, L43).
                     for ll in miyr1
                         y0 = before_first(ll)
-                        y0 === nothing || addterm!(rhs, keep, tm, "VAR_ACT", r, v, y0, p, "ANNUAL")
+                        y0 === nothing && continue
+                        for (_, m, _, _) in get(vint_of_rtp, (r, t, p), NTuple{4,String}[])
+                            addterm!(lhs, one, tm, "VAR_ACT", r, m, y0, p, "ANNUAL")
+                        end
+                        addconst!(rhs, gv(x.stg_chrg, (r, y0, p, "ANNUAL")))
                     end
                 end
-                # Charging and discharging over the period (L34-39).
-                base = one - gv(x.stg_loss, (r, v, p, "ANNUAL"))
-                w = GZERO
-                for (_, y) in get(periodyr_of_t, (t,), NTuple{2,String}[])
-                    (y,) in y_eoh || continue                                  # PERIODYR(T,Y_EOH)
-                    w = w + gpow(base, gv(pE, (t,)) - gv(yearval, (y,)) + half)
-                end
-                for (_, _, c) in x.stgips_of_rp[(r, p)], io in ("IN", "OUT")
-                    (r, p, c, io) in x.top || continue
-                    k = w / gv(x.prc_actflo, (r, v, p, c))
-                    io == "IN" ? addterm!(rhs, k, tm, "VAR_SIN", r, v, t, p, c, "ANNUAL") :
-                                 addterm!(rhs, -k, tm, "VAR_SOUT", r, v, t, p, c, "ANNUAL")
-                end
-            else
-                # IPS = IN is in IO: the level before the first period = STG_CHRG (L16-17, L43).
-                for ll in miyr1
-                    y0 = before_first(ll)
-                    y0 === nothing && continue
-                    for (_, m, _, _) in get(vint_of_rtp, (r, t, p), NTuple{4,String}[])
-                        addterm!(lhs, one, tm, "VAR_ACT", r, m, y0, p, "ANNUAL")
-                    end
-                    addconst!(rhs, gv(x.stg_chrg, (r, y0, p, "ANNUAL")))
-                end
+                gconstraint!(tm, eqtag(tm, "EQ_STGIPS"), swt(tm, (r, v, t, p, ips), t), "E", lhs, rhs) === nothing || (n += 1)
             end
-            gconstraint!(tm, "EQ_STGIPS", (r, v, t, p, ips), "E", lhs, rhs) === nothing || (n += 1)
         end
     end
     return n
@@ -195,6 +203,11 @@ end
 Generate every EQ_STGIPS row under OBJ LIN (eqstgips.lin L12-66) for the STK
 processes `rps` that have PRC_STGIPS commodities. Returns the number of rows.
 
+The SOW tags (sow_tags.jl): the row is `%EQ%_STGIPS(RTP_EQSTK(...) %SWT%)`
+(L21); the level and the flows of the period before are `%VARTT%_ACT`,
+`%VARTT%_SIN` and `%VARTT%_SOUT(..,TT,.. %SWS%)` with TT(T-1) (L34-42, `at =
+tt`); every other term is `%VAR%_X(... %SOW%)`.
+
 GAMS: eqstgips.lin L12-66, v4.9.7.
 """
 function eq_stgips_lin!(tm::TimesModel, x, rps)
@@ -230,24 +243,28 @@ function eq_stgips_lin!(tm::TimesModel, x, rps)
         return w
     end
     # (VAR_SIN$IPS(IO) - VAR_SOUT$(NOT IPS(IO))) * k
-    flows!(e, k, sin, r, v, t, p, c) = sin ? addterm!(e, k, tm, "VAR_SIN", r, v, t, p, c, "ANNUAL") :
-                                             addterm!(e, -k, tm, "VAR_SOUT", r, v, t, p, c, "ANNUAL")
+    # `at`: %VARTT%_SIN/SOUT(R,V,TT,...%SWS%) of the period before (L37, L42); else %VAR%_SIN/SOUT(... %SOW%) (L48, L65)
+    flows!(e, k, sin, r, v, t, p, c; at=nothing) = sin ? addterm!(e, k, tm, "VAR_SIN", r, v, t, p, c, "ANNUAL"; at) :
+                                                         addterm!(e, -k, tm, "VAR_SOUT", r, v, t, p, c, "ANNUAL"; at)
     tops(r, p) = [(c, io) for (_, _, c) in x.stgips_of_rp[(r, p)] for io in ("IN", "OUT") if (r, p, c, io) in x.top]
     n = 0
 
     # 'IN' rows: RTP_EQSTK(R,MIYR_1(T),T,P,'IN')$RTP(R,T,P) (L14)
     for (r, t, p) in gset(tm, "RTP")
         ((r, p) in rps_set && t in miyr1 && (t,) in vx && (t,) in tx) || continue
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        for ll in miyr1
-            y0 = before_first(ll)
-            y0 === nothing && continue
-            for (_, m, _, _) in get(vint_of_rtp, (r, t, p), NTuple{4,String}[])
-                addterm!(lhs, one, tm, "VAR_ACT", r, m, y0, p, "ANNUAL")                 # L25-26
+        for sow in sw_rows(tm, t)   # %SWT% (eqstgips.lin L21)
+            set_sow!(tm, sow)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            for ll in miyr1
+                y0 = before_first(ll)
+                y0 === nothing && continue
+                for (_, m, _, _) in get(vint_of_rtp, (r, t, p), NTuple{4,String}[])
+                    addterm!(lhs, one, tm, "VAR_ACT", r, m, y0, p, "ANNUAL")                 # L25-26
+                end
+                addconst!(rhs, gv(x.stg_chrg, (r, y0, p, "ANNUAL")))                         # L56
             end
-            addconst!(rhs, gv(x.stg_chrg, (r, y0, p, "ANNUAL")))                         # L56
+            gconstraint!(tm, eqtag(tm, "EQ_STGIPS"), swt(tm, (r, t, t, p, "IN"), t), "E", lhs, rhs) === nothing || (n += 1)
         end
-        gconstraint!(tm, "EQ_STGIPS", (r, t, t, p, "IN"), "E", lhs, rhs) === nothing || (n += 1)
     end
 
     # 'N' and '1' rows over RTP_VINTYR (L16, L18)
@@ -256,49 +273,52 @@ function eq_stgips_lin!(tm::TimesModel, x, rps)
         base = one - gv(x.stg_loss, (r, v, p, "ANNUAL"))
         lt = gv(lead, (t,))
         # 'N' (L24, L30-54)
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        addterm!(lhs, one, tm, "VAR_ACT", r, v, t, p, "ANNUAL")
-        tt = get(t_prev, t, nothing)
-        wt = pulse_weight(t, t, base)
-        for (c, io) in tops(r, p)
-            sin = io == "IN"                                            # IPS(IO)
-            if tt !== nothing
-                vv = (r, p) in prc_vint ? ((r, v, tt, p) in rtp_vintyr ? v : nothing) :
-                                          ((r, tt, tt, p) in rtp_vintyr ? tt : nothing)
-                if vv !== nothing
-                    sin && addterm!(rhs, gpower(base, lt), tm, "VAR_ACT", r, vv, tt, p, "ANNUAL")
-                    flows!(rhs, pulse_weight(t, tt, base) / gv(x.prc_actflo, (r, vv, p, c)), sin, r, vv, tt, p, c)
+        for sow in sw_rows(tm, t)   # %SWT% (eqstgips.lin L21): the 'N' and '1' rows
+            set_sow!(tm, sow)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            addterm!(lhs, one, tm, "VAR_ACT", r, v, t, p, "ANNUAL")
+            tt = get(t_prev, t, nothing)
+            wt = pulse_weight(t, t, base)
+            for (c, io) in tops(r, p)
+                sin = io == "IN"                                            # IPS(IO)
+                if tt !== nothing
+                    vv = (r, p) in prc_vint ? ((r, v, tt, p) in rtp_vintyr ? v : nothing) :
+                                              ((r, tt, tt, p) in rtp_vintyr ? tt : nothing)
+                    if vv !== nothing
+                        sin && addterm!(rhs, gpower(base, lt), tm, "VAR_ACT", r, vv, tt, p, "ANNUAL"; at=tt)   # %VARTT%_ACT (L34, L39)
+                        flows!(rhs, pulse_weight(t, tt, base) / gv(x.prc_actflo, (r, vv, p, c)), sin, r, vv, tt, p, c; at=tt)
+                    end
                 end
+                flows!(rhs, wt / gv(x.prc_actflo, (r, v, p, c)), sin, r, v, t, p, c)
             end
-            flows!(rhs, wt / gv(x.prc_actflo, (r, v, p, c)), sin, r, v, t, p, c)
+            for ll in miyr1                                                 # L51-52: VNT(T,MIYR_1(LL))
+                (t, ll) in vnt || continue
+                y0 = before_first(ll)
+                y0 === nothing || addterm!(rhs, gpower(base, lt), tm, "VAR_ACT", r, v, y0, p, "ANNUAL")
+            end
+            gconstraint!(tm, eqtag(tm, "EQ_STGIPS"), swt(tm, (r, v, t, p, "N"), t), "E", lhs, rhs) === nothing || (n += 1)
+            # '1' (L18, L57-65)
+            e, m = gv(pE, (t,)), gv(pM, (t,))
+            e.v > m.v || continue
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            addterm!(rhs, gpower(base, e - m), tm, "VAR_ACT", r, v, t, p, "ANNUAL")
+            for ll in miyr1
+                d = (e - gv(yearval, (ll,))).v
+                isinteger(d) || throw(ArgumentError("E($t)-YEARVAL($ll) = $d is not an integer: the lead needs one"))
+                ye = shift(ll, Int(d))
+                (ye !== nothing && (ye,) in y_eoh) && addterm!(rhs, -one, tm, "VAR_ACT", r, v, ye, p, "ANNUAL")
+            end
+            w1 = GZERO
+            for (_, y) in get(periodyr_of_t, (t,), NTuple{2,String}[])
+                ((y,) in y_eoh && gv(yearval, (y,)).v > m.v) || continue
+                w1 = w1 + gpow(base, e - gv(yearval, (y,)) + half)
+            end
+            fac = one + gif((gv(lagt, (t,)) - one) / two / (e - m) - one, e.v < miyr_vl)
+            for (c, io) in tops(r, p)
+                flows!(rhs, w1 * fac / gv(x.prc_actflo, (r, v, p, c)), io == "IN", r, v, t, p, c)
+            end
+            gconstraint!(tm, eqtag(tm, "EQ_STGIPS"), swt(tm, (r, v, t, p, "1"), t), "E", lhs, rhs) === nothing || (n += 1)
         end
-        for ll in miyr1                                                 # L51-52: VNT(T,MIYR_1(LL))
-            (t, ll) in vnt || continue
-            y0 = before_first(ll)
-            y0 === nothing || addterm!(rhs, gpower(base, lt), tm, "VAR_ACT", r, v, y0, p, "ANNUAL")
-        end
-        gconstraint!(tm, "EQ_STGIPS", (r, v, t, p, "N"), "E", lhs, rhs) === nothing || (n += 1)
-        # '1' (L18, L57-65)
-        e, m = gv(pE, (t,)), gv(pM, (t,))
-        e.v > m.v || continue
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        addterm!(rhs, gpower(base, e - m), tm, "VAR_ACT", r, v, t, p, "ANNUAL")
-        for ll in miyr1
-            d = (e - gv(yearval, (ll,))).v
-            isinteger(d) || throw(ArgumentError("E($t)-YEARVAL($ll) = $d is not an integer: the lead needs one"))
-            ye = shift(ll, Int(d))
-            (ye !== nothing && (ye,) in y_eoh) && addterm!(rhs, -one, tm, "VAR_ACT", r, v, ye, p, "ANNUAL")
-        end
-        w1 = GZERO
-        for (_, y) in get(periodyr_of_t, (t,), NTuple{2,String}[])
-            ((y,) in y_eoh && gv(yearval, (y,)).v > m.v) || continue
-            w1 = w1 + gpow(base, e - gv(yearval, (y,)) + half)
-        end
-        fac = one + gif((gv(lagt, (t,)) - one) / two / (e - m) - one, e.v < miyr_vl)
-        for (c, io) in tops(r, p)
-            flows!(rhs, w1 * fac / gv(x.prc_actflo, (r, v, p, c)), io == "IN", r, v, t, p, c)
-        end
-        gconstraint!(tm, "EQ_STGIPS", (r, v, t, p, "1"), "E", lhs, rhs) === nothing || (n += 1)
     end
     return n
 end
