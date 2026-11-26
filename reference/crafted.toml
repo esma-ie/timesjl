@@ -14,6 +14,7 @@ crafted = "dd"
 # RPC_ACT source flow; bnd_flo.mod L37-39). Fixture demo12_red17b (test/fixtures).
 [[model]]
 name = "TIMES_Demo-demo12_red17b"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -28,6 +29,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_red17b"]
 # eqstgaux.mod L25-32), an inter-period storage process with an auxiliary flow.
 [[model]]
 name = "TIMES_Demo-demo12_ips"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -42,6 +44,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_ips"]
 # dispatching and unit commitment (eqactups.vda, eqlducs.vda; Version.log 3.7.0-4.0.0).
 [[model]]
 name = "TIMES_Demo-demo12_uc"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -56,6 +59,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_uc"]
 # retrofits and lifetime extensions (PRC_REFIT; User Note, Version.log 4.1.2).
 [[model]]
 name = "TIMES_Demo-demo12_refit"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -70,6 +74,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_refit"]
 # dynamic-bound branches OTUS9r does not reach (CAP, NCAP, FX, EQN_UCRTC).
 [[model]]
 name = "TIMES_Demo-demo12_ucrt"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -84,6 +89,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_ucrt"]
 # eqcaflac.vda L32 (an NCAP_AFC on the coal input of the retiring plant ELCTECOA00).
 [[model]]
 name = "TIMES_Demo-demo12_refit_afc"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -99,6 +105,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_refit", "{crafted}/demo12_refit
 # currency left without a target.
 [[model]]
 name = "TIMES_Demo-demo12_curex"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -114,6 +121,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_curex"]
 # term type, GROWTH, SYNC, UC_TIME and past investments in the first period.
 [[model]]
 name = "TIMES_Demo-demo12_ucdyn"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -129,6 +137,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_ucdyn"]
 # SUB, and the CUMSUM and CUM+ entries of UC_TMAP.
 [[model]]
 name = "TIMES_Demo-demo12_ucattr"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -144,6 +153,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_ucattr"]
 # and a storage process, and the three bound types.
 [[model]]
 name = "TIMES_Demo-demo12_flomrk"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -158,6 +168,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_ips", "{crafted}/demo12_flomrk"
 # eqactups.vda EQ_SLSIFT), without time windows.
 [[model]]
 name = "TIMES_Demo-demo12_ls"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -172,6 +183,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_ls"]
 # (ACT_TIME and the hour map of timslice.mod L110-121), M1.3 change 24.
 [[model]]
 name = "TIMES_Demo-demo12_lst"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -187,6 +199,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_ls", "{crafted}/demo12_lst"]
 # a technology discount rate) that no public suite model reaches.
 [[model]]
 name = "TIMES_Demo-demo12_objinv"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -202,6 +215,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_objinv"]
 # process, NCAP_AF with NCAP_AFA), the run going on: M1.3 change 25b-3, the QA log.
 [[model]]
 name = "TIMES_Demo-demo12_qa"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -218,6 +232,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_qa"]
 # harness's work folder (the run's presolve/ dump is the state at the abort).
 [[model]]
 name = "TIMES_Demo-demo12_qa99"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -233,6 +248,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_qa99"]
 # in the phase-angle formulation (powerflo.vda; M1.3 changes 27a-27b, demo12 variant 6 begun).
 [[model]]
 name = "TIMES_Demo-demo12_pf"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -248,6 +264,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_pf"]
 # L109-162; M1.3 change 27a-2).
 [[model]]
 name = "TIMES_Demo-demo12_pfa"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -263,6 +280,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa"]
 # EQ_GR_DEMALL are generated (powerflo.vda L314-340; M1.3 change 27b-2).
 [[model]]
 name = "TIMES_Demo-demo12_pfd"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -278,6 +296,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa", "{
 # the other region, so that the rows EQ_GR_XBND are generated (powerflo.vda L341-359).
 [[model]]
 name = "TIMES_Demo-demo12_pfx"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -294,6 +313,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa", "{
 # EQ(l)_FLOMRK is generated (eqflomrk.mod L83-88; M1.3 change 23).
 [[model]]
 name = "TIMES_Demo-demo12_mrkx"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -312,6 +332,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_mrkx"]
 # are set (M1.3 change 25-4).
 [[model]]
 name = "TIMES_Demo-demo12_cumc"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -332,6 +353,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_cumc"]
 # (L51, L75-76) (M1.3).
 [[model]]
 name = "TIMES_Demo-demo12_ashar"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -347,6 +369,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_ashar"]
 # what reads MINYR after it change, and with them the objective coefficients (M1.3).
 [[model]]
 name = "TIMES_Demo-demo12_lev"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -362,6 +385,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_lev"]
 # RPT_OPT('OBJ','2') is 1 (both read by the reports only) (M1.3).
 [[model]]
 name = "TIMES_Demo-demo12_levstd"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -380,6 +404,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_levstd"]
 # end by `solve_stepped!` (M1.5 change 4, scripts/m13_gate.jl).
 [[model]]
 name = "TIMES_Demo-demo12_step"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -399,6 +424,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_step"]
 # commodity and flow bounds). solve.stp L44, L69-98, L132-196, L217-230.
 [[model]]
 name = "TIMES_Demo-demo12_step2"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -418,6 +444,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_ucdyn", "{crafted}/demo12_ucrt"
 # Checked step by step (steps/<k>/) and solved to its end by `solve_stepped!` (scripts/m13_gate.jl).
 [[model]]
 name = "TIMES_Demo-demo12_steplin"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -433,6 +460,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_objinv", "{crafted}/demo12_step
 # scripts/m13_gate.jl on the workstation; no CI fixture.
 [[model]]
 name = "TIMES_Demo-demo12_steplino"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -451,6 +479,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_objinv", "{crafted}/demo12_step
 # workstation; no CI fixture.
 [[model]]
 name = "TIMES_Demo-demo12_stepalt1"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -467,6 +496,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_objinv", "{crafted}/demo12_step
 # scripts/m11_probe.jl on the workstation; no CI fixture.
 [[model]]
 name = "TIMES_Demo-demo12_lin"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -482,6 +512,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_objinv", "{crafted}/demo12_lin"
 # and scripts/m11_probe.jl on the workstation; no CI fixture.
 [[model]]
 name = "TIMES_Demo-demo12_alt"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -500,6 +531,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_objinv", "{crafted}/demo12_alt"
 # (test/fixtures/demo12_cumlin_cumrows.json, test/unit/test_cum_lin.jl).
 [[model]]
 name = "TIMES_Demo-demo12_cumlin"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -518,6 +550,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_cumc", "{crafted}/demo12_cumlin
 # (M1.3 change 31).
 [[model]]
 name = "TIMES_Demo-demo12_bndc"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -536,6 +569,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_bndc"]
 # VAR_FLO or VAR_ACT, LO records with the value EPS and an UP with the value INF (M1.3 change 32).
 [[model]]
 name = "TIMES_Demo-demo12_flobnd"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -553,6 +587,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_flobnd"]
 # and below the flow's timeslice level, a LO with the value EPS (M1.3 change 33).
 [[model]]
 name = "TIMES_Demo-demo12_flofr"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -571,6 +606,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_flofr"]
 # value EPS, UP INF, a partner without a link (M1.3 change 34).
 [[model]]
 name = "TIMES_Demo-demo12_irebnd"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -589,6 +625,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_irebnd"]
 # the value EPS, UP INF, a commodity without an exchange process (M1.3 change 35).
 [[model]]
 name = "TIMES_Demo-demo12_xbnd"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -608,6 +645,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_xbnd"]
 # (M1.3 change 36).
 [[model]]
 name = "TIMES_Demo-demo12_disp"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -625,6 +663,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_disp"]
 # REFUNIT 1 and 2, a start year, an input with a delivery cost, emissions (M1.3 change 37).
 [[model]]
 name = "TIMES_Demo-demo12_blnd"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -642,6 +681,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_blnd"]
 # term of the equation).
 [[model]]
 name = "TIMES_Demo-demo12_capvac"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -661,6 +701,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_capvac"]
 # the value EPS (M1.3 change 39).
 [[model]]
 name = "TIMES_Demo-demo12_bndcst"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -680,6 +721,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_bndcst"]
 # (M1.3 change 40).
 [[model]]
 name = "TIMES_Demo-demo12_ucv"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -702,6 +744,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_ucv"]
 # (docs/discrepancies.md D43).
 [[model]]
 name = "TIMES_Demo-demo12_step3"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -718,6 +761,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_uc", "{crafted}/demo12_blnd", "
 # attribute COST, and on both sides of a constraint (M1.3 change 42).
 [[model]]
 name = "TIMES_Demo-demo12_ucann"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -733,6 +777,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_ucann"]
 # (REG2 vintaged, with a past investment): EQL_STGCCL (eqactups.vda L121-125) (M1.3 change 43).
 [[model]]
 name = "TIMES_Demo-demo12_stgccl"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -748,6 +793,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_stgccl"]
 # plants of demo12_disp: the UC_ATTR attribute ONLINE (uc_cap.mod L36-43) (M1.3 change 44).
 [[model]]
 name = "TIMES_Demo-demo12_uconl"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -764,6 +810,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_disp", "{crafted}/demo12_uconl"
 # (equserco.mod L75-76, L98-99) (M1.3 change 46).
 [[model]]
 name = "TIMES_Demo-demo12_ucn"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -779,6 +826,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_ucn"]
 # cumulative activity or flow, by region and summed over the regions (M1.3 change 47).
 [[model]]
 name = "TIMES_Demo-demo12_ucbet"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -795,6 +843,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_ucbet"]
 # (M1.3 change 48).
 [[model]]
 name = "TIMES_Demo-demo12_scapin"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -809,6 +858,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_scapin"]
 # terms of EQ_STGAUX as eqstgips.lin and eqstgaux.lin write them (M1.3 change 49). No DD file of its own.
 [[model]]
 name = "TIMES_Demo-demo12_ipslin"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -824,6 +874,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_ips", "{crafted}/demo12_ipslin"
 # change 50).
 [[model]]
 name = "TIMES_Demo-demo12_cstbal"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -838,6 +889,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_cstbal"]
 # (powerflo.vda CSTBAL L388-394 and the grid terms of EQ_OBJBAL; M1.3 change 50).
 [[model]]
 name = "TIMES_Demo-demo12_pfcst"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -854,6 +906,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa", "{
 # M1.3 change 65).
 [[model]]
 name = "TIMES_Demo-demo12_pfdf"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -868,6 +921,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfdf"]
 # gas hub REG3 (eqire.mod L23-38, eqirebnd.mod L46-51; M1.3 change 51).
 [[model]]
 name = "TIMES_Demo-demo12_mkt"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -882,6 +936,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_mkt"]
 # general timeslice storage (eqstgtss.mod L53-93: EQ_STSBAL's STSFLX terms and EQ_STSLEV; M1.3 change 52).
 [[model]]
 name = "TIMES_Demo-demo12_stsflx"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -896,6 +951,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_stsflx"]
 # to decommissioning (NCAP_ICOM, NCAP_OCOM, NCAP_CLED; coef_nio.mod, cal_cap.mod, cal_caps.mod; M1.3 change 53).
 [[model]]
 name = "TIMES_Demo-demo12_capflo"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -910,6 +966,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_capflo"]
 # and of early retirements (NCAP_COM, NCAP_CLAG, FLO_FUNCX CAPFLO, RCAP_OCAP; M1.3 change 54).
 [[model]]
 name = "TIMES_Demo-demo12_capcom"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -924,6 +981,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_capcom"]
 # change 55).
 [[model]]
 name = "TIMES_Demo-demo12_rldc"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -938,6 +996,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_rldc"]
 # M1.3 change 56).
 [[model]]
 name = "TIMES_Demo-demo12_dam"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -953,6 +1012,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_dam"]
 # EQ_GR_PTDFLO, EQ_GR_VIRTCAP and EQ_GR_VIRTBND are generated (powerflo.vda L262-287; M1.3 change 57).
 [[model]]
 name = "TIMES_Demo-demo12_ptdf"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -968,6 +1028,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa", "{
 # cal_caps.mod; M1.3 change 58), with the attributes PERIOD and COST.
 [[model]]
 name = "TIMES_Demo-demo12_uccf"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -983,6 +1044,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_capflo", "{crafted}/demo12_capc
 # L77-94; M1.3 change 59), with early retirement in REG1 (COEF_RCOM).
 [[model]]
 name = "TIMES_Demo-demo12_ctrn"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -997,6 +1059,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_capcom", "{crafted}/demo12_ctrn
 # M1.3 change 61): a one-way pipeline from REG1 to REG2 with Weymouth, linepack and compressor data.
 [[model]]
 name = "TIMES_Demo-demo12_gg"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1011,6 +1074,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_gg"]
 # made two-way (gasgrids.vda: EQ_GG_PDIF1, EQ_GG_PDIF2, EQ_GG_STEP, EQ_GG_MBND FX; M1.3 change 62).
 [[model]]
 name = "TIMES_Demo-demo12_gg2"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1025,6 +1089,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_gg", "{crafted}/demo12_gg2"]
 # REG1's summer season turned off in 2020 and 2030; dynslite.vda, M1.3 change 60).
 [[model]]
 name = "TIMES_Demo-demo12_tsoff"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1039,6 +1104,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_tsoff"]
 # eqobjinv.mod L219-229) and an early-retirement record outside RP (prepret.dsc L49); M1.3 change 64.
 [[model]]
 name = "TIMES_Demo-demo12_iled"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1054,6 +1120,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_iled"]
 # (M1.3 change 67). No DD file of its own.
 [[model]]
 name = "TIMES_Demo-demo12_tsoff_disp"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1069,6 +1136,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_disp", "{crafted}/demo12_tsoff"
 # (M1.3 change 67). No DD file of its own.
 [[model]]
 name = "TIMES_Demo-demo12_tsoff_uc"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1084,6 +1152,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_uc", "{crafted}/demo12_tsoff", 
 # (M1.3 change 67). No DD file of its own.
 [[model]]
 name = "TIMES_Demo-demo12_tsoff_stgccl"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1099,6 +1168,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_stgccl", "{crafted}/demo12_tsof
 # (M1.3 change 67). No DD file of its own.
 [[model]]
 name = "TIMES_Demo-demo12_tsoff_ashar"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1114,6 +1184,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_ashar", "{crafted}/demo12_tsoff
 # (M1.3 change 67). No DD file of its own.
 [[model]]
 name = "TIMES_Demo-demo12_tsoff_ls"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1129,6 +1200,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_ls", "{crafted}/demo12_tsoff", 
 # (M1.3 change 67). No DD file of its own.
 [[model]]
 name = "TIMES_Demo-demo12_tsoff_rldc"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1144,6 +1216,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_rldc", "{crafted}/demo12_tsoff"
 # (M1.3 change 67). No DD file of its own.
 [[model]]
 name = "TIMES_Demo-demo12_tsoff_pfd"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1159,6 +1232,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa", "{
 # (M1.3 change 67). No DD file of its own.
 [[model]]
 name = "TIMES_Demo-demo12_tsoff_ptdf"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1174,6 +1248,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa", "{
 # (M1.3 change 67). No DD file of its own.
 [[model]]
 name = "TIMES_Demo-demo12_tsoff_pfx"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1189,6 +1264,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_pf", "{crafted}/demo12_pfa", "{
 # (M1.3 change 67). No DD file of its own.
 [[model]]
 name = "TIMES_Demo-demo12_tsoff_gg2"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1204,6 +1280,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_gg", "{crafted}/demo12_gg2", "{
 # (M1.3 change 67). No DD file of its own.
 [[model]]
 name = "TIMES_Demo-demo12_tsoff_afc"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1220,6 +1297,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_refit", "{crafted}/demo12_refit
 # own. (demo12_tsoff_stgccl, with the storage cycle limit, is infeasible in GAMS.)
 [[model]]
 name = "TIMES_Demo-demo12_tsoff_stsflx"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1235,6 +1313,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_stsflx", "{crafted}/demo12_tsof
 # M1.3 change 66).
 [[model]]
 name = "TIMES_Demo-demo12_afshp"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1250,6 +1329,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_afshp"]
 # (L91-103; M1.3 change 68).
 [[model]]
 name = "TIMES_Demo-demo12_tsoff_rint"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1265,6 +1345,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_tsoff", "{crafted}/demo12_tsoff
 # demo12_ed reads. M1.3 change 69.
 [[model]]
 name = "TIMES_Demo-demo12_edbase"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1280,6 +1361,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_edbase"]
 # readbprice.mod loads from GAMS's working folder (work_files). M1.3 change 69.
 [[model]]
 name = "TIMES_Demo-demo12_ed"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1296,6 +1378,7 @@ work_files = ["{crafted}/demo12_ed/com_bprice.gdx"]
 # demo12_edbase, as for demo12_ed (TIMES.jl finds their Arrow form, demo12_ed/com_bprice, on the include path). M1.3 change 69.
 [[model]]
 name = "TIMES_Demo-demo12_edagg"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1312,6 +1395,7 @@ work_files = ["{crafted}/demo12_ed/com_bprice.gdx"]
 # user-constraint limit (initmty.stc, stages.stc, fillsow.stc). M1.3 changes 70-74.
 [[model]]
 name = "TIMES_Demo-demo12_stc"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1325,6 +1409,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_stc"]
 # TIMES_Demo demo12 + stc3.dd with %STAGES% YES (20 Nov 2026): a three-stage event tree (stage 2 from 2015, stage 3 from 2030) with children and probabilities copied from the first parent (SW_COPY), and cumulative limits by stage and SOW (S_COM_CUMNET, S_FLO_CUM; SUPERYR). M1.3 changes 70-76.
 [[model]]
 name = "TIMES_Demo-demo12_stc3"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1338,6 +1423,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_stc3"]
 # TIMES_Demo demo12 + stcmx.dd with %STAGES% YES (20 Nov 2026): the uncertain attributes of the MX macros and the FLO_FUNC remapping (S_FLO_FUNC, S_NCAP_AFS, S_COM_FR; recurrin.stc L18-50, stages.stc L213-272) on demo12_stc's tree. M1.3 changes 70-76.
 [[model]]
 name = "TIMES_Demo-demo12_stcmx"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1351,6 +1437,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_stcmx"]
 # TIMES_Demo demo12 + stc.dd and lam.dd with %STAGES% YES (20 Nov 2026): risk aversion (SW_LAMBDA 0.5: EQ_UPDEV, eqobj.mod L103-121) on demo12_stc's tree and data. M1.3 changes 70-76.
 [[model]]
 name = "TIMES_Demo-demo12_stclam"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1364,6 +1451,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_stc", "{crafted}/demo12_stclam"
 # TIMES_Demo demo12 + disp.dd and uconl.dd and stgccl.dd and stc.dd with %STAGES% YES (20 Nov 2026): demo12_stc's tree and data with extension families of the gate together: dispatching (disp.dd), a user constraint by timeslice on the online gas capacity (uconl.dd) and a DAYNITE storage (stgccl.dd). M1.3 changes 70-76.
 [[model]]
 name = "TIMES_Demo-demo12_stcext"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1377,6 +1465,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_disp", "{crafted}/demo12_uconl"
 # TIMES_Demo demo12 + stc.dd with %SPINES% YES (20 Nov 2026): the spines form (%SPINES% YES: recurrin.stc L52-182, eqmain.mod L30-37) on demo12_stc's tree and data. M1.3 changes 70-76.
 [[model]]
 name = "TIMES_Demo-demo12_spines"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1390,6 +1479,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_stc", "{crafted}/demo12_spines"
 # TIMES_Demo demo12 + stc.dd with %SENSIS% YES (20 Nov 2026): sensitivity analysis (%SENSIS% YES: sensis.stc, solve.stc): demo12_stc's three SOWs solved one by one as deterministic runs, each with its own data. M1.3 changes 70-76.
 [[model]]
 name = "TIMES_Demo-demo12_sensis"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -1403,6 +1493,7 @@ idirs = ["{times_demo}/model", "{crafted}/demo12_stc", "{crafted}/demo12_sensis"
 # TIMES_Demo demo12 + tradeoff.dd with %STAGES% YES (20 Nov 2026): two-phase tradeoff analysis (S_UCOBJ, S_UC_RHS N: stages.stc L49-84, solve.stc) over three points. M1.3 changes 70-76.
 [[model]]
 name = "TIMES_Demo-demo12_tradeoff"
+threads = 6
 tier = "crafted"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"

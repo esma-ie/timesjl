@@ -162,20 +162,34 @@ TIMES-GEO and PROTO on 22 Oct 2026; ETSAP-TIAM is never used.
 
 ## Run limits
 
-On James's workstation every run uses at most 12 solver threads and at most
-4 GAMS runs run at the same time (James, 29 Oct 2026), so that the machine
-stays usable and every test gets the same resources. `make_reference.py`
-passes `threads=12` to GAMS and rewrites the `threads` line of each model's
-solver option file (e.g. PSI's `threads -1`) in the run's work folder, never
-in the source; the manifest records both (`limits`, `patch.solver_option_changes`).
-Before each GAMS run it takes one of 4 machine-wide slots (lock files in
-`<temp>/timesjl-run-slots`, `reference/python/runlimits.py`) and waits while all
-are taken; the wait is recorded as `slot_wait_s` and is not part of `wall_s`.
-Change the limits with `--threads`, `--max-parallel` and `--slot-dir` (or
-`TIMESJL_THREADS`, `TIMESJL_MAX_PARALLEL`, `TIMESJL_SLOT_DIR`;
-`run_references.ps1 -Threads -MaxParallel`); 0 disables a limit. GAMS's own
-default is one solver thread, so models without a `threads` option now solve
-with 12.
+On James's workstation runs share a pool of threads (James, 26 Nov 2026;
+`reference/python/runlimits.py`), which replaced "at most 12 solver threads
+per run and at most 4 runs at a time" (29 Oct 2026):
+
+- Each model has a thread class, `threads` in `suite.toml`: 6 for the small
+  models, 12 (the default) for the large ones. `make_reference.py` passes it to
+  GAMS (`threads=`) and rewrites the `threads` line of the model's solver option
+  file (e.g. PSI's `threads -1`) in the run's work folder, never in the source;
+  the manifest records both (`limits`, `patch.solver_option_changes`).
+- A solve run reserves its class from its start; the pre-solve and CONVERT runs,
+  which do not solve, reserve 1. While a run with one SOLVE goes on, the harness
+  reads its GAMS log: at CPLEX's "Barrier time" it keeps 4 threads (crossover),
+  and once GAMS reads the solution back, 1. A stepped run, or a solver log it does
+  not recognise, keeps its class to the end. The manifest records `pool_threads`,
+  `pool_phases` and the run's `peak_ram_gb`.
+- A run starts only when its threads are free (reserved threads within 48 less
+  the 2 kept free; the measured load also leaving 2 CPUs idle) and its RAM is
+  free (its last `peak_ram_gb` plus 10%, or 16 GB the first time). There is no
+  limit on the number of runs. The ledger is one JSON file per run in
+  `<temp>/timesjl-run-slots`, changed under a lock file; the wait to start is
+  `slot_wait_s`, not part of `wall_s`. Runs that do not use the ledger (Veda,
+  TIMES.jl's Julia scripts for now) are seen only through the measured load and RAM.
+
+Change it with `--threads` (one count for every model), `--pool` (0 turns the
+pool off), `--max-parallel` (an optional run limit) and `--slot-dir` (or
+`TIMESJL_THREADS`, `TIMESJL_POOL`, `TIMESJL_MAX_PARALLEL`, `TIMESJL_SLOT_DIR`;
+`run_references.ps1 -Threads -MaxParallel`). GAMS's own default is one solver
+thread, so models without a `threads` option solve with their class.
 
 ## Running it
 

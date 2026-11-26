@@ -72,12 +72,17 @@
     Use only this interpreter for the venv (path to python.exe).
 
 .PARAMETER Threads
-    Solver threads per run (default 12): GAMS threads= and the threads line of
-    each model's solver option file. James's rule for local runs, 29 Oct 2026.
+    Solver threads per run for every model: GAMS threads= and the threads line
+    of each model's solver option file. Default 0: each model's thread class
+    (reference/suite.toml `threads`: 6 for the small models, 12 for the large).
+    The run pool, James's rule for local runs from 26 Nov 2026
+    (reference/python/runlimits.py): a run reserves its class until its barrier
+    ends, then fewer; a run starts when its threads (of 48, 2 kept free) and
+    its RAM are free.
 
 .PARAMETER MaxParallel
-    GAMS runs at a time on this machine, across all harness processes
-    (default 4; shared slot files, see reference/python/runlimits.py).
+    An optional limit on the number of GAMS runs at a time (default 0: none;
+    the pool limits threads and RAM, not runs).
 
 .PARAMETER GamsMajor
     GAMS major version every reference run must be made with (default 54, the
@@ -110,15 +115,15 @@ param(
     [switch]$Checkpoints,
     # CONVERT only: make_reference.py --only convert (matrix and MPS; no solve, no gate, no zips)
     [switch]$Matrix,
-    # Local run limits (James, 29 Oct 2026; reference/python/runlimits.py): solver
-    # threads per run, and GAMS runs at a time on this machine. 0 disables a limit.
-    [int]$Threads = 12,
-    [int]$MaxParallel = 4
+    # Local run limits: the run pool (James, 26 Nov 2026; reference/python/runlimits.py).
+    # Threads 0: each model's class (6 or 12); MaxParallel 0: no limit on the number of runs.
+    [int]$Threads = 0,
+    [int]$MaxParallel = 0
 )
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
-$ScriptVersion = '0.1.20'
+$ScriptVersion = '0.1.21'  # 0.1.21 (26 Nov 2026): the run pool (per-model thread class, no run limit)
 if ($Checkpoints -or $Matrix) { $SkipGate = $true; $SkipPack = $true }
 
 $OnWindows = ($PSVersionTable.PSEdition -eq 'Desktop') -or $IsWindows
@@ -631,7 +636,7 @@ foreach ($model in $Models) {
 Write-Step ("Done in {0:N0} min. Summary: {1}" -f ((Get-Date) - $started).TotalMinutes, $SummaryCsv)
 $Summary | Format-Table model, variant, status, gate, rows, cols, obj_cplex, rel_diff, wall_cplex_s -AutoSize |
     Out-String -Width 200 | Write-Host
-Write-Host "Script $ScriptVersion, GAMS $GamsVersion, solvers $($okSolvers -join ',') (a model's own list in reference/suite.toml comes first), threads $Threads, at most $MaxParallel runs at a time, sources in $SrcRoot"
+Write-Host "Script $ScriptVersion, GAMS $GamsVersion, solvers $($okSolvers -join ',') (a model's own list in reference/suite.toml comes first), threads $(if ($Threads -gt 0) { $Threads } else { 'per model (6 or 12)' }), run pool of 48 threads (2 kept free)$(if ($MaxParallel -gt 0) { ", at most $MaxParallel runs at a time" }), sources in $SrcRoot"
 Write-Host "Send back: $SummaryCsv and the zips in $Packed (start with the M1.1 models)."
 $bad = @($Summary | Where-Object { $_.status -ne 'OK' -or $_.gate -eq 'FAIL' })
 if ($bad.Count -gt 0) { exit 1 } else { exit 0 }
