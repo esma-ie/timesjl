@@ -138,8 +138,15 @@ C:\git\esma\.timesjl-venv\Scripts\python.exe scripts\cuopt\make_ref_bundle.py `
   others. Each job's summary and artifact (`cuopt-ref-<model>-<run id>`) hold
   its results. The nightly schedule is unchanged.
 - **Only from `main`.** The runner group `gpu` takes this workflow from `main`
-  only, so a change to the workflow is tested after its merge. The workflow has no `pull_request` trigger, so forks
-cannot run code on the paid runner.
+  only, so a change to the workflow is tested after its merge. The workflow
+  has no `pull_request` trigger, so forks cannot run code on the paid runner.
+- **Only after a local pass.** No run with `ref_release` (or of any model or
+  fixture beyond the nightly's) starts until the same models pass in the
+  local WSL2 nightly (James, 22 Nov 2026). The first full run on the T4 (run
+  45055717888, 22 Nov 2026) solved none of the six: barrier ended with a
+  numerical error or the time limit, PDLP with the time limit or outside
+  1e-6. That is issue #100. The scheduled nightly (demo12_off) is not paused
+  (James, 25 Nov 2026).
 
 ## On James's workstation (Windows 11, Quadro RTX 4000): WSL2
 

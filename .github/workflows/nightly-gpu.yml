@@ -22,7 +22,10 @@ name: Nightly GPU (cuOpt)
 # fixtures, the reduce_off reference runs of open models, downloaded from a
 # release of this repository that scripts/cuopt/make_ref_bundle.py made (the
 # runner has no GAMS). One job per model, each on its own GPU runner, at 100%
-# of the GPU unless the input shares says otherwise.
+# of the GPU unless the input shares says otherwise. Start such a run only
+# after the same models pass in the local WSL2 nightly (James, 22 Nov 2026;
+# scripts/cuopt/README.md). The scheduled nightly is not paused (James,
+# 25 Nov 2026).
 
 on:
   schedule:
