@@ -199,3 +199,21 @@ Notes for the workstation:
 - **Timings from WSL are indicative.** Compare them only with each other.
 - **The Quadro RTX 4000 has 8 GB.** PDLP needs little memory; barrier's
   factorisation is the part that may not fit on the largest models.
+
+## MPS files shared with NVIDIA (B200)
+
+Apart from the lane, NVIDIA's cuOpt team solves some of the open models on
+B200 GPUs. Nothing here depends on it: no nightly, no gate.
+
+- **15 Oct 2026:** first contact with NVIDIA.
+- **From 11 Nov 2026:** James sent the GAMS CONVERT MPS files (variant
+  `as_run`, from the reference runs) of five open runs: TIMES_Demo demo12
+  (CC BY 4.0), OTCGEN gc_ref, OTNYC s1_nyc_ref, OTUS9r reference and OTUS9r
+  tax1_wo_mou (CC BY-SA 4.0). CONVERT writes generic row and column names
+  (`e1`, `x1`, ...). TIMES-NZ was not in the set. Nothing from TIM,
+  JRC-EU-TIMES or any model without an open licence left the workstation.
+- **From about 16 Nov 2026:** NVIDIA solved them on B200s and sent back a
+  summary of its results.
+
+The results are not published in this repository until publishing is agreed
+with NVIDIA (James, 26 Nov 2026). They are kept on James's workstation.

@@ -72,6 +72,7 @@ On 26 Nov 2026 James answered #196 decisions 2 and 7 (in the log of that pull re
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 26 Nov 2026 | The MPS files sent to NVIDIA for cuOpt on B200 GPUs (five open runs, `as_run`, from 11 Nov 2026) are logged: "sure log the nvidia transfer also". Until 23 Nov 2026, 10:00, the transfer was kept out of this repository (James, 15 Nov 2026), so this is its first record here. NVIDIA's results are not published until publishing is agreed with NVIDIA; they stay on James's workstation. | `scripts/cuopt/README.md` (MPS files shared with NVIDIA); this log |
 | 26 Nov 2026 | q1, q2 and q3 of the 26 Nov chat, on adding OTAI to the suite from DD scenarios that stay off GitHub until the paper and the model are published: "q1, CC-BY-SA4.0; q2 yes, agreed; Q3 - neutral names is fine". q1: the unpublished DD scenarios carry the licence of `esma-ie/otai`, CC-BY-SA-4.0 (seen at the repository, 26 Nov 2026). q2: until publication OTAI is handled like TIM (a local source, `redistribute = "private"`, the local board only, nothing derived from it in this repository, its issues or its pull requests); on publication it becomes `public`, pinned to the repository commit. q3: the suite entries go into `reference/suite.toml` now, with neutral scenario names. Rule-level (licences and test data); explicit yes. The entries are added when the DD files are in `timesjl-sources/OTAI`. James also noted these runs as a Phase 2 case for faster model generation and writing to memory (P2-7). | `CLAUDE.md` (Test-model licences); `docs/test-models.md`; `docs/phase2-notes.md` (P2-7); this log |
 | 25 Nov 2026 | "#195 d5 (a) and d6 yes". Issue #116 (open) loses GAMS's figures and TIMES.jl's ratios to them: its title and body were edited the same day, keeping TIMES.jl's own times; GitHub keeps the edit history visible, and the text before the edit is in `esma-ie/timesjl-unpublished` (`issue-116.md`). The nightly keeps `esma-ie/timesjl-unpublished` current: `build_dashboard_local.ps1` (section 1e; a local script beside the repository, not in it) copies the CPLEX timings of the open models into its clone as `run-timing-restricted.json` and commits and pushes them when they changed, after checking that the repository is private and that every run is of a model with `redistribute = "public"`. First push 25 Nov 2026. Rule-level (what the public repository shows); explicit yes. | #195 (d5, d6); issue #116; `esma-ie/timesjl-unpublished` (README) |
 | 25 Nov 2026 | #109 and #117: "#109 yes, #117 yes, rerun timings after". Rule-level (milestone gates); James's explicit yes. The M1.3 and M1.4 gates are passed, on the evidence of docs/m13-plan.md, "Gate audit, 22 Nov 2026" (the batch pass of 23 Nov 2026 on `db5d3d7`; main `3d5a4ae`, with #192 merged, changes no code). The timing rerun (#192 d3) follows the gate instead of preceding it; its figures go to the local board (#195 d2). The baseline's move to TIMES v4.9.8 (`7064680`) starts (CLAUDE.md, Baseline). Both questions leave the Open decisions list. | #109, #117 and #192 (this log); docs/m13-plan.md, docs/m14-plan.md, docs/translation-guide.md |
@@ -165,6 +166,13 @@ On 26 Nov 2026 James answered #196 decisions 2 and 7 (in the log of that pull re
 | 11 Nov 2026 | Keep this decision log, with its rule. | `docs/decisions.md` |
 
 ## Log by pull request
+
+### #205 cuOpt lane: log the MPS files shared with NVIDIA for B200 runs (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | NVIDIA's B200 results kept off this repository, its issues and pull requests until publishing is agreed with NVIDIA; held on James's workstation only. | Recommended: yes. Built in. | open |
+| 2 | The public record names NVIDIA, not the person James dealt with there. | Recommended: yes. Built in. | open |
 
 ### #204 Dashboard: cuOpt on the GPU back on the public board (#102 d1, from 23 Nov) (open; d1 to d3 answered)
 
