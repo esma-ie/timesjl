@@ -37,6 +37,9 @@ A share of EPS (or below zero) leaves the group sum out (`\$(FLO_SHAR > 0)`,
 EPS comparing as 0, docs/discrepancies.md G12), so the row reads
 `0 =%1= VAR_FLO(...)`.
 
+The SOW tags (sow_tags.jl): the row is `%EQ%%1_%3SHR(... %SWT%)` (L17); every
+term is `%VAR%_FLO(... %SOW%)` (L24, L38, and %cal_red%).
+
 GAMS: eqfloshr.mod L17-42 with eqmain.mod L125-134, v4.9.7.
 """
 function eq_floshr!(tm::TimesModel)
@@ -73,27 +76,30 @@ function eq_floshr!(tm::TimesModel)
         for (r, v, t, p, c, cg, s) in rows
             share = gv(flo_shar, (r, v, p, c, cg, s, bd))
             red = (r, p, cg, io) in rpg_red
-            lhs = JuMP.AffExpr(0.0)
-            if share.v > 0                                    # $(FLO_SHAR(...) > 0)
-                for (_, _, com, _) in get(top_of_rpio, (r, p, io), no4)
-                    (r, cg, com) in com_gmap || continue
-                    for (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, com), no5)
-                        w = gv(rs_fr, (r, s, ts)) * (1 + gv(rtcs_fr, (r, t, com, s, ts)))
-                        if !red
-                            addterm!(lhs, share * w, tm, "VAR_FLO", r, v, t, p, com, ts)
-                        else
-                            cal_nored!(lhs, tm, share * w, r, v, t, p, com, ts)
+            for sow in sw_rows(tm, t)   # %SWT% (eqfloshr.mod L17)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                if share.v > 0                                    # $(FLO_SHAR(...) > 0)
+                    for (_, _, com, _) in get(top_of_rpio, (r, p, io), no4)
+                        (r, cg, com) in com_gmap || continue
+                        for (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, com), no5)
+                            w = gv(rs_fr, (r, s, ts)) * (1 + gv(rtcs_fr, (r, t, com, s, ts)))
+                            if !red
+                                addterm!(lhs, share * w, tm, "VAR_FLO", r, v, t, p, com, ts)
+                            else
+                                cal_nored!(lhs, tm, share * w, r, v, t, p, com, ts)
+                            end
                         end
                     end
                 end
+                rhs = JuMP.AffExpr(0.0)
+                if !red
+                    addterm!(rhs, GNum(1.0), tm, "VAR_FLO", r, v, t, p, c, s)
+                else
+                    cal_nored!(rhs, tm, GNum(1.0), r, v, t, p, c, s)
+                end
+                gconstraint!(tm, eqtag(tm, name), swt(tm, (r, v, t, p, c, cg, s), t), eqtype, lhs, rhs) === nothing || (n += 1)
             end
-            rhs = JuMP.AffExpr(0.0)
-            if !red
-                addterm!(rhs, GNum(1.0), tm, "VAR_FLO", r, v, t, p, c, s)
-            else
-                cal_nored!(rhs, tm, GNum(1.0), r, v, t, p, c, s)
-            end
-            gconstraint!(tm, name, (r, v, t, p, c, cg, s), eqtype, lhs, rhs) === nothing || (n += 1)
         end
     end
     return n

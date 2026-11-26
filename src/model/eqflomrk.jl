@@ -47,6 +47,9 @@ holds and -1 otherwise. The PROD on the right-hand side runs over the
 RX_MARK entries of ITEM when ITEM is a process (P(ITEM)); with none it is 1.
 Returns the number of rows.
 
+The SOW tags (sow_tags.jl): the row is `%EQ%%1_FLOMRK(... %SWT%)` (L63); every
+term is `%VAR%_X(... %SOW%)` (%IRED% L58; L85-86, L93, L102, and %cal_red%).
+
 GAMS: eqflomrk.mod L56-105, eqmain.mod L139-141, v4.9.7.
 """
 function eq_flomrk!(tm::TimesModel)
@@ -88,65 +91,68 @@ function eq_flomrk!(tm::TimesModel)
         name = "EQ$(eqtype)_FLOMRK"
         for (r, t, item, com, b, s) in rtx_mark
             (b == bd && (t,) in tx) || continue                         # (%R_T%,ITEM,COM,S)
-            lhs = JuMP.AffExpr(0.0)
-            pw = gif(GNum(1.0), (r, "0", item, com, bd) in rx_mark) - 1
-            for (_, _, c) in get(gmap_of_rcom, (r, com), no3), (_, p, _) in get(rpc_of_rc, (r, c), no3)
-                haskey(prc_mark, (r, t, p, item, com, bd)) || continue
-                pm = gv(prc_mark, (r, t, p, item, com, bd))
-                sigo, sigi = pm.v >= 0, pm.v <= 0
-                f = gpower(pm, pw)
-                for (_, _, _, sl) in get(comprd_of_rtc, (r, t, c), no4)
+            for sow in sw_rows(tm, t)   # %SWT% (eqflomrk.mod L63)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                pw = gif(GNum(1.0), (r, "0", item, com, bd) in rx_mark) - 1
+                for (_, _, c) in get(gmap_of_rcom, (r, com), no3), (_, p, _) in get(rpc_of_rc, (r, c), no3)
+                    haskey(prc_mark, (r, t, p, item, com, bd)) || continue
+                    pm = gv(prc_mark, (r, t, p, item, com, bd))
+                    sigo, sigi = pm.v >= 0, pm.v <= 0
+                    f = gpower(pm, pw)
+                    for (_, _, _, sl) in get(comprd_of_rtc, (r, t, c), no4)
+                        haskey(rs_fr, (r, s, sl)) || continue
+                        if (r, p) in rp_std
+                            ief = (r, p, c, "OUT") in top ? 1 + (gv(com_ie, (r, t, c, sl)) - 1) : GNum(1.0)
+                            for (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, c), no5)
+                                haskey(rs_fr, (r, sl, ts)) || continue
+                                k = f * (w(r, t, c, sl, ts) * ief)
+                                for (_, _, _, v) in get(vnt_of_rtp, (r, t, p), no4)
+                                    cal_nored!(lhs, tm, k, r, v, t, p, c, ts)
+                                end
+                            end
+                        end
+                        if (r, p) in rp_ire
+                            isimp = sigo && (r, p, c, "IMP") in rpc_ire
+                            isexp = sigi && (r, p, c, "EXP") in rpc_ire
+                            for (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, c), no5)
+                                haskey(rs_fr, (r, sl, ts)) || continue
+                                ws = w(r, t, c, sl, ts)
+                                for (_, _, _, v) in get(vnt_of_rtp, (r, t, p), no4)
+                                    isimp && ire!(lhs, f * ((1 + gv(ire_flosum, (r, t, p, c, s, "IMP", c, "OUT"))) *
+                                                          gv(com_ie, (r, t, c, sl)) * ws), r, v, t, p, c, ts, "IMP")
+                                    isexp && ire!(lhs, f * (-(1 + gv(ire_flosum, (r, t, p, c, s, "EXP", c, "IN"))) * ws),
+                                                r, v, t, p, c, ts, "EXP")
+                                end
+                            end
+                        end
+                        if (r, p) in stg && (r, p, c) in rpc_stg
+                            for (_, _, _, ts) in get(rpcs_var_of_rpc, (r, p, c), no4)
+                                haskey(rs_fr, (r, sl, ts)) || continue
+                                ws = w(r, t, c, sl, ts)
+                                for (_, _, _, v) in get(vnt_of_rtp, (r, t, p), no4)
+                                    sigo && addterm!(lhs, f * (gv(stg_eff, (r, v, p)) * gv(com_ie, (r, t, c, sl)) * ws),
+                                                     tm, "VAR_SOUT", r, v, t, p, c, ts)
+                                    sigi && addterm!(lhs, f * (-ws), tm, "VAR_SIN", r, v, t, p, c, ts)
+                                end
+                            end
+                        end
+                    end
+                end
+                # PROD(RX_MARK(R,LL,P(ITEM),COM,'%2'),PRC_MARK(R,T,P,P,COM,'%2')$LASTLL(LL))
+                g = GNum(1.0)
+                if (item,) in prc
+                    for (_, ll, _, _, _) in get(rx_of_ricb, (r, item, com, bd), no5)
+                        g = g * gif(gv(prc_mark, (r, t, item, item, com, bd)), (ll,) in lastll)
+                    end
+                end
+                rhs = JuMP.AffExpr(0.0)
+                for (_, _, c) in get(gmap_of_rcom, (r, com), no3), (_, _, _, sl) in get(comprd_of_rtc, (r, t, c), no4)
                     haskey(rs_fr, (r, s, sl)) || continue
-                    if (r, p) in rp_std
-                        ief = (r, p, c, "OUT") in top ? 1 + (gv(com_ie, (r, t, c, sl)) - 1) : GNum(1.0)
-                        for (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, c), no5)
-                            haskey(rs_fr, (r, sl, ts)) || continue
-                            k = f * (w(r, t, c, sl, ts) * ief)
-                            for (_, _, _, v) in get(vnt_of_rtp, (r, t, p), no4)
-                                cal_nored!(lhs, tm, k, r, v, t, p, c, ts)
-                            end
-                        end
-                    end
-                    if (r, p) in rp_ire
-                        isimp = sigo && (r, p, c, "IMP") in rpc_ire
-                        isexp = sigi && (r, p, c, "EXP") in rpc_ire
-                        for (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, c), no5)
-                            haskey(rs_fr, (r, sl, ts)) || continue
-                            ws = w(r, t, c, sl, ts)
-                            for (_, _, _, v) in get(vnt_of_rtp, (r, t, p), no4)
-                                isimp && ire!(lhs, f * ((1 + gv(ire_flosum, (r, t, p, c, s, "IMP", c, "OUT"))) *
-                                                      gv(com_ie, (r, t, c, sl)) * ws), r, v, t, p, c, ts, "IMP")
-                                isexp && ire!(lhs, f * (-(1 + gv(ire_flosum, (r, t, p, c, s, "EXP", c, "IN"))) * ws),
-                                            r, v, t, p, c, ts, "EXP")
-                            end
-                        end
-                    end
-                    if (r, p) in stg && (r, p, c) in rpc_stg
-                        for (_, _, _, ts) in get(rpcs_var_of_rpc, (r, p, c), no4)
-                            haskey(rs_fr, (r, sl, ts)) || continue
-                            ws = w(r, t, c, sl, ts)
-                            for (_, _, _, v) in get(vnt_of_rtp, (r, t, p), no4)
-                                sigo && addterm!(lhs, f * (gv(stg_eff, (r, v, p)) * gv(com_ie, (r, t, c, sl)) * ws),
-                                                 tm, "VAR_SOUT", r, v, t, p, c, ts)
-                                sigi && addterm!(lhs, f * (-ws), tm, "VAR_SIN", r, v, t, p, c, ts)
-                            end
-                        end
-                    end
+                    addterm!(rhs, g, tm, "VAR_COMPRD", r, t, c, sl)
                 end
+                gconstraint!(tm, eqtag(tm, name), swt(tm, (r, t, item, com, s), t), eqtype, lhs, rhs) === nothing || (n += 1)
             end
-            # PROD(RX_MARK(R,LL,P(ITEM),COM,'%2'),PRC_MARK(R,T,P,P,COM,'%2')$LASTLL(LL))
-            g = GNum(1.0)
-            if (item,) in prc
-                for (_, ll, _, _, _) in get(rx_of_ricb, (r, item, com, bd), no5)
-                    g = g * gif(gv(prc_mark, (r, t, item, item, com, bd)), (ll,) in lastll)
-                end
-            end
-            rhs = JuMP.AffExpr(0.0)
-            for (_, _, c) in get(gmap_of_rcom, (r, com), no3), (_, _, _, sl) in get(comprd_of_rtc, (r, t, c), no4)
-                haskey(rs_fr, (r, s, sl)) || continue
-                addterm!(rhs, g, tm, "VAR_COMPRD", r, t, c, sl)
-            end
-            gconstraint!(tm, name, (r, t, item, com, s), eqtype, lhs, rhs) === nothing || (n += 1)
         end
     end
     return n
