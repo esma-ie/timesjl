@@ -637,9 +637,9 @@ function gdollar!(g::GamsCompile, s::AbstractString, file, line)
         # writing a GDX file at compile time (setglobs.gms L9-13) changes no data; $GDXIN alone closes one
         cmd == "GDXIN" && (g.gdxin = "")
     elseif cmd == "GDXIN" && lowercase(basename(file)) == "readbprice.mod"
-        # readbprice.mod L11: the base prices of elastic demand. TIMES.jl reads them from its own Arrow
+        # readbprice.mod L18: the base prices of elastic demand. TIMES.jl reads them from its own Arrow
         # folder of the same name (q1, 19 Nov 2026; docs/known-differences.md K4); a missing one is a
-        # compile error that L12 tests (ERRORFREE) and L37 clears, as GAMS's missing GDX file is
+        # compile error that L19 tests (ERRORFREE) and L48 clears, as GAMS's missing GDX file is
         p = bprice_find(g, strip(rest), file)
         g.gdxin = p === nothing ? "" : p
         p === nothing && (g.errors += 1)
@@ -756,7 +756,7 @@ const G_NOARG = Set(["ONTEXT", "ONLISTING", "OFFLISTING", "ONMULTI", "OFFMULTI",
 """
     bprice_find(g, name, from) -> String or nothing
 
-The folder of base prices that readbprice.mod names (L8-11: `com_bprice`, or `%GDXPATH%%TIMESED%`
+The folder of base prices that readbprice.mod names (L12-18: `com_bprice`, or `%GDXPATH%%TIMESED%`
 with `_DP`): TIMES.jl's Arrow form of the GDX file write_bprice writes (a dump folder with
 `manifest.json`; q1, 19 Nov 2026). A `.gdx` ending is dropped. GAMS reads the file from its working
 folder; TIMES.jl looks in the run file's folder, then along the include path (docs/known-differences.md K4).
@@ -776,9 +776,9 @@ end
 """
     gload_bprice!(g, rest, file, line)
 
-readbprice.mod L14-20: `\$LOAD` of the base prices (SOL_BPRICE) and, under DAM_ELAST, DAM_COEF and
+readbprice.mod L21-26: `\$LOAD` of the base prices (SOL_BPRICE) and, under DAM_ELAST, DAM_COEF and
 DAM_TVOC, from the folder `\$GDXIN` opened. Without an open folder each `\$LOAD` is a compile error, as
-in GAMS (L15 then skips the rest). A record outside the symbol's domain is left out, as GAMS's
+in GAMS (L22 then skips the rest). A record outside the symbol's domain is left out, as GAMS's
 `\$LOAD` filters it (UNCONFIRMED: no base price falls outside its domain in the crafted cases).
 """
 function gload_bprice!(g::GamsCompile, rest::AbstractString, file, line)
@@ -845,7 +845,7 @@ function gcondition1(g::GamsCompile, s::AbstractString, ci::Bool, file, line)
              (x !== nothing && (lowercase(m[1]) == "declared" || x.kind === :alias || x.hasdata || x.assigned))
         return (ok, m[3])
     elseif (m = match(r"^exist\s+(\S+)\s*(.*)$"is, s)) !== nothing
-        # readbprice.mod L8-9 test the base-price GDX files, which TIMES.jl reads as Arrow folders (K4)
+        # readbprice.mod L15-16 test the base-price GDX files, which TIMES.jl reads as Arrow folders (K4)
         lowercase(basename(file)) == "readbprice.mod" && endswith(lowercase(m[1]), ".gdx") &&
             return (bprice_find(g, m[1], file) !== nothing, m[2])
         return (gfind(g, m[1], file) !== nothing, m[2])
