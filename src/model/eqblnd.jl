@@ -49,6 +49,11 @@ A stream whose BL_COM equals BL_SPEC, or with RU_CVT 0, has no term (G5);
 a row left without a variable is not generated (G22). A BL_TYPE other than
 1 to 4 gives no row.
 
+The SOW tags (sow_tags.jl): the row is
+`EQ%1_BLND(BLE_TP(%R_T%,BLE),SPE%SWX%)\$(%SWTX% ...)` (L67), with no %EQ%: the
+name stays and the last index is `swx`; the term is `%VAR%_BLND(R,T,BLE,OPR
+%SOW%)` (L69).
+
 GAMS: eqblnd.mod L67-71 with eqmain.mod L249-252, v4.9.7.
 """
 function eq_blnd!(tm::TimesModel)
@@ -76,13 +81,16 @@ function eq_blnd!(tm::TimesModel)
         end
         gams_sort!(rows, d)
         for (r, t, b, s) in rows
-            lhs = JuMP.AffExpr(0.0)
-            spec = gv(bl_spec, (r, b, s))
-            for (_, _, o) in get(opr_of_rb, (r, b), no3)               # L68-69
-                (o,) in opr || continue
-                addterm!(lhs, (gv(bl_com, (r, b, o, s)) - spec) * gv(ru_cvt, (r, b, s, o)), tm, "VAR_BLND", r, t, b, o)
+            for sow in sw_rows(tm, t)   # %SWTX% (L67): SW_T(T,SOW)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                spec = gv(bl_spec, (r, b, s))
+                for (_, _, o) in get(opr_of_rb, (r, b), no3)               # L68-69
+                    (o,) in opr || continue
+                    addterm!(lhs, (gv(bl_com, (r, b, o, s)) - spec) * gv(ru_cvt, (r, b, s, o)), tm, "VAR_BLND", r, t, b, o)
+                end
+                gconstraint!(tm, name, (r, t, b, s, swx(tm)), eqtype, lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
             end
-            gconstraint!(tm, name, (r, t, b, s, "1"), eqtype, lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
         end
     end
     return n
