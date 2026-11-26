@@ -166,13 +166,13 @@ On 26 Nov 2026 James answered #201 decisions 2, 4, 7 and 8 (in the log of that p
 
 ## Log by pull request
 
-### #206 Working rules: one PR a day, parallel lanes, Phase 1 scope, the Phase 2 lane (open)
+### #206 Working rules: one PR a day, parallel lanes, Phase 1 scope, the Phase 2 lane (merged 26 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | The wording in `CLAUDE.md` of the rules James decided in the chat on 26 Nov 2026 (above, Decisions in the chat). Rule-level. | James's explicit yes in the chat; the wording is built in. | James, 26 Nov 2026 (the chat); wording pending merge |
-| 2 | The 16:30 check-in is dropped for PR review: the rule names only the morning check-in. | Recommended: yes. Built in. | open |
-| 3 | The thread pool of the reference runs is not written into `CLAUDE.md`'s run limits in this pull request; left to the session that built it. | Recommended: yes. Nothing built in. | open |
+| 1 | The wording in `CLAUDE.md` of the rules James decided in the chat on 26 Nov 2026 (above, Decisions in the chat). Rule-level. | James's explicit yes in the chat; the wording is built in. | James, 26 Nov 2026 (the chat); wording accepted by merge, 26 Nov 2026 |
+| 2 | The 16:30 check-in is dropped for PR review: the rule names only the morning check-in. | Recommended: yes. Built in. | accepted by merge, 26 Nov 2026 |
+| 3 | The thread pool of the reference runs is not written into `CLAUDE.md`'s run limits in this pull request; left to the session that built it. | Recommended: yes. Nothing built in. | accepted by merge, 26 Nov 2026 |
 
 ### #205 cuOpt lane: log the MPS files shared with NVIDIA for B200 runs (merged 26 Nov 2026)
 
