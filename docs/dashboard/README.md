@@ -150,6 +150,20 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
     (`scripts/m13_gate.jl --from-dd`): the seconds the gate prints for each
     step in the batch's `dd-<model>.log`, and the wall time of the whole run
     (its line `whole run <seconds> s`; James, 14 Nov 2026).
+  - TIMES.jl with CPLEX (James, 22 Nov 2026; #182 d5 option (b)): a second
+    run of the same chain, `scripts/m13_gate.jl --from-dd ... --solve
+    --solver cplex`, whose LP (TIMES.jl's own, checked against GAMS's matrix
+    first) is solved by CPLEX inside GAMS through GAMS.jl
+    (`scripts/gams_cplex.jl`), with the model's own `cplex.opt` and the run
+    limit of 12 threads, as the GAMS/CPLEX reference run has them. Its log
+    `dd-<model>-cplex.log` gives the entry TIMES.jl / CPLEX. Its solve is
+    CPLEX's own time as GAMS reports it (`etSolver`, the measure of GAMS's
+    own CPLEX runs); the handover through GAMS (GAMS.jl writes the LP as a
+    GAMS model, GAMS compiles and generates it, the solution is read back)
+    is in no part: it is in the whole run, and the hover gives it. As a
+    CPLEX timing it is on the local board only. The nightly runs it for the
+    models that get the HiGHS solve (`run_overnight.ps1`, jobs
+    `dd-<model>-cplex`); it needs a licensed GAMS with CPLEX, so never CI.
   - Whole run (slide 12): wall time, for both languages. GAMS: the wall time
     of the GAMS job, which also holds the harness's dumps. TIMES.jl: the
     gate's wall timer around the run of one variant, from the end of the run
@@ -163,14 +177,14 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
     `init_ext` to the end of `ppm_ext`; TIMES.jl input to ppm), coefficients
     (to the SOLVE statement; TIMES.jl ppm to presolve), generation (GAMS
     `resgen`; TIMES.jl `generate!`), solve (GAMS `etsolver`; TIMES.jl
-    `optimize!` with HiGHS), reports (GAMS: the statements after the solve).
+    `optimize!` with HiGHS; with CPLEX, `etSolver` of CPLEX inside GAMS),
+    reports (GAMS: the statements after the solve).
     The header of `scripts/run_timing.jl` has the detail.
   - A part that was never timed is `null` in the block and reads "not
     measured" on the slide (hover gives the reason); nothing is estimated.
     Today: TIMES.jl's reports (not translated, M1.6), TIMES.jl's whole run
-    in a batch made before the gate's wall timer, and any TIMES.jl run with
-    CPLEX (Phase 2). "not run" marks the OTUS9r solves, which are checked by
-    cross-evaluation instead of a HiGHS solve.
+    in a batch made before the gate's wall timer. "not run" marks the OTUS9r
+    solves, which are checked by cross-evaluation instead of a HiGHS solve.
   - GAMS with HiGHS: demo12 and TIMES-NZ steady have the run today. OTCGEN
     and OTNYC get it at the next reference run (`solvers` in
     `reference/suite.toml`; James, 14 Nov 2026), the batch that moves the
@@ -260,7 +274,8 @@ language and the shape is the solver, wherever a slide draws them.
   has fewer columns, so it is the left one. The labels are stacked in the
   widest empty band of the x axis, in the order of their marks' height. On slide
   11's left panel each language has the mark of the run its time comes from
-  (GAMS its CPLEX run, TIMES.jl its HiGHS run). On slide 12 the shading of a
+  (GAMS its CPLEX run, TIMES.jl its HiGHS run, also when the local board
+  has its CPLEX run). On slide 12 the shading of a
   cell is the part's share of the run's measured time.
 - The checks of the `dataviz` palette validator, computed for the pair on
   15 Nov 2026 (OKLab difference x100, Machado simulation):

@@ -763,10 +763,21 @@ function _prepret_decl!(tm::TimesModel)
     return tm
 end
 
-"The sets and parameters prepret_decl! settles (prepret.dsc L44-81)."
+"""
+    prepret_decl_symbols(tm) -> Vector{String}
+
+The sets and parameters prepret_decl! settles (prepret.dsc L44-81) that nothing later in the
+coef -> pre-solve step changes. RVPRL, NCAP_OLIFE, RCAP_OCAP, RCAP_BLK and COEF_CAP are not among
+them: prepret.dsc EQOBJ (L120-131, `prepret_eqobj!`) changes them in the next step, so the probe
+checks them after `eqobjinv_prep!` (`prepret_eqobj_symbols`). RVPRL loses its PYR_S records of
+processes with PRC_RESID(R,'0',P) there (L129), which the DECL step still has.
+"""
 prepret_decl_symbols(tm) = Reference.has_symbol(tm.data.dump, "RP_RTF") ?
-    ["PRC_RCAP", "RTP_TT", "RP_RTF", "RCAP_BND", "VNTRT", "RVPRL", "NCAP_ILED", "VN2T", "TRACKP", "RVP", "PASTSUM",
-     "RCAP_BLK", "NCAP_OLIFE", "RCAP_OCAP", "COEF_CAP"] : String[]
+    ["PRC_RCAP", "RTP_TT", "RP_RTF", "RCAP_BND", "VNTRT", "NCAP_ILED", "VN2T", "TRACKP", "RVP", "PASTSUM"] : String[]
+
+"The sets and parameters prepret.dsc EQOBJ settles (L120-131, `prepret_eqobj!`, in `eqobjinv_prep!`)."
+prepret_eqobj_symbols(tm) = Reference.has_symbol(tm.data.dump, "RP_RTF") ?
+    ["RVPRL", "RCAP_BLK", "NCAP_OLIFE", "RCAP_OCAP", "COEF_CAP"] : String[]
 
 """
     prepret_eqobj!(tm) -> tm
