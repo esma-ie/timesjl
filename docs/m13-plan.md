@@ -319,12 +319,14 @@ With the stochastic extension out of the gate (James, 22 Nov 2026, above), every
 | JRC-EU-TIMES (verdicts only) | Same pass: cli_ll and cli_mm (the second scenario rotates by day; cli_mh in the pass of 21-22 Nov), the chain to presolve, both variants. | PASS, 4 of 4 |
 | CI on demo12: input, preprocessing, coefficients and the model, layers 2 and 3, REDUCE off and on, and every crafted case | GitHub CI on main: `db5d3d7` and `4091d41` passed. | PASS |
 | The merged stack | The pass above runs on `db5d3d7`, after #179 (elastic demand, change 69), #181 (HiGHS threads), #182 (the solver option file) and #185 (the stochastic DD reader, with GAMS's `$GOTO`/`$LABEL`/`$EOLCOM` rules, G63). On v4.9.7. | PASS |
-| Preprocessing timed against GAMS | Timed on 13 Nov 2026 and accepted (James, 14 Nov 2026). Rerun on the merged stack before the gate question (q2 of 21 Nov 2026; #192 d3). `scripts/m13_timing.jl` compares with the GAMS profile of each model's CPLEX reference solve, so its figures and the ratios to them stay off the public repository (#195 d2) and go to the local board. | rerun pending |
+| Preprocessing timed against GAMS | Timed on 13 Nov 2026 and accepted (James, 14 Nov 2026). The rerun on the merged stack (q2 of 21 Nov 2026; #192 d3) follows the gate: James, 25 Nov 2026, "#109 yes, #117 yes, rerun timings after". `scripts/m13_timing.jl` compares with the GAMS profile of each model's CPLEX reference solve, so its figures and the ratios to them stay off the public repository (#195 d2) and go to the local board. | PASS (13 Nov); rerun after the gate |
 | OTUS9r layer 3, one way (CLAUDE.md, #61) | Cross-evaluated on 12 Nov 2026 (relative difference 0). Not rerun since; the model has matched GAMS's matrix at layer 2 in every nightly since, so the same optimum evaluates the same. | PASS (12 Nov) |
 
 The step probe (`scripts/m13_probe.jl`), not a gate criterion, passes 490 of 490 steps on the public suite in the same pass.
 
 The M1.4 gate (#117): its criteria of 14 Nov 2026 pass in the same pass (the chain from DD files above; every DD file of the public suite compiles as GAMS's input dump), and the two additions since are merged: `$GDXIN`/`$LOAD` of readbprice.mod (change 69, #179) and the stochastic declarations (change 70, #185).
+
+**The M1.3 and M1.4 gates are passed (James, 25 Nov 2026: "#109 yes, #117 yes, rerun timings after").** Main at the decision: `3d5a4ae` (#192 merged; src/ and test/ as on `db5d3d7`, the pass above). Next, in order: the move of the baseline to TIMES v4.9.8 (`7064680`; CLAUDE.md, Baseline): the source re-pinned, its diff translated one GAMS file or family per pull request, every GAMS reference rerun with it; the timing rerun on the local board; then the list below, before Phase 1 closes.
 
 ## Findings so far
 
