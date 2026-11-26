@@ -89,6 +89,17 @@ class SuiteTests(unittest.TestCase):
                 self.assertIn(model.get("tier"), ("core", "milestone"))
         self.assertEqual(suite["models"]["TIMES_Demo-demo12"]["tier"], "core")
 
+    def test_thread_classes(self):
+        # reference/suite.toml header, "Threads" (James, 26 Nov 2026): 6 for the small models, 12 (default)
+        # for the large ones; runlimits.model_threads refuses any other count.
+        from runlimits import model_threads
+        suite = load_suite(SUITE, {r: f"/roots/{r}" for r in ROOTS})
+        for name, model in suite["models"].items():
+            with self.subTest(model=name):
+                self.assertIn(model_threads(model), (6, 12))
+        self.assertEqual(model_threads(suite["models"]["TIMES_Demo-demo12"]), 6)
+        self.assertEqual(model_threads(suite["models"]["OTUS9r-reference"]), 12)
+
     def test_at_most_one_core_case_per_model(self):
         # The core tier is the everyday loop: one baseline case per model, where a
         # model is the source root its run file comes from.
