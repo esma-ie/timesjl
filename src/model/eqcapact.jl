@@ -217,6 +217,12 @@ or LO).
          (VAR_NCAP(R,V,P)\$T(V) + NCAP_PASTI(R,V,P)\$PASTYEAR(V)))\$PRC_VINT(R,P)
       ) * POWER(G_YRFR(R,S), 1-1\$RP_STG(R,P));
 
+The SOW tags (sow_tags.jl): the row is `%EQ%%1_CAPACT(... %SWT%)` (L22); the
+activity terms are `%VAR%_ACT(... %SOW%)` (L25, L28; VAR_STS is the macro of
+coef_ext.vda L31, `%var%_udp(... %sow%)`); the capacity terms are
+`%VARM%_NCAP(R,MODLYEAR,P %SWS%)` (L37) and `%VARV%_NCAP(R,V,P %SWS%)` (L45),
+with %RCAPSBM% and %RCAPSUB% (`%VART%_SCAP`, prepret.dsc L87-88).
+
 GAMS: eqcapact.mod L22-52, v4.9.7 (the VALIDATE branch L34/L39-40 and
 VAR_STS with %STSFLX% are not translated; see the file header).
 """
@@ -256,7 +262,7 @@ function eq_capact!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, 
     # One capacity term, coefficient `c`: VAR_NCAP(r,k,p)$T(k) + NCAP_PASTI(r,k,p)$PASTYEAR(k)
     # with %RCAPSBM% (L37) or %RCAPSUB% (L45), k controlled in both (prepret.jl).
     function add_capacity!(rhs, r, k, t, p, c::GNum)
-        (k,) in milestonyr && addterm!(rhs, c, tm, "VAR_NCAP", r, k, p)
+        (k,) in milestonyr && addterm!(rhs, c, tm, "VAR_NCAP", r, k, p; at=k)   # %VARM% (L37), %VARV% (L45): k is MODLYEAR or V
         (k,) in pastyear && addconst!(rhs, c * gv(ncap_pasti, (r, k, p)))
         rcapsub!(rhs, c, tm, r, k, t, p)
         return rhs
@@ -270,39 +276,42 @@ function eq_capact!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, 
             (r, p, s, bd) in rps_caflac && continue
             stg = (r, p) in rp_stg
 
-            lhs = JuMP.AffExpr(0.0)
-            if !stg
-                # L25: activity in the timeslices at or below S.
-                for (_, _, ts) in get(ts_of_rp, (r, p), NTuple{3,String}[])
-                    (r, s, ts) in ts_map || continue
-                    addterm!(lhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, ts)
+            for sow in sw_rows(tm, t)   # %SWT% (L22)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                if !stg
+                    # L25: activity in the timeslices at or below S.
+                    for (_, _, ts) in get(ts_of_rp, (r, p), NTuple{3,String}[])
+                        (r, s, ts) in ts_map || continue
+                        addterm!(lhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, ts)
+                    end
+                else
+                    # L28: storage level times the storage cycles of TS within S.
+                    cyc = gexp(gv(prc_sc, (r, p)))
+                    for (_, _, ts) in get(ts_of_rp, (r, p), NTuple{3,String}[])
+                        haskey(rs_fr, (r, ts, s)) || continue
+                        k = gv(rs_fr, (r, ts, s)) * cyc / gv(rs_stgprd, (r, ts))
+                        addterm!(lhs, k, tm, "VAR_ACT", r, v, t, p, ts)
+                        (r, p, bd) in stl_bd && var_sts!(lhs, k, tm, r, v, t, p, ts, bd)   # + VAR_STS(R,V,T,P,TS,'%2')
+                    end
                 end
-            else
-                # L28: storage level times the storage cycles of TS within S.
-                cyc = gexp(gv(prc_sc, (r, p)))
-                for (_, _, ts) in get(ts_of_rp, (r, p), NTuple{3,String}[])
-                    haskey(rs_fr, (r, ts, s)) || continue
-                    k = gv(rs_fr, (r, ts, s)) * cyc / gv(rs_stgprd, (r, ts))
-                    addterm!(lhs, k, tm, "VAR_ACT", r, v, t, p, ts)
-                    (r, p, bd) in stl_bd && var_sts!(lhs, k, tm, r, v, t, p, ts, bd)   # + VAR_STS(R,V,T,P,TS,'%2')
-                end
-            end
 
-            # RHS, L32-50, times POWER(G_YRFR(R,S),1-1$RP_STG(R,P)).
-            capact = gv(prc_capact, (r, p))
-            yrfr = gpower(gv(g_yrfr, (r, s)), stg ? 0 : 1)
-            rhs = JuMP.AffExpr(0.0)
-            if !((r, p) in prc_vint)
-                for k in get(k_of_rtp, (r, t, p), String[])
-                    c = gv(coef_cpt, (r, k, t, p)) * gv(coef_af, (r, k, t, p, s, bd)) * capact * yrfr
-                    add_capacity!(rhs, r, k, t, p, c)
+                # RHS, L32-50, times POWER(G_YRFR(R,S),1-1$RP_STG(R,P)).
+                capact = gv(prc_capact, (r, p))
+                yrfr = gpower(gv(g_yrfr, (r, s)), stg ? 0 : 1)
+                rhs = JuMP.AffExpr(0.0)
+                if !((r, p) in prc_vint)
+                    for k in get(k_of_rtp, (r, t, p), String[])
+                        c = gv(coef_cpt, (r, k, t, p)) * gv(coef_af, (r, k, t, p, s, bd)) * capact * yrfr
+                        add_capacity!(rhs, r, k, t, p, c)
+                    end
+                else
+                    c = gv(coef_af, (r, v, t, p, s, bd)) * gv(coef_cpt, (r, v, t, p)) * capact * yrfr
+                    add_capacity!(rhs, r, v, t, p, c)
                 end
-            else
-                c = gv(coef_af, (r, v, t, p, s, bd)) * gv(coef_cpt, (r, v, t, p)) * capact * yrfr
-                add_capacity!(rhs, r, v, t, p, c)
-            end
 
-            gconstraint!(tm, name, (r, v, t, p, s), eqtype, lhs, rhs) === nothing || (n += 1)
+                gconstraint!(tm, eqtag(tm, name), swt(tm, (r, v, t, p, s), t), eqtype, lhs, rhs) === nothing || (n += 1)
+            end
         end
     end
     return n
