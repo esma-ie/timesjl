@@ -408,20 +408,20 @@ end
 "VAR_IRE(R,V,T,P,C,S,IE), or VAR_ACT*PRC_ACTFLO for a process with RPC_AIRE, times `k`."
 function gg_ire!(expr, x, tm, k::GNum, r, v, t, p, c, s, ie)
     if (r, p, c) in x.aire
-        addterm!(expr, k * gv(x.actflo, (r, v, p, c)), tm, "VAR_ACT", r, v, t, p, s)
+        addterm!(expr, k * gv(x.actflo, (r, v, p, c)), tm, "VAR_ACT", r, v, t, p, s; tagged=false)
     else
-        addterm!(expr, k, tm, "VAR_IRE", r, v, t, p, c, s, ie)
+        addterm!(expr, k, tm, "VAR_IRE", r, v, t, p, c, s, ie; tagged=false)
     end
 end
 
 "VAR_GG_PRIO(r,t,p,c,s): VAR_GG_PR(r,t,c,s) + VAR_GG_PADD(r,t,p,c,s)\$GG_GAMMA(r,t,p,c) (gasgrids.vda L146), times `k`."
 function gg_prio!(expr, x, tm, k::GNum, r, t, p, c, s)
-    addterm!(expr, k, tm, "VAR_GG_PR", r, t, c, s)
-    haskey(x.gamma.values, (r, t, p, c)) && addterm!(expr, k, tm, "VAR_GG_PADD", r, t, p, c, s)
+    addterm!(expr, k, tm, "VAR_GG_PR", r, t, c, s; tagged=false)
+    haskey(x.gamma.values, (r, t, p, c)) && addterm!(expr, k, tm, "VAR_GG_PADD", r, t, p, c, s; tagged=false)
 end
 
 "VAR_GG_PRU(r,t,p,c,s): VAR_GG_PDIF(r,t,p,c,r,'ACT',s) (gasgrids.vda L144), times `k`."
-gg_pru!(expr, tm, k::GNum, r, t, p, c, s) = addterm!(expr, k, tm, "VAR_GG_PDIF", r, t, p, c, r, "ACT", s)
+gg_pru!(expr, tm, k::GNum, r, t, p, c, s) = addterm!(expr, k, tm, "VAR_GG_PDIF", r, t, p, c, r, "ACT", s; tagged=false)
 
 """
 VAR_GG_WSLAC(r,t,p,c,reg,com,s) (gasgrids.vda L148), times `k`:
@@ -432,8 +432,8 @@ GG_M1 is 0 in the LP formulation, so GG_M1->0 holds.
 """
 function gg_wslac!(expr, x, tm, k::GNum, r, t, p, c, reg, com, s)
     haskey(x.kgf.values, (r, t, p, c)) || return expr
-    addterm!(expr, k, tm, "VAR_GG_PDIF", r, t, p, "ACT", r, c, s)
-    (reg, p, com, r, c) in x.wink && addterm!(expr, k * (GNum(8.0) / GNum(11.0)), tm, "VAR_GG_PDIF", reg, t, p, "ACT", reg, com, s)
+    addterm!(expr, k, tm, "VAR_GG_PDIF", r, t, p, "ACT", r, c, s; tagged=false)
+    (reg, p, com, r, c) in x.wink && addterm!(expr, k * (GNum(8.0) / GNum(11.0)), tm, "VAR_GG_PDIF", reg, t, p, "ACT", reg, com, s; tagged=false)
     return expr
 end
 
@@ -443,10 +443,10 @@ The flow-direction term of VAR_GG_Y2 and VAR_GG_PDMAX (gasgrids.vda L145, L150),
     (VAR_GG_Y(R,T,P,C,S)\$GG_TOP(R,C,REG,COM,P) + (1-VAR_GG_Y(REG,T,P,COM,S))\$GG_TOP(REG,COM,R,C,P))
 """
 function gg_y2!(expr, x, tm, k::GNum, r, t, p, c, reg, com, s)
-    (r, c, reg, com, p) in x.top && addterm!(expr, k, tm, "VAR_GG_Y", r, t, p, c, s)
+    (r, c, reg, com, p) in x.top && addterm!(expr, k, tm, "VAR_GG_Y", r, t, p, c, s; tagged=false)
     if (reg, com, r, c, p) in x.top
         addconst!(expr, k)
-        addterm!(expr, -k, tm, "VAR_GG_Y", reg, t, p, com, s)
+        addterm!(expr, -k, tm, "VAR_GG_Y", reg, t, p, com, s; tagged=false)
     end
     return expr
 end
@@ -498,6 +498,11 @@ EQ_GG_MBND with VAR_GG_Y, the second term of VAR_GG_WSLAC) came with M1.3 change
 EQ_GG_WEYMTX needs GG_WTX, from pressure points given as data (refused). Returns the number of
 rows.
 
+The SOW tags (sow_tags.jl): gasgrids.vda has none. Its rows are plain
+`EQ_GG_x(...)` and its variables literal `VAR_GG_x`, `VAR_IRE` and `VAR_ACT`
+(L154-204), so every term here is `tagged=false` and the rows keep their names
+and indices in a stochastic run too.
+
 GAMS: gasgrids.vda L141-205, v4.9.7.
 """
 function eq_gg!(tm)
@@ -518,7 +523,7 @@ function eq_gg!(tm)
             off(r, t, s) && continue     # RTS(S) of every EQ_GG_* row, L154-200 (M1.3 change 67)
             # EQ_GG_MFLO
             lhs = JuMP.AffExpr(0.0)
-            addterm!(lhs, gv(x.dens, (r, c)) * gv(x.g_yrfr, (r, s)) * GNum(8760.0), tm, "VAR_GG_MF", r, t, p, c, reg, com, s)
+            addterm!(lhs, gv(x.dens, (r, c)) * gv(x.g_yrfr, (r, s)) * GNum(8760.0), tm, "VAR_GG_MF", r, t, p, c, reg, com, s; tagged=false)
             rhs = JuMP.AffExpr(0.0)
             intra = (r, p, r) in x.edge
             for (_, c1, _, c2, _) in get(x.top_ire, (r, reg, p), NTuple{5,String}[])
@@ -532,14 +537,14 @@ function eq_gg!(tm)
             # EQ_GG_GAMA
             g = gv(x.gamma, (r, t, p, c))
             if !iszero(g)
-                lhs = JuMP.AffExpr(0.0); addterm!(lhs, one, tm, "VAR_GG_PADD", r, t, p, c, s)
-                rhs = JuMP.AffExpr(0.0); addterm!(rhs, g - one, tm, "VAR_GG_PR", r, t, c, s)
+                lhs = JuMP.AffExpr(0.0); addterm!(lhs, one, tm, "VAR_GG_PADD", r, t, p, c, s; tagged=false)
+                rhs = JuMP.AffExpr(0.0); addterm!(rhs, g - one, tm, "VAR_GG_PR", r, t, c, s; tagged=false)
                 put("EQ_GG_GAMA", (r, t, p, c, reg, com, s), "L", lhs, rhs)
             end
             # EQ_GG_MBND: L = 'N' (IPS; GG_M1->GG_WTX is true with GG_M1 0), and L = 'FX' (BD) for a two-way link
             twoway = (reg, p, com, r, c) in x.link
             for l in (twoway ? ("N", "FX") : ("N",))
-                lhs = JuMP.AffExpr(0.0); addterm!(lhs, one, tm, "VAR_GG_MF", r, t, p, c, reg, com, s)
+                lhs = JuMP.AffExpr(0.0); addterm!(lhs, one, tm, "VAR_GG_MF", r, t, p, c, reg, com, s; tagged=false)
                 (reg, p, com, r, c) in x.wink && gg_wslac!(lhs, x, tm, one, r, t, p, c, reg, com, s)
                 rhs = JuMP.AffExpr(0.0)
                 mm = gv(x.mm, (r, t, p, c))
@@ -547,9 +552,9 @@ function eq_gg!(tm)
                     if (r, c, reg, com, p) in x.top
                         gg_prio!(rhs, x, tm, mm, r, t, p, c, s)
                         gg_prio!(rhs, x, tm, -mm, reg, t, p, com, s)
-                        twoway && addterm!(rhs, mm, tm, "VAR_GG_PDIF", reg, t, p, com, r, c, s)
+                        twoway && addterm!(rhs, mm, tm, "VAR_GG_PDIF", reg, t, p, com, r, c, s; tagged=false)
                     end
-                    (reg, com, r, c, p) in x.top && addterm!(rhs, mm, tm, "VAR_GG_PDIF", r, t, p, c, reg, com, s)
+                    (reg, com, r, c, p) in x.top && addterm!(rhs, mm, tm, "VAR_GG_PDIF", r, t, p, c, reg, com, s; tagged=false)
                 else
                     # (GG_KGF(r,t,p,c)*SQRT(VAR_GG_PDMAX(R,T,P,C,REG,COM,S,2)))$BD(L): the macro closes the SQRT
                     #   before its direction term, which multiplies it
@@ -563,7 +568,7 @@ function eq_gg!(tm)
                 for j in x.gg_vi
                     lhs = JuMP.AffExpr(0.0)
                     if !(j in x.gg_o)                                         # $(NOT GG_O(J))
-                        addterm!(lhs, one, tm, "VAR_GG_PDIF", r, t, p, c, reg, com, s)
+                        addterm!(lhs, one, tm, "VAR_GG_PDIF", r, t, p, c, reg, com, s; tagged=false)
                         gg_y2!(lhs, x, tm, -gg_pdmax(x, r, t, p, c, reg, com, 1), r, t, p, c, reg, com, s)
                     elseif x.jord[j] == 1                                     # ORD(J)=1
                         gg_pru!(lhs, tm, one, r, t, p, c, s)
@@ -579,26 +584,26 @@ function eq_gg!(tm)
                 end
                 # EQ_GG_PDIF2(GG_RTPC(R,T,P,C),REG,COM,S)$(GG_LINK(REG,P,COM,R,C)$PRC_TS(R,P,S)$GG_TOP(R,C,REG,COM,P))
                 if (r, c, reg, com, p) in x.top
-                    lhs = JuMP.AffExpr(0.0); addterm!(lhs, one, tm, "VAR_GG_PDIF", reg, t, p, com, r, c, s)
+                    lhs = JuMP.AffExpr(0.0); addterm!(lhs, one, tm, "VAR_GG_PDIF", reg, t, p, com, r, c, s; tagged=false)
                     rhs = JuMP.AffExpr(0.0)
                     gg_prio!(rhs, x, tm, one, reg, t, p, com, s)
                     gg_prio!(rhs, x, tm, -one, r, t, p, c, s)
-                    addterm!(rhs, one, tm, "VAR_GG_PDIF", r, t, p, c, reg, com, s)
+                    addterm!(rhs, one, tm, "VAR_GG_PDIF", r, t, p, c, reg, com, s; tagged=false)
                     put("EQ_GG_PDIF2", (r, t, p, c, reg, com, s), "E", lhs, rhs)
                 end
             end
             # EQ_GG_HLIP and EQ_GG_HLEV
             if (r, c, reg, com) in x.arc
-                hl = JuMP.AffExpr(0.0); addterm!(hl, one, tm, "VAR_GG_PADD", r, t, p, "ACT", s)
+                hl = JuMP.AffExpr(0.0); addterm!(hl, one, tm, "VAR_GG_PADD", r, t, p, "ACT", s; tagged=false)
                 if haskey(x.klp.values, (r, t, p, c))
                     rhs = JuMP.AffExpr(0.0)
-                    addterm!(rhs, one, tm, "VAR_GG_PADD", r, t, p, "ACT", get(x.prev, (r, s), s))
+                    addterm!(rhs, one, tm, "VAR_GG_PADD", r, t, p, "ACT", get(x.prev, (r, s), s); tagged=false)
                     for (rr, cc) in ((r, c), (reg, com)), (_, _, _, ie) in get(x.ire_of, (rr, p, cc), no4), k in get(x.vint_of, (rr, t, p), no4)
                         gg_ire!(rhs, x, tm, GNum(ie == "EXP" ? 1.0 : -1.0), rr, k[2], t, p, cc, s, ie)
                     end
                     put("EQ_GG_HLIP", (r, t, p, c, reg, com, s), "E", hl, rhs)
                 end
-                hl = JuMP.AffExpr(0.0); addterm!(hl, one, tm, "VAR_GG_PADD", r, t, p, "ACT", s)
+                hl = JuMP.AffExpr(0.0); addterm!(hl, one, tm, "VAR_GG_PADD", r, t, p, "ACT", s; tagged=false)
                 f = gv(x.klp, (r, t, p, c)) * gv(x.dens, (r, c)) * gv(x.stgprd, (r, s))
                 rhs = JuMP.AffExpr(0.0)
                 gg_prio!(rhs, x, tm, f / GNum(2.0), r, t, p, c, s)
@@ -609,8 +614,8 @@ function eq_gg!(tm)
             # EQ_GG_STEP(GG_RTPC(R,T,P,C),RC(REG,COM),S)$((GG_M1->0)$PRC_TS(R,P,S)$GG_WINK(REG,P,COM,R,C)$GG_WINK(R,P,C,RC)$GG_ARC(R,C,RC))
             if (reg, p, com, r, c) in x.wink && (r, c, reg, com) in x.arc
                 lhs = JuMP.AffExpr(0.0)
-                foreach(j -> addterm!(lhs, one, tm, "VAR_GG_STEP", r, t, p, c, s, j), get(x.ppw_j, (r, t, p, c, reg, com), String[]))
-                foreach(j -> addterm!(lhs, one, tm, "VAR_GG_STEP", reg, t, p, com, s, j), get(x.ppw_j, (reg, t, p, com, r, c), String[]))
+                foreach(j -> addterm!(lhs, one, tm, "VAR_GG_STEP", r, t, p, c, s, j; tagged=false), get(x.ppw_j, (r, t, p, c, reg, com), String[]))
+                foreach(j -> addterm!(lhs, one, tm, "VAR_GG_STEP", reg, t, p, com, s, j; tagged=false), get(x.ppw_j, (reg, t, p, com, r, c), String[]))
                 put("EQ_GG_STEP", (r, t, p, c, reg, com, s), "L", lhs, JuMP.AffExpr(1.0))
             end
             # EQ_GG_PRIO, L in LNX = (N, FX)
@@ -618,11 +623,11 @@ function eq_gg!(tm)
                 for l in ("N", "FX")
                     lhs = JuMP.AffExpr(0.0)
                     gg_pru!(lhs, tm, one, r, t, p, c, s); gg_pru!(lhs, tm, one, reg, t, p, com, s)
-                    l == "N" ? addterm!(lhs, -one, tm, "VAR_GG_PDIF", reg, t, p, com, r, c, s) :
-                               addterm!(lhs, -one, tm, "VAR_GG_PDIF", r, t, p, c, reg, com, s)
+                    l == "N" ? addterm!(lhs, -one, tm, "VAR_GG_PDIF", reg, t, p, com, r, c, s; tagged=false) :
+                               addterm!(lhs, -one, tm, "VAR_GG_PDIF", r, t, p, c, reg, com, s; tagged=false)
                     rhs = JuMP.AffExpr(0.0)
                     l == "N" ? gg_prio!(rhs, x, tm, one, r, t, p, c, s) : gg_prio!(rhs, x, tm, one, reg, t, p, com, s)
-                    addterm!(rhs, -one, tm, "VAR_GG_PDIF", r, t, p, c, r, c, s)
+                    addterm!(rhs, -one, tm, "VAR_GG_PDIF", r, t, p, c, r, c, s; tagged=false)
                     put("EQ_GG_PRIO", (r, t, p, c, reg, com, l, s), "E", lhs, rhs)
                 end
             end
@@ -631,17 +636,17 @@ function eq_gg!(tm)
             for l in ("LO", "FX", "UP")
                 lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
                 if l == "FX"                                                   # LNX(L)
-                    addterm!(lhs, one, tm, "VAR_GG_MF", r, t, p, c, reg, com, s)
+                    addterm!(lhs, one, tm, "VAR_GG_MF", r, t, p, c, reg, com, s; tagged=false)
                     gg_wslac!(lhs, x, tm, one, r, t, p, c, reg, com, s)
                     kg = gv(x.kgf, (r, t, p, c))
-                    foreach(j -> addterm!(rhs, kg * gv(x.ppw, (r, t, p, c, reg, com, j)), tm, "VAR_GG_STEP", r, t, p, c, s, j), js)
+                    foreach(j -> addterm!(rhs, kg * gv(x.ppw, (r, t, p, c, reg, com, j)), tm, "VAR_GG_STEP", r, t, p, c, s, j; tagged=false), js)
                 elseif l == "LO"                                               # BDNEQ, BDLOX
-                    addterm!(lhs, one, tm, "VAR_GG_PDIF", r, t, p, c, reg, com, s)
+                    addterm!(lhs, one, tm, "VAR_GG_PDIF", r, t, p, c, reg, com, s; tagged=false)
                     foreach(j -> addterm!(rhs, gv(x.ppm, (r, t, p, c, r, c, j)) - gv(x.ppm, (r, t, p, c, reg, com, j)),
-                                          tm, "VAR_GG_STEP", r, t, p, c, s, j), js)
+                                          tm, "VAR_GG_STEP", r, t, p, c, s, j; tagged=false), js)
                 else                                                           # BDNEQ, BDUPX
                     gg_pru!(lhs, tm, one, r, t, p, c, s)
-                    foreach(j -> addterm!(rhs, gv(x.ppm, (r, t, p, c, r, c, j)), tm, "VAR_GG_STEP", r, t, p, c, s, j), js)
+                    foreach(j -> addterm!(rhs, gv(x.ppm, (r, t, p, c, r, c, j)), tm, "VAR_GG_STEP", r, t, p, c, s, j; tagged=false), js)
                 end
                 put("EQ_GG_WEYMST", (r, t, p, c, reg, com, l, s), "E", lhs, rhs)
             end
