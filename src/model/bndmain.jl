@@ -45,7 +45,7 @@
 # STAGES, dynamic timeslices (dynslite.vda, NORTS), VDA trade bounds
 # (bnd_ire.vda, PREMILE), DSC semi-continuous capacity (mod_vars.dsc L18-19,
 # NCAP_SEMI), damage (eqdamage.mod L141-156), MACRO/MICRO demand
-# (pp_micro.mod L88-91, RD_NLP), POWERFLO (powerflo.vda), load points
+# (pp_micro.mod L86-90, RD_NLP), POWERFLO (powerflo.vda), load points
 # (spoint.mod L83-85) and the %R_T% variant of REG_FIXT (maindrv.mod L41).
 #
 # A stepped run (TIMESTEP; maindrv.mod L38-40): %R_T% is 'R,SUBT(T)', so the
@@ -119,7 +119,7 @@ function bounds_unported(tm::TimesModel)
         throw(UnportedError("bounds under RPOINT (spoint.mod)"))
     notempty_set("PREMILE", 1) && throw(UnportedError("bnd_ire.vda (VDA fixed trade before PREMILE)"))
     notempty_par("NCAP_SEMI", 3) && throw(UnportedError("mod_vars.dsc L18-19 (semi-continuous capacity)"))
-    notempty_par("RD_NLP", 2) && throw(UnportedError("pp_micro.mod L88-91 (VAR_DEM bounds)"))
+    notempty_par("RD_NLP", 2) && throw(UnportedError("pp_micro.mod L86-90 (VAR_DEM bounds)"))
     notempty_par("REG_FIXT", 1) && throw(UnportedError("%R_T% = RT_PP(R,T) (REG_FIXT, maindrv.mod L41)"))
     return nothing
 end
