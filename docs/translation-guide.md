@@ -18,6 +18,10 @@ optimisation. Performance work happens in Phase 2.
   `v4.9.7`: v4.9.8 shifts lines only in ppmain.mod (+2 after L542),
   pp_qack.mod (+1 at L199-200, +7 after L201) and pp_chp.mod (+1 after
   L13).
+  The scripts that run slices of ppmain.mod with GAMS (`scripts/ppmain_replay.jl`,
+  `scripts/m13_replay.jl`, `scripts/make_*_unit.jl`) cut it by v4.9.7 line
+  numbers: run them with the v4.9.7 clone (`timesjl-sources\TIMES_model`)
+  until the ppmain.mod pull request moves them.
 - Equation reference: jamesglynn/TIMES_Documentation, Part II.
 - If the GAMS code and the documentation disagree, the GAMS code is
   authoritative. Log every discrepancy in `docs/discrepancies.md`.

@@ -192,6 +192,22 @@ def check_source(source: Path, allow_other: bool) -> dict:
     return {"version": version, "commit": commit, "path": str(source)}
 
 
+def check_same_times(out: Path, source_info: dict, label: str) -> None:
+    """A reference holds the dumps of one TIMES source. Refuse to extend (--only) or replace
+    (a full run) a reference made with another TIMES version or commit: the v4.9.7 references
+    stay as they are, and v4.9.8 ones go to another --out folder (harness 0.3.8, 26 Nov 2026)."""
+    mf = out / "manifest.json"
+    if not mf.exists():
+        return
+    old = json.loads(mf.read_text()).get("times") or {}
+    oc, nc = (old.get("commit") or "")[:7], (source_info.get("commit") or "")[:7]
+    same = (oc == nc) if (oc and nc) else (old.get("version") == source_info.get("version"))
+    if not same:
+        raise SystemExit(f"{label}: the reference in {out} was made with TIMES v{old.get('version')} @ "
+                         f"{oc or '?'}; this source is v{source_info.get('version')} @ {nc or '?'}. "
+                         f"Write it to another --out folder, or delete that folder first.")
+
+
 def gams_version_line(lst: Path) -> str:
     if not lst.exists():
         return ""
@@ -293,6 +309,7 @@ def make_one(args, suite, model_name: str, variant: str, source_info: dict):
     out = args.out / model_name / variant
     only = parse_only(getattr(args, "only", None))     # empty: the full reference
     old_manifest = None
+    check_same_times(out, source_info, f"{model_name}/{variant}")
     if only and (out / "manifest.json").exists():
         old_manifest = json.loads((out / "manifest.json").read_text())
     elif out.exists():
@@ -337,14 +354,6 @@ def make_one(args, suite, model_name: str, variant: str, source_info: dict):
         if old_manifest.get("overrides", overrides) != overrides:
             raise SystemExit(f"{model_name}/{variant}: the reference was made with overrides "
                              f"{old_manifest.get('overrides')}, not {overrides}; rerun it in full")
-        # A reference holds the dumps of one TIMES source: never add runs of another version
-        # (the v4.9.7 references stay as they are; v4.9.8 ones go to another --out folder).
-        old_commit = (old_manifest.get("times") or {}).get("commit") or ""
-        new_commit = source_info.get("commit") or ""
-        if old_commit and new_commit and old_commit[:7] != new_commit[:7]:
-            raise SystemExit(f"{model_name}/{variant}: the reference was made with TIMES "
-                             f"v{old_manifest['times'].get('version')} @ {old_commit[:7]}, this source is "
-                             f"v{source_info.get('version')} @ {new_commit[:7]}; write it to another --out folder")
 
     # Run 1..n: solves. The first solver also writes the ppm/coef dumps.
     for k, solver in enumerate([] if only else args.solvers):

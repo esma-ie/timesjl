@@ -3,8 +3,10 @@
 # The DD reader compiles TIMES's own files (src/dd/compile.jl), so it needs the TIMES v4.9.8 source
 # at run time. It is a pinned download (Artifacts.toml): the GitHub archive of
 # etsap-TIMES/TIMES_model @ 7064680, fetched on first use and checked by hash (James, 10 Nov 2026;
-# d9a6a25, v4.9.7, until 26 Nov 2026). The files the reader compiles are the same in both, but for
-# initsys.mod L1 ($TITLE): demo12 and every crafted case compile to the same input dump.
+# d9a6a25, v4.9.7, until 26 Nov 2026). The reader compiles maindrv.mod and every file it includes
+# (full=true), so it reads v4.9.8's changed files too; their changes are executable statements,
+# comments and initsys.mod's $TITLE, and demo12 and every crafted case compile to the same input
+# dump with either source (26 Nov 2026).
 
 "Full commit of `etsap-TIMES/TIMES_model` in Artifacts.toml (the `TIMES_GAMS_COMMIT` baseline)."
 const TIMES_MODEL_COMMIT = "7064680430fe6e42ef3a29a1472ad54a0f8ee68f"

@@ -108,8 +108,11 @@ Any mismatch blocks the merge. Justified differences go in
 - Single model by hand, from the repo root: pass a `--root` for every
   placeholder that model uses (see `reference/suite.toml`), e.g.
   `python reference/python/make_reference.py --out ../timesjl-reference --solvers CPLEX,HIGHS --root times_source=../TIMES_model --root times_demo=../TIMES_Demo --model TIMES_Demo-demo12`
-  (clone `etsap-TIMES/TIMES_model` and `etsap-TIMES/TIMES_Demo`)
+  (clone `etsap-TIMES/TIMES_model` at the baseline commit and `etsap-TIMES/TIMES_Demo`)
   then `julia --project=. scripts/m10_gate.jl ../timesjl-reference/<model>/<variant>`.
+  On James's workstation `timesjl-reference` and `timesjl-sources\TIMES_model`
+  hold v4.9.7; v4.9.8 references go to their own folder, made with
+  `timesjl-sources\TIMES_model-v4.9.8` (make_reference.py refuses to mix them).
 - Local run limits on James's Windows workstation (James, 29 Oct 2026), for
   load management and comparable, fair resources across tests: every TIMES
   run (GAMS or TIMES.jl, any solver) uses at most 12 threads, and at most 4
