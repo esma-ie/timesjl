@@ -29,7 +29,7 @@ solves it with the open-source solver HiGHS. No GAMS, no solver licence, no cost
 | | |
 | --- | --- |
 | Julia | 1.10 or later, installed with juliaup (below) |
-| Internet | on the first run, to download the Julia packages, the TIMES v4.9.7 source and the demo models from GitHub |
+| Internet | on the first run, to download the Julia packages, the TIMES v4.9.8 source and the demo models from GitHub |
 | Operating system | Windows or Linux (tested); macOS should work (every dependency, HiGHS included, has macOS builds) but is not tested yet |
 
 You do not need GAMS, CPLEX, Python, VEDA or Git. HiGHS and every other
@@ -68,7 +68,7 @@ using TIMES
 r = run_model(joinpath(TIMES.times_demo_dir(), "demo12.run"); out="demo12_out")
 ```
 
-The first call downloads the TIMES v4.9.7 source and the TIMES_Demo models
+The first call downloads the TIMES v4.9.8 source and the TIMES_Demo models
 (each checked by hash; see [Baseline](#baseline)). `run_model` prints one
 line per step:
 
@@ -149,7 +149,7 @@ check a model against GAMS, see [`reference/README.md`](reference/README.md).
 - **Updating.** `using Pkg; Pkg.update("TIMES")` fetches the latest `main`.
 - **Offline or behind a firewall.** Clone
   [etsap-TIMES/TIMES_model](https://github.com/etsap-TIMES/TIMES_model) at
-  commit `d9a6a25` and set `TIMESJL_TIMES_SOURCE` to that folder, so the
+  commit `7064680` and set `TIMESJL_TIMES_SOURCE` to that folder, so the
   TIMES source is not downloaded. Julia uses the usual `HTTPS_PROXY`
   setting for its downloads.
 
@@ -184,7 +184,7 @@ stacks, when every step must reproduce the original's results?
 
 - **Who writes the code.** Almost all of the code, tests and documentation
   here are written by AI models (Anthropic's Claude), working from the TIMES
-  v4.9.7 GAMS source under the rules in [`CONTRIBUTING.md`](CONTRIBUTING.md)
+  v4.9.8 GAMS source under the rules in [`CONTRIBUTING.md`](CONTRIBUTING.md)
   and [`CLAUDE.md`](CLAUDE.md). Commits authored by `Claude` are AI-written,
   and the model used is named in each commit's `Co-Authored-By` line. A human
   directs the work, reviews every pull request and decides what is merged.
@@ -214,7 +214,7 @@ stacks, when every step must reproduce the original's results?
 
 | Item | Value |
 | --- | --- |
-| TIMES GAMS source | v4.9.7, [etsap-TIMES/TIMES_model](https://github.com/etsap-TIMES/TIMES_model) @ `d9a6a25` |
+| TIMES GAMS source | v4.9.8, [etsap-TIMES/TIMES_model](https://github.com/etsap-TIMES/TIMES_model) @ `7064680` (v4.9.7 @ `d9a6a25` until 26 Nov 2026; the v4.9.8 diff is being translated) |
 | Equation reference | TIMES Documentation, Part II |
 | Julia | 1.10 or later (developed on 1.13) |
 
@@ -222,7 +222,7 @@ The GAMS code is authoritative. Where it disagrees with the documentation the
 difference is logged in [`docs/discrepancies.md`](docs/discrepancies.md).
 
 To read a model's `.run` and `.dd` files, TIMES.jl compiles TIMES's own files as GAMS
-does, so it needs the v4.9.7 source. It downloads that commit's GitHub archive on
+does, so it needs the v4.9.8 source. It downloads that commit's GitHub archive on
 first use and checks it by hash ([`Artifacts.toml`](Artifacts.toml),
 `TIMES.times_source()`). To use a local clone of the same commit instead, set
 `TIMESJL_TIMES_SOURCE`. The open demo models (`etsap-TIMES/TIMES_Demo` @ 962db86,

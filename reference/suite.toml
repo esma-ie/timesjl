@@ -2,7 +2,8 @@
 # --root name=path on the make_reference.py command line.
 #
 # Root         Repository                                   Commit used
-# times_source github.com/etsap-TIMES/TIMES_model           d9a6a25 (v4.9.7, required)
+# times_source github.com/etsap-TIMES/TIMES_model           7064680 (v4.9.8, required; d9a6a25,
+#                                                            v4.9.7, until 26 Nov 2026)
 # times_demo   github.com/etsap-TIMES/TIMES_Demo            962db86
 # jrc_eu_times local folder timesjl-sources/JRC-EU-TIMES    not a git repository; pinned by
 #              (DD and run files extracted from the dumps    SHA-256 of dd/manifest.json:

@@ -6,8 +6,25 @@ parity. Phase 1 is a faithful translation: no reformulation and no
 optimisation. Performance work happens in Phase 2.
 
 ## Source of truth
-- Baseline: TIMES v4.9.7, etsap-TIMES/TIMES_model @ d9a6a25. Pin this commit
-  and never translate from any other version.
+- Baseline: TIMES v4.9.8, etsap-TIMES/TIMES_model @ 7064680 (from 26 Nov
+  2026; v4.9.7 @ d9a6a25 until the M1.3 gate). Pin this commit and never
+  translate from any other version. The move, in order: the re-pin (the
+  source download, the harness, the baseline in the documents); the GAMS
+  references rerun with v4.9.8 into their own folder; the diff translated
+  one GAMS file per pull request, each checked against those references:
+  ppmain.mod, pp_qack.mod, pp_chp.mod, coef_obj.mod and prepret.dsc
+  (initsys.mod changes only its title). `TIMES_GAMS_VERSION` stays 4.9.7
+  (the QA log's title, which GAMS takes from initsys.mod L1, and the CI
+  fixtures are v4.9.7) until the last diff pull request, which moves it
+  with the fixtures. Until a file's pull request merges,
+  TIMES.jl follows v4.9.7 there, and the citations of the code stay
+  `v4.9.7`: v4.9.8 shifts lines only in ppmain.mod (+2 after L542),
+  pp_qack.mod (+1 at L199-200, +7 after L201) and pp_chp.mod (+1 after
+  L13).
+  The scripts that run slices of ppmain.mod with GAMS (`scripts/ppmain_replay.jl`,
+  `scripts/m13_replay.jl`, `scripts/make_*_unit.jl`) cut it by v4.9.7 line
+  numbers: run them with the v4.9.7 clone (`timesjl-sources\TIMES_model`)
+  until the ppmain.mod pull request moves them.
 - Equation reference: jamesglynn/TIMES_Documentation, Part II.
 - If the GAMS code and the documentation disagree, the GAMS code is
   authoritative. Log every discrepancy in `docs/discrepancies.md`.
