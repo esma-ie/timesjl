@@ -101,7 +101,7 @@ function qack_checks!(tm, part::Symbol)
         if timesed_on(tm)                                                               # L95-110: IF(%TIMESED%, ...)
             T = [k[1] for k in Sk("MILESTONYR", 1)]
             # L97-98: FORWARD(T)=YES; $IF DEFINED SOL_BPRICE OPTION FORWARD < SOL_BPRICE (DEFINED: the base prices
-            #   were loaded, readbprice.mod L14)
+            #   were loaded, readbprice.mod L21)
             sb = P("SOL_BPRICE", 5)
             fwd = gmembers(tm, "FORWARD", 1)
             foreach(t -> push!(fwd, (t,)), T)
