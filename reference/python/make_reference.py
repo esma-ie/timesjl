@@ -1,6 +1,6 @@
 """Produce GAMS reference dumps for TIMES.jl parity tests.
 
-For each test model and variant this runs TIMES v4.9.7 under GAMS twice and
+For each test model and variant this runs TIMES v4.9.8 under GAMS twice and
 writes, under ``<out>/<model>/<variant>/``:
 
     manifest.json   provenance, settings, timings, solve information
@@ -71,9 +71,9 @@ from runfile import build_dd_run, patch_run  # noqa: E402
 from runlimits import RunSlot, default_max_parallel, default_slot_dir, default_threads, limit_threads  # noqa: E402
 from gdx2arrow import convert_gdx, gams_system_directory  # noqa: E402
 
-HARNESS_VERSION = "0.3.7"  # 0.3.7 (20 Nov 2026): $ONIMPLICITASSIGN in the pre-solve run of a SENSIS run (runfile.py); 0.3.6 (19 Nov 2026): work_files, files copied into the work folder (the base prices of elastic demand); 0.3.5 (15 Nov 2026): parse_solves reads MODEL STATISTICS with "N projected"; 0.3.4 (14 Nov 2026): steps/<k>/ of stepped runs (www_in.cgi, www_out.cgi); 0.3.3 (14 Nov 2026): equ/, the checkpoint of stepped runs (equ_ext.tjlref); 0.3.2 (9 Nov 2026): raw/tjl_presolve_qa_check.log; 0.3.1 (5 Nov 2026): --only convert; 0.3.0 (31 Oct 2026): M1.3 checkpoints, --only presolve; 0.2.4 (29 Oct 2026): run limits (threads, parallel runs); 0.2.3: model overrides; 0.2.2: raw/tjl_<run>.run; 0.2.1: extra_dd_dirs; 0.2.0: pre-solve run
-EXPECTED_TIMES_VERSION = "4.9.7"
-EXPECTED_TIMES_COMMIT = "d9a6a25"
+HARNESS_VERSION = "0.3.8"  # 0.3.8 (26 Nov 2026): TIMES v4.9.8; a --only pass refuses a reference made with another TIMES commit; 0.3.7 (20 Nov 2026): $ONIMPLICITASSIGN in the pre-solve run of a SENSIS run (runfile.py); 0.3.6 (19 Nov 2026): work_files, files copied into the work folder (the base prices of elastic demand); 0.3.5 (15 Nov 2026): parse_solves reads MODEL STATISTICS with "N projected"; 0.3.4 (14 Nov 2026): steps/<k>/ of stepped runs (www_in.cgi, www_out.cgi); 0.3.3 (14 Nov 2026): equ/, the checkpoint of stepped runs (equ_ext.tjlref); 0.3.2 (9 Nov 2026): raw/tjl_presolve_qa_check.log; 0.3.1 (5 Nov 2026): --only convert; 0.3.0 (31 Oct 2026): M1.3 checkpoints, --only presolve; 0.2.4 (29 Oct 2026): run limits (threads, parallel runs); 0.2.3: model overrides; 0.2.2: raw/tjl_<run>.run; 0.2.1: extra_dd_dirs; 0.2.0: pre-solve run
+EXPECTED_TIMES_VERSION = "4.9.8"  # v4.9.7 @ d9a6a25 until 26 Nov 2026 (CLAUDE.md, Baseline)
+EXPECTED_TIMES_COMMIT = "7064680"
 VARIANTS = {"reduce_off": {"REDUCE": "NO"}, "as_run": {}}
 # M1.3 checkpoints in execution order (tjl_<name>.gdx -> <name>/), dumped by the
 # pre-solve run with --TJL_CHECKPOINTS=1: runfile.py INPUT_BLOCK (before
@@ -337,6 +337,14 @@ def make_one(args, suite, model_name: str, variant: str, source_info: dict):
         if old_manifest.get("overrides", overrides) != overrides:
             raise SystemExit(f"{model_name}/{variant}: the reference was made with overrides "
                              f"{old_manifest.get('overrides')}, not {overrides}; rerun it in full")
+        # A reference holds the dumps of one TIMES source: never add runs of another version
+        # (the v4.9.7 references stay as they are; v4.9.8 ones go to another --out folder).
+        old_commit = (old_manifest.get("times") or {}).get("commit") or ""
+        new_commit = source_info.get("commit") or ""
+        if old_commit and new_commit and old_commit[:7] != new_commit[:7]:
+            raise SystemExit(f"{model_name}/{variant}: the reference was made with TIMES "
+                             f"v{old_manifest['times'].get('version')} @ {old_commit[:7]}, this source is "
+                             f"v{source_info.get('version')} @ {new_commit[:7]}; write it to another --out folder")
 
     # Run 1..n: solves. The first solver also writes the ppm/coef dumps.
     for k, solver in enumerate([] if only else args.solvers):
@@ -569,7 +577,7 @@ def main(argv=None):
     roots = {k: str(Path(v).resolve()) for k, v in roots.items()}
     suite = load_suite(a.suite, roots)
     if "times_source" not in suite["roots"]:
-        raise SystemExit("pass --root times_source=<path to TIMES_model @ d9a6a25>")
+        raise SystemExit("pass --root times_source=<path to TIMES_model @ 7064680>")
     source_info = check_source(Path(suite["roots"]["times_source"]), a.allow_other_version)
     models = a.model or [n for n, m in suite["models"].items() if a.tier is None or m.get("tier", "core") == a.tier]
     variants = a.variant or list(VARIANTS)

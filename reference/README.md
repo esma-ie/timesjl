@@ -1,7 +1,7 @@
 # GAMS reference harness
 
 Produces the GAMS reference dumps that every TIMES.jl parity test compares
-against. It runs the unmodified TIMES v4.9.7 source under GAMS; it never edits
+against. It runs the unmodified TIMES v4.9.8 source under GAMS; it never edits
 TIMES files.
 
 ## What it produces
@@ -137,7 +137,7 @@ rerun in full.
 
 | Root | Repository | Commit |
 | --- | --- | --- |
-| `times_source` | `etsap-TIMES/TIMES_model` | `d9a6a25` (v4.9.7; checked) |
+| `times_source` | `etsap-TIMES/TIMES_model` | `7064680` (v4.9.8; checked; `run_references.ps1` clones it as `TIMES_model-v4.9.8`. References made before 26 Nov 2026 are v4.9.7, `d9a6a25`, and a `--only` pass never adds v4.9.8 runs to them) |
 | `times_demo` | `etsap-TIMES/TIMES_Demo` | `962db86` |
 | `times_nz_dd` | local folder `timesjl-sources/TIMES-NZ` (DD export of EECA main 8165e1d, TIMES-NZ 3.0.8) | pinned by the SHA-256 of `dd/manifest.json` |
 | `otus` | `esma-ie/OTUS9r` (`dd/`: the Veda DD export of 28 Oct 2026; EPA original at tag `epaus9rt-v20.4`) | `598e179` |

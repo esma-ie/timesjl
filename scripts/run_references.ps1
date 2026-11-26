@@ -132,7 +132,9 @@ $Suite = Join-Path (Join-Path $Repo 'reference') 'suite.toml'
 
 # Repositories and pinned commits; must match the header of reference/suite.toml.
 $Sources = @(
-    @{ Root = 'times_source'; Dir = 'TIMES_model';          Commit = 'd9a6a25'; Url = 'https://github.com/etsap-TIMES/TIMES_model.git' },
+    # TIMES v4.9.8 (26 Nov 2026) in its own clone: TIMES_model stays at d9a6a25 (v4.9.7) for the
+    # references made with it, which make_reference.py never mixes with v4.9.8 runs.
+    @{ Root = 'times_source'; Dir = 'TIMES_model-v4.9.8';   Commit = '7064680'; Url = 'https://github.com/etsap-TIMES/TIMES_model.git' },
     @{ Root = 'times_demo';   Dir = 'TIMES_Demo';           Commit = '962db86'; Url = 'https://github.com/etsap-TIMES/TIMES_Demo.git' },
     # OTUS9r, public from 30 Oct 2026: dd/ added in 68588a6 (EPA original at tag epaus9rt-v20.4)
     @{ Root = 'otus';         Dir = 'OTUS9r';               Commit = '598e179'; Url = 'https://github.com/esma-ie/OTUS9r.git' },

@@ -2,7 +2,7 @@
 
 ## Phase 1 rules (faithful translation)
 
-1. Translate only from TIMES v4.9.7, `etsap-TIMES/TIMES_model` @ `d9a6a25`.
+1. Translate only from TIMES v4.9.8, `etsap-TIMES/TIMES_model` @ `7064680`.
 2. Match GAMS results exactly. Do not reformulate, aggregate, substitute or
    tune for performance; that belongs to Phase 2.
 3. Keep the GAMS names for sets, parameters, variables and equations

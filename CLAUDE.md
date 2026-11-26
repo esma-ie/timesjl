@@ -5,11 +5,14 @@ Julia/JuMP. These rules apply in every Claude session (claude.ai Project,
 Claude Code in the terminal, VS Code, or the desktop app).
 
 ## Baseline
-- Translate only from TIMES v4.9.7, `etsap-TIMES/TIMES_model` @ `d9a6a25`
-  (Antti Lehtilä's v4.9.7 commit; James's fork holds the same commit).
-  Version (James, 11 Nov 2026): v4.9.7 until the M1.3 gate closes; then the
-  whole baseline moves to v4.9.8 (`7064680`): the source download re-pinned,
-  its diff translated, every GAMS reference rerun with it.
+- Translate only from TIMES v4.9.8, `etsap-TIMES/TIMES_model` @ `7064680`
+  (Antti Lehtilä's v4.9.8 commit; James's fork holds the same commit).
+  Version (James, 11 Nov 2026): v4.9.7 (`d9a6a25`) until the M1.3 gate
+  closed (25 Nov 2026); then the whole baseline moves to v4.9.8: the source
+  download re-pinned (26 Nov 2026), its diff translated, every GAMS reference
+  rerun with it. Until the diff is translated, the v4.9.8 changes to
+  ppmain.mod, pp_qack.mod, pp_chp.mod, coef_obj.mod and prepret.dsc are not
+  (docs/translation-guide.md, "Source of truth").
 - Equation reference: `jamesglynn/TIMES_Documentation`, Part II.
 - If the GAMS code and the documentation disagree, follow the GAMS code and
   log the discrepancy in `docs/discrepancies.md`.
