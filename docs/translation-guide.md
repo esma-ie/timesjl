@@ -125,6 +125,10 @@ Any mismatch blocks the merge. Record known, justified differences in
   Phase 1 still times each stage against GAMS and logs it, and M1.7's
   baseline benchmarks record where TIMES.jl stands, with no target to
   meet. Correctness comes first; speed is Phase 2's job.
+  James, 26 Nov 2026: MACRO with MSA and the mixed-integer and nonlinear
+  features move after M1.7, with the other extensions; a Phase 2 speed
+  lane (LP-identical changes only) runs alongside the rest of Phase 1
+  (docs/decisions.md; CLAUDE.md, How to work).
 
 ## Status
 Entries up to 22 Oct 2026 summarise the pre-publication work. Until 27 Oct

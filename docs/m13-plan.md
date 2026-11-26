@@ -215,8 +215,8 @@ Each stays refused with its message until its change merges, and each is transla
 | --- | --- | --- |
 | Damage costs from a base run (DAM_ELAST 'N': DAM_COEF and DAM_TVOC written by wrtbprice.mod L21-25, read by readbprice.mod L24-25 and L37-45) | James, 22 Nov 2026 (#192 d1) | change 69b: carried in the base-price Arrow folder, with a crafted case and its GAMS reference; about half a day |
 | The stochastic extension (%STAGES%, SPINES, SENSIS): changes 71-76 | James, 22 Nov 2026 (the chat; #192 d2) | after the move to v4.9.8; change 73 first ("Plan: the stochastic extension") |
-| DSC lumpy investments and block retirements, the discrete unit commitment, ETL, TIMES-Micro (RD_NLP, MICRO), %DAMAGE% NLP, gas-grid pressure points and %SOLMIP%, the PTDF candidate lines | James, 17 Nov 2026 (q5) | mixed-integer or nonlinear |
-| MACRO (with MSA) | James, 17 Nov 2026 | checked with IPOPT on both sides |
+
+James, 26 Nov 2026 ("ok, move them"; docs/decisions.md): the mixed-integer and nonlinear features (DSC lumpy investments and block retirements, the discrete unit commitment, ETL, TIMES-Micro (RD_NLP, MICRO), %DAMAGE% NLP, gas-grid pressure points and %SOLMIP%, the PTDF candidate lines; on this list since 17 Nov 2026, q5) and MACRO with MSA (17 Nov 2026; to be checked with IPOPT on both sides) left this list for after M1.7. They stay refused with their message.
 
 The ECB, CLI, ABS, MCA and IER extensions come after M1.7 (15 Nov 2026), and the M1.5 and M1.6 items stay in their milestones; neither is on this list.
 

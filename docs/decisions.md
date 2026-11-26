@@ -72,6 +72,7 @@ On 26 Nov 2026 James answered #196 decisions 2 and 7 (in the log of that pull re
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 26 Nov 2026 | q1 to q4 of the 26 Nov status report, and the working rules for parallel agents. One PR a day: "one PR per day is a rule change, I agree, proceed with the change to 1 pr per day at 9am"; each GAMS file or family stays one commit with its own parity check inside it (q4: "Agreed, sesible and a good log of changes"). "from next monday the check in time and PR review will be 7am central european time. until saturday next": 30 Nov to 5 Dec 2026. Parallel agent lanes managed by one Claude session, which alone writes this file ("Agreed, that would be sensible and acclerating"); rule-level decisions keep needing James's explicit yes ("agreed"). q1: "Target is Phase 2 complete with 5x GAMS and while aiming for 5x faster than GAMS", by Wednesday 2 Dec 2026. q2 (MACRO and the mixed-integer and nonlinear features after M1.7): "ok, move them". q3 (a Phase 2 speed lane before M1.7, LP-identical changes only): "ok, agreed, proceed". Rule-level (CLAUDE.md, the plan's order, the milestone order); explicit yes. James also noted that the workstation's reference runs are now managed with a thread pool (6 or 12 threads kept for barrier by model size and class, one thread for every other step), set up in another session; CLAUDE.md's run limits are not changed here. q5 (#201 d2, d4, d7, d8) is not answered: James asked for the questions again; they stay on the Open decisions list. | `CLAUDE.md` (Phase 1 rules; How to work); `docs/m13-plan.md` ("After the gate, before Phase 1 closes"); `docs/translation-guide.md` (Decisions); `docs/phase2-notes.md` (P2-6); this log |
 | 26 Nov 2026 | The MPS files sent to NVIDIA for cuOpt on B200 GPUs (five open runs, `as_run`, from 11 Nov 2026) are logged: "sure log the nvidia transfer also". Until 23 Nov 2026, 10:00, the transfer was kept out of this repository (James, 15 Nov 2026), so this is its first record here. NVIDIA's results are not published until publishing is agreed with NVIDIA; they stay on James's workstation. | `scripts/cuopt/README.md` (MPS files shared with NVIDIA); this log |
 | 26 Nov 2026 | q1, q2 and q3 of the 26 Nov chat, on adding OTAI to the suite from DD scenarios that stay off GitHub until the paper and the model are published: "q1, CC-BY-SA4.0; q2 yes, agreed; Q3 - neutral names is fine". q1: the unpublished DD scenarios carry the licence of `esma-ie/otai`, CC-BY-SA-4.0 (seen at the repository, 26 Nov 2026). q2: until publication OTAI is handled like TIM (a local source, `redistribute = "private"`, the local board only, nothing derived from it in this repository, its issues or its pull requests); on publication it becomes `public`, pinned to the repository commit. q3: the suite entries go into `reference/suite.toml` now, with neutral scenario names. Rule-level (licences and test data); explicit yes. The entries are added when the DD files are in `timesjl-sources/OTAI`. James also noted these runs as a Phase 2 case for faster model generation and writing to memory (P2-7). | `CLAUDE.md` (Test-model licences); `docs/test-models.md`; `docs/phase2-notes.md` (P2-7); this log |
 | 25 Nov 2026 | "#195 d5 (a) and d6 yes". Issue #116 (open) loses GAMS's figures and TIMES.jl's ratios to them: its title and body were edited the same day, keeping TIMES.jl's own times; GitHub keeps the edit history visible, and the text before the edit is in `esma-ie/timesjl-unpublished` (`issue-116.md`). The nightly keeps `esma-ie/timesjl-unpublished` current: `build_dashboard_local.ps1` (section 1e; a local script beside the repository, not in it) copies the CPLEX timings of the open models into its clone as `run-timing-restricted.json` and commits and pushes them when they changed, after checking that the repository is private and that every run is of a model with `redistribute = "public"`. First push 25 Nov 2026. Rule-level (what the public repository shows); explicit yes. | #195 (d5, d6); issue #116; `esma-ie/timesjl-unpublished` (README) |
@@ -167,14 +168,22 @@ On 26 Nov 2026 James answered #196 decisions 2 and 7 (in the log of that pull re
 
 ## Log by pull request
 
-### #205 cuOpt lane: log the MPS files shared with NVIDIA for B200 runs (open)
+### #206 Working rules: one PR a day, parallel lanes, Phase 1 scope, the Phase 2 lane (open)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | NVIDIA's B200 results kept off this repository, its issues and pull requests until publishing is agreed with NVIDIA; held on James's workstation only. | Recommended: yes. Built in. | open |
-| 2 | The public record names NVIDIA, not the person James dealt with there. | Recommended: yes. Built in. | open |
+| 1 | The wording in `CLAUDE.md` of the rules James decided in the chat on 26 Nov 2026 (above, Decisions in the chat). Rule-level. | James's explicit yes in the chat; the wording is built in. | James, 26 Nov 2026 (the chat); wording pending merge |
+| 2 | The 16:30 check-in is dropped for PR review: the rule names only the morning check-in. | Recommended: yes. Built in. | open |
+| 3 | The thread pool of the reference runs is not written into `CLAUDE.md`'s run limits in this pull request; left to the session that built it. | Recommended: yes. Nothing built in. | open |
 
-### #204 Dashboard: cuOpt on the GPU back on the public board (#102 d1, from 23 Nov) (open; d1 to d3 answered)
+### #205 cuOpt lane: log the MPS files shared with NVIDIA for B200 runs (merged 26 Nov 2026)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | NVIDIA's B200 results kept off this repository, its issues and pull requests until publishing is agreed with NVIDIA; held on James's workstation only. | Recommended: yes. Built in. | accepted by merge, 26 Nov 2026 |
+| 2 | The public record names NVIDIA, not the person James dealt with there. | Recommended: yes. Built in. | accepted by merge, 26 Nov 2026 |
+
+### #204 Dashboard: cuOpt on the GPU back on the public board (#102 d1, from 23 Nov) (merged 26 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
@@ -182,16 +191,16 @@ On 26 Nov 2026 James answered #196 decisions 2 and 7 (in the log of that pull re
 | 2 | The slide rebuilt rather than restored from 920b00b: 66 cases in three columns, and every statement computed from the embedded reports (920b00b's notes no longer held), the GitHub T4 line excepted. | Yes | James, 26 Nov 2026, in the chat: "d2 yes" |
 | 3 | The local board keeps its own cuOpt slide beside the public one (the public blocks' ids keep them apart), instead of stepping aside as planned on 12 Nov. | Yes | James, 26 Nov 2026, in the chat: "d3 yes" |
 
-### #201 v4.9.8 re-pin: the TIMES source download, the harness and the baseline (open)
+### #201 v4.9.8 re-pin: the TIMES source download, the harness and the baseline (merged 26 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | The order of the move: the re-pin, then James's rerun of the GAMS references with v4.9.8 into their own folder, then the diff translated one GAMS file per pull request against those references (the earlier order had the rerun last). | Recommended: yes. Built in (docs/translation-guide.md, "Source of truth"). | pending merge |
+| 1 | The order of the move: the re-pin, then James's rerun of the GAMS references with v4.9.8 into their own folder, then the diff translated one GAMS file per pull request against those references (the earlier order had the rerun last). | Recommended: yes. Built in (docs/translation-guide.md, "Source of truth"). | accepted by merge, 26 Nov 2026 |
 | 2 | Citations stay `v4.9.7` until each diff pull request moves its file's; a last scripted pull request relabels the unchanged files. Rule-level (CLAUDE.md). | Recommended: yes. Not built in. | open (Open decisions) |
-| 3 | `TIMES_GAMS_VERSION` and `TIMES_GAMS_COMMIT` stay 4.9.7 @ d9a6a25 (the version the translation and the CI fixtures follow) while the download moves to v4.9.8; the last diff pull request moves them with the fixtures. Changed in this pull request after CI: with 4.9.8, the QA log's title (GAMS's %SYSTEM.TITLE%, initsys.mod L1; `qa_title`) no longer matched the v4.9.7 fixtures (six checks). | Recommended: as built. Built in. | pending merge |
+| 3 | `TIMES_GAMS_VERSION` and `TIMES_GAMS_COMMIT` stay 4.9.7 @ d9a6a25 (the version the translation and the CI fixtures follow) while the download moves to v4.9.8; the last diff pull request moves them with the fixtures. Changed in this pull request after CI: with 4.9.8, the QA log's title (GAMS's %SYSTEM.TITLE%, initsys.mod L1; `qa_title`) no longer matched the v4.9.7 fixtures (six checks). | Recommended: as built. Built in. | accepted by merge, 26 Nov 2026 |
 | 4 | Change 73: (a) finish it while the references run and merge it before the first diff pull request, or (b) park it until the diff is translated. Rule-level (the plan's order; #192 d2). | Recommended: (a). Not built in. | open (Open decisions) |
-| 5 | Two TIMES sources on the workstation: v4.9.8 cloned as `timesjl-sources\TIMES_model-v4.9.8`, `TIMES_model` kept at v4.9.7 for the references the nightly uses; make_reference.py 0.3.8 refuses to add runs to a reference made with another TIMES commit. | Recommended: yes. Built in. | pending merge |
-| 6 | Fixtures, dashboard data and the `times_version` label of `parity_report.jl` and `cuopt_layer3.jl` keep "4.9.7 @ d9a6a25" (they describe v4.9.7 GAMS runs) until the nightly moves to the v4.9.8 references. | Recommended: yes. Built in. | pending merge |
+| 5 | Two TIMES sources on the workstation: v4.9.8 cloned as `timesjl-sources\TIMES_model-v4.9.8`, `TIMES_model` kept at v4.9.7 for the references the nightly uses; make_reference.py 0.3.8 refuses to add runs to a reference made with another TIMES commit. | Recommended: yes. Built in. | accepted by merge, 26 Nov 2026 |
+| 6 | Fixtures, dashboard data and the `times_version` label of `parity_report.jl` and `cuopt_layer3.jl` keep "4.9.7 @ d9a6a25" (they describe v4.9.7 GAMS runs) until the nightly moves to the v4.9.8 references. | Recommended: yes. Built in. | accepted by merge, 26 Nov 2026 |
 | 7 | When the nightly moves to the v4.9.8 references: (a) as soon as they exist, as decided on 14 Nov 2026 (#109 d3: "the nightly runs and probes move to v4.9.8 with it"), its mismatches in the five files being the worklist of the diff pull requests (and every QA log's title, VERSION 4.9.7 against 4.9.8, until the last one); or (b) after the last diff pull request merges, the nightly staying on v4.9.7 until then. | Recommended: (a), as decided on 14 Nov. Not built in (a change to the local batch script). | open (Open decisions) |
 | 8 | The scope of the v4.9.8 rerun (CLAUDE.md: every GAMS reference): first the core tier with checkpoints and CONVERT and the crafted cases (what the diff pull requests are checked on), then the milestone tier, TIM-bau and the JRC-EU-TIMES scenarios (local) overnight or at the weekend. | Recommended: yes. Not built in (James starts the runs). | open (Open decisions) |
 
