@@ -683,7 +683,7 @@ function bnd_ucw!(bt::BoundTable, tm::TimesModel; reset::Bool=false)
     if reset                                                   # bnd_ucv.mod L24-25
         uc_r_each = gset_opt(tm.data, "UC_R_EACH", 2)
         for var in ("VAR_UC", "VAR_UCR", "VAR_UCT", "VAR_UCRT", "VAR_UCTS", "VAR_UCRTS")
-            recs = get(bt.recs, var, nothing)
+            recs = get(bt.recs, vartag(tm, var), nothing)      # %1.LO(UC_N%2%3%4%9%SWD%), %1 being %VAR%_UC.. (bnd_ucw.mod L15-20)
             recs === nothing && continue
             for (key, (lo, _)) in collect(recs)                # keys start with UC_N; then R, TT where present
                 free = var == "VAR_UCR" ? (key[2], key[1]) in uc_r_each :
