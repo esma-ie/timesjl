@@ -94,13 +94,34 @@ function _setbound!(bt::BoundTable, tm, name, key::Tuple, which::Symbol, v::GNum
     return bt
 end
 
-"`name.LO(key) = v`, `.UP`, `.FX` for `which` = :lo, :up, :fx."
-setbound!(bt::BoundTable, tm::TimesModel, name::AbstractString, key::Tuple, which::Symbol, v::GNum) =
-    _setbound!(bt, tm, name, key, which, v)
+"""
+    setbound!(bt, tm, name, key, which, v; sw=nothing) -> bt
 
-"`name.<which>(key) \$= v`: assigned only where `v` is nonzero or EPS (G10)."
-setbound_if!(bt::BoundTable, tm::TimesModel, name::AbstractString, key::Tuple, which::Symbol, v::GNum) =
-    iszero(v) ? bt : _setbound!(bt, tm, name, key, which, v)
+`name.LO(key) = v`, `.UP`, `.FX` for `which` = :lo, :up, :fx.
+
+The SOW tags (sow_tags.jl): `sw` says how the GAMS statement tags the
+variable. `nothing` is a literal `VAR_X(key)`. `:sow` is
+`%VAR%_X.LO(key %SOW%)`, which a stochastic run assigns for every SOW; a
+period `t` is the same under SW_T(T,SOW) (the local %SWT% of bndmain.mod L42,
+bnd_act.mod L18 and bnd_flo.mod L35; the SW_T loops of bnd_elas.mod L21,
+bnd_flo.mod L26 and bnd_stg.mod L20). In a deterministic run every form is
+`VAR_X(key)` (`sw_bnd`).
+
+GAMS: setglobs.gms L348; stages.stc L12; bnd_set.mod L23-25, v4.9.7.
+"""
+function setbound!(bt::BoundTable, tm::TimesModel, name::AbstractString, key::Tuple, which::Symbol, v::GNum;
+                   sw::Union{Nothing,Symbol,AbstractString}=nothing)
+    (sw === nothing || !tm.tags.stochastic) && return _setbound!(bt, tm, name, key, which, v)
+    for (vas, k) in sw_bnd(tm, name, key, sw)
+        _setbound!(bt, tm, vas, k, which, v)
+    end
+    return bt
+end
+
+"`name.<which>(key) \$= v`: assigned only where `v` is nonzero or EPS (G10). `sw`: see `setbound!`."
+setbound_if!(bt::BoundTable, tm::TimesModel, name::AbstractString, key::Tuple, which::Symbol, v::GNum;
+             sw::Union{Nothing,Symbol,AbstractString}=nothing) =
+    iszero(v) ? bt : setbound!(bt, tm, name, key, which, v; sw)
 
 const BD_WHICH = (("LO", :lo), ("UP", :up), ("FX", :fx))   # bnd_set.mod L23-25 order
 
@@ -143,6 +164,10 @@ end
     VAR_ACT.UP(...) \$= ACT_BND(R,T,P,S,'UP');  VAR_ACT.FX(RTP_VINTYR(%R_T%,T,P),S)\$(...) \$= ACT_BND(R,T,P,S,'FX');
     VAR_ACT.UP(RTP_VINTYR(R,V,T,P),S)\$(PRC_TS(R,P,S) * PRC_VINT(R,P)\$RTPS_OFF(R,T,P,S)) = EPS;
 
+The SOW tags (sow_tags.jl; `setbound!` with `sw`): each statement is
+`%VAR%_ACT.x(.. %SWD%)\$(%SWT% ..)` with %SWT% set to `SW_T(T%SWD%)\$` under
+STAGES (L18): the SOWs of period T (`sw = t`).
+
 GAMS: bnd_act.mod L13-24, v4.9.7 (%R_T% = R,T, maindrv.mod L39; R,SUBT(T) in
 a stepped run, L40: the FX statement alone).
 """
@@ -160,11 +185,11 @@ function bnd_act!(bt::BoundTable, tm::TimesModel)
             if v == t && !((r, p) in prc_vint)                                  # L20-22
                 for (bd, which) in BD_WHICH
                     (which === :fx && !((t,) in tx)) && continue                # L22: RTP_VINTYR(%R_T%,T,P)
-                    setbound_if!(bt, tm, "VAR_ACT", key, which, gv(act_bnd, (r, t, p, s, bd)))
+                    setbound_if!(bt, tm, "VAR_ACT", key, which, gv(act_bnd, (r, t, p, s, bd)); sw=t)   # %VAR%_ACT(..%SWD%)$(%SWT%..): SW_T(T,WW) (L18)
                 end
             end
             (r, p) in prc_vint && (r, t, p, s) in rtps_off &&                   # L24
-                setbound!(bt, tm, "VAR_ACT", key, :up, GEPS)
+                setbound!(bt, tm, "VAR_ACT", key, :up, GEPS; sw=t)
         end
     end
     return bt
@@ -182,6 +207,11 @@ end
 
 Under %REDUCE% YES (L34-39) the bounds of a flow that the activity replaces
 (RPC_ACT, processes without vintages) go to VAR_ACT, divided by PRC_ACTFLO.
+
+The SOW tags (sow_tags.jl; `setbound!` with `sw`): L27-29 run inside
+`LOOP(SW_T(T%SWD%),` under STAGES (L26) on `%VAR%_FLO(.. %SWD%)`, and L37-39
+write `%VAR%_ACT(R,T,T,P,S%SWT%)` with %SWT% set to `%SWD%)\$SW_T(T%SWD%`
+(L35): the SOWs of period T, each with its own bound (`sw = t`, `sw_bnd`).
 
 GAMS: bnd_flo.mod L12-39, v4.9.7. L22-23 mark FLO_BND entries under the
 '%DFLBL%' year for eqflobnd.mod and do not affect bounds (file header).
@@ -208,7 +238,7 @@ function bnd_flo!(bt::BoundTable, tm::TimesModel)
     for ((r, t, p, c, s, bd), x) in sort!(collect(flo_bnd); by=first)           # L27-29
         which = bd == "LO" ? :lo : bd == "UP" ? :up : bd == "FX" ? :fx : continue
         ((r, t, p) in vint_tt && (c,) in com && (r, t, p, c, s) in rtpcs_varf && (r, p, c) in trackpc) || continue
-        setbound!(bt, tm, "VAR_FLO", (r, t, t, p, c, s), which, x)
+        setbound!(bt, tm, "VAR_FLO", (r, t, t, p, c, s), which, x; sw=t)        # L26: LOOP(SW_T(T%SWD%), %VAR%_FLO(..%SWD%))
     end
     tm.reduce || return bt                                                      # L34: $IF NOT '%REDUCE%' == 'YES' $EXIT
     # L37-39: LOOP(RTPCS_VARF(R,T,P,C,S)$(((NOT PRC_VINT(R,P))*RPC_ACT(R,P,C))$FLO_BND(R,T,P,C,S,'LO')),
@@ -221,11 +251,12 @@ function bnd_flo!(bt::BoundTable, tm::TimesModel)
             x = get(flo_bnd, (r, t, p, c, s, bd), nothing)
             x === nothing && continue
             y = x / gv(actflo, (r, t, p, c))
-            key = (r, t, t, p, s)
-            lo, up = bounds(bt, tm, "VAR_ACT", key)
-            which === :lo && (y = gmax(GNum(lo), y))
-            which === :up && (y = gmin(GNum(up), y))
-            setbound!(bt, tm, "VAR_ACT", key, which, y)
+            # %VAR%_ACT.LO(R,T,T,P,S%SWT%) with the local %SWT% "%SWD%)$SW_T(T%SWD%" (L35): each SOW of period T
+            for (var, key) in sw_bnd(tm, "VAR_ACT", (r, t, t, p, s), t)
+                lo, up = bounds(bt, tm, var, key)
+                z = which === :lo ? gmax(GNum(lo), y) : which === :up ? gmin(GNum(up), y) : y
+                setbound!(bt, tm, var, key, which, z)
+            end
         end
     end
     return bt
@@ -254,6 +285,10 @@ parameter that EQ(l)_STGIN/STGOUT also read at the SOLVE; the pre-solve dump
 already holds the cleared values, so it is applied to a local copy here.
 %STAGES% (L20, L26) is refused with the bounds.
 
+The SOW tags (sow_tags.jl; `setbound!` with `sw`): L14 is `%VAR%_%1.LO(..
+%SWD%)`, every SOW (`sw = :sow`); L22-24 run inside `LOOP(SW_T(T%SWD%),` under
+STAGES (L20): the SOWs of period T (`sw = t`).
+
 GAMS: bnd_stg.mod L12-27 with bndmain.mod L36-37, v4.9.7.
 """
 function bnd_stg!(bt::BoundTable, tm::TimesModel, var::String, io::String, lo::GNum)
@@ -266,7 +301,7 @@ function bnd_stg!(bt::BoundTable, tm::TimesModel, var::String, io::String, lo::G
             ((r, p) in rp_sts && (v,) in v_set && (t,) in t_set) || continue
             for s in all_ts
                 (r, p, s) in rps_stg && continue
-                setbound!(bt, tm, var, (r, v, t, p, "ACT", s), :lo, lo)
+                setbound!(bt, tm, var, (r, v, t, p, "ACT", s), :lo, lo; sw=:sow)    # %VAR%_%1.LO(..%SWD%): every WW (L14)
             end
         end
     end
@@ -285,7 +320,7 @@ function bnd_stg!(bt::BoundTable, tm::TimesModel, var::String, io::String, lo::G
         for ((r, t, p, c, s, b), x) in sort!(collect(bnd); by=first)
             b == bd || continue
             ((r, t, p) in vint_tt && (r, p, c, s) in rpcs_var && (r, p) in trackp) || continue
-            setbound_if!(bt, tm, var, (r, t, t, p, c, s), which, x)
+            setbound_if!(bt, tm, var, (r, t, t, p, c, s), which, x; sw=t)           # L20: LOOP(SW_T(T%SWD%), ..)
         end
     end
     return bt
@@ -302,6 +337,11 @@ end
 
 L46 is `bnd_set.mod VAR_NCAP 'R,T,P' NCAP_BND '%R_T%,P' \$(RP(R,P))`: in a
 stepped run the bounds are taken for the periods of the step.
+
+The SOW tags (sow_tags.jl; `setbound!` with `sw`): bnd_set.mod L23-25 assign
+`%1.x(%4%SOW%)%5`, and bndmain.mod L42 sets %SWT% to `\$SW_T(T%SOW%)` under
+STAGES for %5: the SOWs of period T (`sw = t`). The uncertain bounds S_CAP_BND
+(bnd_set.mod L31-33) are change 74.
 
 GAMS: bndmain.mod L44-46 and L51-52 with bnd_set.mod L20-25, v4.9.7.
 """
@@ -320,7 +360,7 @@ function bnd_ncap_cap!(bt::BoundTable, tm::TimesModel)
     end
     for ((r, t, p, bd), x) in sort!(collect(ncap); by=first)                     # L46
         which = bd == "LO" ? :lo : bd == "UP" ? :up : bd == "FX" ? :fx : continue
-        ((t,) in tx && (r, p) in rp) && setbound_if!(bt, tm, "VAR_NCAP", (r, t, p), which, x)
+        ((t,) in tx && (r, p) in rp) && setbound_if!(bt, tm, "VAR_NCAP", (r, t, p), which, x; sw=t)   # %SWT%: $SW_T(T%SOW%) (L42)
     end
     cap = gtable(gparam(tm, "CAP_BND"))
     old = copy(cap)                                                             # L51
@@ -330,7 +370,7 @@ function bnd_ncap_cap!(bt::BoundTable, tm::TimesModel)
     end
     for ((r, t, p, bd), x) in sort!(collect(cap); by=first)                      # L52
         which = bd == "LO" ? :lo : bd == "UP" ? :up : bd == "FX" ? :fx : continue
-        ((t,) in t_set && (r, t, p) in rtp) && setbound_if!(bt, tm, "VAR_CAP", (r, t, p), which, x)
+        ((t,) in t_set && (r, t, p) in rtp) && setbound_if!(bt, tm, "VAR_CAP", (r, t, p), which, x; sw=t)
     end
     return bt
 end
@@ -344,6 +384,10 @@ end
 L57-58 are written with `RTCS_VARC(%R_T%,C,S)`: in a stepped run the bounds
 are taken for the periods of the step. L59 runs over every period.
 
+The SOW tags (sow_tags.jl; `setbound!` with `sw`): L57-58 as VAR_NCAP above
+(`sw = t`); L59 is `%VAR%_COMPRD.FX(RTCS_VARC(R,T,C,S)%SOW%)`, every SOW (`sw
+= :sow`).
+
 GAMS: bndmain.mod L57-59 with bnd_set.mod L20-25, v4.9.7.
 """
 function bnd_com!(bt::BoundTable, tm::TimesModel)
@@ -353,13 +397,13 @@ function bnd_com!(bt::BoundTable, tm::TimesModel)
         p = gparam(tm, par)
         for (r, t, c, s, bd) in sort(p.keys)
             which = bd == "LO" ? :lo : bd == "UP" ? :up : bd == "FX" ? :fx : continue
-            ((t,) in tx && (r, t, c, s) in varc) && setbound_if!(bt, tm, var, (r, t, c, s), which, gv(p, (r, t, c, s, bd)))
+            ((t,) in tx && (r, t, c, s) in varc) && setbound_if!(bt, tm, var, (r, t, c, s), which, gv(p, (r, t, c, s, bd)); sw=t)   # %SWT% (L42)
         end
     end
     rhs_comprd = gset(tm, "RHS_COMPRD")
     for (r, t, c, s, l) in gset(tm, "RCS_COMPRD")
         (l == "FX" && (t,) in t_set && (r, t, c, s) in varc && !((r, t, c, s) in rhs_comprd)) &&
-            setbound!(bt, tm, "VAR_COMPRD", (r, t, c, s), :fx, GEPS)
+            setbound!(bt, tm, "VAR_COMPRD", (r, t, c, s), :fx, GEPS; sw=:sow)   # %VAR%_COMPRD.FX(..%SOW%): every SOW (L59)
     end
     return bt
 end
@@ -553,6 +597,10 @@ An aggregate (a first index of COST_GMAP) with an upper bound is free below:
 its taxes less subsidies can be negative. The statements run in this order, so
 a lower or fixed bound overrides the -INF. L42 (`\$IFI %MACRO%==YES \$EXIT`)
 does not act: MACRO is refused.
+The SOW tags (sow_tags.jl; `setbound!` with `sw`): every statement is
+`%VAR%_X.x(.. %SOW%)`, every SOW (`sw = :sow`); S_FLO_CUM and S_COM_CUM
+(%SW1%, %SW2%: L9) are change 74.
+
 GAMS: bnd_cum.mod L23-24, L39-40 and L44-48, v4.9.7 (included with %1 =
 COM_VAR since %2 = 0, bndmain.mod L64).
 """
@@ -563,14 +611,14 @@ function bnd_cum!(bt::BoundTable, tm::TimesModel)
     for ((r, p, c, y, ll, bd), x) in sort!(collect(tab); by=first)
         (bd in ("LO", "UP") && (y,) in allyear && (ll,) in allyear) || continue
         n = get(tab, (r, p, c, y, ll, "N"), GZERO)
-        setbound!(bt, tm, "VAR_CUMFLO", (r, p, c, y, ll), bd == "LO" ? :lo : :up, x * scal * (n + 1))
+        setbound!(bt, tm, "VAR_CUMFLO", (r, p, c, y, ll), bd == "LO" ? :lo : :up, x * scal * (n + 1); sw=:sow)   # %VAR%_CUMFLO(..%SOW%)
     end
     ctab = gtable(gparam(tm, "COM_CUM"))                                        # L39-40
     cscal = GNum(1 / parse(Float64, gswitch(tm, "CUCSCAL", "1000")))
     for ((r, kind, y, ll, c, bd), x) in sort!(collect(ctab); by=first)
         (bd in ("LO", "UP") && kind in ("NET", "PRD") && (y,) in allyear && (ll,) in allyear) || continue
         n = get(ctab, (r, kind, y, ll, c, "N"), GZERO)
-        setbound!(bt, tm, "VAR_CUMCOM", (r, c, kind, y, ll), bd == "LO" ? :lo : :up, x * cscal * (n + 1))
+        setbound!(bt, tm, "VAR_CUMCOM", (r, c, kind, y, ll), bd == "LO" ? :lo : :up, x * cscal * (n + 1); sw=:sow)   # %VAR%_CUMCOM(..%SOW%)
     end
     cst = gparam_opt(tm.data, "REG_CUMCST", 6)                                  # L44-48
     isempty(cst) && return bt
@@ -579,11 +627,11 @@ function bnd_cum!(bt::BoundTable, tm::TimesModel)
     recs = [(k, gv(cst, k)) for k in cst.keys
             if (k[1],) in reg && (k[2],) in allyear && (k[3],) in allyear && (k[4],) in costagg]
     for ((r, y, ll, cat, cur, bd), _) in recs                                   # L44-45
-        (bd == "UP" && cat in aggregates) && setbound!(bt, tm, "VAR_CUMCST", (r, y, ll, cat, cur), :lo, GNum(-Inf))
+        (bd == "UP" && cat in aggregates) && setbound!(bt, tm, "VAR_CUMCST", (r, y, ll, cat, cur), :lo, GNum(-Inf); sw=:sow)
     end
     for (bd, which) in (("UP", :up), ("LO", :lo), ("FX", :fx))                  # L46, L47, L48
         for ((r, y, ll, cat, cur, b), x) in recs
-            b == bd && setbound_if!(bt, tm, "VAR_CUMCST", (r, y, ll, cat, cur), which, x)
+            b == bd && setbound_if!(bt, tm, "VAR_CUMCST", (r, y, ll, cat, cur), which, x; sw=:sow)
         end
     end
     return bt
@@ -619,6 +667,10 @@ The upper bound of every record goes to INF. The lower bound goes to -INF
 for every record of VAR_UC, VAR_UCT and VAR_UCTS (no %12), for VAR_UCR where
 UC_R_EACH(R,UC_N), and for VAR_UCRT and VAR_UCRTS where UC_T_EACH(R,UC_N,TT)
 (with the members of UC_T_SUCC, L14); elsewhere it stays.
+
+The SOW tags (sow_tags.jl; `setbound!` with `sw`): bnd_ucv.mod L29-31 assign
+`%1.x(UC_N%2%3%4%13%9%SOW%)%6`, every SOW, or the SOWs of the period for the
+families that have one (see the comment in the loop).
 
 GAMS: bnd_ucw.mod L2-12 with bnd_ucv.mod L2-18, v4.9.7 (STAGES parts refused
 with the bounds).
@@ -665,7 +717,10 @@ function bnd_ucw!(bt::BoundTable, tm::TimesModel; reset::Bool=false)
                 else
                     (r,) in reg && (t === nothing ? on(r, n) : on_t(r, n, t))
                 end
-                ok && setbound_if!(bt, tm, var, key, which, gv(p, k))
+                # %1.LO(UC_N%2%3%4%13%9%SOW%)%6 (bnd_ucv.mod L29-31): every SOW, and for the families with a period
+                # the SOWs of SW_T(T,SOW) (%1 of bnd_ucw.mod, the %SWT% of bndmain.mod L42 and L69). The shift of
+                # the period by SUC_L (bnd_ucw.mod L12, %13) and S_UC_RHS (bnd_ucv.mod L50-52) are change 74.
+                ok && setbound_if!(bt, tm, var, key, which, gv(p, k); sw=(t === nothing ? :sow : t))
             end
         end
     end
@@ -680,6 +735,9 @@ end
     VAR_OBJ.UP(R,OBV(UC_N),CUR) \$= UC_RHS(UC_N,'UP');
     (the same three with UC_RHSR(R,UC_N,...))
 
+The SOW tags (sow_tags.jl; `setbound!` with `sw`): every statement is
+`%VAR%_OBJ.x(R,OBV(UC_N),CUR %SOW%)`, every SOW (`sw = :sow`).
+
 GAMS: bndmain.mod L74-79, v4.9.7 (L73 clears UC_TS_SUM, which no bound uses).
 """
 function bnd_obj!(bt::BoundTable, tm::TimesModel)
@@ -690,15 +748,15 @@ function bnd_obj!(bt::BoundTable, tm::TimesModel)
         (o,) in uc_n || continue
         for r in regs, cur in curs
             key = (r, o, cur)
-            haskey(uc_rhs, (o, "N")) && setbound!(bt, tm, "VAR_OBJ", key, :lo, GNum(-Inf))
-            setbound_if!(bt, tm, "VAR_OBJ", key, :lo, gv(uc_rhs, (o, "LO")))
-            setbound_if!(bt, tm, "VAR_OBJ", key, :up, gv(uc_rhs, (o, "UP")))
+            haskey(uc_rhs, (o, "N")) && setbound!(bt, tm, "VAR_OBJ", key, :lo, GNum(-Inf); sw=:sow)
+            setbound_if!(bt, tm, "VAR_OBJ", key, :lo, gv(uc_rhs, (o, "LO")); sw=:sow)
+            setbound_if!(bt, tm, "VAR_OBJ", key, :up, gv(uc_rhs, (o, "UP")); sw=:sow)
         end
         for r in regs, cur in curs
             key = (r, o, cur)
-            haskey(uc_rhsr, (r, o, "N")) && setbound!(bt, tm, "VAR_OBJ", key, :lo, GNum(-Inf))
-            setbound_if!(bt, tm, "VAR_OBJ", key, :lo, gv(uc_rhsr, (r, o, "LO")))
-            setbound_if!(bt, tm, "VAR_OBJ", key, :up, gv(uc_rhsr, (r, o, "UP")))
+            haskey(uc_rhsr, (r, o, "N")) && setbound!(bt, tm, "VAR_OBJ", key, :lo, GNum(-Inf); sw=:sow)
+            setbound_if!(bt, tm, "VAR_OBJ", key, :lo, gv(uc_rhsr, (r, o, "LO")); sw=:sow)
+            setbound_if!(bt, tm, "VAR_OBJ", key, :up, gv(uc_rhsr, (r, o, "UP")); sw=:sow)
         end
     end
     return bt
