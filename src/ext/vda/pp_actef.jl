@@ -39,6 +39,10 @@ Generate every EQE_ACTEFF row. Returns the number of rows.
       SUM(RP_PL(R,P,L('FX')),ACT_LOSPL(R,V,P,L) *
         SUM(PRC_TS(R,P,TS)\$RS_FR(R,S,TS),VAR_UPS(R,V,T,P,TS,L)*RS_FR(R,S,TS)));
 
+The SOW tags (sow_tags.jl): the row is `%EQ%E_ACTEFF(... %SWT%)` (L56); every
+term is `%VAR%_X(... %SOW%)` (L60-80). The shape factor %SHFF%S(.. %SOW%) of
+L52 is the data of change 74.
+
 GAMS: pp_actef.vda L50-80, v4.9.7.
 """
 function eq_acteff!(tm::TimesModel)
@@ -87,43 +91,46 @@ function eq_acteff!(tm::TimesModel)
         end
         shp1 = (1 + gif(gv(rtp_ffcx, (r, v, t, p, cg, "ACT")), (r, p) in prc_vint)) *
                (1 + gv(rtp_ffcs, (r, v, p, cg, "ACT")))
-        lhs = JuMP.AffExpr(0.0)
-        for (_, _, c) in get(rpc_ace_of_rp, (r, p), no3)
-            (r, cg, c) in com_gmap || continue
-            for (_, _, ts) in get(tsmap_of_rs, (r, s), no3)
-                (r, t, p, c, ts) in rtpcs_varf || continue
-                addterm!(lhs, aeff((r, v, p, c, ts)) * grp * shp1, tm, "VAR_FLO", r, v, t, p, c, ts)
-            end
-        end
-        # RHS, L66-76.
-        rhs = JuMP.AffExpr(0.0)
-        pace = (r, p, cg) in rpg_pace
-        pgflo, pgact = (r, p) in rp_pgflo, (r, p) in rp_pgact
-        for (_, _, ts) in get(ts_of_rp, (r, p), no3)
-            haskey(rs_fr, (r, s, ts)) || continue
-            fr = gv(rs_fr, (r, s, ts))
-            if !pace
-                pgflo || addterm!(rhs, fr, tm, "VAR_ACT", r, v, t, p, ts)
-                pgflo || continue
-            end
-            for (_, _, c) in get(pg_of_rp, (r, p), no3)
-                w = fr * (pace ? GNum(1.0) / aeff((r, v, p, c, ts)) : GNum(1.0)) * (1 + gv(rtcs_fr, (r, t, c, s, ts)))
-                if pgact
-                    addterm!(rhs, w, tm, "VAR_ACT", r, v, t, p, ts)
-                else
-                    addterm!(rhs, w * (GNum(1.0) / gv(prc_actflo, (r, v, p, c))), tm, "VAR_FLO", r, v, t, p, c, ts)
+        for sow in sw_rows(tm, t)   # %SWT% (pp_actef.vda L56)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            for (_, _, c) in get(rpc_ace_of_rp, (r, p), no3)
+                (r, cg, c) in com_gmap || continue
+                for (_, _, ts) in get(tsmap_of_rs, (r, s), no3)
+                    (r, t, p, c, ts) in rtpcs_varf || continue
+                    addterm!(lhs, aeff((r, v, p, c, ts)) * grp * shp1, tm, "VAR_FLO", r, v, t, p, c, ts)
                 end
             end
-        end
-        # Partial loads, L78-80.
-        if (r, p, "FX") in rp_pl
-            lp = gv(act_lospl, (r, v, p, "FX"))
+            # RHS, L66-76.
+            rhs = JuMP.AffExpr(0.0)
+            pace = (r, p, cg) in rpg_pace
+            pgflo, pgact = (r, p) in rp_pgflo, (r, p) in rp_pgact
             for (_, _, ts) in get(ts_of_rp, (r, p), no3)
                 haskey(rs_fr, (r, s, ts)) || continue
-                addterm!(rhs, lp * gv(rs_fr, (r, s, ts)), tm, "VAR_UPS", r, v, t, p, ts, "FX")
+                fr = gv(rs_fr, (r, s, ts))
+                if !pace
+                    pgflo || addterm!(rhs, fr, tm, "VAR_ACT", r, v, t, p, ts)
+                    pgflo || continue
+                end
+                for (_, _, c) in get(pg_of_rp, (r, p), no3)
+                    w = fr * (pace ? GNum(1.0) / aeff((r, v, p, c, ts)) : GNum(1.0)) * (1 + gv(rtcs_fr, (r, t, c, s, ts)))
+                    if pgact
+                        addterm!(rhs, w, tm, "VAR_ACT", r, v, t, p, ts)
+                    else
+                        addterm!(rhs, w * (GNum(1.0) / gv(prc_actflo, (r, v, p, c))), tm, "VAR_FLO", r, v, t, p, c, ts)
+                    end
+                end
             end
+            # Partial loads, L78-80.
+            if (r, p, "FX") in rp_pl
+                lp = gv(act_lospl, (r, v, p, "FX"))
+                for (_, _, ts) in get(ts_of_rp, (r, p), no3)
+                    haskey(rs_fr, (r, s, ts)) || continue
+                    addterm!(rhs, lp * gv(rs_fr, (r, s, ts)), tm, "VAR_UPS", r, v, t, p, ts, "FX")
+                end
+            end
+            gconstraint!(tm, eqtag(tm, "EQE_ACTEFF"), swt(tm, (r, v, t, p, cg, io, s), t), "E", lhs, rhs) === nothing || (n += 1)
         end
-        gconstraint!(tm, "EQE_ACTEFF", (r, v, t, p, cg, io, s), "E", lhs, rhs) === nothing || (n += 1)
     end
     return n
 end

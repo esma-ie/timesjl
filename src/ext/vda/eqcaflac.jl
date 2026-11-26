@@ -89,6 +89,9 @@ with `f(K)` the rest of the coefficient (COEF_AF(R,K,T,P,S,%2) times
 PRC_CAPACT and G_YRFR for EQ(l)_CAFLAC, NCAP_AFC(R,V,P,CG,S) times PRC_CAPACT
 and G_YRFR for EQL_CAPFLO). %UPSCAP0% is added by `upscap0!`.
 
+The SOW tags (sow_tags.jl): `%VARM%_NCAP(R,K,P%SWS%)` with MODLYEAR(K) (`at =
+k`), and %RCAPSBM% (`rcapsub!`).
+
 GAMS: eqcaflac.vda L31-32 and L56-57, v4.9.7.
 """
 function caflac_capacity!(rhs::JuMP.AffExpr, tm::TimesModel, r, v, t, p, f)
@@ -98,7 +101,7 @@ function caflac_capacity!(rhs::JuMP.AffExpr, tm::TimesModel, r, v, t, p, f)
     for (_, _, _, k) in get(kmap, (r, v, p), NTuple{4,String}[])
         (k,) in modlyear || continue                                # MODLYEAR(K)
         c = gv(coef_vnt, (r, t, p, k)) * f(k)
-        (k,) in milestonyr && addterm!(rhs, c, tm, "VAR_NCAP", r, k, p)
+        (k,) in milestonyr && addterm!(rhs, c, tm, "VAR_NCAP", r, k, p; at=k)   # %VARM%_NCAP(R,K,P%SWS%) (L32, L57)
         (k,) in pastyear && addconst!(rhs, c * gv(ncap_pasti, (r, k, p)))
         rcapsub!(rhs, c, tm, r, k, t, p)                        # %RCAPSBM%, MODLYEAR = K (G48; prepret.jl)
     end
@@ -165,6 +168,11 @@ RPG_AFCX(R,P,C,'EXP') marks a stored commodity with an output side
 (ppm_ext.vda L137), whose charging flow is then multiplied by own/type
 NCAP_AFCS, or by 0 when the type has none.
 
+The SOW tags (sow_tags.jl): the row is `%EQ%%1_CAFLAC(... %SWT%)` (L15); the
+flows are `%VAR%_X(... %SOW%)` (L21-25), the capacity
+`%VARM%_NCAP(R,K,P%SWS%)` with %RCAPSBM% (L32, `caflac_capacity!`) and
+%UPSCAP0% the `%VAR%_UPS(.. %SOW%)` of coef_ext.vda L30.
+
 GAMS: eqcaflac.vda L15-35, v4.9.7.
 """
 function eq_caflac!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, rps_caflac::GamsSet{4})
@@ -196,61 +204,64 @@ function eq_caflac!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, 
         for (_, _, _, s, _) in get(s_of_rtpbd, (r, t, p, bd), no5)
             (r, p, s, bd) in rps_caflac || continue
             std = (r, p) in rp_std
-            lhs = JuMP.AffExpr(0.0)
-            for (_, _, c) in get(pg_of_rp, (r, p), no3)
-                afcs_c = (r, v, p, c, s)
-                for (_, cg, _) in get(tmap_of_rc, (r, c), no3)
-                    (cg,) in com_type || continue                   # COM_TMAP(R,COM_TYPE(CG),C)
-                    afcs_cg = (r, v, p, cg, s)
-                    divisor = haskey(ncap_afcs, afcs_c) ? gv(ncap_afcs, afcs_c) :
-                              (haskey(ncap_afcs, afcs_cg) ? gv(ncap_afcs, afcs_cg) : GNum(1.0))
-                    base = (GNum(1.0) / abs(gv(prc_actflo, (r, v, p, c)))) / divisor
-                    # Storage (L22-24): only where C or its type has an NCAP_AFCS.
-                    stg = !std && (r, p, c) in rpc_stg && !iszero(gv(ncap_afcs, afcs_c) + gv(ncap_afcs, afcs_cg))
-                    sin_f = GNum(1.0)                                # PROD(RPG_AFCX(R,P,C,IE)$NCAP_AFCS(C), ...)
-                    if stg && haskey(ncap_afcs, afcs_c)
-                        for _ in get(afcx_of_rpc, (r, p, c), no4)
-                            sin_f = sin_f * (haskey(ncap_afcs, afcs_cg) ? gv(ncap_afcs, afcs_c) / gv(ncap_afcs, afcs_cg) : GZERO)
-                        end
-                    end
-                    for (_, _, _, ts) in get(ts_of_rpc, (r, p, c), no4)
-                        haskey(rs_fr, (r, s, ts)) || continue
-                        w = base * gv(rs_fr, (r, s, ts))
-                        if std
-                            addterm!(lhs, w, tm, "VAR_FLO", r, v, t, p, c, ts)
-                            continue
-                        end
-                        if stg
-                            for io in io_set
-                                (r, p, c, io) in top || continue
-                                if (io,) in ips
-                                    addterm!(lhs, w * sin_f, tm, "VAR_SIN", r, v, t, p, c, ts)
-                                else
-                                    addterm!(lhs, w * (gv(stg_eff, (r, v, p)) * (1 + gv(rtcs_fr, (r, t, c, s, ts)))),
-                                             tm, "VAR_SOUT", r, v, t, p, c, ts)
-                                end
+            for sow in sw_rows(tm, t)   # %SWT% (eqcaflac.vda L15)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                for (_, _, c) in get(pg_of_rp, (r, p), no3)
+                    afcs_c = (r, v, p, c, s)
+                    for (_, cg, _) in get(tmap_of_rc, (r, c), no3)
+                        (cg,) in com_type || continue                   # COM_TMAP(R,COM_TYPE(CG),C)
+                        afcs_cg = (r, v, p, cg, s)
+                        divisor = haskey(ncap_afcs, afcs_c) ? gv(ncap_afcs, afcs_c) :
+                                  (haskey(ncap_afcs, afcs_cg) ? gv(ncap_afcs, afcs_cg) : GNum(1.0))
+                        base = (GNum(1.0) / abs(gv(prc_actflo, (r, v, p, c)))) / divisor
+                        # Storage (L22-24): only where C or its type has an NCAP_AFCS.
+                        stg = !std && (r, p, c) in rpc_stg && !iszero(gv(ncap_afcs, afcs_c) + gv(ncap_afcs, afcs_cg))
+                        sin_f = GNum(1.0)                                # PROD(RPG_AFCX(R,P,C,IE)$NCAP_AFCS(C), ...)
+                        if stg && haskey(ncap_afcs, afcs_c)
+                            for _ in get(afcx_of_rpc, (r, p, c), no4)
+                                sin_f = sin_f * (haskey(ncap_afcs, afcs_cg) ? gv(ncap_afcs, afcs_c) / gv(ncap_afcs, afcs_cg) : GZERO)
                             end
                         end
-                        for (_, _, _, ie) in get(ire_of_rpc, (r, p, c), no4)
-                            factor = GNum(1.0)
-                            if (r, p, c, ie) in rpg_afcx
-                                x = gpow(gif(gv(ncap_afcs, afcs_c), haskey(ncap_afcs, afcs_cg)),
-                                         gif(GNum(1.0), (r, p, ie) in rp_aire))
-                                if !iszero(x)
-                                    factor = haskey(ncap_afcs, afcs_cg) ?
-                                             gv(ncap_afcs, afcs_c) / gv(ncap_afcs, afcs_cg) : GZERO
+                        for (_, _, _, ts) in get(ts_of_rpc, (r, p, c), no4)
+                            haskey(rs_fr, (r, s, ts)) || continue
+                            w = base * gv(rs_fr, (r, s, ts))
+                            if std
+                                addterm!(lhs, w, tm, "VAR_FLO", r, v, t, p, c, ts)
+                                continue
+                            end
+                            if stg
+                                for io in io_set
+                                    (r, p, c, io) in top || continue
+                                    if (io,) in ips
+                                        addterm!(lhs, w * sin_f, tm, "VAR_SIN", r, v, t, p, c, ts)
+                                    else
+                                        addterm!(lhs, w * (gv(stg_eff, (r, v, p)) * (1 + gv(rtcs_fr, (r, t, c, s, ts)))),
+                                                 tm, "VAR_SOUT", r, v, t, p, c, ts)
+                                    end
                                 end
                             end
-                            addterm!(lhs, w * factor, tm, "VAR_IRE", r, v, t, p, c, ts, ie)
+                            for (_, _, _, ie) in get(ire_of_rpc, (r, p, c), no4)
+                                factor = GNum(1.0)
+                                if (r, p, c, ie) in rpg_afcx
+                                    x = gpow(gif(gv(ncap_afcs, afcs_c), haskey(ncap_afcs, afcs_cg)),
+                                             gif(GNum(1.0), (r, p, ie) in rp_aire))
+                                    if !iszero(x)
+                                        factor = haskey(ncap_afcs, afcs_cg) ?
+                                                 gv(ncap_afcs, afcs_c) / gv(ncap_afcs, afcs_cg) : GZERO
+                                    end
+                                end
+                                addterm!(lhs, w * factor, tm, "VAR_IRE", r, v, t, p, c, ts, ie)
+                            end
                         end
                     end
                 end
+                tail = gv(prc_capact, (r, p)) * gv(g_yrfr, (r, s))
+                rhs = caflac_capacity!(JuMP.AffExpr(0.0), tm, r, v, t, p,
+                                       k -> gv(coef_af, (r, k, t, p, s, bd)) * tail)
+                upscap0!(rhs, gv(coef_af, (r, v, t, p, s, bd)) * tail, tm, r, v, t, p, s)
+                gconstraint!(tm, eqtag(tm, name), swt(tm, (r, v, t, p, s), t), eqtype, lhs, rhs) === nothing || (n += 1)
             end
-            tail = gv(prc_capact, (r, p)) * gv(g_yrfr, (r, s))
-            rhs = caflac_capacity!(JuMP.AffExpr(0.0), tm, r, v, t, p,
-                                   k -> gv(coef_af, (r, k, t, p, s, bd)) * tail)
-            upscap0!(rhs, gv(coef_af, (r, v, t, p, s, bd)) * tail, tm, r, v, t, p, s)
-            gconstraint!(tm, name, (r, v, t, p, s), eqtype, lhs, rhs) === nothing || (n += 1)
         end
     end
     return n
@@ -279,6 +290,10 @@ The domain's STL index is S itself. An NCAP_AFC entry of EPS (an
 availability <= 0 for a commodity of the group, ppm_ext.vda L134) gives the
 row with EPS capacity coefficients (the columns exist, docs/discrepancies.md G5).
 VAR_STS has terms only with %STSFLX% (`var_sts!`).
+
+The SOW tags (sow_tags.jl): the row is `%EQ%L_CAPFLO(... %SWT%)` (L40); the
+terms are `%VAR%_X(... %SOW%)` (L48-51, VAR_STS the macro of coef_ext.vda
+L31), the capacity `%VARM%_NCAP(R,K,P%SWS%)` with %RCAPSBM% (L57).
 
 GAMS: eqcaflac.vda L40-60, v4.9.7.
 """
@@ -309,47 +324,50 @@ function eq_capflo!(tm::TimesModel, ncap_afc::GamsParam{5})
         for (_, _, _, cg, s) in get(afc_of_rvp, (r, v, p), no5)
             haskey(rs_tslvl, (r, s)) || continue                   # RS_TSLVL(R,S); S in STL
             off(r, t, s) && continue                               # SL(STL(%RTS%)): S+NORTS(R,T,S) (M1.3 change 67)
-            lhs = JuMP.AffExpr(0.0)
-            if (r, p) in rp_flo
-                for (_, _, c) in get(gmap_of_rcg, (r, cg), no3)
-                    (r, p, c) in rpc || continue
-                    for (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, c), no5)
-                        haskey(rs_fr, (r, s, ts)) || continue
-                        k = gv(rs_fr, (r, s, ts)) * (1 + gv(rtcs_fr, (r, t, c, s, ts)))
-                        cal_nored!(lhs, tm, k, r, v, t, p, c, ts)
-                    end
-                end
-            end
-            if (r, p) in rp_stg
-                # Storage level, L48: ACTCG(CG).
-                if uppercase(cg) == "ACT"
-                    cyc = gexp(gv(prc_sc, (r, p)))
-                    for (_, _, ts) in get(ts_of_rp, (r, p), no3)
-                        haskey(rs_fr, (r, ts, s)) || continue
-                        k = gv(rs_fr, (r, ts, s)) * cyc / gv(rs_stgprd, (r, ts)) * gv(g_yrfr, (r, s))
-                        addterm!(lhs, k, tm, "VAR_ACT", r, v, t, p, ts)
-                        (r, p) in stl_up && var_sts!(lhs, k, tm, r, v, t, p, ts, "UP")    # + VAR_STS(R,V,T,P,TS,'UP')
-                    end
-                end
-                # Storage flows of a stored commodity in CG, L49-51.
-                for (_, _, c) in get(gmap_of_rcg, (r, cg), no3)
-                    (r, p, c) in rpc_stg || continue
-                    out_top = (r, p, c, "OUT") in top
-                    for io in io_set
-                        (r, p, c, io) in top || continue
-                        for (_, _, _, ts) in get(varts_of_rpc, (r, p, c), NTuple{4,String}[])
+            for sow in sw_rows(tm, t)   # %SWT% (eqcaflac.vda L40)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                if (r, p) in rp_flo
+                    for (_, _, c) in get(gmap_of_rcg, (r, cg), no3)
+                        (r, p, c) in rpc || continue
+                        for (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, c), no5)
                             haskey(rs_fr, (r, s, ts)) || continue
                             k = gv(rs_fr, (r, s, ts)) * (1 + gv(rtcs_fr, (r, t, c, s, ts)))
-                            (!out_top && (io,) in ips) && addterm!(lhs, k, tm, "VAR_SIN", r, v, t, p, c, ts)
-                            io == "OUT" && addterm!(lhs, k * gv(stg_eff, (r, v, p)), tm, "VAR_SOUT", r, v, t, p, c, ts)
+                            cal_nored!(lhs, tm, k, r, v, t, p, c, ts)
                         end
                     end
                 end
+                if (r, p) in rp_stg
+                    # Storage level, L48: ACTCG(CG).
+                    if uppercase(cg) == "ACT"
+                        cyc = gexp(gv(prc_sc, (r, p)))
+                        for (_, _, ts) in get(ts_of_rp, (r, p), no3)
+                            haskey(rs_fr, (r, ts, s)) || continue
+                            k = gv(rs_fr, (r, ts, s)) * cyc / gv(rs_stgprd, (r, ts)) * gv(g_yrfr, (r, s))
+                            addterm!(lhs, k, tm, "VAR_ACT", r, v, t, p, ts)
+                            (r, p) in stl_up && var_sts!(lhs, k, tm, r, v, t, p, ts, "UP")    # + VAR_STS(R,V,T,P,TS,'UP')
+                        end
+                    end
+                    # Storage flows of a stored commodity in CG, L49-51.
+                    for (_, _, c) in get(gmap_of_rcg, (r, cg), no3)
+                        (r, p, c) in rpc_stg || continue
+                        out_top = (r, p, c, "OUT") in top
+                        for io in io_set
+                            (r, p, c, io) in top || continue
+                            for (_, _, _, ts) in get(varts_of_rpc, (r, p, c), NTuple{4,String}[])
+                                haskey(rs_fr, (r, s, ts)) || continue
+                                k = gv(rs_fr, (r, s, ts)) * (1 + gv(rtcs_fr, (r, t, c, s, ts)))
+                                (!out_top && (io,) in ips) && addterm!(lhs, k, tm, "VAR_SIN", r, v, t, p, c, ts)
+                                io == "OUT" && addterm!(lhs, k * gv(stg_eff, (r, v, p)), tm, "VAR_SOUT", r, v, t, p, c, ts)
+                            end
+                        end
+                    end
+                end
+                tail = gv(ncap_afc, (r, v, p, cg, s)) * gv(prc_capact, (r, p)) * gv(g_yrfr, (r, s))
+                rhs = caflac_capacity!(JuMP.AffExpr(0.0), tm, r, v, t, p, k -> tail)
+                upscap0!(rhs, tail, tm, r, v, t, p, s)
+                gconstraint!(tm, eqtag(tm, "EQL_CAPFLO"), swt(tm, (r, v, t, p, cg, s), t), "L", lhs, rhs) === nothing || (n += 1)
             end
-            tail = gv(ncap_afc, (r, v, p, cg, s)) * gv(prc_capact, (r, p)) * gv(g_yrfr, (r, s))
-            rhs = caflac_capacity!(JuMP.AffExpr(0.0), tm, r, v, t, p, k -> tail)
-            upscap0!(rhs, tail, tm, r, v, t, p, s)
-            gconstraint!(tm, "EQL_CAPFLO", (r, v, t, p, cg, s), "L", lhs, rhs) === nothing || (n += 1)
         end
     end
     return n
