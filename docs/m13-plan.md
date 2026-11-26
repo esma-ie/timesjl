@@ -2612,7 +2612,7 @@ belong to the solve loops of change 76. A stepped run with STAGES and no
 SPINES is stopped (solve.stp L13).
 
 Check: no deterministic model changes. The test suite passes unchanged
-(36,034 of 36,034 before and after, 26 Nov 2026), with every fixture and
+(36,034 of 36,034 before and after; 36,054 of 36,054 with the 20 new unit tests, 26 Nov 2026), with every fixture and
 crafted case at layer 2. The tests cannot see a wrong tag: each `at`,
 `tagged=false` and `sw` was set from the GAMS line cited beside it, and is
 first checked against GAMS by the stochastic cases of change 74.
