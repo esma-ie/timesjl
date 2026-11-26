@@ -48,7 +48,7 @@ Refused (UnportedError), as in M1.1-M1.3:
 
 - the DATAGDX branch, initmty.mod L489-508 (`%RUN_NAME%~data.gdx` or
   `_dd_.gdx`). Change 4 checks whether any suite run takes it.
-- `%STAGES%` (initmty.stc);
+- `%STAGES%` (initmty.stc), read since M1.3 change 70 (20 Nov 2026);
 - MACRO (initmty.tm);
 - `INTEXT_ONLY`.
 
@@ -316,6 +316,8 @@ copies a dump. The test picks up every public fixture that has a run file, so no
 changes but the count: 24 crafted cases, all PASS (compile, pre-solve state, matrix, objective).
 
 ### Gate close-out, 14 Nov 2026
+
+**Passed, 25 Nov 2026** (James: "#109 yes, #117 yes, rerun timings after"), after the M1.3 gate. The evidence on the merged stack is in docs/m13-plan.md, "Gate audit, 22 Nov 2026": the chain from the DD files to GAMS's matrix, 14 of 14 runs.
 
 The gate: change 5 passes on every core-tier run, both variants, and CI runs the chain from DD
 files on demo12 and the crafted cases. Each criterion with its evidence follows. Every reference

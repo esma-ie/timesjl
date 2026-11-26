@@ -171,6 +171,7 @@ GAMS 54.6.1):
 | 67 | Dynamic timeslices, the RTS(S) rows of the other families, refused since M1.3 (63): with %DYNTS% YES and TS_OFF, `RTS(S)` is the macro `S+NORTS(R,T,S)` (timslice.mod L31-39), a lead of -INF at a timeslice turned off in period T, so the row is not generated there. The filter (`rts_off`) now skips those rows in EQ_STGAUX, EQ_STGTSS, EQ_STSBAL, EQ_STSLEV, EQ_ACTRAMP, EQ(l)_ACTUPS, EQL_ACTUPC, EQ_ACTPL, EQ_SLSIFT, EQ(l)_ASHAR, EQL_CAPFLO, the seven eq_sd*/eq_sud* rows, EQ_RL_*, EQ_GR_POWFLO, EQ_GR_PTDFLO, EQ_GR_VIRTCAP, EQ_GR_GENALL, EQ_GR_DEMALL, EQ_GR_XBND and the ten EQ_GG_* rows. A fix found on the way: prepret.dsc L75 (`MIN(VAR_RCAP.UP,VAR_SCAP.UP)`) keeps an EPS bound EPS, which HOLDFIXED (dynslite.vda L111) needs to hold the column. D46: timslice.mod L121 divides by zero when the regions have different trees and there is ramping or start-up data (GAMS and TIMES.jl both stop). Not in this change: the re-interpolation of dynslite.vda L94-102. Twelve crafted cases demo12_tsoff_* (19 Nov 2026), each demo12_tsoff with one earlier case, and tsoff2.dd (REG2 on the same tree) | timslice.mod 31-39; eqstgaux.mod 14; eqstgtss.mod 13, 53, 88; eqactups.vda 50-131; eqashar.vda 38; eqcaflac.vda 40; eqlducs.vda 67-118; resloadc.vda 72-142; powerflo.vda 254-343; gasgrids.vda 154-200; prepret.dsc 75 | layers 1 to 3 on eleven cases and layers 1 and 2 on demo12_tsoff_stgccl (infeasible in GAMS), both variants, from the DD files; every family's rows at the timeslices turned off absent on both sides (CI: demo12_tsoff_disp, demo12_tsoff_ptdf, demo12_tsoff_gg2 public fixtures); demo12_tsoff and the early-retirement cases unchanged |
 | 68 | Dynamic timeslices, the re-interpolation of dynslite.vda POSTLEV, refused since M1.3 (63): for the vintaged processes at the ANNUAL level (RVP), each row of FLO_FUNC, then (for those with RPS_S1 at ANNUAL) ACT_EFF, ACT_FLO and FLO_SUM with ANNUAL data at a vintage gets option 3 at year '0' (`LL--ORD(LL)`, the last ALLYEAR element), and fillparm.gms re-interpolates and extrapolates it over the vintages through a write cache, with DATAYEAR set to '0' alone so that only those rows are taken; RESET 0 then removes the options. `fillparm!` with `cache=true`. New crafted case demo12_tsoff_rint (19 Nov 2026) | dynslite.vda 88-104; fillparm.gms 20-56 | layers 1 to 3 on demo12_tsoff_rint, both variants, from the DD files (CSHNGAS1's ANNUAL ACT_EFF: the 2005 record goes, the vintages keep 0.938 to 0.97) (CI: demo12_tsoff_rint public and run fixtures, test_m13_chain.jl and test_ddsource.jl); demo12_tsoff unchanged |
 | 69 | Elastic demand, the linear form (%TIMESED% YES), refused since M1.1: the base prices of an earlier run (readbprice.mod; read from TIMES.jl's own Arrow folder in place of the GDX file, q1 of 19 Nov 2026: `$GDXIN`/`$LOAD` in the compile step, L22-36 in `readbprice!`), TIMES-Micro's linear preprocessing (pp_micro.mod PRE: the demand aggregates, MI_DMAS, RD_AGG, DDF_PREF, DDF_QREF, RD_SHAR, MI_ESUB), the shaped elasticities (coef_obj.mod L184-189: SHEDJ, SHAPED), the QA checks (pp_qack.mod L95-110, L127), bnd_elas.mod (its data statements and the step bounds), the rows EQ_OBJELS and EQL_COMCES, the elastic terms of EQ(l)_COMBAL (L67, L101) and EQ_PEAK (L85) and of EQ_OBJ (L89); after a base run (%TIMESED% neither 0 nor YES) `run_model` writes the base prices (wrtbprice.mod, `write_bprice`). Harness 0.3.6: `work_files`. New crafted cases demo12_edbase, demo12_ed and demo12_edagg (19 Nov 2026) | readbprice.mod 1-48; wrtbprice.mod 1-35; pp_micro.mod 9-40; coef_obj.mod 180-189; bnd_elas.mod 10-35; eqobjels.mod 12-49; eqcombal.mod 67, 101; eqpeak.mod 85; eqobj.mod 49, 89; pp_qack.mod 95-110, 127 | layers 1 to 3 on demo12_ed and demo12_edagg, both variants, from the DD files (objectives 25,331,722.63 and 25,333,565.50); demo12_edbase (the base run, demo12's model) the same; the base prices TIMES.jl writes from GAMS/CPLEX's own marginals equal GAMS's `com_bprice.gdx` (120 of 120, difference 0, both variants) (CI: demo12_ed and demo12_edagg public and run fixtures, test_m13_chain.jl and test_ddsource.jl) |
+| 70 | The stochastic extension, change 70 of its plan (approved by James, 20 Nov 2026, #178): the DD reader reads the stochastic declarations and data. initmty.mod L435-437 includes initmty.stc for %STAGES%, %SPINES% or %SENSIS% YES (`$IFI`); `src/dd/compile.jl` no longer refuses it. Under SENSIS, maindrv.mod L34 sets STAGES to `Yes` in scope, which hides initmty.stc's global `YES` (G62), so solve.stc L7 compiles the report writer: the compile reads rptlite.rpt and solsysd.v3, with GAMS's `$GOTO`/`$LABEL`/`$EOLCOM` rules (G63) and the Latin-1 label of rptlite.rpt L53 as `\xa4`, as the dumps hold it. A SPINES or SENSIS run is refused at init_ext (maindrv.mod L33-36), as STAGES is, until changes 71-76. Eight crafted cases with GAMS 54.6.1 references (CPLEX and HiGHS, both variants): demo12_stc, demo12_stc3, demo12_stcmx, demo12_stclam, demo12_stcext, demo12_spines, demo12_sensis and demo12_tradeoff. Harness 0.3.7: `$ONIMPLICITASSIGN` in the pre-solve run of a SENSIS run, without which GAMS stops on error 141 before the checkpoints | Layer 1 at the input dump: all eight cases, both variants, every symbol, record, value and label order (`test/unit/test_ddsource.jl`, CI, input and run fixtures) |
 
 ## Parity (per change)
 
@@ -201,6 +202,23 @@ TIMES-Micro) and MACRO (checked with IPOPT) come after it, refused with a
 message until then (docs/decisions.md, 17 Nov 2026).
 
 James, 18 Nov 2026 (q1 and q2 of the gate audit below): also in the gate are shaped availability (NCAP_AFM, NCAP_AFX, NCAP_AFSM, NCAP_AFSX; coef_cpt.mod L42-58, pp_shapr.mod L19-40); the rest of dynamic timeslices (the re-interpolation of dynslite.vda L94-102, and the RTS(S) rows of the storage, dispatching, EQ(l)_ASHAR, EQL_CAPFLO, unit commitment, residual load curve and power-flow families); GR_DEMFR as input data (powerflo.vda L107, L131). %IREAUXBAL% set by the run without %POWERFLO% (cal_ire.mod L30), in the gate from q1, left it on 19 Nov 2026 (James: "yes, leave IREAUXBAL refused"; no GAMS code to translate, #149 d1): it stays refused with its message. Moved to M1.5 as run options, refused with their message until then: %OBJANN% YES (eqobjann.tm), %VALIDATE% YES, %VINTOPT% 1 (fillvint.gms), %WAVER% YES (fillwave.gms), %INTEXT_ONLY% YES and %PREP_ANS% YES; and user constraints with VAR_UC not YES (eqmain.mod L204-207, L229-232; equcwrap.mod L13), and the VDA trade bounds and prices from an earlier run (bnd_ire.vda, equ_ext.vda L67; GDX_IREBND and GDX_IPRIC, init_ext.vda L137-151).
+
+James, 22 Nov 2026 (the chat, after the M1.3 audit of that day: "option 2, move stochastics out of the gate, but do not start tests with v4.9.8 until Monday's nightly's not todays"): the stochastic extension leaves the gate. Change 70 (its DD reader, #185) is merged; changes 71-76 come after the gate, as MACRO and the mixed-integer features do, and STAGES, SPINES and SENSIS runs stay refused at init_ext with their message until then. The move of the baseline to TIMES v4.9.8 (CLAUDE.md, "Baseline") follows the gate, and no v4.9.8 test runs before the nightly of Monday 23 Nov 2026: the nightly of Sunday 22 Nov runs on v4.9.7, on the merged stack, as the gate's last evidence.
+
+James, 22 Nov 2026 (#192 d1 and d2): damage costs as elastic supply curves carried from a base run (DAM_ELAST with an 'N' record: wrtbprice.mod L21-25, readbprice.mod L24-25 and L37-45) leave the gate too, "listed for completion before phase 1 close"; they stay refused with their message until then. Changes 71-76 of the stochastic extension resume after the move to v4.9.8; change 73 (the SOW tags) finishes and merges first.
+
+### After the gate, before Phase 1 closes
+
+Each stays refused with its message until its change merges, and each is translated and checked as the gate's features were (layers 1 to 3, a crafted case where no suite model reaches it). Phase 1 does not close (M1.7) until every item here is done or James moves it.
+
+| Item | Decided | Note |
+| --- | --- | --- |
+| Damage costs from a base run (DAM_ELAST 'N': DAM_COEF and DAM_TVOC written by wrtbprice.mod L21-25, read by readbprice.mod L24-25 and L37-45) | James, 22 Nov 2026 (#192 d1) | change 69b: carried in the base-price Arrow folder, with a crafted case and its GAMS reference; about half a day |
+| The stochastic extension (%STAGES%, SPINES, SENSIS): changes 71-76 | James, 22 Nov 2026 (the chat; #192 d2) | after the move to v4.9.8; change 73 first ("Plan: the stochastic extension") |
+
+James, 26 Nov 2026 ("ok, move them"; docs/decisions.md): the mixed-integer and nonlinear features (DSC lumpy investments and block retirements, the discrete unit commitment, ETL, TIMES-Micro (RD_NLP, MICRO), %DAMAGE% NLP, gas-grid pressure points and %SOLMIP%, the PTDF candidate lines; on this list since 17 Nov 2026, q5) and MACRO with MSA (17 Nov 2026; to be checked with IPOPT on both sides) left this list for after M1.7. They stay refused with their message.
+
+The ECB, CLI, ABS, MCA and IER extensions come after M1.7 (15 Nov 2026), and the M1.5 and M1.6 items stay in their milestones; neither is on this list.
 
 - Input dump to `ppm/` at 1e-9 on every core model, reduce_off and as_run
   (TIM-bau locally).
@@ -233,8 +251,7 @@ James, 18 Nov 2026 (q1 and q2 of the gate audit below): also in the gate are sha
   pp_qack.mod) is not part of M1.3, so the model is generated from the
   pre-solve dump, as in M1.1.
 - Preprocessing timed against GAMS (`scripts/m13_timing.jl`,
-  docs/timings.md): TIMES.jl warm 3.0x GAMS on demo12 and 4.8x to 5.5x on
-  the four large core models.
+  docs/timings.md; the ratios, to CPLEX runs, in `esma-ie/timesjl-unpublished`).
 
 ### Gate close-out, 14 Nov 2026 (changes 0-29)
 
@@ -248,7 +265,7 @@ The gate is passed when James says so (a rule-level decision, #109).
 | The same chain beyond the gate: coef, presolve | Same run: every set and parameter at coef (949 to 953 symbols) and presolve. | PASS, 10 of 10 |
 | TIM-bau | Checked locally (results stay on James's machine). | local |
 | CI on demo12: input, preprocessing, coefficients and the model, layers 2 and 3, REDUCE off and on | `test/unit/test_m13_chain.jl` (input dump to ppm, coef, presolve, then the model against GAMS's matrix and objective, `demo12_off`); `demo12_red` for REDUCE YES; the crafted demo12 cases as fixtures. GitHub CI: Julia 1, Julia lts and the reference harness. | PASS |
-| Preprocessing timed against GAMS | docs/timings.md, 13 Nov 2026: TIMES.jl warm 3.4 times GAMS on demo12 and 5.4 to 6.3 times on the four large core models. James, 14 Nov 2026: close enough to pass the gate. | timed; accepted |
+| Preprocessing timed against GAMS | docs/timings.md, 13 Nov 2026 (the ratios, to CPLEX runs, in `esma-ie/timesjl-unpublished`; #184 d6). James, 14 Nov 2026: close enough to pass the gate. | timed; accepted |
 | QA log and ERRLEV abort as GAMS (change 25b) | Changes 25b-1 to 25b-3 (#75-#77). In the chain, QA_CHECK.LOG, PUTOUT, PUTGRP and ERRLEV are compared at every checkpoint, and the log text at ppm and at presolve; crafted cases with warnings and a FATAL abort are in CI. | PASS, 10 of 10 |
 | JRC-EU-TIMES-cli_ll: input dump to ppm, both variants (verdicts only) | Batches of 12 Nov and 14 Nov (`c04c8ab`): init, prep, prelv, ppm and the QA log at ppm; 850 symbols; chain in 933 s (reduce_off) and 833 s (as_run). | PASS, 2 of 2 |
 | OTUS9r layer 3, one way (CLAUDE.md, #61) | Parity report of 12 Nov: the CPLEX optimum of the GAMS run cross-evaluated in TIMES.jl's model. OTUS9r-reference reduce_off: objective 192,206,392,884.7 on both sides, relative difference 0; the largest row violation, 2.5e-4 at EQ_OBJVAR(R5,USD05), is the same in GAMS's own matrix. | PASS |
@@ -273,7 +290,7 @@ Every refusal left in `src/` was listed (`UnportedError`, the `*_unported` lists
 | Refused feature | Where it goes |
 | --- | --- |
 | Elastic demand, linear form (%TIMESED%: readbprice.mod, ppmain.mod L747-755, pp_micro.mod PRE, bnd_elas.mod, eqobjels.mod) | translated: change 69 (19 Nov 2026); the base prices from TIMES.jl's own Arrow folder (q1, 19 Nov 2026) |
-| The stochastic extension (%STAGES%, SPINES, SENSIS) | M1.3 gate; plan below ("Plan: the stochastic extension"), approved by James on 20 Nov 2026 (#178 d1): changes 70 to 76 |
+| The stochastic extension (%STAGES%, SPINES, SENSIS) | after the gate (James, 22 Nov 2026); plan below ("Plan: the stochastic extension"), approved by James on 20 Nov 2026 (#178 d1): changes 70 to 76; change 70 (the DD reader) merged (#185), changes 71-76 after the gate |
 | Shaped availability (NCAP_AFM, NCAP_AFX, NCAP_AFSM, NCAP_AFSX; coef_cpt.mod L42-58, pp_shapr.mod L19-40) | translated: change 66 (19 Nov 2026) |
 | Dynamic timeslices: the re-interpolation (dynslite.vda L94-102) and the RTS(S) rows of the other families | translated: the RTS(S) rows in change 67, the re-interpolation in change 68 (19 Nov 2026) |
 | GR_DEMFR as input data (powerflo.vda L107, L131) | translated: change 65 (19 Nov 2026) |
@@ -281,11 +298,35 @@ Every refusal left in `src/` was listed (`UnportedError`, the `*_unported` lists
 | %OBJANN%, %VALIDATE%, %VINTOPT% 1, %WAVER%, %INTEXT_ONLY%, %PREP_ANS% | M1.5 (q1) |
 | VAR_UC not YES; bnd_ire.vda with GDX_IREBND and GDX_IPRIC | M1.5 (q2) |
 | Restart points (SPOINT, LPOINT, RPOINT, FIXBOH), REG_FIXT | M1.5 |
+| Damage costs from a base run (DAM_ELAST 'N'; wrtbprice.mod L21-25, readbprice.mod L24-25 and L37-45), refused since change 69 and not listed on 18 Nov 2026 | after the gate, before Phase 1 closes (James, 22 Nov 2026, #192 d1) |
 | DSC lumpy investments and block retirements, the discrete unit commitment, ETL, TIMES-Micro (RD_NLP, MICRO), %DAMAGE% NLP, gas-grid pressure points and %SOLMIP%, the PTDF candidate lines | after the gate, Phase 1 (17 Nov 2026) |
 | MACRO (with MSA) | after the gate, checked with IPOPT (17 Nov 2026) |
 | The ECB, CLI, ABS, MCA and IER extensions | after M1.7 (15 Nov 2026) |
 
 The M1.4 gate's own criteria still pass; it waits for this gate (CLAUDE.md), and elastic demand adds `$GDXIN`/`$LOAD` of a GDX file to the reader before it closes.
+
+### Gate audit, 22 Nov 2026 (main db5d3d7, #169 to #191 merged, #183 closed; evidence updated 23 Nov 2026)
+
+With the stochastic extension out of the gate (James, 22 Nov 2026, above), every item of the gate is translated. Each criterion with its evidence; the gate is passed when James says so (a rule-level decision, #109; the M1.4 gate is #117).
+
+| Criterion | Evidence | Result |
+| --- | --- | --- |
+| Every refused linear feature in the gate translated and tested | Every refusal left in `src/` (`UnportedError`, the `*_unported` lists, `untranslated_families`) listed again on db5d3d7, and every refusal added to `src/` since the audit of 18 Nov 2026 (`git diff 7fcdd05`: TIMES-Micro's nonlinear form, VALIDATE, SOL_ACFR under ANNCOST LEV, DAM_ELAST), and sorted by the scope above: all are after the gate, in M1.5 or M1.6, or stay refused by decision, except one, which the audit of 18 Nov 2026 did not list because change 69 added it: damage costs as elastic supply curves carried from a base run (DAM_ELAST with an 'N' record: wrtbprice.mod L21-25 writes DAM_COEF and DAM_TVOC, readbprice.mod L24-25 and L37-45 read them back). Refused with its message (TIMES.jl's messages and comments cited readbprice.mod, wrtbprice.mod and pp_micro.mod a few lines early; corrected by #193); no suite model or crafted case reaches it. Linear, so in the gate as it stood; James moved it out on 22 Nov 2026 (#192 d1), listed for completion before Phase 1 closes ("After the gate, before Phase 1 closes"). | PASS (the one item moved out) |
+| Input dump to `ppm/` and on to presolve at 1e-9, every core model, reduce_off and as_run | Workstation batch, the pass started 23 Nov 2026 00:54 on `db5d3d7`, the merged stack (src/ and test/ are the same on `4091d41`, main of 23 Nov; only `scripts/run_timing.jl`, a dashboard script, differs) (`scripts/m13_gate.jl`): demo12, TIMES-NZ steady and shift, OTCGEN, OTNYC, OTUS9r reference and tax1_wo_mou, both variants; every set and parameter at init, prep, prelv, ppm, coef and presolve, and the QA log at ppm and presolve. The pass of 21-22 Nov on `b112c93` and the pass of 22 Nov on `1a729a0` gave the same. | PASS, 14 of 14 |
+| The same from the DD files (M1.4), with the model against GAMS's matrix | Same pass (`scripts/m14_probe.jl`): the chain from the DD files to presolve, then layer 2 against GAMS's CONVERT matrix, the same 14 runs (OTUS9r tax1_wo_mou reduce_off: 2,528,996 rows, 3,233,253 columns, 11,599,301 nonzeros). | PASS, 14 of 14 |
+| Parity report (dashboard) | Same pass: layers 1 to 3 on the public suite, 281 checks. | PASS, 281 of 281 |
+| TIM-bau | Checked locally (results stay on James's machine). | local |
+| JRC-EU-TIMES (verdicts only) | Same pass: cli_ll and cli_mm (the second scenario rotates by day; cli_mh in the pass of 21-22 Nov), the chain to presolve, both variants. | PASS, 4 of 4 |
+| CI on demo12: input, preprocessing, coefficients and the model, layers 2 and 3, REDUCE off and on, and every crafted case | GitHub CI on main: `db5d3d7` and `4091d41` passed. | PASS |
+| The merged stack | The pass above runs on `db5d3d7`, after #179 (elastic demand, change 69), #181 (HiGHS threads), #182 (the solver option file) and #185 (the stochastic DD reader, with GAMS's `$GOTO`/`$LABEL`/`$EOLCOM` rules, G63). On v4.9.7. | PASS |
+| Preprocessing timed against GAMS | Timed on 13 Nov 2026 and accepted (James, 14 Nov 2026). The rerun on the merged stack (q2 of 21 Nov 2026; #192 d3) follows the gate: James, 25 Nov 2026, "#109 yes, #117 yes, rerun timings after". `scripts/m13_timing.jl` compares with the GAMS profile of each model's CPLEX reference solve, so its figures and the ratios to them stay off the public repository (#195 d2) and go to the local board. | PASS (13 Nov); rerun after the gate |
+| OTUS9r layer 3, one way (CLAUDE.md, #61) | Cross-evaluated on 12 Nov 2026 (relative difference 0). Not rerun since; the model has matched GAMS's matrix at layer 2 in every nightly since, so the same optimum evaluates the same. | PASS (12 Nov) |
+
+The step probe (`scripts/m13_probe.jl`), not a gate criterion, passes 490 of 490 steps on the public suite in the same pass.
+
+The M1.4 gate (#117): its criteria of 14 Nov 2026 pass in the same pass (the chain from DD files above; every DD file of the public suite compiles as GAMS's input dump), and the two additions since are merged: `$GDXIN`/`$LOAD` of readbprice.mod (change 69, #179) and the stochastic declarations (change 70, #185).
+
+**The M1.3 and M1.4 gates are passed (James, 25 Nov 2026: "#109 yes, #117 yes, rerun timings after").** Main at the decision: `3d5a4ae` (#192 merged; src/ and test/ as on `db5d3d7`, the pass above). Next, in order: the move of the baseline to TIMES v4.9.8 (`7064680`; CLAUDE.md, Baseline): the source re-pinned, its diff translated one GAMS file or family per pull request, every GAMS reference rerun with it; the timing rerun on the local board; then the list below, before Phase 1 closes.
 
 ## Findings so far
 
@@ -2443,6 +2484,12 @@ The M1.4 gate's own criteria still pass; it waits for this gate (CLAUDE.md), and
 Asked as q2 at the check-in of 19 Nov 2026 ("yes show me the plan"); James
 approved it on 20 Nov 2026 (#178 d1, docs/decisions.md).
 
+James, 22 Nov 2026: the stochastic extension leaves the M1.3 gate (see
+"Gate"). Change 70 is merged (#185); changes 71-76 come after the gate. They
+resume after the move to v4.9.8, so that their GAMS references are made once,
+on v4.9.8; change 73 (the SOW tags) finishes and merges before the move
+(James, 22 Nov 2026, #192 d2).
+
 ### What GAMS does (TIMES v4.9.7 @ d9a6a25)
 
 Three run switches turn the extension on (maindrv.mod L33-36):
@@ -2502,6 +2549,11 @@ or `%VARM%`, as written.
 | 74 | The stochastic model: `ES_`/`VAS_` rows and columns of the core families and the extension families in the gate, the uncertain data in the equations and bounds, the stochastic objective | the files in the table above; eqobj.mod L75-121 | layers 1 to 3 on the STAGES cases |
 | 75 | SPINES | recurrin.stc L52-182; eqmain.mod L30-37; mod_equa.mod L213 | layers 1 to 3 on demo12_spines |
 | 76 | The solve loops: decomposed deterministic runs, the tradeoff phases, SENSIS. The harness exports GAMS's matrix of each solve, as it does for the steps of a stepped run (harness 0.3.4) | solve.stc; sensis.stc; clearsol.stc | layers 2 and 3 for each solve |
+
+James, 21 Nov 2026 (q1): change 73 is built in parallel with 71 and 72, in a
+second tab and its own worktree; change 74 starts once 72 and 73 are merged.
+After change 76, the preprocessing timings are rerun on the final stack for
+the gate (q2).
 
 Change 74 may be split in two (core families first, then the extension
 families) if its pull request grows past what one check-in can review.

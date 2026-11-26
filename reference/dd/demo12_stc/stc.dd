@@ -1,0 +1,43 @@
+* TIMES.jl crafted case demo12_stc (20 Nov 2026): the event tree and the uncertain attributes of the
+* stochastic extension (initmty.stc; stages.stc, fillsow.stc). Stage 1 starts at the first milestone year;
+* stage 2 in 2020, with three SOWs under SOW 1 of stage 1 and their conditional probabilities.
+$ONEMPTY
+$ONEPS
+$ONWARNING
+PARAMETER SW_START /
+2 2020
+/;
+PARAMETER SW_SUBS /
+1.1 3
+/;
+PARAMETER SW_SPROB /
+2.1 0.3
+2.2 0.5
+2.3 0.2
+/;
+* Demand multipliers (relative to COM_PROJ): high car demand in SOW 1, low in SOW 3; high space heating in
+* SOW 1 by 2050.
+PARAMETER S_COM_PROJ /
+REG1.2030.DTCAR.2.1 1.1
+REG1.2050.DTCAR.2.1 1.2
+REG1.2030.DTCAR.2.3 0.92
+REG1.2050.DRSH.2.1 1.15
+/;
+* Investment-cost multipliers (relative to NCAP_COST): dearer nuclear in SOW 2, cheaper biomass in SOW 3.
+PARAMETER S_NCAP_COST /
+REG1.2020.ELCNNNUC01.2.2 1.3
+REG1.2020.ELCRNBIO01.2.3 0.8
+/;
+* A tax on REG1's transport CO2 (added to COM_TAX) in SOW 2 from 2020.
+PARAMETER S_COM_TAX /
+REG1.2020.TRACO2.ANNUAL.NET.MEuro05.2.2 0.05
+/;
+* An upper bound on REG1's new nuclear capacity in SOW 3.
+PARAMETER S_CAP_BND /
+REG1.2030.ELCNNNUC01.UP.2.3 2
+REG1.2050.ELCNNNUC01.UP.2.3 4
+/;
+* A looser limit of the nuclear user constraint in REG1 in SOW 1 (installed capacity keeps 50 or less infeasible).
+PARAMETER S_UC_RHSRT /
+REG1.AU_NUC_MaxCAP.2030.UP.2.1 60
+/;

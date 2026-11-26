@@ -5,7 +5,7 @@
 # (presolve, M1.3 change 25), on every set and parameter at 1e-9.
 #
 #   julia --project=test scripts/m13_gate.jl <reference dir> [--root name=path ...] [<model> ...]
-#   julia --project=test scripts/m13_gate.jl <reference dir> --from-dd <timesjl-sources> [--solve] [--local] [<model> ...]
+#   julia --project=test scripts/m13_gate.jl <reference dir> --from-dd <timesjl-sources> [--solve [--solver cplex]] [--local] [<model> ...]
 #
 # --from-dd (M1.4 change 5): no GAMS state at all. The input is compiled from the model's own run and
 # DD files (src/dd/compile.jl, the TIMES source from times_source()) and written as a dump
@@ -14,6 +14,12 @@
 # generated and compared with GAMS's CONVERT matrix (layer 2); with --solve, HiGHS solves it and the
 # objective is compared with GAMS/CPLEX's (layer 3, 1e-6). The DD folders are the suite's (scripts/m14_models.jl);
 # TIM and JRC-EU-TIMES need --local (James's workstation only, logs kept there).
+#
+# --solver cplex (James, 22 Nov 2026; #182 d5 option (b)): the same LP is solved with CPLEX inside GAMS,
+# through GAMS.jl (scripts/gams_cplex.jl), with the model's own cplex.opt as the GAMS/CPLEX reference run
+# has it, instead of HiGHS; its line reads "CPLEX solve vs GAMS/CPLEX". It needs a licensed GAMS with
+# CPLEX (James's workstation), so it is never run in CI. A stepped run is not solved with CPLEX.
+# Its timings are a Restricted Solver's: local board only (scripts/run_timing.jl, #182 d6, #184).
 #
 # scripts/m13_probe.jl starts each segment from GAMS's own state; here only
 # the input dump comes from GAMS. At a checkpoint the state goes on in a
@@ -156,14 +162,31 @@ The time limit of the layer-3 HiGHS solve, in seconds: 24 hours for every model 
 """
 const HIGHS_TIME_LIMIT = 86400.0
 
+"The solvers of the layer-3 solve: HiGHS (the default) and CPLEX inside GAMS (--solver cplex)."
+const GATE_SOLVERS = Dict("highs" => "HiGHS", "cplex" => "CPLEX")
+
 """
-    model_check(tm, dir, model, variant; solve) -> Bool
+The model's own CPLEX option file (`solver_opt_dir` of reference/suite.toml), as the GAMS/CPLEX
+reference run reads it (make_reference.py, find_solver_opts), or nothing.
+"""
+function cplex_optfile(model, sources)
+    d = get(suite_model(model), "solver_opt_dir", nothing)
+    (d === nothing || sources === nothing) && return nothing
+    f = joinpath(resolve_root(d, sources), "cplex.opt")
+    return isfile(f) ? f : nothing
+end
+
+"""
+    model_check(tm, dir, model, variant; solve, solver="highs", sources=nothing) -> Bool
 
 Layer 2: the model generated from TIMES.jl's state against GAMS's CONVERT matrix (1e-9). Layer 3
 with `solve`: HiGHS (TIMESJL_THREADS threads, 24 hours at most, HIGHS_TIME_LIMIT) against
-GAMS/CPLEX's objective (1e-6).
+GAMS/CPLEX's objective (1e-6). With `solver="cplex"` the same LP is solved by CPLEX inside GAMS
+(scripts/gams_cplex.jl), with the model's cplex.opt from `sources` (timesjl-sources), the same
+threads and time limit; "solved in" is then CPLEX's own time (GAMS's etSolver), and the line adds
+the handover through GAMS.jl.
 """
-function model_check(tm, dir, model, variant; solve=false)
+function model_check(tm, dir, model, variant; solve=false, solver="highs", sources=nothing)
     ok = true
     t = @elapsed generate!(tm)
     mine = canonical_from_jump(tm.model)
@@ -180,27 +203,41 @@ function model_check(tm, dir, model, variant; solve=false)
     solve || return ok
     m = JSON.parsefile(joinpath(dir, "manifest.json"))
     si = get(get(get(m, "runs", Dict()), "solve_cplex", Dict()), "solveinfo", Dict())
-    JuMP.set_optimizer(tm.model, HiGHS.Optimizer)
-    JuMP.set_silent(tm.model)
-    JuMP.set_attribute(tm.model, "threads", parse(Int, get(ENV, "TIMESJL_THREADS", "12")))
-    JuMP.set_time_limit_sec(tm.model, HIGHS_TIME_LIMIT)
-    ts = @elapsed JuMP.optimize!(tm.model)
-    st = JuMP.termination_status(tm.model)
+    threads = parse(Int, get(ENV, "TIMESJL_THREADS", "12"))
+    name = GATE_SOLVERS[solver]
+    via = ""                                  # the handover through GAMS.jl (CPLEX only)
+    if solver == "cplex"
+        opt = cplex_optfile(model, sources)
+        r = solve_cplex_in_gams!(tm.model; optfile=opt, threads, time_limit=HIGHS_TIME_LIMIT)
+        st = r.status
+        ts = something(r.solver, r.wall)
+        r.handover === nothing || (via = string("; GAMS.jl handover ", round(r.handover; digits=1), " s"))
+        println("== ", model, "/", variant, " CPLEX in GAMS (GAMS.jl ", pkgversion(GAMS), "): ",
+                opt === nothing ? "no cplex.opt, CPLEX's defaults" : string("cplex.opt ", join(("$k $v" for (k, v) in r.options), ", ")),
+                "; threads ", threads)
+    else
+        JuMP.set_optimizer(tm.model, HiGHS.Optimizer)
+        JuMP.set_silent(tm.model)
+        JuMP.set_attribute(tm.model, "threads", threads)
+        JuMP.set_time_limit_sec(tm.model, HIGHS_TIME_LIMIT)
+        ts = @elapsed JuMP.optimize!(tm.model)
+        st = JuMP.termination_status(tm.model)
+    end
     if st != JuMP.OPTIMAL
-        println("== ", model, "/", variant, " HiGHS solve: FAIL (", st, " after ", round(ts; digits=1), " s)")
+        println("== ", model, "/", variant, " ", name, " solve: FAIL (", st, " after ", round(ts; digits=1), " s", via, ")")
         return false
     end
     obj = JuMP.objective_value(tm.model)
     gobj = get(si, "objval", nothing)
     if gobj === nothing
-        println("== ", model, "/", variant, " HiGHS solve: optimal, objective ", obj, " in ", round(ts; digits=1),
-                " s; no GAMS/CPLEX objective to compare")
+        println("== ", model, "/", variant, " ", name, " solve: optimal, objective ", obj, " in ", round(ts; digits=1),
+                " s", via, "; no GAMS/CPLEX objective to compare")
         return ok
     end
     rel = abs(obj - gobj) / max(1.0, abs(gobj))
     ok &= rel <= 1e-6
-    println("== ", model, "/", variant, " HiGHS solve vs GAMS/CPLEX: ", rel <= 1e-6 ? "PASS" : "FAIL", " (objective ",
-            obj, " vs ", gobj, ", relative difference ", round(rel; sigdigits=2), "; solved in ", round(ts; digits=1), " s)")
+    println("== ", model, "/", variant, " ", name, " solve vs GAMS/CPLEX: ", rel <= 1e-6 ? "PASS" : "FAIL", " (objective ",
+            obj, " vs ", gobj, ", relative difference ", round(rel; sigdigits=2), "; solved in ", round(ts; digits=1), " s", via, ")")
     return ok
 end
 
@@ -316,13 +353,13 @@ function stepped_check(snap, dir, model, variant)
 end
 
 """
-    gate13(refdir, model; roots, variant, from_dd=nothing, solve=false) -> Bool
+    gate13(refdir, model; roots, variant, from_dd=nothing, solve=false, solver="highs") -> Bool
 
 The chain input -> init -> prep -> prelv -> ppm -> coef -> presolve on one
 reference run, as far as TIMES.jl translates it; true when every checkpoint
 reached matches GAMS and the chain reaches ppm at least.
 """
-function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off", from_dd=nothing, solve=false)
+function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off", from_dd=nothing, solve=false, solver="highs")
     dir = joinpath(refdir, model, variant)
     isfile(joinpath(dir, "manifest.json")) || (println("== ", model, "/", variant, ": no reference"); return false)
     missing_cp = filter(c -> !isdir(joinpath(dir, c)), ["input", "init", "prep", "prelv", "ppm"])
@@ -398,9 +435,14 @@ function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off"
                                        "the chain did not reach the pre-solve state, the steps are not run")
             return ok && gate
         end
+        if solve && solver != "highs"
+            println("== ", model, "/", variant, ": stepped run: not solved with ", GATE_SOLVERS[solver],
+                    " (the stepped solve is HiGHS only)")
+            return ok && gate
+        end
         return stepped_check(snap, dir, model, variant) && ok && gate
     end
-    reached == "presolve" && (from_dd !== nothing || solve) && (ok &= model_check(tm, dir, model, variant; solve))
+    reached == "presolve" && (from_dd !== nothing || solve) && (ok &= model_check(tm, dir, model, variant; solve, solver, sources=from_dd))
     return ok && gate
 end
 
@@ -409,6 +451,12 @@ if abspath(PROGRAM_FILE) == @__FILE__
     take_local!(args)
     solve = "--solve" in args
     filter!(!=("--solve"), args)
+    i = findfirst(==("--solver"), args)
+    solver = i === nothing ? "highs" : lowercase(args[i+1])
+    i === nothing || deleteat!(args, i:i+1)
+    haskey(GATE_SOLVERS, solver) || error("--solver is highs or cplex, not $solver")
+    solver == "highs" || solve || error("--solver $solver needs --solve")
+    solver == "cplex" && include(joinpath(@__DIR__, "gams_cplex.jl"))   # GAMS.jl only when asked for
     i = findfirst(==("--from-dd"), args)
     from_dd = i === nothing ? nothing : abspath(args[i+1])
     i === nothing || deleteat!(args, i:i+1)
@@ -416,7 +464,7 @@ if abspath(PROGRAM_FILE) == @__FILE__
     let t0 = GATE_T0
         for model in models, variant in ("reduce_off", "as_run")
             try
-                gate13(refdir, model; roots, variant, from_dd, solve)
+                Base.invokelatest(gate13, refdir, model; roots, variant, from_dd, solve, solver)
             catch e
                 e isa TIMES.UnportedError || rethrow()
                 println("== ", model, "/", variant, ": not translated: ", sprint(showerror, e))

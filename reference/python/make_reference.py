@@ -1,6 +1,6 @@
 """Produce GAMS reference dumps for TIMES.jl parity tests.
 
-For each test model and variant this runs TIMES v4.9.7 under GAMS twice and
+For each test model and variant this runs TIMES v4.9.8 under GAMS twice and
 writes, under ``<out>/<model>/<variant>/``:
 
     manifest.json   provenance, settings, timings, solve information
@@ -71,9 +71,9 @@ from runfile import build_dd_run, patch_run  # noqa: E402
 from runlimits import RunSlot, default_max_parallel, default_slot_dir, default_threads, limit_threads  # noqa: E402
 from gdx2arrow import convert_gdx, gams_system_directory  # noqa: E402
 
-HARNESS_VERSION = "0.3.6"  # 0.3.6 (19 Nov 2026): work_files, files copied into the work folder (the base prices of elastic demand); 0.3.5 (15 Nov 2026): parse_solves reads MODEL STATISTICS with "N projected"; 0.3.4 (14 Nov 2026): steps/<k>/ of stepped runs (www_in.cgi, www_out.cgi); 0.3.3 (14 Nov 2026): equ/, the checkpoint of stepped runs (equ_ext.tjlref); 0.3.2 (9 Nov 2026): raw/tjl_presolve_qa_check.log; 0.3.1 (5 Nov 2026): --only convert; 0.3.0 (31 Oct 2026): M1.3 checkpoints, --only presolve; 0.2.4 (29 Oct 2026): run limits (threads, parallel runs); 0.2.3: model overrides; 0.2.2: raw/tjl_<run>.run; 0.2.1: extra_dd_dirs; 0.2.0: pre-solve run
-EXPECTED_TIMES_VERSION = "4.9.7"
-EXPECTED_TIMES_COMMIT = "d9a6a25"
+HARNESS_VERSION = "0.3.8"  # 0.3.8 (26 Nov 2026): TIMES v4.9.8; a --only pass refuses a reference made with another TIMES commit; 0.3.7 (20 Nov 2026): $ONIMPLICITASSIGN in the pre-solve run of a SENSIS run (runfile.py); 0.3.6 (19 Nov 2026): work_files, files copied into the work folder (the base prices of elastic demand); 0.3.5 (15 Nov 2026): parse_solves reads MODEL STATISTICS with "N projected"; 0.3.4 (14 Nov 2026): steps/<k>/ of stepped runs (www_in.cgi, www_out.cgi); 0.3.3 (14 Nov 2026): equ/, the checkpoint of stepped runs (equ_ext.tjlref); 0.3.2 (9 Nov 2026): raw/tjl_presolve_qa_check.log; 0.3.1 (5 Nov 2026): --only convert; 0.3.0 (31 Oct 2026): M1.3 checkpoints, --only presolve; 0.2.4 (29 Oct 2026): run limits (threads, parallel runs); 0.2.3: model overrides; 0.2.2: raw/tjl_<run>.run; 0.2.1: extra_dd_dirs; 0.2.0: pre-solve run
+EXPECTED_TIMES_VERSION = "4.9.8"  # v4.9.7 @ d9a6a25 until 26 Nov 2026 (CLAUDE.md, Baseline)
+EXPECTED_TIMES_COMMIT = "7064680"
 VARIANTS = {"reduce_off": {"REDUCE": "NO"}, "as_run": {}}
 # M1.3 checkpoints in execution order (tjl_<name>.gdx -> <name>/), dumped by the
 # pre-solve run with --TJL_CHECKPOINTS=1: runfile.py INPUT_BLOCK (before
@@ -192,6 +192,22 @@ def check_source(source: Path, allow_other: bool) -> dict:
     return {"version": version, "commit": commit, "path": str(source)}
 
 
+def check_same_times(out: Path, source_info: dict, label: str) -> None:
+    """A reference holds the dumps of one TIMES source. Refuse to extend (--only) or replace
+    (a full run) a reference made with another TIMES version or commit: the v4.9.7 references
+    stay as they are, and v4.9.8 ones go to another --out folder (harness 0.3.8, 26 Nov 2026)."""
+    mf = out / "manifest.json"
+    if not mf.exists():
+        return
+    old = json.loads(mf.read_text()).get("times") or {}
+    oc, nc = (old.get("commit") or "")[:7], (source_info.get("commit") or "")[:7]
+    same = (oc == nc) if (oc and nc) else (old.get("version") == source_info.get("version"))
+    if not same:
+        raise SystemExit(f"{label}: the reference in {out} was made with TIMES v{old.get('version')} @ "
+                         f"{oc or '?'}; this source is v{source_info.get('version')} @ {nc or '?'}. "
+                         f"Write it to another --out folder, or delete that folder first.")
+
+
 def gams_version_line(lst: Path) -> str:
     if not lst.exists():
         return ""
@@ -293,6 +309,7 @@ def make_one(args, suite, model_name: str, variant: str, source_info: dict):
     out = args.out / model_name / variant
     only = parse_only(getattr(args, "only", None))     # empty: the full reference
     old_manifest = None
+    check_same_times(out, source_info, f"{model_name}/{variant}")
     if only and (out / "manifest.json").exists():
         old_manifest = json.loads((out / "manifest.json").read_text())
     elif out.exists():
@@ -569,7 +586,7 @@ def main(argv=None):
     roots = {k: str(Path(v).resolve()) for k, v in roots.items()}
     suite = load_suite(a.suite, roots)
     if "times_source" not in suite["roots"]:
-        raise SystemExit("pass --root times_source=<path to TIMES_model @ d9a6a25>")
+        raise SystemExit("pass --root times_source=<path to TIMES_model @ 7064680>")
     source_info = check_source(Path(suite["roots"]["times_source"]), a.allow_other_version)
     models = a.model or [n for n, m in suite["models"].items() if a.tier is None or m.get("tier", "core") == a.tier]
     variants = a.variant or list(VARIANTS)

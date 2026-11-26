@@ -2,7 +2,7 @@
 # the dashboard's slides 11 and 12 (docs/dashboard/index.html, block "run-timing").
 #
 #   julia --project=test scripts/run_timing.jl <reference dir> [<batch log dir> ...]
-#         [--meta <parity report .json of the batch>] [--out <file.json>] [--embed [<page>]] [--all | --local]
+#         [--meta <parity report .json of the batch>] [--out <file.json>] [--embed [<page>]] [--all | --local | --unpublished]
 #
 # Nothing is run here: every number is read from output that exists already.
 #
@@ -12,9 +12,12 @@
 #   raw/tjl_solve_<solver>.log     the elapsed stamp at the start of execution (only the number)
 #   raw/tjl_solve_<solver>.lst     the Include File Summary (which listing lines are which file)
 #   raw/tjl_solve_<solver>_profile.txt   seconds per statement (profile=1)
-# TIMES.jl, one entry per (model, variant) of a workstation batch (scripts/m13_gate.jl --from-dd,
-# log dd-<model>.log in <batch log dir>): the seconds the gate prints for each step, and the wall
-# time of the whole run (its line "whole run <s> s"; a batch older than that timer has none). With --all
+# TIMES.jl, one entry per (model, variant, solver) of a workstation batch (scripts/m13_gate.jl --from-dd,
+# log dd-<model>.log in <batch log dir>, solved with HiGHS): the seconds the gate prints for each step, and the wall
+# time of the whole run (its line "whole run <s> s"; a batch older than that timer has none). A log
+# dd-<model>-cplex.log (m13_gate.jl --solve --solver cplex; James, 22 Nov 2026) is a second run of the same
+# chain whose LP is solved by CPLEX inside GAMS (scripts/gams_cplex.jl): an entry with solver CPLEX, its
+# solve CPLEX's own time (GAMS's etSolver) and its handover through GAMS.jl in `handover`. With --all
 # or --local, a model without such a log is looked for in the batch's *chain*.log files (the gate
 # from GAMS's dump of the input: no reading of DD files, and it may end at an untranslated path).
 #
@@ -26,17 +29,29 @@
 #   coef      coefficients and the preparation of the equations: GAMS from the end of ppm_ext to
 #             the SOLVE statement; TIMES.jl the steps ppm -> coef -> presolve.
 #   generate  GAMS: resgen. TIMES.jl: generate! (the JuMP model).
-#   solve     GAMS: etsolver. TIMES.jl: JuMP.optimize! with HiGHS.
+#   solve     GAMS: etsolver. TIMES.jl: JuMP.optimize! with HiGHS; with CPLEX, etSolver of the GAMS job
+#             GAMS.jl runs (the same measure as GAMS's), its handover outside the parts.
 #   reports   GAMS: the statements after the solve. TIMES.jl: not translated yet (M1.6).
 # wall is the whole run, and other is what of it is in no part. GAMS: wall_s, which also holds the
 # harness's dumps (profile records of type Unload, reported as harness.dumps) and GAMS's start and
 # exit. TIMES.jl: the gate's wall timer around the run of one variant; its steps read the harness's
 # dump of the input (harness.write is the time to write it), and other is its comparisons with GAMS,
-# the reading of GAMS's dumps for them and, in the first run of a Julia process (cold), the loading
-# and compilation of TIMES.jl.
+# the reading of GAMS's dumps for them, with CPLEX the handover through GAMS.jl and, in the first run
+# of a Julia process (cold), the loading and compilation of TIMES.jl.
 #
 # Only models with redistribute = "public" in reference/suite.toml are read, unless --all (every
 # model) or --local (only the others); both are for a local board, and --embed then refuses.
+#
+# Timings the public page does not show (rt_public): every entry of a solver in RT_RESTRICTED (CPLEX
+# among them), GAMS's and TIMES.jl's alike, with every part of such a run, the parts before the solve
+# included. The GAMS EULA's "Publication of Benchmarks" (C:\GAMS\54\EULA.md L362-377) forbids
+# publishing performance comparisons of its Restricted Solvers without the consent of GAMS and the
+# solver vendor (James, 20 Nov 2026, #182 d6). GAMS's timings with other solvers, such as GAMS/HiGHS,
+# stay on the public page (James, 22 Nov 2026, #184 d6).
+# By default they are dropped, and --embed refuses any of them. --unpublished writes only those
+# entries, of the public models, for the local board (C:\git\esma\build_dashboard_local.ps1 embeds
+# them as the block run-timing-unpublished) and the private repository esma-ie/timesjl-unpublished;
+# --all and --local keep every entry, as they are local already.
 # No path, host name or log line goes into the output.
 
 import JSON, TOML
@@ -46,6 +61,11 @@ include(joinpath(@__DIR__, "gams_profile.jl"))   # include_summary, profile_line
 const RT_REPO = normpath(joinpath(@__DIR__, ".."))
 const RT_VARIANTS = ("reduce_off", "as_run")
 const RT_GAMS_MAJOR = 54                          # CLAUDE.md: every reference run is made with GAMS 54
+# The GAMS EULA's Restricted Solvers (C:\GAMS\54\EULA.md L362-376), ODHCPLEX with CPLEX as its subsolver:
+# their timings are kept off the public page (#182 d6; the header above)
+const RT_RESTRICTED = ("COPT", "CPLEX", "GUROBI", "KNITRO", "LINDO", "LINDOGLOBAL", "XPRESS", "ODHCPLEX")
+"Whether the public page may show a timing entry: not a Restricted Solver's, whatever its language (#182 d6, #184 d6)."
+rt_public(e) = !(e.solver in RT_RESTRICTED)
 
 r3(x) = x === nothing ? nothing : round(Float64(x); digits=3)
 int(x) = x === nothing ? nothing : round(Int, x)
@@ -125,9 +145,11 @@ end
 """
 The TIMES.jl timing entries of `model` in one batch log (scripts/m13_gate.jl): variant => entry.
 The first (model, variant) of a log ran first in its Julia process, so its times include Julia's
-compilation of TIMES.jl (cold).
+compilation of TIMES.jl (cold). `solver` is the solver of the log's runs: HIGHS for dd-<model>.log,
+CPLEX for dd-<model>-cplex.log (whose solve lines read "CPLEX solve").
 """
-function julia_entries(log, model, meta, logname)
+function julia_entries(log, model, meta, logname; solver="HIGHS")
+    sname = solver == "CPLEX" ? "CPLEX" : "HiGHS"            # as the gate prints it
     out = Dict{String,Any}()
     order = String[]
     seen = Dict{String,Dict{String,Any}}()
@@ -147,10 +169,12 @@ function julia_entries(log, model, meta, logname)
         elseif startswith(rest, "model vs GAMS's matrix: PASS")
             d["generate"] = num(r"generated in ([\d.]+) s")
             d["rows"], d["cols"] = num(r"\((\d+) rows"), num(r", (\d+) columns")
-        elseif startswith(rest, "HiGHS solve vs GAMS/CPLEX: PASS")
+        elseif startswith(rest, "$sname solve vs GAMS/CPLEX: PASS")
             d["solve"], d["status"] = num(r"solved in ([\d.]+) s"), "optimal"
-        elseif startswith(rest, "HiGHS solve: FAIL (TIME_LIMIT")
+            d["handover"] = num(r"GAMS\.jl handover ([\d.]+) s")
+        elseif startswith(rest, "$sname solve: FAIL (TIME_LIMIT")
             d["solve"], d["status"] = num(r"after ([\d.]+) s"), "time limit"
+            d["handover"] = num(r"GAMS\.jl handover ([\d.]+) s")
         elseif (s = match(r"^the chain ends before (\w+)", rest)) !== nothing
             d["ends"] = String(s[1])                   # an untranslated path: nothing after it is run
         elseif (s = match(r"^whole run ([\d.]+) s", rest)) !== nothing
@@ -167,7 +191,7 @@ function julia_entries(log, model, meta, logname)
                  coef=r3(stages(("coef", "presolve"))), generate=r3(get(d, "generate", nothing)),
                  solve=r3(get(d, "solve", nothing)), reports=nothing)
         wall = get(d, "wall", nothing)
-        out[v] = (language="TIMES.jl", solver="HIGHS",
+        out[v] = (language="TIMES.jl", solver=solver,
                   status=get(d, "failed", false) ? "stopped" : haskey(d, "ends") ? "ends before $(d["ends"])" :
                          get(d, "status", "not run"), cold=(model, v) == first_run,
                   decimals=1,                           # the gate prints seconds with one decimal
@@ -178,24 +202,39 @@ function julia_entries(log, model, meta, logname)
                   # are printed with one decimal each)
                   wall=r3(wall), other=wall === nothing ? nothing : r3(max(wall - sum(x for x in parts if x !== nothing; init=0.0), 0.0)),
                   harness=(write=r3(get(d, "write", nothing)),),
+                  # CPLEX inside GAMS: JuMP to GAMS.jl, moi.gms written, compiled and generated by
+                  # GAMS, the solution read back (in other, as it is in no part)
+                  handover=r3(get(d, "handover", nothing)),
                   rows=int(get(d, "rows", nothing)), cols=int(get(d, "cols", nothing)), source=[logname])
     end
     return out
 end
 
-function run_timing(refdir, logdirs; meta=Dict{String,Any}(), all_models=false, only_local=false)
+# unpublished: :drop (the public page: only entries for which rt_public holds), :only (only the others,
+# for the local board) or :keep (every entry; --all and --local)
+function run_timing(refdir, logdirs; meta=Dict{String,Any}(), all_models=false, only_local=false, unpublished=:drop)
+    unpublished in (:drop, :only, :keep) || error("unpublished is :drop, :only or :keep, not $unpublished")
     suite = TOML.parsefile(joinpath(RT_REPO, "reference", "suite.toml"))["model"]
     runs = Any[]
     for m in suite
         red = get(m, "redistribute", "?")
         (only_local ? red != "public" : (all_models || red == "public")) || continue
         name = m["name"]
-        jl = Dict{String,Any}()
+        jl = Dict{Tuple{String,String},Any}()                 # (variant, solver) => entry
         for ld in logdirs
             logs = isfile(joinpath(ld, "dd-$name.log")) ? ["dd-$name.log"] : !(all_models || only_local) ? String[] :
                    sort!(filter(f -> endswith(f, ".log") && occursin("chain", f), readdir(ld)))
             for f in logs
-                merge!(jl, julia_entries(joinpath(ld, f), name, meta, "$(basename(normpath(ld)))/$f"))
+                for (v, e) in julia_entries(joinpath(ld, f), name, meta, "$(basename(normpath(ld)))/$f")
+                    jl[(v, e.solver)] = e
+                end
+            end
+            # TIMES.jl with CPLEX inside GAMS (m13_gate.jl --solver cplex), a run of its own
+            f = "dd-$name-cplex.log"
+            if isfile(joinpath(ld, f))
+                for (v, e) in julia_entries(joinpath(ld, f), name, meta, "$(basename(normpath(ld)))/$f"; solver="CPLEX")
+                    jl[(v, e.solver)] = e
+                end
             end
         end
         for v in RT_VARIANTS
@@ -213,12 +252,17 @@ function run_timing(refdir, logdirs; meta=Dict{String,Any}(), all_models=false, 
             isempty(timing) && continue
             si = man["runs"][first(used)]["solveinfo"]   # the LP's size, as GAMS counts it
             rows, cols = int(si["numequ"]), int(si["numvar"])
-            if haskey(jl, v)
-                e = jl[v]
+            # TIMES.jl's entries in the order of GAMS's (solve_cplex before solve_highs)
+            for s in ("CPLEX", "HIGHS")
+                haskey(jl, (v, s)) || continue
+                e = jl[(v, s)]
                 (e.rows === nothing || (e.rows, e.cols) == (rows, cols)) ||
                     error("$name/$v: TIMES.jl's model has $(e.rows) rows and $(e.cols) columns, GAMS's $rows and $cols")
                 push!(timing, Base.structdiff(e, NamedTuple{(:rows, :cols)}))
             end
+            unpublished === :drop && filter!(rt_public, timing)
+            unpublished === :only && filter!(!rt_public, timing)
+            isempty(timing) && continue
             push!(runs, (run="$name/$v", model=name, variant=v, redistribute=red, rows=rows, cols=cols,
                          nonzeros=int(si["numnz"]), timing=timing))
         end
@@ -231,6 +275,8 @@ end
 function embed_timing!(page, data; id="run-timing")
     all(r -> r.redistribute == "public", data.runs) ||
         error("only models with redistribute = \"public\" go into the page")
+    all(r -> all(rt_public, r.timing), data.runs) ||
+        error("no timing of a solver in RT_RESTRICTED (#182 d6, #184 d6) goes into the page")
     html = read(page, String)
     open_tag = "<script id=\"$id\" type=\"application/json\">"
     a = findfirst(open_tag, html)
@@ -245,7 +291,7 @@ function main_run_timing(args)
     i = 1
     while i <= length(args)
         a = args[i]
-        if a in ("--all", "--local")
+        if a in ("--all", "--local", "--unpublished")
             opt[a[3:end]] = true
         elseif a == "--embed"
             opt["embed"] = i < length(args) && !startswith(args[i+1], "--") ? args[i+=1] :
@@ -257,9 +303,12 @@ function main_run_timing(args)
         end
         i += 1
     end
-    isempty(pos) && error("usage: run_timing.jl <reference dir> [<batch log dir> ...] [--meta <report.json>] [--out <file>] [--embed [<page>]] [--all | --local]")
+    isempty(pos) && error("usage: run_timing.jl <reference dir> [<batch log dir> ...] [--meta <report.json>] [--out <file>] [--embed [<page>]] [--all | --local | --unpublished]")
     meta = haskey(opt, "meta") ? JSON.parsefile(opt["meta"])["meta"] : Dict{String,Any}()
-    data = run_timing(pos[1], pos[2:end]; meta, all_models=get(opt, "all", false), only_local=get(opt, "local", false))
+    count(k -> haskey(opt, k), ("all", "local", "unpublished")) <= 1 || error("--all, --local and --unpublished go alone")
+    haskey(opt, "unpublished") && haskey(opt, "embed") && error("--unpublished is for the local board; --embed refuses it")
+    unpublished = haskey(opt, "unpublished") ? :only : (haskey(opt, "all") || haskey(opt, "local")) ? :keep : :drop
+    data = run_timing(pos[1], pos[2:end]; meta, all_models=get(opt, "all", false), only_local=get(opt, "local", false), unpublished)
     for r in data.runs, e in r.timing
         p = e.parts
         f(x) = x === nothing ? "      -" : lpad(string(round(x; digits=1)), 7)

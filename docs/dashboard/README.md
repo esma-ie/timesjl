@@ -1,9 +1,16 @@
 # Parity dashboard
 
-`index.html` is the TIMES.jl parity board: twelve 16:9 slides in the ESMA brand
+`index.html` is the TIMES.jl parity board: thirteen 16:9 slides in the ESMA brand
 (DM Sans, Dark Green and Dark Yellow, the ESMA logo). Each slide follows the
 usual ESMA slide layout: a title and one-line message, a Dark Yellow accent
 line, then the chart, with the source in the footer.
+
+Timings of CPLEX and the GAMS EULA's other Restricted Solvers are shown on
+the local board only (James, 20 and 22 Nov 2026; #182 d6, #184 d6). GAMS's
+timings with other solvers (GAMS/HiGHS) are on the public page. Slide 10's
+GAMS times come from CPLEX runs, so the public page has no slide 10, and its
+slides 11 to 13 are its slides 10 to 12. The numbers below are those of the
+local board, which adds the CPLEX timings back (see Run timings).
 
 1. at a glance: headline figures and the milestones;
 2. translation coverage by stage of the GAMS code;
@@ -14,13 +21,16 @@ line, then the chart, with the source in the footer.
 7. parity by run, public reference models;
 8. equation families against GAMS's matrix;
 9. objective agreement;
-10. coefficient-stage time against GAMS;
+10. coefficient-stage time against GAMS (local board only);
 11. run time against model size: seconds against the number of variables in
     the LP, both on log scales, in two panels (input files to the LP, and the
     solve), one point per model-scenario pair, variant, language and solver;
 12. where the time goes: the seconds of each part of a run (read input,
     preprocessing, coefficients, generation, solve, reports), one row per
-    model-scenario pair, language and solver.
+    model-scenario pair, language and solver;
+13. cuOpt on the GPU against GAMS (informational, never a merge gate; public
+    from 23 Nov 2026, #102 d1): the CI test cases, a cell per method (barrier
+    and PDLP, each with crossover), and the open reference runs in one line.
 
 ## Slides for a deck
 
@@ -101,9 +111,9 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
   update embeds the newest finished pass as `report-suite-<mmdd>-solve` and
   `report-suite-<mmdd>-nosolve`, in place of the blocks of the pass before,
   with `meta.host` set to `"workstation"`; the files themselves are not
-  committed. Now embedded: `report-suite-1117-solve` and
-  `report-suite-1117-nosolve`, the pass of 17 Nov 2026 on main 3114b67
-  (to #145): 281 checks, all pass. They supersede the reports above for all
+  committed. Now embedded: `report-suite-1122-solve` and
+  `report-suite-1122-nosolve`, the pass of 22 Nov 2026 on main 1a729a0
+  (to #182): 281 checks, all pass. They supersede the reports above for all
   seven runs.
 
   `--no-solve` records layer 3 without the HiGHS solve: each GAMS optimum
@@ -124,10 +134,39 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
     profile (`raw/tjl_solve_<solver>_profile.txt`, seconds per statement),
     cut at the files of the Include File Summary. Only numbers are read; no
     line of a listing or log is copied.
+  - No timing of CPLEX or the GAMS EULA's other Restricted Solvers (Gurobi,
+    Xpress, ...) on the public board, GAMS's or TIMES.jl's, nor any part of
+    such a run: the EULA's "Publication of Benchmarks" forbids publishing
+    their performance comparisons without the consent of GAMS and the
+    solver vendor (James, 20 Nov 2026; #182 d6). GAMS's timings with other
+    solvers, such as GAMS/HiGHS, are shown (James, 22 Nov 2026; #184 d6,
+    which reverses #184 d5's "every GAMS timing on the local board only").
+    `run_timing.jl` leaves every Restricted Solver's entry out of the block,
+    and `--embed` refuses one. The slides then say "CPLEX's run times are
+    not published on this board". The local board adds them back
+    (`run_timing.jl --unpublished`, block `run-timing-unpublished`, merged
+    into the same runs by the page), and with them slide 10, whose data it
+    holds in a `timing-coef` block (`C:\git\esma\build_dashboard_local.ps1`).
+    The CPLEX timings of the open models are also kept in the private
+    repository `esma-ie/timesjl-unpublished`.
   - TIMES.jl, one entry per model and variant of a workstation batch
     (`scripts/m13_gate.jl --from-dd`): the seconds the gate prints for each
     step in the batch's `dd-<model>.log`, and the wall time of the whole run
     (its line `whole run <seconds> s`; James, 14 Nov 2026).
+  - TIMES.jl with CPLEX (James, 22 Nov 2026; #182 d5 option (b)): a second
+    run of the same chain, `scripts/m13_gate.jl --from-dd ... --solve
+    --solver cplex`, whose LP (TIMES.jl's own, checked against GAMS's matrix
+    first) is solved by CPLEX inside GAMS through GAMS.jl
+    (`scripts/gams_cplex.jl`), with the model's own `cplex.opt` and the run
+    limit of 12 threads, as the GAMS/CPLEX reference run has them. Its log
+    `dd-<model>-cplex.log` gives the entry TIMES.jl / CPLEX. Its solve is
+    CPLEX's own time as GAMS reports it (`etSolver`, the measure of GAMS's
+    own CPLEX runs); the handover through GAMS (GAMS.jl writes the LP as a
+    GAMS model, GAMS compiles and generates it, the solution is read back)
+    is in no part: it is in the whole run, and the hover gives it. As a
+    CPLEX timing it is on the local board only. The nightly runs it for the
+    models that get the HiGHS solve (`run_overnight.ps1`, jobs
+    `dd-<model>-cplex`); it needs a licensed GAMS with CPLEX, so never CI.
   - Whole run (slide 12): wall time, for both languages. GAMS: the wall time
     of the GAMS job, which also holds the harness's dumps. TIMES.jl: the
     gate's wall timer around the run of one variant, from the end of the run
@@ -141,14 +180,14 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
     `init_ext` to the end of `ppm_ext`; TIMES.jl input to ppm), coefficients
     (to the SOLVE statement; TIMES.jl ppm to presolve), generation (GAMS
     `resgen`; TIMES.jl `generate!`), solve (GAMS `etsolver`; TIMES.jl
-    `optimize!` with HiGHS), reports (GAMS: the statements after the solve).
+    `optimize!` with HiGHS; with CPLEX, `etSolver` of CPLEX inside GAMS),
+    reports (GAMS: the statements after the solve).
     The header of `scripts/run_timing.jl` has the detail.
   - A part that was never timed is `null` in the block and reads "not
     measured" on the slide (hover gives the reason); nothing is estimated.
     Today: TIMES.jl's reports (not translated, M1.6), TIMES.jl's whole run
-    in a batch made before the gate's wall timer, and any TIMES.jl run with
-    CPLEX (Phase 2). "not run" marks the OTUS9r solves, which are checked by
-    cross-evaluation instead of a HiGHS solve.
+    in a batch made before the gate's wall timer. "not run" marks the OTUS9r
+    solves, which are checked by cross-evaluation instead of a HiGHS solve.
   - GAMS with HiGHS: demo12 and TIMES-NZ steady have the run today. OTCGEN
     and OTNYC get it at the next reference run (`solvers` in
     `reference/suite.toml`; James, 14 Nov 2026), the batch that moves the
@@ -184,15 +223,29 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
 
 - The pipeline (GAMS files and their status), the milestones, the M1.3
   changes and their probe results, the M1.3 chain (`M13_GATE`, from
-  `scripts/m13_gate.jl`), the coefficient-stage timings (M1.2,
-  workstation) and the suite's models not yet reported are written into the
-  page by hand (`PIPELINE`, `MILESTONES`, `M13_CHANGES`, `M13_NOTE`, `M13_GATE`, `M13_PROBE`,
-  `TIMINGS`, `PLANNED_RUNS` in its script); update them when a file is
-  translated, a change merges, a gate passes, `scripts/m13_probe.jl` is run
-  on the core tier, `docs/timings.md` changes or the suite changes.
+  `scripts/m13_gate.jl`) and the suite's models not yet reported are written
+  into the page by hand (`PIPELINE`, `MILESTONES`, `M13_CHANGES`, `M13_NOTE`,
+  `M13_GATE`, `M13_PROBE`, `PLANNED_RUNS` in its script); update them when a
+  file is translated, a change merges, a gate passes, `scripts/m13_probe.jl`
+  is run on the core tier or the suite changes.
   `M13_PROBE` holds the GAMS records each probe step compares (counts only).
-  Only open models go in `TIMINGS` and `M13_PROBE`: TIM's results stay on
-  James's machine.
+  Only open models go in `M13_PROBE`: TIM's results stay on James's machine.
+  The coefficient-stage timings of slide 10 (M1.2, workstation; GAMS's from
+  its CPLEX runs) are not in the page: the local board supplies them
+  (`TIMINGS` reads its `timing-coef` block; #184, #184 d6).
+
+- `gpu-cuopt-fixtures` and `gpu-cuopt-reference` (slide 13): the reports of
+  the WSL2 cuOpt nightly at 100% of the GPU (`scripts/cuopt`), copied by hand
+  from `~/timesjl-cuopt/nightly/<date>/fixtures/share100.json` and
+  `.../reference/share100.json` in WSL2, with `meta.host` removed. Every run
+  in them must have `redistribute = "public"` (the CI fixtures and the open
+  reference runs; TIM never goes in). They hold cuOpt's own times and
+  objectives, and GAMS's objectives only: no CPLEX time. Now embedded: the
+  night of 26 Nov 2026 (TIMES.jl 3d5a4ae, cuOpt 26.10.0). Their ids do not
+  start with `cuopt-`: the local board reads every `cuopt-*` block for its own
+  cuOpt slide, which stays beside this one. `CUOPT_NOTES` (the GitHub T4
+  nightly) is written by hand from `gh run list --workflow nightly-gpu.yml`;
+  everything else on the slide is computed from the two blocks.
 
 ## Encoding
 
@@ -202,8 +255,9 @@ or not started. Numbers in cells are the records compared at 1e-9 (layers
 1-2, and GAMS records per probe step) or the relative objective difference
 (layer 3). A Dark Yellow underline marks records left to a later coefficient
 file (`later_overwrites`). Objective slide: CPLEX and HiGHS references on a
-log axis against the 1e-6 gate. Timing slide: the GAMS profile of the
-coefficient stage against TIMES.jl, warm, with the Phase 1 5x target.
+log axis against the 1e-6 gate. Timing slide (local board only): the GAMS
+profile of the coefficient stage against TIMES.jl, warm, with the Phase 1 5x
+target.
 
 Languages and solvers (James, 14 and 15 Nov 2026): the colour is the
 language and the shape is the solver, wherever a slide draws them.
@@ -236,7 +290,8 @@ language and the shape is the solver, wherever a slide draws them.
   has fewer columns, so it is the left one. The labels are stacked in the
   widest empty band of the x axis, in the order of their marks' height. On slide
   11's left panel each language has the mark of the run its time comes from
-  (GAMS its CPLEX run, TIMES.jl its HiGHS run). On slide 12 the shading of a
+  (GAMS its CPLEX run, TIMES.jl its HiGHS run, also when the local board
+  has its CPLEX run). On slide 12 the shading of a
   cell is the part's share of the run's measured time.
 - The checks of the `dataviz` palette validator, computed for the pair on
   15 Nov 2026 (OKLab difference x100, Machado simulation):

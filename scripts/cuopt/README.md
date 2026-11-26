@@ -106,8 +106,47 @@ repository variables, else the defaults:
 | `CUOPT_METHODS` | `barrier pdlp` | `barrier pdlp dual_simplex` |
 
 The job summary is `sweep.md`; the whole output directory is kept as an
-artifact for 30 days. The workflow has no `pull_request` trigger, so forks
-cannot run code on the paid runner.
+artifact for 30 days.
+
+### Open reference runs on the GitHub runner
+
+The runner has no GAMS and cannot see the workstation's reference folder, so
+the open models' reference runs reach it as release assets (James, 22 Nov
+2026: yes to publishing them; rule-level, test data). On the workstation,
+`make_ref_bundle.py` packs the reduce_off run of each model, keeping only what
+`cuopt_layer3.jl --ref` reads, then publishes them as a pre-release:
+
+```powershell
+C:\git\esma\.timesjl-venv\Scripts\python.exe scripts\cuopt\make_ref_bundle.py `
+  --ref ..\timesjl-reference --sources ..\timesjl-sources --out D:\workspace\timesjl-cuopt-bundle `
+  --release cuopt-ref-2026-11-22 `
+  TIMES-NZ-steady-v308 TIMES-NZ-shift-v308 OTCGEN-gc_ref OTNYC-s1_nyc_ref OTUS9r-reference OTUS9r-tax1_wo_mou
+```
+
+- **What is in each zip.** `<model>-reduce_off.zip` holds the `presolve`,
+  `matrix`, `matrix_dictmap` and `final` dumps, the run file, a cut-down
+  `manifest.json` (return codes, model status, objective and size of each GAMS
+  run; no paths, host, commands or timings: GAMS timings are for the local
+  board only), the model's `LICENSE` and a `NOTICE.md`. `SHA256SUMS` lists the
+  zips. The script refuses a model that is not `redistribute = "public"`, and
+  a zip that still holds a local path or the user's name.
+- **Running it.** Actions → Nightly GPU (cuOpt) → Run workflow, with
+  `ref_release` set to the tag. `ref_models` picks models (default `all`),
+  `shares` defaults to `100` here, and `time_limit` caps each solve (default
+  1800 s). One job per model, each on its own GPU runner (at most 3 at a
+  time), so one model running out of memory or time does not stop the
+  others. Each job's summary and artifact (`cuopt-ref-<model>-<run id>`) hold
+  its results. The nightly schedule is unchanged.
+- **Only from `main`.** The runner group `gpu` takes this workflow from `main`
+  only, so a change to the workflow is tested after its merge. The workflow
+  has no `pull_request` trigger, so forks cannot run code on the paid runner.
+- **Only after a local pass.** No run with `ref_release` (or of any model or
+  fixture beyond the nightly's) starts until the same models pass in the
+  local WSL2 nightly (James, 22 Nov 2026). The first full run on the T4 (run
+  45055717888, 22 Nov 2026) solved none of the six: barrier ended with a
+  numerical error or the time limit, PDLP with the time limit or outside
+  1e-6. That is issue #100. The scheduled nightly (demo12_off) is not paused
+  (James, 25 Nov 2026).
 
 ## On James's workstation (Windows 11, Quadro RTX 4000): WSL2
 
@@ -160,3 +199,21 @@ Notes for the workstation:
 - **Timings from WSL are indicative.** Compare them only with each other.
 - **The Quadro RTX 4000 has 8 GB.** PDLP needs little memory; barrier's
   factorisation is the part that may not fit on the largest models.
+
+## MPS files shared with NVIDIA (B200)
+
+Apart from the lane, NVIDIA's cuOpt team solves some of the open models on
+B200 GPUs. Nothing here depends on it: no nightly, no gate.
+
+- **15 Oct 2026:** first contact with NVIDIA.
+- **From 11 Nov 2026:** James sent the GAMS CONVERT MPS files (variant
+  `as_run`, from the reference runs) of five open runs: TIMES_Demo demo12
+  (CC BY 4.0), OTCGEN gc_ref, OTNYC s1_nyc_ref, OTUS9r reference and OTUS9r
+  tax1_wo_mou (CC BY-SA 4.0). CONVERT writes generic row and column names
+  (`e1`, `x1`, ...). TIMES-NZ was not in the set. Nothing from TIM,
+  JRC-EU-TIMES or any model without an open licence left the workstation.
+- **From about 16 Nov 2026:** NVIDIA solved them on B200s and sent back a
+  summary of its results.
+
+The results are not published in this repository until publishing is agreed
+with NVIDIA (James, 26 Nov 2026). They are kept on James's workstation.

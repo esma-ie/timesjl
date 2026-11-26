@@ -5,11 +5,14 @@ Julia/JuMP. These rules apply in every Claude session (claude.ai Project,
 Claude Code in the terminal, VS Code, or the desktop app).
 
 ## Baseline
-- Translate only from TIMES v4.9.7, `etsap-TIMES/TIMES_model` @ `d9a6a25`
-  (Antti Lehtilä's v4.9.7 commit; James's fork holds the same commit).
-  Version (James, 11 Nov 2026): v4.9.7 until the M1.3 gate closes; then the
-  whole baseline moves to v4.9.8 (`7064680`): the source download re-pinned,
-  its diff translated, every GAMS reference rerun with it.
+- Translate only from TIMES v4.9.8, `etsap-TIMES/TIMES_model` @ `7064680`
+  (Antti Lehtilä's v4.9.8 commit; James's fork holds the same commit).
+  Version (James, 11 Nov 2026): v4.9.7 (`d9a6a25`) until the M1.3 gate
+  closed (25 Nov 2026); then the whole baseline moves to v4.9.8: the source
+  download re-pinned (26 Nov 2026), its diff translated, every GAMS reference
+  rerun with it. Until the diff is translated, the v4.9.8 changes to
+  ppmain.mod, pp_qack.mod, pp_chp.mod, coef_obj.mod and prepret.dsc are not
+  (docs/translation-guide.md, "Source of truth").
 - Equation reference: `jamesglynn/TIMES_Documentation`, Part II.
 - If the GAMS code and the documentation disagree, follow the GAMS code and
   log the discrepancy in `docs/discrepancies.md`.
@@ -26,7 +29,9 @@ Claude Code in the terminal, VS Code, or the desktop app).
 - Write `$`-conditions as explicit sparse index sets. Never build dense
   Cartesian products.
 - Copy GAMS defaults, implicit zeros and interpolation exactly, and document them.
-- Translate one GAMS file or equation family per change (one PR each).
+- Translate one GAMS file or equation family per change: one commit each,
+  with its own parity check. The verified changes of a day go to James in
+  one PR (James, 26 Nov 2026; before: one PR each).
 
 ## How to work
 - Before writing code, name the GAMS files and line ranges being translated.
@@ -45,8 +50,28 @@ Claude Code in the terminal, VS Code, or the desktop app).
 - Approved plans (James, 3 Nov 2026): the Phase 1 plan is approved, with
   M1.3 in the order of `docs/m13-plan.md`. Work through it without waiting
   for a plan approval per change, and stop only to depart from it. James
-  reviews PRs at two check-ins, 9:00 and 16:30 (from 5 Nov 2026). Each PR starts with a
-  "Decisions for you" list.
+  reviews one PR a day, at the 9:00 check-in (James, 26 Nov 2026; from
+  Monday 30 Nov to Saturday 5 Dec 2026 the check-in and the review are at
+  7:00 Central European Time). The PR starts with a "Decisions for you"
+  list.
+- Parallel lanes (James, 26 Nov 2026): several agents may work at once, each
+  on its own branch and git worktree, managed by one Claude session that
+  briefs them, checks each change at the validation layers and combines the
+  verified ones into the daily PR. Only the managing session writes
+  `docs/decisions.md`. GAMS references still come from James's workstation
+  alone, within its run limits.
+- Phase 1 scope (James, 26 Nov 2026): MACRO with MSA and the mixed-integer
+  and nonlinear features (the DSC lumpy investments and block retirements,
+  the discrete unit commitment, ETL, TIMES-Micro, %DAMAGE% NLP, the gas-grid
+  pressure points and %SOLMIP%, the PTDF candidate lines) move after M1.7,
+  with the ECB, CLI, ABS, MCA and IER extensions. They stay refused with
+  their message.
+- Phase 2 lane (James, 26 Nov 2026): Phase 2 speed work runs alongside the
+  rest of Phase 1, before M1.7, limited to changes that leave the generated
+  LP identical (the exception above: layer 2 at 1e-9, same rows, columns and
+  order). Target: Phase 2 complete by Wednesday 2 Dec 2026, which means
+  model generation within 5x GAMS, warm (P2-6), while aiming for 5x faster
+  than GAMS.
 - Decision log (James, 11 Nov 2026): every question in a PR's "Decisions for
   you" list or at a check-in goes into `docs/decisions.md` with its outcome.
   A merge accepts a recommendation the PR already builds in. A question with
@@ -105,8 +130,11 @@ Any mismatch blocks the merge. Justified differences go in
 - Single model by hand, from the repo root: pass a `--root` for every
   placeholder that model uses (see `reference/suite.toml`), e.g.
   `python reference/python/make_reference.py --out ../timesjl-reference --solvers CPLEX,HIGHS --root times_source=../TIMES_model --root times_demo=../TIMES_Demo --model TIMES_Demo-demo12`
-  (clone `etsap-TIMES/TIMES_model` and `etsap-TIMES/TIMES_Demo`)
+  (clone `etsap-TIMES/TIMES_model` at the baseline commit and `etsap-TIMES/TIMES_Demo`)
   then `julia --project=. scripts/m10_gate.jl ../timesjl-reference/<model>/<variant>`.
+  On James's workstation `timesjl-reference` and `timesjl-sources\TIMES_model`
+  hold v4.9.7; v4.9.8 references go to their own folder, made with
+  `timesjl-sources\TIMES_model-v4.9.8` (make_reference.py refuses to mix them).
 - Local run limits on James's Windows workstation (James, 29 Oct 2026), for
   load management and comparable, fair resources across tests: every TIMES
   run (GAMS or TIMES.jl, any solver) uses at most 12 threads, and at most 4
@@ -144,6 +172,14 @@ Any mismatch blocks the merge. Justified differences go in
   MaREI-EPMG/times-ireland-model with DD files James generates. It runs on
   James's machine only; nothing derived from it is committed, published or
   made a fixture.
+- OTAI (ESMA; `esma-ie/otai`, CC BY-SA 4.0) joins the suite from James's DD
+  scenarios, which stay off GitHub until the paper and model are published
+  (James, 26 Nov 2026). Until then they are handled like TIM: a local source
+  (`timesjl-sources/OTAI`), `redistribute = "private"`, neutral scenario
+  names, results on the local board only, and nothing derived from them
+  (sizes, objectives, timings, logs, fixtures) in this repository, its
+  issues or its pull requests. On publication it becomes `public`, pinned to
+  the repository commit.
 - Never use anything from the `esma-cgep` GitHub organisation (an archived
   Columbia institution kept for transparency only), including
   `esma-cgep/tim-gams`: no models, DD files, licences or code.
@@ -169,6 +205,14 @@ Any mismatch blocks the merge. Justified differences go in
   licence. Keep the public repository so: no branch, commit, pull request,
   issue, release asset or tag may hold anything derived from a model without
   an open licence, and TIM material never enters it.
+- Solver timings (James, 20 and 22 Nov 2026; #182 d6, #184 d6): no timing of
+  CPLEX or another Restricted Solver of the GAMS EULA ("Publication of
+  Benchmarks": COPT, Gurobi, KNITRO, LINDO, Xpress, ODHCPLEX), GAMS's or
+  TIMES.jl's, nor any figure taken from such a run or a ratio to one, goes
+  into the public repository, its issues or its pull requests. They go to
+  the local board and the private repository `esma-ie/timesjl-unpublished`
+  (open models only). GAMS's timings with other solvers (GAMS/HiGHS) and
+  from runs that call no solver may be published, with the method stated.
 - Commit messages end with the session attribution lines Claude Code
   supplies. Keep them: the README points readers to the `Co-Authored-By`
   line to see which model wrote each commit.

@@ -8,7 +8,7 @@ using TIMES: times_source, times_demo_dir, compile_run, grecords, gdx_uels, gdx_
              TIMES_MODEL_COMMIT, TIMES_GAMS_COMMIT
 using TIMES.Reference: load_dump, read_symbol, SV_EPS
 
-@test startswith(TIMES_MODEL_COMMIT, TIMES_GAMS_COMMIT)
+@test startswith(TIMES_MODEL_COMMIT, "7064680")   # the v4.9.8 download (TIMES_GAMS_COMMIT: d9a6a25 until the diff is translated)
 src = times_source()
 @test all(f -> isfile(joinpath(src, f)), ("maindrv.mod", "initsys.mod", "initmty.mod", "eqobj.mod"))
 
@@ -135,4 +135,42 @@ end
     @test_throws "Invalid Control: TIMESTEP" ctl(Dict("TIMESTEP" => "YES"))
     @test_throws "Invalid Control: FIXBOH" ctl(Dict("FIXBOH" => "1950"))
     @test_throws "Invalid Control: SPOINT" ctl(Dict("SPOINT" => "NO"))
+end
+
+# M1.3 change 70: the stochastic extension's declarations and data (initmty.mod L435-437, initmty.stc),
+# eight crafted cases, each compiled from its DD files to GAMS's input dump (as_run). demo12_sensis also
+# reaches the report writer that solve.stc L7 compiles under SENSIS (rptlite.rpt with solsysd.v3: G63, and
+# the Latin-1 label of rptlite.rpt L53). Their model fixtures come with changes 71-76 (docs/m13-plan.md).
+@testset "stochastic $p" for p in ("demo12_stc", "demo12_stc3", "demo12_stcmx", "demo12_stclam", "demo12_stcext",
+                                   "demo12_spines", "demo12_sensis", "demo12_tradeoff")
+    check_dd_case("TIMES_Demo-" * p, p * "_run", p * "_input")
+end
+
+# G63 (GAMS 54.6.1, 20 Nov 2026): $GOTO goes to the first `$LABEL name` from the top, with the name
+# substituted, and the dollar commands after the name run, also after the jump (solsysd.v3 L7-14)
+@testset "\$GOTO and \$LABEL, G63" begin
+    mktempdir() do dir
+        write(joinpath(dir, "b.gms"), """
+            \$SETARGS P1 P2
+            \$GOTO %1
+            \$LABEL X SHIFT
+            SET S / %1 /;
+            \$IF NOT '%2'=='' \$GOTO %P1%
+            \$EXIT
+            \$LABEL %P1% SHIFT SHIFT
+            SET T / %1 /;
+            """)
+        for (call, s, t) in (("X one two three", ["one", "two", "three"], nothing), ("Y one two three", nothing, ["two"]))
+            write(joinpath(dir, "a.run"), "\$ONMULTI\n\$BATINCLUDE b.gms $call\n")
+            g = compile_run(joinpath(dir, "a.run"))
+            mem(n) = haskey(g.syms, n) ? [only(k) for k in grecords(g, g.syms[n])[1]] : nothing
+            @test mem("S") == s
+            @test mem("T") == t
+        end
+        # $EOLCOM takes one marker, then the rest of the line runs
+        write(joinpath(dir, "c.run"), "\$EOLCOM ! SETGLOBAL Z 1\nSET U / u1 / ! a comment\n")
+        g = compile_run(joinpath(dir, "c.run"))
+        @test g.globals["Z"] == "1"
+        @test [only(k) for k in grecords(g, g.syms["U"])[1]] == ["u1"]
+    end
 end

@@ -140,10 +140,27 @@ In the suite from 30 Oct 2026, beside the primary models:
   auto-relax step (`pp_qafs.mod`). Their policy cases were exported and
   checked on 30 Oct 2026 and can join the milestone tier later.
 
-Candidates, not yet in the suite: OTAI (CC-BY-SA-4.0, ESMA; no TIM data,
-James 27 Oct 2026), DEVTAI (ESMA's two-region power model; needs a LICENSE),
-and JRC-EU-TIMES v1.1.1 (CC-BY-4.0). OTAI and JRC-EU-TIMES v1.1.1 are Veda
-Excel only, so they join at M1.4 through xl2times unless DD files are added.
+Candidates, not yet in the suite: DEVTAI (ESMA's two-region power model;
+needs a LICENSE) and JRC-EU-TIMES v1.1.1 (CC-BY-4.0; Veda Excel only, so it
+joins through xl2times unless DD files are added).
+
+OTAI (`esma-ie/otai`, CC-BY-SA-4.0, ESMA; no TIM data, James 27 Oct 2026;
+licence seen at the repository on 26 Nov 2026) joins the suite from DD
+scenarios James exports (James, 26 Nov 2026). The scenarios are CC-BY-SA-4.0
+and stay off GitHub until the paper and the model are published. Until then:
+
+- they are a local source, `timesjl-sources/OTAI/dd/<scenario>/` (the layout
+  above), pinned by `dd/manifest.json`, never committed;
+- `redistribute = "private"`, as for TIM: nothing derived from them (sizes,
+  objectives, timings, logs, references, fixtures, crafted cases) enters
+  this repository, its issues or its pull requests; results go to the local
+  board only;
+- the suite entries use neutral scenario names;
+- one small case may join the core tier; the larger ones are milestone tier.
+
+On publication the DD files move to the repository's `dd/`, the entries are
+pinned to its commit and `redistribute` becomes `public`. The suite entries
+are added when the DD files are in place.
 
 JRC-EU-TIMES in the suite is PSI's WIMBY version. PSI's repository holds only
 GAMS `DUMPOPT=11` dumps of nine scenarios (TIMES v4.8.3). The DD files were

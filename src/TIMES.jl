@@ -3,17 +3,23 @@
 
 Julia/JuMP translation of the IEA-ETSAP TIMES model generator.
 
-Phase 1 translates TIMES v4.9.7 (`etsap-TIMES/TIMES_model` @ `d9a6a25`) with
-exact numerical parity. The `TIMES.Reference` submodule reads GAMS reference
+Phase 1 translates TIMES v4.9.8 (`etsap-TIMES/TIMES_model` @ `7064680`) with
+exact numerical parity. The baseline moved from v4.9.7 (`d9a6a25`) on 26 Nov 2026,
+after the M1.3 gate: the source download is v4.9.8; until their pull requests merge,
+`TIMES_GAMS_VERSION` stays 4.9.7 and the v4.9.8 changes to
+ppmain.mod, pp_qack.mod, pp_chp.mod, coef_obj.mod and prepret.dsc are not yet translated
+(docs/translation-guide.md, "Source of truth"). The `TIMES.Reference` submodule reads GAMS reference
 dumps and compares them with TIMES.jl output; the model itself is added
 milestone by milestone from M1.1.
 """
 module TIMES
 
-"TIMES GAMS version this code is translated from."
+"""TIMES GAMS version this code is translated from and its CI fixtures were made with: 4.9.7 until the
+last v4.9.8 diff pull request, which moves it with the fixtures. The QA log's title (%SYSTEM.TITLE%,
+initsys.mod L1) is taken from it (src/prep/qalog.jl `qa_title`)."""
 const TIMES_GAMS_VERSION = v"4.9.7"
 
-"Commit of `etsap-TIMES/TIMES_model` this code is translated from."
+"Commit of `etsap-TIMES/TIMES_model` this code is translated from (see `TIMES_GAMS_VERSION`)."
 const TIMES_GAMS_COMMIT = "d9a6a25"
 
 import JuMP

@@ -6,8 +6,25 @@ parity. Phase 1 is a faithful translation: no reformulation and no
 optimisation. Performance work happens in Phase 2.
 
 ## Source of truth
-- Baseline: TIMES v4.9.7, etsap-TIMES/TIMES_model @ d9a6a25. Pin this commit
-  and never translate from any other version.
+- Baseline: TIMES v4.9.8, etsap-TIMES/TIMES_model @ 7064680 (from 26 Nov
+  2026; v4.9.7 @ d9a6a25 until the M1.3 gate). Pin this commit and never
+  translate from any other version. The move, in order: the re-pin (the
+  source download, the harness, the baseline in the documents); the GAMS
+  references rerun with v4.9.8 into their own folder; the diff translated
+  one GAMS file per pull request, each checked against those references:
+  ppmain.mod, pp_qack.mod, pp_chp.mod, coef_obj.mod and prepret.dsc
+  (initsys.mod changes only its title). `TIMES_GAMS_VERSION` stays 4.9.7
+  (the QA log's title, which GAMS takes from initsys.mod L1, and the CI
+  fixtures are v4.9.7) until the last diff pull request, which moves it
+  with the fixtures. Until a file's pull request merges,
+  TIMES.jl follows v4.9.7 there, and the citations of the code stay
+  `v4.9.7`: v4.9.8 shifts lines only in ppmain.mod (+2 after L542),
+  pp_qack.mod (+1 at L199-200, +7 after L201) and pp_chp.mod (+1 after
+  L13).
+  The scripts that run slices of ppmain.mod with GAMS (`scripts/ppmain_replay.jl`,
+  `scripts/m13_replay.jl`, `scripts/make_*_unit.jl`) cut it by v4.9.7 line
+  numbers: run them with the v4.9.7 clone (`timesjl-sources\TIMES_model`)
+  until the ppmain.mod pull request moves them.
 - Equation reference: jamesglynn/TIMES_Documentation, Part II.
 - If the GAMS code and the documentation disagree, the GAMS code is
   authoritative. Log every discrepancy in `docs/discrepancies.md`.
@@ -19,8 +36,8 @@ optimisation. Performance work happens in Phase 2.
 2. M1.1 Model generation: variables, core + VDA equations, bounds and
    objective, built from GAMS-dumped data.
 3. M1.2 Coefficients (coefmain, coef_*).
-4. M1.3 Preprocessing (ppmain, pp_*, VDA prep, REDUCE).
-5. M1.4 GAMS-free DD/.run reader.
+4. M1.3 Preprocessing (ppmain, pp_*, VDA prep, REDUCE). Gate passed 25 Nov 2026.
+5. M1.4 GAMS-free DD/.run reader. Gate passed 25 Nov 2026.
 6. M1.5 Run options (OBJ variants, MID_YEAR, DSCAUTO, VAR_UC, FIXBOH, ...).
 7. M1.6 Reporting + Veda .vd output.
 8. M1.7 Phase 1 release + baseline benchmarks.
@@ -89,6 +106,11 @@ Any mismatch blocks the merge. Record known, justified differences in
   are in the M1.3 gate; %OBJANN%, %VALIDATE%, %VINTOPT% 1, %WAVER%,
   %INTEXT_ONLY%, %PREP_ANS%, VAR_UC not YES and the trade bounds of an
   earlier run (bnd_ire.vda) move to M1.5 (docs/m13-plan.md, Gate audit).
+  James, 22 Nov 2026: the stochastic extension (changes 71-76, after the
+  move to v4.9.8; #192 d2) and damage costs from a base run (DAM_ELAST
+  'N'; #192 d1) leave the M1.3 gate. They and the other post-gate
+  features are listed for completion before Phase 1 closes
+  (docs/m13-plan.md, "After the gate, before Phase 1 closes").
 - Reference solver: CPLEX via James's GAMS licence for reference runs;
   HiGHS on both sides for open-source parity and CI; Gurobi trial
   possible later for benchmarks. Confirmed.
@@ -103,6 +125,10 @@ Any mismatch blocks the merge. Record known, justified differences in
   Phase 1 still times each stage against GAMS and logs it, and M1.7's
   baseline benchmarks record where TIMES.jl stands, with no target to
   meet. Correctness comes first; speed is Phase 2's job.
+  James, 26 Nov 2026: MACRO with MSA and the mixed-integer and nonlinear
+  features move after M1.7, with the other extensions; a Phase 2 speed
+  lane (LP-identical changes only) runs alongside the rest of Phase 1
+  (docs/decisions.md; CLAUDE.md, How to work).
 
 ## Status
 Entries up to 22 Oct 2026 summarise the pre-publication work. Until 27 Oct
@@ -191,8 +217,9 @@ those checks, their figures and their crafted cases are not published
   demo12). The reduced-flow conversion (L38-40, L42) is refused until REDUCE
   (M1.3). `OPTION` projection semantics confirmed (discrepancies G26-G28).
 - 21 Oct 2026: M1.1 timings on one machine (James's workstation, Julia
-  1.13.2 against GAMS 52.1.0; docs/timings.md): TIMES.jl generation is 6.8x
-  GAMS equations + hand-over on demo12.
+  1.13.2 against GAMS 52.1.0; docs/timings.md): TIMES.jl generation timed
+  against GAMS's equations and hand-over on demo12 (GAMS's figures, from a
+  CPLEX run: `esma-ie/timesjl-unpublished`; #184 d6).
 - 21 Oct 2026: M1.2 (4): coef_obj.mod with filparam.gms and fillcost.gms,
   with a crafted state replayed through coef_obj.mod by GAMS
   (scripts/gams_replay.jl). Refused: ANNCOST LEV, VALIDATE, elastic demand
@@ -289,8 +316,8 @@ those checks, their figures and their crafted cases are not published
   with no mismatch; OTCGEN and OTNYC, after the YK1 fix (coef_alt.lin L32),
   also cover the OBLONG NO path of coef_cpt.mod (L19-21, G23)
   (docs/dashboard/suite-public-weekend.json). The coefficient stage is timed
-  against GAMS on James's workstation (docs/timings.md): 75x on demo12 (one
-  1/64 s step of the GAMS profile) to 359x on OTCGEN, a Phase 2 matter.
+  against GAMS on James's workstation (docs/timings.md; the ratios, to
+  CPLEX runs, in `esma-ie/timesjl-unpublished`), a Phase 2 matter.
 - 31 Oct 2026: **M1.2 gate PASS** (James). Every translated coefficient file
   passes layer 1 at 1e-9 on demo12 with nothing excluded and on the crafted
   states (CI), on every public reference run of the core tier and on
@@ -524,8 +551,9 @@ those checks, their figures and their crafted cases are not published
   chain from the input dump PASS at every checkpoint on the five core
   models, both variants (`scripts/m13_gate.jl`); in CI the demo12 chain
   through the coefficients (`test/unit/test_m13_chain.jl`) and the model
-  with REDUCE off and on; preprocessing 3.0x GAMS on demo12, 4.8x to 5.5x
-  on the large core models (`scripts/m13_timing.jl`, docs/timings.md).
+  with REDUCE off and on; preprocessing timed against GAMS
+  (`scripts/m13_timing.jl`, docs/timings.md; the ratios in
+  `esma-ie/timesjl-unpublished`).
   Outstanding for the gate: TIM-bau on James's machine, and the merge of
   #44-#47.
 - 5 Nov 2026: M1.3 (17c): the two REDUCE paths demo12 does not reach (an
@@ -727,8 +755,8 @@ those checks, their figures and their crafted cases are not published
   with changes 0-29 the chain from the input dump PASS at every checkpoint
   to presolve on the five core models, both variants, with the QA log;
   JRC-EU-TIMES-cli_ll PASS to ppm in both variants; OTUS9r layer 3 by
-  cross-evaluation PASS; preprocessing 3.4x GAMS on demo12 and 5.4x to 6.3x
-  on the large core models (13 Nov, docs/timings.md), accepted for the gate
+  cross-evaluation PASS; preprocessing timed against GAMS (13 Nov,
+  docs/timings.md; the ratios in `esma-ie/timesjl-unpublished`), accepted for the gate
   by James on 14 Nov. The gate is passed when James says so (#109).
   Refused features are translated after it, one PR each.
 - 14 Nov 2026: M1.3 change 30: stepped (myopic) runs before solve.stp:
@@ -1108,6 +1136,12 @@ those checks, their figures and their crafted cases are not published
   PRC_RCAP outside RP kept; eqobjinv.mod L219-229, an EPS COEF_ILED gives
   interest during construction). New crafted case demo12_iled: layers 1
   to 3 PASS in both variants from the DD files (objective 23,961,179.22).
+- 20 Nov 2026: M1.3 change 70, the first of the stochastic extension's plan
+  (approved by James, 20 Nov 2026): the DD reader reads initmty.stc and the
+  stochastic data, and under SENSIS the report writer that solve.stc L7
+  compiles (G62, G63). Eight crafted cases (demo12_stc, _stc3, _stcmx,
+  _stclam, _stcext, _spines, _sensis, _tradeoff): layer 1 at the input dump
+  in both variants from the DD files. Harness 0.3.7.
 - 19 Nov 2026: M1.3 change 69: elastic demand, the linear form (%TIMESED%
   YES), with the base prices read from and written to TIMES.jl's own Arrow
   folder (q1). New crafted cases demo12_edbase, demo12_ed and demo12_edagg:
@@ -1142,3 +1176,7 @@ those checks, their figures and their crafted cases are not published
   `STEP_SYMBOLS`. No generated LP changes (#35, #54): the steps, their
   order and the functions are those of before, checked one by one, and the
   M1.3 gate passes on demo12 as before.
+- 25 Nov 2026: the M1.3 and M1.4 gates passed (James: "#109 yes, #117 yes, rerun timings after"; #109,
+  #117), on the audit of 22 Nov 2026 (docs/m13-plan.md). The baseline
+  moves to TIMES v4.9.8 (`7064680`) next; the timing rerun follows on the
+  local board.
