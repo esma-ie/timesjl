@@ -32,6 +32,10 @@ it references. Returns the number of rows generated.
           COEF_PTRAN(R,V,P,COM_GRP,C,CG,TS) * RS_FR(R,S,TS)*(1+RTCS_FR(R,T,C,S,TS)) * [cal_red C COM TS P T])
       %SHP1% * (1+(ACT_FLO(R,V,P,CG,S)-1\$ACT_FLO(R,V,P,CG,S))\$PRC_CG(R,P,COM_GRP));
 
+The SOW tags (sow_tags.jl): the row is `%EQ%_PTRANS(... %SWT%)` (L19); the
+flows are the `%VAR%_FLO(... %SOW%)` of %cal_red% (L27, L37). The shape factor
+%SHFF%S(... %SOW%) of L15 is the data of change 74.
+
 GAMS: eqptrans.mod L14-39, v4.9.7.
 """
 function eq_ptrans!(tm::TimesModel)
@@ -77,31 +81,34 @@ function eq_ptrans!(tm::TimesModel)
                 any(k -> (r, p, k[5]) in rpc && (r, s, k[7]) in rs_tree, ptran) || continue
 
                 # LHS: dependent commodities of group CG.
-                lhs = JuMP.AffExpr(0.0)
-                for (_, _, c) in get(gmap_of_rcg, (r, cg2), NTuple{3,String}[])
-                    for (_, _, ts) in get(tree_of_rs, (r, s), NTuple{3,String}[])
-                        (r, t, p, c, ts) in rtpcs_varf || continue
-                        k = gv(rs_fr, (r, s, ts)) * (1 + gv(rtcs_fr, (r, t, c, s, ts)))
-                        cal_nored!(lhs, tm, k, r, v, t, p, c, ts)
+                for sow in sw_rows(tm, t)   # %SWT% (L19)
+                    set_sow!(tm, sow)
+                    lhs = JuMP.AffExpr(0.0)
+                    for (_, _, c) in get(gmap_of_rcg, (r, cg2), NTuple{3,String}[])
+                        for (_, _, ts) in get(tree_of_rs, (r, s), NTuple{3,String}[])
+                            (r, t, p, c, ts) in rtpcs_varf || continue
+                            k = gv(rs_fr, (r, s, ts)) * (1 + gv(rtcs_fr, (r, t, c, s, ts)))
+                            cal_nored!(lhs, tm, k, r, v, t, p, c, ts)
+                        end
                     end
-                end
 
-                # RHS: control commodities, times %SHP1% and the ACT_FLO factor.
-                shp1 = (1 + gif(gv(rtp_ffcx, (r, v, t, p, cg1, cg2)), (r, p) in prc_vint)) *
-                       (1 + gv(rtp_ffcs, (r, v, p, cg1, cg2)))
-                af = gv(act_flo, (r, v, p, cg2, s))
-                actf = 1 + gif(af - gif(1, haskey(act_flo, (r, v, p, cg2, s))), (r, p, cg1) in prc_cg)
-                outer = shp1 * actf
-                rhs = JuMP.AffExpr(0.0)
-                for (_, _, _, c, ts) in get(varf_of_rtp, (r, t, p), NTuple{5,String}[])
-                    (r, s, ts) in rs_tree || continue
-                    haskey(coef_ptran, (r, v, p, cg1, c, cg2, ts)) || continue
-                    k = gv(coef_ptran, (r, v, p, cg1, c, cg2, ts)) * gv(rs_fr, (r, s, ts)) *
-                        (1 + gv(rtcs_fr, (r, t, c, s, ts)))
-                    cal_nored!(rhs, tm, k * outer, r, v, t, p, c, ts)
-                end
+                    # RHS: control commodities, times %SHP1% and the ACT_FLO factor.
+                    shp1 = (1 + gif(gv(rtp_ffcx, (r, v, t, p, cg1, cg2)), (r, p) in prc_vint)) *
+                           (1 + gv(rtp_ffcs, (r, v, p, cg1, cg2)))
+                    af = gv(act_flo, (r, v, p, cg2, s))
+                    actf = 1 + gif(af - gif(1, haskey(act_flo, (r, v, p, cg2, s))), (r, p, cg1) in prc_cg)
+                    outer = shp1 * actf
+                    rhs = JuMP.AffExpr(0.0)
+                    for (_, _, _, c, ts) in get(varf_of_rtp, (r, t, p), NTuple{5,String}[])
+                        (r, s, ts) in rs_tree || continue
+                        haskey(coef_ptran, (r, v, p, cg1, c, cg2, ts)) || continue
+                        k = gv(coef_ptran, (r, v, p, cg1, c, cg2, ts)) * gv(rs_fr, (r, s, ts)) *
+                            (1 + gv(rtcs_fr, (r, t, c, s, ts)))
+                        cal_nored!(rhs, tm, k * outer, r, v, t, p, c, ts)
+                    end
 
-                gconstraint!(tm, "EQ_PTRANS", (r, v, t, p, cg1, cg2, s), "E", lhs, rhs) === nothing || (n += 1)
+                    gconstraint!(tm, eqtag(tm, "EQ_PTRANS"), swt(tm, (r, v, t, p, cg1, cg2, s), t), "E", lhs, rhs) === nothing || (n += 1)
+                end
             end
         end
     end

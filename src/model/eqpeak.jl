@@ -75,6 +75,12 @@ Generate every EQ_PEAK row from `tm.data`. Returns the number of rows.
 Inside the cal_* terms the commodity is C and the balance timeslice is S
 (the inner summation indices), as eqpeak.mod passes them.
 
+The SOW tags (sow_tags.jl): the row is `%EQ%_PEAK(... %SWT%)` (L15); the
+capacity is `%VARV%_NCAP(R,V,P %SWS%)` (L24, `at = v`) with %RCAPSUB%; every
+other term is `%VAR%_X(... %SOW%)` (cal_fflo.mod, cal_ire.mod, cal_stgn.mod;
+L78, L82, L85). The uncertain demand (S_COM_PROJ through the local %SWS% of
+L81, COM_FR%MX% of L82) is change 74.
+
 GAMS: eqpeak.mod L15-87, v4.9.7.
 """
 function eq_peak!(tm::TimesModel)
@@ -153,82 +159,85 @@ function eq_peak!(tm::TimesModel)
 
     n = 0
     for (r, t, cg2, sl) in rows
-        lhs = JuMP.AffExpr(0.0)
-        rhs = JuMP.AffExpr(0.0)
-        for (_, _, c) in get(gmap_of_rcg, (r, cg2), no3), (_, _, s) in get(ts_of_rc, (r, c), no3)
-            haskey(rs_fr, (r, sl, s)) || continue
-            fr = gv(rs_fr, (r, sl, s))
-            ie = gv(com_ie, (r, t, c, s))
+        for sow in sw_rows(tm, t)   # %SWT% (L15)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            rhs = JuMP.AffExpr(0.0)
+            for (_, _, c) in get(gmap_of_rcg, (r, cg2), no3), (_, _, s) in get(ts_of_rc, (r, c), no3)
+                haskey(rs_fr, (r, sl, s)) || continue
+                fr = gv(rs_fr, (r, sl, s))
+                ie = gv(com_ie, (r, t, c, s))
 
-            # ---- LHS (L17-50) -------------------------------------------------
-            rsv = GNum(1.0) / (1 + gmax(grp(com_pkrsv, (r, t, cg2)), gv(com_pkrsv, (r, t, c))))
-            out = fr * rsv * ie
-            # Capacity contribution (L22-25).
-            for (_, p, _) in get(pkc_of_rc, (r, c), no3)
-                base = gv(g_yrfr, (r, s)) * gv(prc_capact, (r, p))
-                for v in get(v_of_rtp, (r, t, p), String[])
-                    k = out * (base * (gv(coef_vnt, (r, t, p, v)) * gv(prc_actflo, (r, v, p, c)) *
-                                       gv(ncap_pkcnt, (r, v, p, s))))
-                    (v,) in milestonyr && addterm!(lhs, k, tm, "VAR_NCAP", r, v, p)
-                    (v,) in pastyear && addconst!(lhs, k * gv(ncap_pasti, (r, v, p)))
-                    rcapsub!(lhs, k, tm, r, v, t, p)                  # %RCAPSUB% (prepret.jl)
+                # ---- LHS (L17-50) -------------------------------------------------
+                rsv = GNum(1.0) / (1 + gmax(grp(com_pkrsv, (r, t, cg2)), gv(com_pkrsv, (r, t, c))))
+                out = fr * rsv * ie
+                # Capacity contribution (L22-25).
+                for (_, p, _) in get(pkc_of_rc, (r, c), no3)
+                    base = gv(g_yrfr, (r, s)) * gv(prc_capact, (r, p))
+                    for v in get(v_of_rtp, (r, t, p), String[])
+                        k = out * (base * (gv(coef_vnt, (r, t, p, v)) * gv(prc_actflo, (r, v, p, c)) *
+                                           gv(ncap_pkcnt, (r, v, p, s))))
+                        (v,) in milestonyr && addterm!(lhs, k, tm, "VAR_NCAP", r, v, p; at=v)   # %VARV%_NCAP(R,V,P %SWS%) (L24)
+                        (v,) in pastyear && addconst!(lhs, k * gv(ncap_pasti, (r, v, p)))
+                        rcapsub!(lhs, k, tm, r, v, t, p)                  # %RCAPSUB% (prepret.jl)
+                    end
                 end
-            end
-            pkcnt = (p, v, ts) -> gv(ncap_pkcnt, (r, v, p, s))
-            # Net imports (L31-32): imports times NCAP_PKCNT, minus exports of PRC_PKNO processes.
-            cal_ire!(lhs, tm, out, "IMP", "OUT", r, t, c, s; pk=pkcnt)
-            ireaux!(lhs, tm, -out, r, t, c, s)                     # L31: cal_ire.mod L30, IREAUXOUT- (%MX% = '-')
-            ie_pos = ie.v > 0                              # COM_IE(R,T,C,S)>0 (EPS compares as 0, G12)
-            exp_pk = (p, v, ts) -> ie_pos ? (-gv(ncap_pkcnt, (r, v, p, s))) / ie : GZERO
-            cal_ire!(lhs, tm, out, "EXP", "IN", r, t, c, s; pk=exp_pk, pfilter=p -> (r, p) in prc_pkno)
-            # Storage (L41): output * STG_EFF (net of the input with RPC_STGN), * NCAP_PKCNT**RPC_PKF.
-            pkf = (p, v) -> gif(gpow(gv(ncap_pkcnt, (r, v, p, s)), gv(rpc_pkf, (r, p, c))), haskey(rpc_pkf, (r, p, c)))
-            cal_stgn!(lhs, tm, out, "OUT", r, t, c, s; cond=(p, ts) -> !((r, p, ts) in nstts),
-                      f3=(p, v) -> gv(stg_eff, (r, v, p)), f4=(p, v) -> one, f6=pkf)
-            # Flow-based contribution (L44).
-            cal_fflo!(lhs, tm, out, "OUT", r, t, c, s;
-                      pk=(p, v, ts) -> gpow(gv(ncap_pkcnt, (r, v, p, s)), gv(rpc_pkf, (r, p, c))),
-                      pcond=p -> haskey(rpc_pkf, (r, p, c)))
+                pkcnt = (p, v, ts) -> gv(ncap_pkcnt, (r, v, p, s))
+                # Net imports (L31-32): imports times NCAP_PKCNT, minus exports of PRC_PKNO processes.
+                cal_ire!(lhs, tm, out, "IMP", "OUT", r, t, c, s; pk=pkcnt)
+                ireaux!(lhs, tm, -out, r, t, c, s)                     # L31: cal_ire.mod L30, IREAUXOUT- (%MX% = '-')
+                ie_pos = ie.v > 0                              # COM_IE(R,T,C,S)>0 (EPS compares as 0, G12)
+                exp_pk = (p, v, ts) -> ie_pos ? (-gv(ncap_pkcnt, (r, v, p, s))) / ie : GZERO
+                cal_ire!(lhs, tm, out, "EXP", "IN", r, t, c, s; pk=exp_pk, pfilter=p -> (r, p) in prc_pkno)
+                # Storage (L41): output * STG_EFF (net of the input with RPC_STGN), * NCAP_PKCNT**RPC_PKF.
+                pkf = (p, v) -> gif(gpow(gv(ncap_pkcnt, (r, v, p, s)), gv(rpc_pkf, (r, p, c))), haskey(rpc_pkf, (r, p, c)))
+                cal_stgn!(lhs, tm, out, "OUT", r, t, c, s; cond=(p, ts) -> !((r, p, ts) in nstts),
+                          f3=(p, v) -> gv(stg_eff, (r, v, p)), f4=(p, v) -> one, f6=pkf)
+                # Flow-based contribution (L44).
+                cal_fflo!(lhs, tm, out, "OUT", r, t, c, s;
+                          pk=(p, v, ts) -> gpow(gv(ncap_pkcnt, (r, v, p, s)), gv(rpc_pkf, (r, p, c))),
+                          pcond=p -> haskey(rpc_pkf, (r, p, c)))
 
-            # ---- RHS (L54-87) -------------------------------------------------
-            flx = fr * (1 + gmax(grp(com_pkflx, (r, t, cg2, sl)), gv(com_pkflx, (r, t, c, s))))
-            pkcoi = (p, v, ts) -> gv(flo_pkcoi, (r, t, p, c, ts))
-            cal_fflo!(rhs, tm, flx, "IN", r, t, c, s; pk=pkcoi)          # L65
-            cal_ire!(rhs, tm, flx, "EXP", "IN", r, t, c, s; pk=pkcoi)    # L68
-            # Capacity-related flows consumed (L72: cal_cap.mod IN I '1$(NOT PRC_PKNO(R,P))*').
-            cal_cap!(rhs, tm, flx, "IN", r, t, c, s; pf=p -> GNum((r, p) in prc_pkno ? 0.0 : 1.0))
-            # Storage input (L75), net of STG_EFF * NCAP_PKCNT**RPC_PKF * output with RPC_STGN.
-            cal_stgn!(rhs, tm, flx, "IN", r, t, c, s;
-                      cond=(p, ts) -> !((r, "NST", p) in prc_map) || (r, p, ts) in nstts,
-                      f3=(p, v) -> one,
-                      f4=(p, v) -> gv(stg_eff, (r, v, p)) * gpow(gv(ncap_pkcnt, (r, v, p, s)), gv(rpc_pkf, (r, p, c))),
-                      f6=(p, v) -> gif(one, haskey(rpc_pkf, (r, p, c))))
-            # Blending inputs (L78).
-            for (_, b, _) in get(ble_inp_of_rc, (r, c), no3)
-                ((b,) in ble && (r, t, b) in ble_tp) || continue
-                k = gv(g_yrfr, (r, s)) * (1 + gv(rtcs_fr, (r, t, c, s, "ANNUAL"))) * gv(bl_inp, (r, b, c)) * gv(peakda_bl, (r, b, t))
-                for (_, _, o) in get(ble_opr_of_rb, (r, b), no3)
-                    (o,) in opr || continue
-                    addterm!(rhs, flx * k, tm, "VAR_BLND", r, t, b, o)
+                # ---- RHS (L54-87) -------------------------------------------------
+                flx = fr * (1 + gmax(grp(com_pkflx, (r, t, cg2, sl)), gv(com_pkflx, (r, t, c, s))))
+                pkcoi = (p, v, ts) -> gv(flo_pkcoi, (r, t, p, c, ts))
+                cal_fflo!(rhs, tm, flx, "IN", r, t, c, s; pk=pkcoi)          # L65
+                cal_ire!(rhs, tm, flx, "EXP", "IN", r, t, c, s; pk=pkcoi)    # L68
+                # Capacity-related flows consumed (L72: cal_cap.mod IN I '1$(NOT PRC_PKNO(R,P))*').
+                cal_cap!(rhs, tm, flx, "IN", r, t, c, s; pf=p -> GNum((r, p) in prc_pkno ? 0.0 : 1.0))
+                # Storage input (L75), net of STG_EFF * NCAP_PKCNT**RPC_PKF * output with RPC_STGN.
+                cal_stgn!(rhs, tm, flx, "IN", r, t, c, s;
+                          cond=(p, ts) -> !((r, "NST", p) in prc_map) || (r, p, ts) in nstts,
+                          f3=(p, v) -> one,
+                          f4=(p, v) -> gv(stg_eff, (r, v, p)) * gpow(gv(ncap_pkcnt, (r, v, p, s)), gv(rpc_pkf, (r, p, c))),
+                          f6=(p, v) -> gif(one, haskey(rpc_pkf, (r, p, c))))
+                # Blending inputs (L78).
+                for (_, b, _) in get(ble_inp_of_rc, (r, c), no3)
+                    ((b,) in ble && (r, t, b) in ble_tp) || continue
+                    k = gv(g_yrfr, (r, s)) * (1 + gv(rtcs_fr, (r, t, c, s, "ANNUAL"))) * gv(bl_inp, (r, b, c)) * gv(peakda_bl, (r, b, t))
+                    for (_, _, o) in get(ble_opr_of_rb, (r, b), no3)
+                        (o,) in opr || continue
+                        addterm!(rhs, flx * k, tm, "VAR_BLND", r, t, b, o)
+                    end
+                end
+                # Demand projection (L82).
+                if (r, c) in dem
+                    cfr = gv(com_fr, (r, t, c, s))
+                    haskey(rd_nlp, (r, c)) || addconst!(rhs, flx * (gv(com_proj, (r, t, c)) * cfr))
+                    for (_, cm) in get(agg_of_r, (r,), no2)
+                        addterm!(rhs, flx * (gv(rd_shar, (r, t, cm, c)) * cfr), tm, "VAR_COMPRD", r, t, cm, "ANNUAL")
+                    end
+                end
+                # Elastic demand (L85): SUM(RCJ(R,C,J,BDNEQ(BD))$COM_ELAST(R,T,C,S,BD),-BDSIG(BD)*VAR_ELAST(R,T,C,S,J,BD))
+                if ted
+                    for (_, _, j, b) in get(rcj_of, (r, c), NTuple{4,String}[])
+                        (b in bdneq && !iszero(gv(com_elast, (r, t, c, s, b)))) || continue
+                        addterm!(rhs, flx * GNum(-bdsig(b)), tm, "VAR_ELAST", r, t, c, s, j, b)
+                    end
                 end
             end
-            # Demand projection (L82).
-            if (r, c) in dem
-                cfr = gv(com_fr, (r, t, c, s))
-                haskey(rd_nlp, (r, c)) || addconst!(rhs, flx * (gv(com_proj, (r, t, c)) * cfr))
-                for (_, cm) in get(agg_of_r, (r,), no2)
-                    addterm!(rhs, flx * (gv(rd_shar, (r, t, cm, c)) * cfr), tm, "VAR_COMPRD", r, t, cm, "ANNUAL")
-                end
-            end
-            # Elastic demand (L85): SUM(RCJ(R,C,J,BDNEQ(BD))$COM_ELAST(R,T,C,S,BD),-BDSIG(BD)*VAR_ELAST(R,T,C,S,J,BD))
-            if ted
-                for (_, _, j, b) in get(rcj_of, (r, c), NTuple{4,String}[])
-                    (b in bdneq && !iszero(gv(com_elast, (r, t, c, s, b)))) || continue
-                    addterm!(rhs, flx * GNum(-bdsig(b)), tm, "VAR_ELAST", r, t, c, s, j, b)
-                end
-            end
+            gconstraint!(tm, eqtag(tm, name), swt(tm, (r, t, cg2, sl), t), "G", lhs, rhs) === nothing || (n += 1)
         end
-        gconstraint!(tm, name, (r, t, cg2, sl), "G", lhs, rhs) === nothing || (n += 1)
     end
     return n
 end
