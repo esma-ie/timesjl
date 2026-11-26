@@ -166,6 +166,13 @@ On 25 Nov 2026 James answered the question of 22 Nov 2026 on the cuOpt pause: "k
 
 ## Log by pull request
 
+### #205 cuOpt lane: log the MPS files shared with NVIDIA for B200 runs (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | NVIDIA's B200 results kept off this repository, its issues and pull requests until publishing is agreed with NVIDIA; held on James's workstation only. | Recommended: yes. Built in. | open |
+| 2 | The public record names NVIDIA, not the person James dealt with there. | Recommended: yes. Built in. | open |
+
 ### #201 v4.9.8 re-pin: the TIMES source download, the harness and the baseline (open)
 
 | # | Question | Decided | How |
