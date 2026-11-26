@@ -28,6 +28,9 @@
 #              (DD export of 28 Oct 2026 for the esma-ie     SHA-256 of dd/manifest.json:
 #              fork of EECA-NZ/TIMES-NZ-Model-Files)         a4b7514e65143c5aebf4dcf48b2ca0e9
 #                                                            8076545bd4f1b1516d2785fe7e081b45
+# otai         local folder timesjl-sources/OTAI             James's DD scenarios (26 Nov 2026),
+#              (unpublished; local only until the model      local until published; pinned in
+#              is published; nothing derived committed)      scripts/run_references.ps1
 # tim          local folder timesjl-sources/TIM              James's DD export of 28 Oct 2026
 #              (exception: research use, James's machine     from the esma-ie fork of
 #              only; nothing derived is committed)           MaREI-EPMG/times-ireland-model;
@@ -294,6 +297,26 @@ kind = "run"
 run_file = "{tim}/dd/mitigation_cb2024-300mt-myopic/mitigation_cb2024-300mt-myopic.run"
 idirs = ["{tim}/dd/mitigation_cb2024-300mt-myopic"]
 solver_opt_dir = "{tim}/dd/mitigation_cb2024-300mt-myopic"
+
+# OTAI (ESMA; esma-ie/otai, CC-BY-SA-4.0): DD scenarios James exports, which stay off
+# GitHub until the paper and the model are published (James, 26 Nov 2026). Until then
+# they are a local source ({otai}: timesjl-sources/OTAI, pinned by dd/manifest.json),
+# handled like TIM: neutral scenario names, redistribute = "private", nothing derived
+# from them committed or published. On publication: pinned to the repository commit,
+# redistribute = "public". Milestone tier: larger than the other suite models.
+[[model]]
+name = "OTAI-s3"
+tier = "milestone"
+source_repo = "esma-ie/otai"
+licence_url = "https://github.com/esma-ie/otai/blob/main/LICENSE-CC-BY-SA"
+licence_checked = "2026-11-26"
+licence = "CC-BY-SA-4.0"
+redistribute = "private"
+kind = "run"
+run_file = "{otai}/dd/s3/s3.run"
+idirs = ["{otai}/dd/s3"]
+solver_opt_dir = "{otai}/dd/s3"
+solvers = ["CPLEX"]
 
 # JRC-EU-TIMES, PSI WIMBY version (James, 29 Oct 2026: one scenario for now).
 # EU27 + CH, NO, UK; 12 time slices; milestone years 2019-2050; TIMES v4.8.3 at PSI.
