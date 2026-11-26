@@ -29,7 +29,9 @@ Claude Code in the terminal, VS Code, or the desktop app).
 - Write `$`-conditions as explicit sparse index sets. Never build dense
   Cartesian products.
 - Copy GAMS defaults, implicit zeros and interpolation exactly, and document them.
-- Translate one GAMS file or equation family per change (one PR each).
+- Translate one GAMS file or equation family per change: one commit each,
+  with its own parity check. The verified changes of a day go to James in
+  one PR (James, 26 Nov 2026; before: one PR each).
 
 ## How to work
 - Before writing code, name the GAMS files and line ranges being translated.
@@ -48,8 +50,28 @@ Claude Code in the terminal, VS Code, or the desktop app).
 - Approved plans (James, 3 Nov 2026): the Phase 1 plan is approved, with
   M1.3 in the order of `docs/m13-plan.md`. Work through it without waiting
   for a plan approval per change, and stop only to depart from it. James
-  reviews PRs at two check-ins, 9:00 and 16:30 (from 5 Nov 2026). Each PR starts with a
-  "Decisions for you" list.
+  reviews one PR a day, at the 9:00 check-in (James, 26 Nov 2026; from
+  Monday 30 Nov to Saturday 5 Dec 2026 the check-in and the review are at
+  7:00 Central European Time). The PR starts with a "Decisions for you"
+  list.
+- Parallel lanes (James, 26 Nov 2026): several agents may work at once, each
+  on its own branch and git worktree, managed by one Claude session that
+  briefs them, checks each change at the validation layers and combines the
+  verified ones into the daily PR. Only the managing session writes
+  `docs/decisions.md`. GAMS references still come from James's workstation
+  alone, within its run limits.
+- Phase 1 scope (James, 26 Nov 2026): MACRO with MSA and the mixed-integer
+  and nonlinear features (the DSC lumpy investments and block retirements,
+  the discrete unit commitment, ETL, TIMES-Micro, %DAMAGE% NLP, the gas-grid
+  pressure points and %SOLMIP%, the PTDF candidate lines) move after M1.7,
+  with the ECB, CLI, ABS, MCA and IER extensions. They stay refused with
+  their message.
+- Phase 2 lane (James, 26 Nov 2026): Phase 2 speed work runs alongside the
+  rest of Phase 1, before M1.7, limited to changes that leave the generated
+  LP identical (the exception above: layer 2 at 1e-9, same rows, columns and
+  order). Target: Phase 2 complete by Wednesday 2 Dec 2026, which means
+  model generation within 5x GAMS, warm (P2-6), while aiming for 5x faster
+  than GAMS.
 - Decision log (James, 11 Nov 2026): every question in a PR's "Decisions for
   you" list or at a check-in goes into `docs/decisions.md` with its outcome.
   A merge accepts a recommendation the PR already builds in. A question with
