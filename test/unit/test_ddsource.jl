@@ -8,7 +8,7 @@ using TIMES: times_source, times_demo_dir, compile_run, grecords, gdx_uels, gdx_
              TIMES_MODEL_COMMIT, TIMES_GAMS_COMMIT
 using TIMES.Reference: load_dump, read_symbol, SV_EPS
 
-@test startswith(TIMES_MODEL_COMMIT, TIMES_GAMS_COMMIT)
+@test startswith(TIMES_MODEL_COMMIT, "7064680")   # the v4.9.8 download (TIMES_GAMS_COMMIT: d9a6a25 until the diff is translated)
 src = times_source()
 @test all(f -> isfile(joinpath(src, f)), ("maindrv.mod", "initsys.mod", "initmty.mod", "eqobj.mod"))
 

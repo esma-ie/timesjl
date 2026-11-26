@@ -8,8 +8,8 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
 # on 27 Oct 2026; whole-model parity now runs in test_public_parity.jl on the
 # fixtures listed in test/fixtures/public_fixtures.toml.
 @testset "TIMES.jl" begin
-    @test TIMES.TIMES_GAMS_VERSION == v"4.9.8"
-    @test TIMES.TIMES_GAMS_COMMIT == "7064680"
+    @test TIMES.TIMES_GAMS_VERSION == v"4.9.7"   # until the last v4.9.8 diff PR (with the fixtures)
+    @test TIMES.TIMES_GAMS_COMMIT == "d9a6a25"
     @testset "Reference: dump reader" begin
         include("unit/test_dump.jl")
     end

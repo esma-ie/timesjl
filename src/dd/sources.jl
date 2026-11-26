@@ -8,7 +8,7 @@
 # comments and initsys.mod's $TITLE, and demo12 and every crafted case compile to the same input
 # dump with either source (26 Nov 2026).
 
-"Full commit of `etsap-TIMES/TIMES_model` in Artifacts.toml (the `TIMES_GAMS_COMMIT` baseline)."
+"Full commit of `etsap-TIMES/TIMES_model` in Artifacts.toml (v4.9.8; `TIMES_GAMS_COMMIT` stays d9a6a25 until the v4.9.8 diff is translated)."
 const TIMES_MODEL_COMMIT = "7064680430fe6e42ef3a29a1472ad54a0f8ee68f"
 
 "Full commit of `etsap-TIMES/TIMES_Demo` in Artifacts.toml (CC BY 4.0)."

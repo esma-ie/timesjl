@@ -13,7 +13,10 @@ optimisation. Performance work happens in Phase 2.
   references rerun with v4.9.8 into their own folder; the diff translated
   one GAMS file per pull request, each checked against those references:
   ppmain.mod, pp_qack.mod, pp_chp.mod, coef_obj.mod and prepret.dsc
-  (initsys.mod changes only its title). Until a file's pull request merges,
+  (initsys.mod changes only its title). `TIMES_GAMS_VERSION` stays 4.9.7
+  (the QA log's title, which GAMS takes from initsys.mod L1, and the CI
+  fixtures are v4.9.7) until the last diff pull request, which moves it
+  with the fixtures. Until a file's pull request merges,
   TIMES.jl follows v4.9.7 there, and the citations of the code stay
   `v4.9.7`: v4.9.8 shifts lines only in ppmain.mod (+2 after L542),
   pp_qack.mod (+1 at L199-200, +7 after L201) and pp_chp.mod (+1 after
