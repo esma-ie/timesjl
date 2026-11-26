@@ -317,6 +317,8 @@ changes but the count: 24 crafted cases, all PASS (compile, pre-solve state, mat
 
 ### Gate close-out, 14 Nov 2026
 
+**Passed, 25 Nov 2026** (James: "#109 yes, #117 yes, rerun timings after"), after the M1.3 gate. The evidence on the merged stack is in docs/m13-plan.md, "Gate audit, 22 Nov 2026": the chain from the DD files to GAMS's matrix, 14 of 14 runs.
+
 The gate: change 5 passes on every core-tier run, both variants, and CI runs the chain from DD
 files on demo12 and the crafted cases. Each criterion with its evidence follows. Every reference
 was made with GAMS 54.6.1; the runs are on James's workstation, within the run limits. The gate
