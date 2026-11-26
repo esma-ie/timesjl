@@ -305,6 +305,11 @@ dispatching and commodity-net variable of a timeslice turned off in a period of 
 
 with `%MODEL_NAME%.HOLDFIXED=1` (`holdfixed!`). Set on the columns the rows made.
 
+The SOW tags (sow_tags.jl): each statement is `%VAR%_X.FX(.. %SWT%\$..) = 0`
+with %SWT% set to `%SWD%)\$(SW_T(T%SWD%)\$RT_PP(R,T)..` (L111-112): the SOWs
+of period T. The bounds go on the columns the rows created, VAS_X(..,SOW) in a
+stochastic run (`vartag`).
+
 GAMS: dynslite.vda L106-119, v4.9.7.
 """
 function bnd_dynslite!(bt, tm)
@@ -315,7 +320,10 @@ function bnd_dynslite!(bt, tm)
     off(r, t, s) = (r, t) in rt_pp && haskey(norts, (r, t, s))
     prc_ts, rpcs_var, rps_ups, rp_dp, rp_upr = S("PRC_TS"), S("RPCS_VAR"), S("RPS_UPS"), S("RP_DP"), S("RP_UPR")
     rtc_net, rtc_prd, com_ts = S("RTC_NET"), S("RTC_PRD"), S("COM_TS")
+    # %VAR%_X.FX(.. %SWT%$..) = 0 with the local %SWT% `%SWD%)$(SW_T(T%SWD%)$RT_PP(R,T)..` (L111-112): the
+    # columns VAS_X(..,WW) of the SOWs of period T in a stochastic run, which are the columns the rows created
     function fx(name, cond)
+        name = vartag(tm, name)
         haskey(tm.vars.families, name) || return
         for k in tm.vars.families[name].keys
             cond(k) || continue
