@@ -163,13 +163,13 @@ On 25 Nov 2026 James answered the question of 22 Nov 2026 on the cuOpt pause: "k
 
 ## Log by pull request
 
-### #204 Dashboard: cuOpt on the GPU back on the public board (#102 d1, from 23 Nov) (open)
+### #204 Dashboard: cuOpt on the GPU back on the public board (#102 d1, from 23 Nov) (open; d1 to d3 answered)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | The two open reference runs (OTNYC, OTCGEN, REDUCE off) on the public cuOpt slide, in one line, beside the CI fixtures that #102's slide showed. | Recommended: yes. Built in. | open |
-| 2 | The slide rebuilt rather than restored from 920b00b: 66 cases in three columns, and every statement computed from the embedded reports (920b00b's notes no longer held), the GitHub T4 line excepted. | Recommended: yes. Built in. | open |
-| 3 | The local board keeps its own cuOpt slide beside the public one (the public blocks' ids keep them apart), instead of stepping aside as planned on 12 Nov. | Recommended: yes. Built in. | open |
+| 1 | The two open reference runs (OTNYC, OTCGEN, REDUCE off) on the public cuOpt slide, in one line, beside the CI fixtures that #102's slide showed. | Yes | James, 26 Nov 2026, in the chat: "d1 yes" |
+| 2 | The slide rebuilt rather than restored from 920b00b: 66 cases in three columns, and every statement computed from the embedded reports (920b00b's notes no longer held), the GitHub T4 line excepted. | Yes | James, 26 Nov 2026, in the chat: "d2 yes" |
+| 3 | The local board keeps its own cuOpt slide beside the public one (the public blocks' ids keep them apart), instead of stepping aside as planned on 12 Nov. | Yes | James, 26 Nov 2026, in the chat: "d3 yes" |
 
 ### #197 cuOpt lane: no GPU runner test until it passes locally; issue #100 to the 9:00 check-in (open)
 
