@@ -36,8 +36,8 @@ optimisation. Performance work happens in Phase 2.
 2. M1.1 Model generation: variables, core + VDA equations, bounds and
    objective, built from GAMS-dumped data.
 3. M1.2 Coefficients (coefmain, coef_*).
-4. M1.3 Preprocessing (ppmain, pp_*, VDA prep, REDUCE).
-5. M1.4 GAMS-free DD/.run reader.
+4. M1.3 Preprocessing (ppmain, pp_*, VDA prep, REDUCE). Gate passed 25 Nov 2026.
+5. M1.4 GAMS-free DD/.run reader. Gate passed 25 Nov 2026.
 6. M1.5 Run options (OBJ variants, MID_YEAR, DSCAUTO, VAR_UC, FIXBOH, ...).
 7. M1.6 Reporting + Veda .vd output.
 8. M1.7 Phase 1 release + baseline benchmarks.
@@ -1172,3 +1172,7 @@ those checks, their figures and their crafted cases are not published
   `STEP_SYMBOLS`. No generated LP changes (#35, #54): the steps, their
   order and the functions are those of before, checked one by one, and the
   M1.3 gate passes on demo12 as before.
+- 25 Nov 2026: the M1.3 and M1.4 gates passed (James: "#109 yes, #117 yes, rerun timings after"; #109,
+  #117), on the audit of 22 Nov 2026 (docs/m13-plan.md). The baseline
+  moves to TIMES v4.9.8 (`7064680`) next; the timing rerun follows on the
+  local board.
