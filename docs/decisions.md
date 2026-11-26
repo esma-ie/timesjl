@@ -53,6 +53,8 @@ answer yet.
 | 17 Nov 2026 | #156 | resloadc.vda L111 and L144 read VAR_RLD at 'RL_THMIN' (an underscore) beside 'RL-THMIN': two columns, likely a typo (D45). TIMES.jl follows the code. Report it to ETSAP, in one note with #155 d2 (COEF_RCOM)? | yes, in the same note | Open (#156, decision 3). Nothing in TIMES.jl depends on it. |
 | 22 Nov 2026 | #195 | Issue #116 (open) shows GAMS/CPLEX timings in its title and body (GAMS's seconds per step on OTCGEN and OTNYC, and the ratios 10.5x and 4.6x). GitHub keeps every edit of an issue visible, so an edit only takes them out of view. (a) Edit the title and body to drop GAMS's figures (kept in `esma-ie/timesjl-unpublished`), or (b) leave the issue as it is, as the git history (#184 d4)? Rule-level (what the public repository shows). | (a) | Open (#195, decision 5) |
 | 22 Nov 2026 | #195 | Keep `esma-ie/timesjl-unpublished` current from the nightly: `build_dashboard_local.ps1` copies `run-timing-unpublished.json` into its clone and commits and pushes it (open models only)? | yes, in a change to the local script | Open (#195, decision 6) |
+| 26 Nov 2026 | #201 | Citations after the move to v4.9.8: the `v4.9.7` citations stay until each diff pull request moves its own file's to v4.9.8 (with the shifted lines: ppmain.mod +2 after L542, pp_qack.mod +1 at L199-200 and +7 after L201, pp_chp.mod +1 after L13), and a last scripted pull request relabels the rest (their files are identical in v4.9.8); CLAUDE.md's citation rule says v4.9.7 until then. Rule-level (CLAUDE.md). | yes | Open (#201, decision 2); not built in. |
+| 26 Nov 2026 | #201 | Change 73 (the SOW tags): docs/m13-plan.md says it finishes and merges before the move (#192 d2), but part 1 sits unfinished at `212fe19` (`m13-sowtags`, no pull request). (a) Finish it while the v4.9.8 references run (layer 2 only, no GAMS run) and merge it before the first diff pull request, or (b) park it until the diff is translated? Rule-level (the plan's order). | (a) | Open (#201, decision 4); nothing of change 73 moves until James answers. |
 
 Reviewed on 14 Nov 2026 against pull requests #1 to #120 (108 merged, six open: #114, #115, #117 to #120). Four questions that James had answered left this list for the log of their pull requests: the demo12 trade case (#68, #104); refused features before v4.9.8 (#109, decision 3); the stepped solve before the gates (#108, decision 3); the M1.4 CI criterion with demo12_uc refused (#118, decision 2). Five questions asked in the chat and never listed were added (issues #97, #100 and #17, the commit trailer, the unused worktree). Every row of the log that is still "open" is either on this list or is a built-in default of an open pull request, which its merge decides. Later the same evening James merged #114 to #125 (eleven pull requests): their built-in defaults are accepted by merge, and his answers on #120 (decision 5), #121 (decision 2) and #125 (decisions 6, 8, 9 and 10) are in the log of those pull requests. Two more pull requests were opened later that evening, #127 (the dashboard changes James asked for on #125) and #128 (M1.5 change 2); #127's choice of the green and the orange joined this list.
 
@@ -155,6 +157,17 @@ On 22 Nov 2026 James answered #192 decisions 1 and 2 (in the log of that pull re
 | 11 Nov 2026 | Keep this decision log, with its rule. | `docs/decisions.md` |
 
 ## Log by pull request
+
+### #201 v4.9.8 re-pin: the TIMES source download, the harness and the baseline (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | The order of the move: the re-pin, then James's rerun of the GAMS references with v4.9.8 into their own folder, then the diff translated one GAMS file per pull request against those references (the earlier order had the rerun last). | Recommended: yes. Built in (docs/translation-guide.md, "Source of truth"). | pending merge |
+| 2 | Citations stay `v4.9.7` until each diff pull request moves its file's; a last scripted pull request relabels the unchanged files. Rule-level (CLAUDE.md). | Recommended: yes. Not built in. | open (Open decisions) |
+| 3 | `TIMES_GAMS_VERSION` reads 4.9.8 from the re-pin, while ppmain.mod, pp_qack.mod, pp_chp.mod, coef_obj.mod and prepret.dsc follow v4.9.7 until their pull requests (stated in the module docstring, CLAUDE.md and the guide); or keep 4.9.7 until the last diff pull request. | Recommended: as built. | pending merge |
+| 4 | Change 73: (a) finish it while the references run and merge it before the first diff pull request, or (b) park it until the diff is translated. Rule-level (the plan's order; #192 d2). | Recommended: (a). Not built in. | open (Open decisions) |
+| 5 | Two TIMES sources on the workstation: v4.9.8 cloned as `timesjl-sources\TIMES_model-v4.9.8`, `TIMES_model` kept at v4.9.7 for the references the nightly uses; make_reference.py 0.3.8 refuses to add runs to a reference made with another TIMES commit. | Recommended: yes. Built in. | pending merge |
+| 6 | Fixtures, dashboard data and the `times_version` label of `parity_report.jl` and `cuopt_layer3.jl` keep "4.9.7 @ d9a6a25" (they describe v4.9.7 GAMS runs) until the nightly moves to the v4.9.8 references. | Recommended: yes. Built in. | pending merge |
 
 ### #195 Timings: only CPLEX's off the public repository; GAMS/HiGHS back on the board (#184 d6) (merged 23 Nov 2026)
 
