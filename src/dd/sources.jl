@@ -1,11 +1,15 @@
 # M1.4 change 2c: where the TIMES source and the open demo models come from.
 #
-# The DD reader compiles TIMES's own files (src/dd/compile.jl), so it needs the TIMES v4.9.7 source
+# The DD reader compiles TIMES's own files (src/dd/compile.jl), so it needs the TIMES v4.9.8 source
 # at run time. It is a pinned download (Artifacts.toml): the GitHub archive of
-# etsap-TIMES/TIMES_model @ d9a6a25, fetched on first use and checked by hash (James, 10 Nov 2026).
+# etsap-TIMES/TIMES_model @ 7064680, fetched on first use and checked by hash (James, 10 Nov 2026;
+# d9a6a25, v4.9.7, until 26 Nov 2026). The reader compiles maindrv.mod and every file it includes
+# (full=true), so it reads v4.9.8's changed files too; their changes are executable statements,
+# comments and initsys.mod's $TITLE, and demo12 and every crafted case compile to the same input
+# dump with either source (26 Nov 2026).
 
-"Full commit of `etsap-TIMES/TIMES_model` in Artifacts.toml (the `TIMES_GAMS_COMMIT` baseline)."
-const TIMES_MODEL_COMMIT = "d9a6a25ad25ca080202a53d694de816ac3f7324e"
+"Full commit of `etsap-TIMES/TIMES_model` in Artifacts.toml (v4.9.8; `TIMES_GAMS_COMMIT` stays d9a6a25 until the v4.9.8 diff is translated)."
+const TIMES_MODEL_COMMIT = "7064680430fe6e42ef3a29a1472ad54a0f8ee68f"
 
 "Full commit of `etsap-TIMES/TIMES_Demo` in Artifacts.toml (CC BY 4.0)."
 const TIMES_DEMO_COMMIT = "962db8603aa00850b8581e6374b4f0559c47dd52"
@@ -13,8 +17,8 @@ const TIMES_DEMO_COMMIT = "962db8603aa00850b8581e6374b4f0559c47dd52"
 """
     times_source() -> String
 
-The folder of the TIMES v4.9.7 source (`maindrv.mod`, `initsys.mod`, ...): the pinned download of
-`etsap-TIMES/TIMES_model` @ d9a6a25, fetched on first use. The environment variable
+The folder of the TIMES v4.9.8 source (`maindrv.mod`, `initsys.mod`, ...): the pinned download of
+`etsap-TIMES/TIMES_model` @ 7064680, fetched on first use. The environment variable
 `TIMESJL_TIMES_SOURCE` names a local folder instead (a clone of the same commit, for work offline);
 it must hold `maindrv.mod`.
 """

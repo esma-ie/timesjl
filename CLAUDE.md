@@ -5,11 +5,14 @@ Julia/JuMP. These rules apply in every Claude session (claude.ai Project,
 Claude Code in the terminal, VS Code, or the desktop app).
 
 ## Baseline
-- Translate only from TIMES v4.9.7, `etsap-TIMES/TIMES_model` @ `d9a6a25`
-  (Antti Lehtilä's v4.9.7 commit; James's fork holds the same commit).
-  Version (James, 11 Nov 2026): v4.9.7 until the M1.3 gate closes; then the
-  whole baseline moves to v4.9.8 (`7064680`): the source download re-pinned,
-  its diff translated, every GAMS reference rerun with it.
+- Translate only from TIMES v4.9.8, `etsap-TIMES/TIMES_model` @ `7064680`
+  (Antti Lehtilä's v4.9.8 commit; James's fork holds the same commit).
+  Version (James, 11 Nov 2026): v4.9.7 (`d9a6a25`) until the M1.3 gate
+  closed (25 Nov 2026); then the whole baseline moves to v4.9.8: the source
+  download re-pinned (26 Nov 2026), its diff translated, every GAMS reference
+  rerun with it. Until the diff is translated, the v4.9.8 changes to
+  ppmain.mod, pp_qack.mod, pp_chp.mod, coef_obj.mod and prepret.dsc are not
+  (docs/translation-guide.md, "Source of truth").
 - Equation reference: `jamesglynn/TIMES_Documentation`, Part II.
 - If the GAMS code and the documentation disagree, follow the GAMS code and
   log the discrepancy in `docs/discrepancies.md`.
@@ -105,8 +108,11 @@ Any mismatch blocks the merge. Justified differences go in
 - Single model by hand, from the repo root: pass a `--root` for every
   placeholder that model uses (see `reference/suite.toml`), e.g.
   `python reference/python/make_reference.py --out ../timesjl-reference --solvers CPLEX,HIGHS --root times_source=../TIMES_model --root times_demo=../TIMES_Demo --model TIMES_Demo-demo12`
-  (clone `etsap-TIMES/TIMES_model` and `etsap-TIMES/TIMES_Demo`)
+  (clone `etsap-TIMES/TIMES_model` at the baseline commit and `etsap-TIMES/TIMES_Demo`)
   then `julia --project=. scripts/m10_gate.jl ../timesjl-reference/<model>/<variant>`.
+  On James's workstation `timesjl-reference` and `timesjl-sources\TIMES_model`
+  hold v4.9.7; v4.9.8 references go to their own folder, made with
+  `timesjl-sources\TIMES_model-v4.9.8` (make_reference.py refuses to mix them).
 - Local run limits on James's Windows workstation (James, 29 Oct 2026), for
   load management and comparable, fair resources across tests: every TIMES
   run (GAMS or TIMES.jl, any solver) uses at most 12 threads, and at most 4
@@ -144,6 +150,14 @@ Any mismatch blocks the merge. Justified differences go in
   MaREI-EPMG/times-ireland-model with DD files James generates. It runs on
   James's machine only; nothing derived from it is committed, published or
   made a fixture.
+- OTAI (ESMA; `esma-ie/otai`, CC BY-SA 4.0) joins the suite from James's DD
+  scenarios, which stay off GitHub until the paper and model are published
+  (James, 26 Nov 2026). Until then they are handled like TIM: a local source
+  (`timesjl-sources/OTAI`), `redistribute = "private"`, neutral scenario
+  names, results on the local board only, and nothing derived from them
+  (sizes, objectives, timings, logs, fixtures) in this repository, its
+  issues or its pull requests. On publication it becomes `public`, pinned to
+  the repository commit.
 - Never use anything from the `esma-cgep` GitHub organisation (an archived
   Columbia institution kept for transparency only), including
   `esma-cgep/tim-gams`: no models, DD files, licences or code.
