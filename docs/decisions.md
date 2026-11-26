@@ -127,7 +127,7 @@ On 22 Nov 2026 James answered #192 decisions 1 and 2 (in the log of that pull re
 | 12 Nov 2026 | M1.6 reporting, order of outputs: results for downstream tools first, in Arrow format v1 (#97): the solution (levels and marginals), then the translated report parameters, as the default output of every solve; Veda `.vd` files second. The M1.6 gate is unchanged (report parameters and `.vd` against GAMS at 1e-6). Rule-level (a change to the plan); explicit yes. | `docs/translation-guide.md` (M1.6) when the M1.6 plan is written |
 | 12 Nov 2026 | MPS run files for each open model in its own repository: the GAMS `CONVERT` LP of each scenario, "as run" only, named `<model>+<scenario>+as_run` (`.mps.gz` and `.dict.txt.gz`), described in `mpsrunfiles/README.md` and attached to a release per TIMES version (`mps-times-v4.9.7`), not Git LFS (esma-ie's LFS quota is in use elsewhere and blocked; release assets have no quota). OTUS9r, OTCGEN, OTNYC and an esma-ie fork of TIMES_Demo; not TIMES-NZ (not ESMA's to share). | esma-ie/OTUS9r#1, OTCGEN#1, OTNYC#1, TIMES_Demo#1 (draft releases for James to publish) |
 | 12 Nov 2026 | GAMSPy (TIMES-2-GAMSPy) comparison: on the webinar list only, not in the core probes. | `_handoff` (local) |
-| 12 Nov 2026 | cuOpt results stay on the local dashboard for now and go onto the public dashboard on 23 Nov (#102 decision 1: no to the public slide until then). | #102 (slide removed; kept in commit 920b00b) |
+| 12 Nov 2026 | cuOpt results stay on the local dashboard for now and go onto the public dashboard on 23 Nov (#102 decision 1: no to the public slide until then). | #102 (slide removed; kept in commit 920b00b); put back in #204 (26 Nov 2026) |
 | 12 Nov 2026 | The M1.3 chain slide shows the open scenarios only; the crafted demo12 cases' last pass (9 Nov) stays in its note (#102 decision 2): yes. | #102 |
 | 11 Nov 2026 | The decision-log rule (#96 decision 1): yes. | `CLAUDE.md` (#96) |
 | 11 Nov 2026 | The four rule-level questions approved only by merge (#96 decision 2): yes to all four. #35 and #54: changes to internal code or data structures are allowed in Phase 1 when the generated LP stays identical (layer 2 at 1e-9, same rows, columns and order). #61: one-way cross-evaluation counts as OTUS9r's layer 3 at the M1.3 gate. #91: K2 approved. The other open decisions are to be reviewed with James. | `CLAUDE.md` (#96); `docs/known-differences.md` K2 |
@@ -158,6 +158,14 @@ On 22 Nov 2026 James answered #192 decisions 1 and 2 (in the log of that pull re
 | 11 Nov 2026 | Keep this decision log, with its rule. | `docs/decisions.md` |
 
 ## Log by pull request
+
+### #204 Dashboard: cuOpt on the GPU back on the public board (#102 d1, from 23 Nov) (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | The two open reference runs (OTNYC, OTCGEN, REDUCE off) on the public cuOpt slide, in one line, beside the CI fixtures that #102's slide showed. | Recommended: yes. Built in. | open |
+| 2 | The slide rebuilt rather than restored from 920b00b: 66 cases in three columns, and every statement computed from the embedded reports (920b00b's notes no longer held), the GitHub T4 line excepted. | Recommended: yes. Built in. | open |
+| 3 | The local board keeps its own cuOpt slide beside the public one (the public blocks' ids keep them apart), instead of stepping aside as planned on 12 Nov. | Recommended: yes. Built in. | open |
 
 ### #196 TIMES.jl with CPLEX inside GAMS (GAMS.jl): slide 12's TIMES.jl · CPLEX rows, local board only (open)
 
@@ -892,7 +900,7 @@ Built from James's answers of 14 Nov 2026 on #125 (decisions 6, 8, 9 and 10).
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | cuOpt results on the public board? | No: on the local board until 23 Nov 2026 (the slide is kept in commit 920b00b). | James, 12 Nov 2026 |
+| 1 | cuOpt results on the public board? | No: on the local board until 23 Nov 2026 (the slide is kept in commit 920b00b). | James, 12 Nov 2026; carried out in #204 |
 | 2 | The chain slide shows the open scenarios only? | Yes. | James, 12 Nov 2026 |
 
 ### #101 M1.6 (#97, early): write_solution, the solution as a TIMES.jl dump (merged 2026-11-12)
