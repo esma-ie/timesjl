@@ -124,8 +124,17 @@ Generate every EQ_BNDCST row. Returns the number of rows.
       =E= VAR_CUMCST(R,YEAR,ALLYEAR,COSTCAT,CUR);
 
 A division is made even when the sum it follows is empty (docs/discrepancies.md
-G9). GAMS: eqbndcst.mod L81-213, v4.9.7 (the stochastic lines L78-79, L83 and
-L162 are refused with STAGES).
+G9).
+
+The SOW tags (sow_tags.jl): the row is `%EQ%_BNDCST(... %SOW%)\$(%SWT% ...)`
+with %SWT% set to `SW_T(TT%SOW%)\$` (L78, L81): one row per SOW of period TT,
+the SOW last in the index. Every cost term is `%VART%_X(..,T,.. %SWS%)`
+(`at = t`; L94-204), and the flows of %cal_red% are summed the same way
+(`%SWTD%(%SWSW%`, with %SOW% set to `,WW`: L83, L179, L196). The VAR_CUMCST
+terms are `%VAR%_CUMCST(... %SOW%)` again (L209-213). The %SCUM% form (L79,
+L162: SPINES) is change 75.
+
+GAMS: eqbndcst.mod L78-213, v4.9.7 (a STAGES run is refused until change 74).
 """
 function eq_bndcst!(tm::TimesModel)
     reg_cumcst = gparam_opt(tm.data, "REG_CUMCST", 6)
@@ -192,9 +201,9 @@ function eq_bndcst!(tm::TimesModel)
     end
     function ire_or_act!(expr, k, r, v, t, p, c, s, ie)
         if !((r, p, c) in rpc_aire)
-            addterm!(expr, k, tm, "VAR_IRE", r, v, t, p, c, s, ie)
+            addterm!(expr, k, tm, "VAR_IRE", r, v, t, p, c, s, ie; at=t)   # %VART%_IRE(... %SWS%) (L183-204)
         else
-            addterm!(expr, k * gv(prc_actflo, (r, v, p, c)), tm, "VAR_ACT", r, v, t, p, s)
+            addterm!(expr, k * gv(prc_actflo, (r, v, p, c)), tm, "VAR_ACT", r, v, t, p, s; at=t)   # %VART%_ACT(... %SWS%)
         end
     end
     # SUM((T,P)$CST_ANNC(R,T,P,TT,name,CUR), CST_ANNC(R,T,P,TT,name,CUR)*VAR_NCAP(R,T,P)), times `sgn`
@@ -202,7 +211,7 @@ function eq_bndcst!(tm::TimesModel)
         for k in get(annc_of, (r, tt, name, cur), NO6)
             (k[2],) in x.t || continue
             c = gv(cst_annc, k)
-            addterm!(lhs, sgn > 0 ? c : -c, tm, "VAR_NCAP", r, k[2], k[3])
+            addterm!(lhs, sgn > 0 ? c : -c, tm, "VAR_NCAP", r, k[2], k[3]; at=k[2])   # %VART%_NCAP(R,T,P %SWS%) (L95, L110, L117)
         end
     end
 
@@ -219,7 +228,7 @@ function eq_bndcst!(tm::TimesModel)
                     s = s + obmac(x.ob_icost, r, k, p, cur) *
                             max(0.0, min(yval(allyear) + 1, yval(y) + oa) - max(yval(year), yval(y)))
                 end
-                addterm!(lhs, s * gv(obj_crf, (r, t, p, cur)) / gv(x.obj_divi, (r, t, p)), tm, "VAR_NCAP", r, t, p)
+                addterm!(lhs, s * gv(obj_crf, (r, t, p, cur)) / gv(x.obj_divi, (r, t, p)), tm, "VAR_NCAP", r, t, p; at=t)
             end
         else                                                                                      # L95
             annual!(lhs, "INVCOST", 1, r, tt, cur)
@@ -233,7 +242,7 @@ function eq_bndcst!(tm::TimesModel)
                 ((ke,) in x.k_eoh && (k,) in x.k && (allyear, ll) in yk) || continue
                 s = s + obmac(x.ob_dcc, r, k, p, cur) * max(0, min(ord[allyear] + 1, ord[ll] + dl) - max(ord[year], ord[ll]))
             end
-            addterm!(lhs, s * gv(obj_crfd, (r, t, p, cur)) / gv(x.obj_diviii, (r, t, p)), tm, "VAR_NCAP", r, t, p)
+            addterm!(lhs, s * gv(obj_crfd, (r, t, p, cur)) / gv(x.obj_diviii, (r, t, p)), tm, "VAR_NCAP", r, t, p; at=t)
         end
     end
     # L106-111 (INVTAX: OBJ_ITAX, +CST_ANNC) and L113-118 (INVSUB: OBJ_ISUB, -CST_ANNC)
@@ -250,7 +259,7 @@ function eq_bndcst!(tm::TimesModel)
                 ((k,) in x.k && (allyear, ll) in yk && oa + min(ord[ll] - ord[year], 0) >= 1) || continue
                 s = s + obmac(ob, r, k, p, cur) * (min(ord[allyear] + 1, ord[ll] + oa) - max(ord[year], ord[ll]))
             end
-            addterm!(lhs, s * gv(obj_crf, (r, t, p, cur)) / gv(x.obj_divi, (r, t, p)), tm, "VAR_NCAP", r, t, p)
+            addterm!(lhs, s * gv(obj_crf, (r, t, p, cur)) / gv(x.obj_divi, (r, t, p)), tm, "VAR_NCAP", r, t, p; at=t)
         end
     end
     # L121-132 (FOM), L135-146 (FOMTAX), L149-160 (FOMSUB): `ob` with the shape class `cls`;
@@ -267,7 +276,7 @@ function eq_bndcst!(tm::TimesModel)
                 s = s + obmac(ob, r, k, p, cur) *
                         max(0.0, min(yval(allyear) + 1, yval(k) + ol) - max(yval(year), yval(k)))
             end
-            addterm!(lhs, s / gv(x.obj_diviv, (r, t, p)), tm, "VAR_NCAP", r, t, p)
+            addterm!(lhs, s / gv(x.obj_diviv, (r, t, p)), tm, "VAR_NCAP", r, t, p; at=t)
         end
         for (_, t, p, _, j, jj) in get(shape_of_rcls, (r, cls), NO6)                              # shaped
             ((t,) in x.t && (tt, t) in yk) || continue
@@ -288,7 +297,7 @@ function eq_bndcst!(tm::TimesModel)
                     s = s + a * obmac(ob, r, ll, p, cur)
                 end
             end
-            addterm!(lhs, s / gv(x.obj_diviv, (r, t, p)), tm, "VAR_NCAP", r, t, p)
+            addterm!(lhs, s / gv(x.obj_diviv, (r, t, p)), tm, "VAR_NCAP", r, t, p; at=t)
         end
     end
     # L164-167 (COMTAX: 'TAX', added) and L169-172 (COMSUB: 'SUB', subtracted); every period T
@@ -303,7 +312,7 @@ function eq_bndcst!(tm::TimesModel)
                     for (y, wy) in pw
                         w = w + wy * gv(par, (r, y, c, s, ctype, cur))
                     end
-                    addterm!(lhs, sgn > 0 ? w : -w, tm, var, r, t, c, s)
+                    addterm!(lhs, sgn > 0 ? w : -w, tm, var, r, t, c, s; at=t)   # %VART%_COMNET/COMPRD(R,T,C,S %SWS%) (L165-171)
                 end
             end
         end
@@ -324,7 +333,7 @@ function eq_bndcst!(tm::TimesModel)
             for (_, v, _, _) in get(vint_of_rtp, (r, t, p), NO4)
                 (v,) in x.v || continue
                 if !((r, p) in rp_ire)
-                    cal_nored!(lhs, tm, w, r, v, t, p, c, s)                                      # %cal_red% C COM S P T
+                    cal_nored!(lhs, tm, w, r, v, t, p, c, s; at=t)  # %SWTD%(%SWSW% ...): SUM(SW_TSW(SOW,T,WW),..), %SOW% as ,WW (L83, L179, L196);                                    # %cal_red% C COM S P T
                 else
                     for (_, _, _, ie) in get(ire_of_rpc, (r, p, c), NO4)
                         ire_or_act!(lhs, w, r, v, t, p, c, s, ie)
@@ -349,33 +358,36 @@ function eq_bndcst!(tm::TimesModel)
     gams_sort!(rows, tm.data)
     n = 0
     for (r, year, tt, allyear, cat, cur) in rows
-        lhs = JuMP.AffExpr(0.0)
-        if cat == "INV"
-            inv!(lhs, r, year, tt, allyear, cur)
-        elseif cat == "INVTAX"
-            invtaxsub!(lhs, x.ob_itax, "INVTAX", 1, r, year, tt, allyear, cur)
-        elseif cat == "INVSUB"
-            invtaxsub!(lhs, x.ob_isub, "INVSUB", -1, r, year, tt, allyear, cur)
-        elseif cat == "FOM"
-            fixed!(lhs, x.ob_fom, "1", false, r, year, tt, allyear, cur)
-        elseif cat == "FOMTAX"
-            fixed!(lhs, x.ob_ftx, "2", true, r, year, tt, allyear, cur)
-        elseif cat == "FOMSUB"
-            fixed!(lhs, x.ob_fsb, "3", true, r, year, tt, allyear, cur)
-        elseif cat == "COMTAX"
-            commodity!(lhs, "TAX", 1, r, year, allyear, cur)
-        elseif cat == "COMSUB"
-            commodity!(lhs, "SUB", -1, r, year, allyear, cur)
-        elseif cat == "FLOTAX"
-            flow!(lhs, "TAX", 1, r, year, tt, allyear, cur)
-        elseif cat == "FLOSUB"
-            flow!(lhs, "SUB", -1, r, year, tt, allyear, cur)
+        for sow in sw_rows(tm, tt)   # %SOW% with the local %SWT%, SW_T(TT,SOW) (L78, L81)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            if cat == "INV"
+                inv!(lhs, r, year, tt, allyear, cur)
+            elseif cat == "INVTAX"
+                invtaxsub!(lhs, x.ob_itax, "INVTAX", 1, r, year, tt, allyear, cur)
+            elseif cat == "INVSUB"
+                invtaxsub!(lhs, x.ob_isub, "INVSUB", -1, r, year, tt, allyear, cur)
+            elseif cat == "FOM"
+                fixed!(lhs, x.ob_fom, "1", false, r, year, tt, allyear, cur)
+            elseif cat == "FOMTAX"
+                fixed!(lhs, x.ob_ftx, "2", true, r, year, tt, allyear, cur)
+            elseif cat == "FOMSUB"
+                fixed!(lhs, x.ob_fsb, "3", true, r, year, tt, allyear, cur)
+            elseif cat == "COMTAX"
+                commodity!(lhs, "TAX", 1, r, year, allyear, cur)
+            elseif cat == "COMSUB"
+                commodity!(lhs, "SUB", -1, r, year, allyear, cur)
+            elseif cat == "FLOTAX"
+                flow!(lhs, "TAX", 1, r, year, tt, allyear, cur)
+            elseif cat == "FLOSUB"
+                flow!(lhs, "SUB", -1, r, year, tt, allyear, cur)
+            end
+            for (_, agg, ctype) in get(gmap_of, (cat,), no3)                                          # L210
+                addterm!(lhs, GNum(ctype == "SUB" ? -1.0 : 1.0), tm, "VAR_CUMCST", r, year, allyear, agg, cur)
+            end
+            rhs = addterm!(JuMP.AffExpr(0.0), GNum(1.0), tm, "VAR_CUMCST", r, year, allyear, cat, cur)  # L213
+            gconstraint!(tm, eqtag(tm, "EQ_BNDCST"), sowkey(tm, (r, year, tt, allyear, cat, cur)), "E", lhs, rhs) === nothing || (n += 1)
         end
-        for (_, agg, ctype) in get(gmap_of, (cat,), no3)                                          # L210
-            addterm!(lhs, GNum(ctype == "SUB" ? -1.0 : 1.0), tm, "VAR_CUMCST", r, year, allyear, agg, cur)
-        end
-        rhs = addterm!(JuMP.AffExpr(0.0), GNum(1.0), tm, "VAR_CUMCST", r, year, allyear, cat, cur)  # L213
-        gconstraint!(tm, "EQ_BNDCST", (r, year, tt, allyear, cat, cur), "E", lhs, rhs) === nothing || (n += 1)
     end
     return n
 end

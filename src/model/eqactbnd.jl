@@ -25,6 +25,9 @@ Generate every EQ(l)_ACTBND row. Returns the number of rows.
         SUM(PRC_TS(R,P,TS)\$TS_MAP(R,S,TS), SUM(RTP_VINTYR(R,V,T,P), VAR_ACT(R,V,T,P,TS)))
         =%1= ACT_BND(R,T,P,S,'%2');
 
+The SOW tags (sow_tags.jl): the row is `%EQ%%1_ACTBND(... %SWT%)`
+(eqactbnd.mod L17) and the term `%VAR%_ACT(... %SOW%)` (L22).
+
 GAMS: eqactbnd.mod L17-28 with eqmain.mod L47-49, v4.9.7.
 """
 function eq_actbnd!(tm::TimesModel)
@@ -55,16 +58,19 @@ function eq_actbnd!(tm::TimesModel)
         end
         gams_sort!(rows, tm.data)
         for (r, t, p, s) in rows
-            lhs = JuMP.AffExpr(0.0)
-            for (_, _, ts) in get(ts_of_rp, (r, p), no3)
-                (r, s, ts) in ts_map || continue
-                for (_, v, _, _) in get(v_of_rtp, (r, t, p), no4)
-                    (v,) in modlyear || continue
-                    addterm!(lhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, ts)
+            for sow in sw_rows(tm, t)   # %SWT% (eqactbnd.mod L17)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                for (_, _, ts) in get(ts_of_rp, (r, p), no3)
+                    (r, s, ts) in ts_map || continue
+                    for (_, v, _, _) in get(v_of_rtp, (r, t, p), no4)
+                        (v,) in modlyear || continue
+                        addterm!(lhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, ts)
+                    end
                 end
+                rhs = addconst!(JuMP.AffExpr(0.0), gv(act_bnd, (r, t, p, s, bd)))
+                gconstraint!(tm, eqtag(tm, name), swt(tm, (r, t, p, s), t), eqtype, lhs, rhs) === nothing || (n += 1)
             end
-            rhs = addconst!(JuMP.AffExpr(0.0), gv(act_bnd, (r, t, p, s, bd)))
-            gconstraint!(tm, name, (r, t, p, s), eqtype, lhs, rhs) === nothing || (n += 1)
         end
     end
     return n

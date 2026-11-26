@@ -85,6 +85,9 @@ LO, E with FX, L with UP). Returns the number of rows.
       =%1=
       IRE_BND(R,T,C,S,ALL_REG,IE,'%2');
 
+The SOW tags (sow_tags.jl): the row is `%EQ%%1_IREBND(... %SWT%)` (L18); every
+term is `%VAR%_IRE(... %SOW%)` or `%VAR%_ACT(... %SOW%)` (L26, L37, L48, L58).
+
 GAMS: eqirebnd.mod L18-69 with eqmain.mod L152-154, v4.9.7.
 """
 function eq_irebnd!(tm::TimesModel)
@@ -134,64 +137,67 @@ function eq_irebnd!(tm::TimesModel)
         end
         gams_sort!(rows, tm.data)
         for (r, t, c, s, all_reg, ie) in rows
-            lhs = JuMP.AffExpr(0.0)
-            if (ie,) in imp
-                if (all_reg,) in reg                                                # L23-32
-                    for (_, com, _, _, p) in get(top_into, (all_reg, r, c), no5)
-                        (r, p, c, "IMP") in rpc_eqire || continue
-                        ccvt = gv(ire_ccvt, (all_reg, com, r, c))
-                        for (_, _, _, _, sl) in get(varf_of_rtpc, (r, t, p, c), no5)  # L24
-                            (r, s, sl) in rs_tree || continue
-                            lvl = level(r, s, sl)                                   # L30
-                            for (_, all_ts, _, _) in get(tscvt_of, (all_reg, r, sl), no4)
-                                tscvt = gv(ire_tscvt, (all_reg, all_ts, r, sl))
-                                for (_, _, _, v) in get(vint_of_rtp, (all_reg, t, p), no4),
-                                    (_, _, _, _, ts) in get(varf_of_rtpc, (all_reg, t, p, com), no5)
-                                    (all_reg, all_ts, ts) in rs_tree || continue    # L25
-                                    w = gv(ire_flo, (all_reg, v, p, com, r, c, sl)) * ccvt * tscvt *
-                                        gv(rs_fr, (all_reg, all_ts, ts)) * (1 + gv(rtcs_fr, (all_reg, t, com, all_ts, ts)))
-                                    flow!(lhs, w * lvl, all_reg, v, t, p, com, ts, "EXP")   # L26-28
+            for sow in sw_rows(tm, t)   # %SWT% (eqirebnd.mod L18)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                if (ie,) in imp
+                    if (all_reg,) in reg                                                # L23-32
+                        for (_, com, _, _, p) in get(top_into, (all_reg, r, c), no5)
+                            (r, p, c, "IMP") in rpc_eqire || continue
+                            ccvt = gv(ire_ccvt, (all_reg, com, r, c))
+                            for (_, _, _, _, sl) in get(varf_of_rtpc, (r, t, p, c), no5)  # L24
+                                (r, s, sl) in rs_tree || continue
+                                lvl = level(r, s, sl)                                   # L30
+                                for (_, all_ts, _, _) in get(tscvt_of, (all_reg, r, sl), no4)
+                                    tscvt = gv(ire_tscvt, (all_reg, all_ts, r, sl))
+                                    for (_, _, _, v) in get(vint_of_rtp, (all_reg, t, p), no4),
+                                        (_, _, _, _, ts) in get(varf_of_rtpc, (all_reg, t, p, com), no5)
+                                        (all_reg, all_ts, ts) in rs_tree || continue    # L25
+                                        w = gv(ire_flo, (all_reg, v, p, com, r, c, sl)) * ccvt * tscvt *
+                                            gv(rs_fr, (all_reg, all_ts, ts)) * (1 + gv(rtcs_fr, (all_reg, t, com, all_ts, ts)))
+                                        flow!(lhs, w * lvl, all_reg, v, t, p, com, ts, "EXP")   # L26-28
+                                    end
                                 end
                             end
                         end
                     end
-                end
-                for (_, p, _, _) in get(ire_of_rc, (r, c, ie), no4)                 # L35-41
-                    (r, p, c, "IMP") in rpc_eqire && continue
-                    any(k -> k[5] == p, get(top_into, (all_reg, r, c), no5)) || continue
-                    for (_, _, _, v) in get(vint_of_rtp, (r, t, p), no4), (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, c), no5)
-                        (r, s, ts) in rs_tree || continue
-                        flow!(lhs, level(r, s, ts), r, v, t, p, c, ts, ie)
-                    end
-                end
-            end
-            if (ie,) in xpt
-                if (all_reg,) in reg                                                # L46-51
-                    for (_, _, _, com, p) in get(top_from, (r, c, all_reg), no5)
-                        (r, p, c, "EXP") in rpc_market || continue
-                        ccvt = gv(ire_ccvt, (all_reg, com, r, c))
-                        for (_, all_ts, _, _) in get(tscvt_of, (all_reg, r, s), no4)
-                            tscvt = gv(ire_tscvt, (all_reg, all_ts, r, s))
-                            for (_, _, _, v) in get(vint_of_rtp, (all_reg, t, p), no4),
-                                (_, _, _, _, ts) in get(varf_of_rtpc, (all_reg, t, p, com), no5)
-                                (all_reg, all_ts, ts) in rs_tree || continue
-                                w = ccvt * tscvt * gv(rs_fr, (all_reg, all_ts, ts)) * (1 + gv(rtcs_fr, (all_reg, t, com, all_ts, ts)))
-                                flow!(lhs, w, all_reg, v, t, p, com, ts, "IMP")
-                            end
+                    for (_, p, _, _) in get(ire_of_rc, (r, c, ie), no4)                 # L35-41
+                        (r, p, c, "IMP") in rpc_eqire && continue
+                        any(k -> k[5] == p, get(top_into, (all_reg, r, c), no5)) || continue
+                        for (_, _, _, v) in get(vint_of_rtp, (r, t, p), no4), (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, c), no5)
+                            (r, s, ts) in rs_tree || continue
+                            flow!(lhs, level(r, s, ts), r, v, t, p, c, ts, ie)
                         end
                     end
                 end
-                for (_, p, _, _) in get(ire_of_rc, (r, c, ie), no4)                 # L56-62
-                    (r, p, c, "EXP") in rpc_market && continue
-                    any(k -> k[5] == p, get(top_from, (r, c, all_reg), no5)) || continue
-                    for (_, _, _, v) in get(vint_of_rtp, (r, t, p), no4), (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, c), no5)
-                        (r, s, ts) in rs_tree || continue
-                        flow!(lhs, level(r, s, ts), r, v, t, p, c, ts, ie)
+                if (ie,) in xpt
+                    if (all_reg,) in reg                                                # L46-51
+                        for (_, _, _, com, p) in get(top_from, (r, c, all_reg), no5)
+                            (r, p, c, "EXP") in rpc_market || continue
+                            ccvt = gv(ire_ccvt, (all_reg, com, r, c))
+                            for (_, all_ts, _, _) in get(tscvt_of, (all_reg, r, s), no4)
+                                tscvt = gv(ire_tscvt, (all_reg, all_ts, r, s))
+                                for (_, _, _, v) in get(vint_of_rtp, (all_reg, t, p), no4),
+                                    (_, _, _, _, ts) in get(varf_of_rtpc, (all_reg, t, p, com), no5)
+                                    (all_reg, all_ts, ts) in rs_tree || continue
+                                    w = ccvt * tscvt * gv(rs_fr, (all_reg, all_ts, ts)) * (1 + gv(rtcs_fr, (all_reg, t, com, all_ts, ts)))
+                                    flow!(lhs, w, all_reg, v, t, p, com, ts, "IMP")
+                                end
+                            end
+                        end
+                    end
+                    for (_, p, _, _) in get(ire_of_rc, (r, c, ie), no4)                 # L56-62
+                        (r, p, c, "EXP") in rpc_market && continue
+                        any(k -> k[5] == p, get(top_from, (r, c, all_reg), no5)) || continue
+                        for (_, _, _, v) in get(vint_of_rtp, (r, t, p), no4), (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, c), no5)
+                            (r, s, ts) in rs_tree || continue
+                            flow!(lhs, level(r, s, ts), r, v, t, p, c, ts, ie)
+                        end
                     end
                 end
+                rhs = addconst!(JuMP.AffExpr(0.0), gv(ire_bnd, (r, t, c, s, all_reg, ie, bd)))   # L68
+                gconstraint!(tm, eqtag(tm, name), swt(tm, (r, t, c, s, all_reg, ie), t), eqtype, lhs, rhs) === nothing || (n += 1)
             end
-            rhs = addconst!(JuMP.AffExpr(0.0), gv(ire_bnd, (r, t, c, s, all_reg, ie, bd)))   # L68
-            gconstraint!(tm, name, (r, t, c, s, all_reg, ie), eqtype, lhs, rhs) === nothing || (n += 1)
         end
     end
     return n

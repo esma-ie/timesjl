@@ -479,70 +479,73 @@ function eq_combal!(tm::TimesModel, eqtype::String, lim::String, kind::String)
         l == lim || continue
         (t,) in tx || continue                           # %R_T% = R,T (R,SUBT(T) in a stepped run): T controls
         kind == "PRD" && !((r, t, c, s) in rhs_comprd) && continue
+        for sow in sw_rows(tm, t)                        # %SWT% (L19): SW_T(T,SOW) in a stochastic run
+            set_sow!(tm, sow)
 
-        lhs = JuMP.AffExpr(0.0)
-        # Production (L23-58).
-        if kind == "BAL" && (r, t, c, s) in rhs_comprd
-            addterm!(lhs, GNum(1.0), tm, "VAR_COMPRD", r, t, c, s)
-        else
-            ie = gv(x.com_ie, (r, t, c, s))
-            cal_fflo!(lhs, tm, ie, "OUT", r, t, c, s)
-            combal_blend_out!(lhs, tm, ie, r, t, c, s)                                    # L30-35
-            cal_ire!(lhs, tm, ie, "IMP", "OUT", r, t, c, s)
-            cal_stgn!(lhs, tm, ie, "OUT", r, t, c, s;                                     # L42
-                      cond=(p, ts) -> !((r, p, ts) in nstts), f3=(p, v) -> gv(x.stg_eff, (r, v, p)),
-                      f4=(p, v) -> one, f6=(p, v) -> one)
-            combal_aggregation!(lhs, tm, ie, r, t, c, s)
-            cal_cap!(lhs, tm, ie, "OUT", r, t, c, s)                                       # L51: cal_cap.mod OUT O
-        end
-        # L67: + SUM(RCJ(R,C,J,BDNEQ(BD))$COM_ELAST(R,T,C,S,BD),BDSIG(BD)*VAR_ELAST(R,T,C,S,J,BD)), BAL only
-        if ted && kind == "BAL"
-            for (_, _, j, b) in get(rcj_of, (r, c), NTuple{4,String}[])
-                (b in bdneq && !iszero(gv(com_elast, (r, t, c, s, b)))) || continue
-                addterm!(lhs, GNum(bdsig(b)), tm, "VAR_ELAST", r, t, c, s, j, b)
+            lhs = JuMP.AffExpr(0.0)
+            # Production (L23-58).
+            if kind == "BAL" && (r, t, c, s) in rhs_comprd
+                addterm!(lhs, GNum(1.0), tm, "VAR_COMPRD", r, t, c, s)
+            else
+                ie = gv(x.com_ie, (r, t, c, s))
+                cal_fflo!(lhs, tm, ie, "OUT", r, t, c, s)
+                combal_blend_out!(lhs, tm, ie, r, t, c, s)                                    # L30-35
+                cal_ire!(lhs, tm, ie, "IMP", "OUT", r, t, c, s)
+                cal_stgn!(lhs, tm, ie, "OUT", r, t, c, s;                                     # L42
+                          cond=(p, ts) -> !((r, p, ts) in nstts), f3=(p, v) -> gv(x.stg_eff, (r, v, p)),
+                          f4=(p, v) -> one, f6=(p, v) -> one)
+                combal_aggregation!(lhs, tm, ie, r, t, c, s)
+                cal_cap!(lhs, tm, ie, "OUT", r, t, c, s)                                       # L51: cal_cap.mod OUT O
             end
-        end
-        # Consumption (L69-93), BAL only.
-        if kind == "BAL"
-            cal_fflo!(lhs, tm, GNum(-1.0), "IN", r, t, c, s)
-            combal_blend_in!(lhs, tm, GNum(-1.0), r, t, c, s)                             # L75-80
-            cal_ire!(lhs, tm, GNum(-1.0), "EXP", "IN", r, t, c, s)
-            ireaux!(lhs, tm, -gv(x.com_ie, (r, t, c, s)), r, t, c, s)                    # L84: cal_ire.mod L30, IREAUXIN
-            cal_stgn!(lhs, tm, GNum(-1.0), "IN", r, t, c, s;                              # L87
-                      cond=(p, ts) -> !((r, "NST", p) in prc_map) || (r, p, ts) in nstts,
-                      f3=(p, v) -> one, f4=(p, v) -> gv(x.stg_eff, (r, v, p)), f6=(p, v) -> one)
-            cal_cap!(lhs, tm, GNum(-1.0), "IN", r, t, c, s)                                # L91: cal_cap.mod IN I
-        end
+            # L67: + SUM(RCJ(R,C,J,BDNEQ(BD))$COM_ELAST(R,T,C,S,BD),BDSIG(BD)*VAR_ELAST(R,T,C,S,J,BD)), BAL only
+            if ted && kind == "BAL"
+                for (_, _, j, b) in get(rcj_of, (r, c), NTuple{4,String}[])
+                    (b in bdneq && !iszero(gv(com_elast, (r, t, c, s, b)))) || continue
+                    addterm!(lhs, GNum(bdsig(b)), tm, "VAR_ELAST", r, t, c, s, j, b)
+                end
+            end
+            # Consumption (L69-93), BAL only.
+            if kind == "BAL"
+                cal_fflo!(lhs, tm, GNum(-1.0), "IN", r, t, c, s)
+                combal_blend_in!(lhs, tm, GNum(-1.0), r, t, c, s)                             # L75-80
+                cal_ire!(lhs, tm, GNum(-1.0), "EXP", "IN", r, t, c, s)
+                ireaux!(lhs, tm, -gv(x.com_ie, (r, t, c, s)), r, t, c, s)                    # L84: cal_ire.mod L30, IREAUXIN
+                cal_stgn!(lhs, tm, GNum(-1.0), "IN", r, t, c, s;                              # L87
+                          cond=(p, ts) -> !((r, "NST", p) in prc_map) || (r, p, ts) in nstts,
+                          f3=(p, v) -> one, f4=(p, v) -> gv(x.stg_eff, (r, v, p)), f6=(p, v) -> one)
+                cal_cap!(lhs, tm, GNum(-1.0), "IN", r, t, c, s)                                # L91: cal_cap.mod IN I
+            end
 
-        rhs = JuMP.AffExpr(0.0)
-        if kind == "PRD"
-            addterm!(rhs, GNum(1.0), tm, "VAR_COMPRD", r, t, c, s)    # L100, row exists only under RHS_COMPRD
-            # L101: +(SUM(RCJ(R,COM,J,BD)$MI_DMAS(R,C,COM),(DDF_PREF(R,T,COM)*(MI_AGC(R,T,C,COM,J,BD)-1)+RD_SHAR(R,T,COM,C))*
-            #   BDSIG(BD)*SUM(RTCS_VARC(R,T,COM,TS),VAR_ELAST(R,T,COM,TS,J,BD)))-VAR_COMPRD(R,T,C,S))$(COM_ELAST(R,T,C,S,'N')>0)$RD_AGG(R,C)
-            if ted && gv(com_elast, (r, t, c, s, "N")).v > 0 && (r, c) in rd_agg
-                for (_, _, com) in get(dmas_by_agg, (r, c), NTuple{3,String}[]), (_, _, j, b) in get(rcj_of, (r, com), NTuple{4,String}[])
-                    k = (gv(pref, (r, t, com)) * (gv(agc, (r, t, c, com, j, b)) - one) + gv(rd_shar, (r, t, com, c))) * GNum(bdsig(b))
-                    for (_, _, _, ts) in get(varc_of, (r, t, com), NTuple{4,String}[])
-                        addterm!(rhs, k, tm, "VAR_ELAST", r, t, com, ts, j, b)
+            rhs = JuMP.AffExpr(0.0)
+            if kind == "PRD"
+                addterm!(rhs, GNum(1.0), tm, "VAR_COMPRD", r, t, c, s)    # L100, row exists only under RHS_COMPRD
+                # L101: +(SUM(RCJ(R,COM,J,BD)$MI_DMAS(R,C,COM),(DDF_PREF(R,T,COM)*(MI_AGC(R,T,C,COM,J,BD)-1)+RD_SHAR(R,T,COM,C))*
+                #   BDSIG(BD)*SUM(RTCS_VARC(R,T,COM,TS),VAR_ELAST(R,T,COM,TS,J,BD)))-VAR_COMPRD(R,T,C,S))$(COM_ELAST(R,T,C,S,'N')>0)$RD_AGG(R,C)
+                if ted && gv(com_elast, (r, t, c, s, "N")).v > 0 && (r, c) in rd_agg
+                    for (_, _, com) in get(dmas_by_agg, (r, c), NTuple{3,String}[]), (_, _, j, b) in get(rcj_of, (r, com), NTuple{4,String}[])
+                        k = (gv(pref, (r, t, com)) * (gv(agc, (r, t, c, com, j, b)) - one) + gv(rd_shar, (r, t, com, c))) * GNum(bdsig(b))
+                        for (_, _, _, ts) in get(varc_of, (r, t, com), NTuple{4,String}[])
+                            addterm!(rhs, k, tm, "VAR_ELAST", r, t, com, ts, j, b)
+                        end
+                    end
+                    addterm!(rhs, GNum(-1.0), tm, "VAR_COMPRD", r, t, c, s)
+                end
+            else
+                if lim == "FX" && (r, t, c, s) in rhs_combal              # L106
+                    addterm!(rhs, GNum(1.0), tm, "VAR_COMNET", r, t, c, s)
+                end
+                if (r, c) in dem                                          # L110
+                    fr = gv(com_fr, (r, t, c, s))
+                    haskey(rd_nlp, (r, c)) || addconst!(rhs, gv(com_proj, (r, t, c)) * fr)
+                    for (_, com, _) in get(dmas_of_rc, (r, c), NTuple{3,String}[])
+                        (r, com) in rd_agg || continue
+                        addterm!(rhs, gv(rd_shar, (r, t, com, c)) * fr, tm, "VAR_COMPRD", r, t, com, "ANNUAL")
                     end
                 end
-                addterm!(rhs, GNum(-1.0), tm, "VAR_COMPRD", r, t, c, s)
             end
-        else
-            if lim == "FX" && (r, t, c, s) in rhs_combal              # L106
-                addterm!(rhs, GNum(1.0), tm, "VAR_COMNET", r, t, c, s)
-            end
-            if (r, c) in dem                                          # L110
-                fr = gv(com_fr, (r, t, c, s))
-                haskey(rd_nlp, (r, c)) || addconst!(rhs, gv(com_proj, (r, t, c)) * fr)
-                for (_, com, _) in get(dmas_of_rc, (r, c), NTuple{3,String}[])
-                    (r, com) in rd_agg || continue
-                    addterm!(rhs, gv(rd_shar, (r, t, com, c)) * fr, tm, "VAR_COMPRD", r, t, com, "ANNUAL")
-                end
-            end
-        end
 
-        gconstraint!(tm, name, (r, t, c, s), eqtype, lhs, rhs) === nothing || (n += 1)
+            gconstraint!(tm, eqtag(tm, name), swt(tm, (r, t, c, s), t), eqtype, lhs, rhs) === nothing || (n += 1)
+        end
     end
     return n
 end
@@ -591,7 +594,7 @@ function cal_cap!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, io::String, r,
         (i == io && (r, v, t, p) in x.cptyr) || continue
         k = mult * (gv(x.coef_cpt, (r, v, t, p)) * gv(x.ncom, (r, v, p, c, io)) * yrfr * pf(p)) *
             (1 + gv(x.coef_cio, (r, v, t, p, c, io)))
-        (v,) in x.milestonyr && addterm!(expr, k, tm, "VAR_NCAP", r, v, p)
+        (v,) in x.milestonyr && addterm!(expr, k, tm, "VAR_NCAP", r, v, p; at=v)   # %VARV% (L18)
         (v,) in x.pyr && addconst!(expr, k * gv(x.pasti, (r, v, p)))
         rcapsub!(expr, k, tm, r, v, t, p)                                   # %RCAPSUB%
     end
@@ -602,15 +605,15 @@ function cal_cap!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, io::String, r,
         haskey(coef.values, (r, v, t, p, c)) || continue                    # $COEF_%2COM(R,V,T,P,C)
         k = mult * (yrfr * pf(p))
         kc = k * gv(coef, (r, v, t, p, c))
-        (v,) in x.milestonyr && addterm!(expr, kc, tm, "VAR_NCAP", r, v, p)
+        (v,) in x.milestonyr && addterm!(expr, kc, tm, "VAR_NCAP", r, v, p; at=v)  # %VARV% (L24)
         (v,) in x.pyr && addconst!(expr, kc * gv(x.pasti, (r, v, p)))
         if io == "OUT" && haskey(x.rcap_ocap.values, (r, v, p, c)) && (v, t) in x.vntrt
             n = gmin(gv(x.vn2t, (v, t)), gv(x.rvprl, (r, v, p)))
             i = x.ord[v] + glead(n.v)                                      # TT(LL+MIN(VN2T(V,T),RVPRL(R,V,P)))
             if 1 <= i <= length(x.allyear) && (x.allyear[i],) in x.milestonyr
-                addterm!(expr, -kc, tm, "VAR_SCAP", r, v, x.allyear[i], p)
+                addterm!(expr, -kc, tm, "VAR_SCAP", r, v, x.allyear[i], p; at=x.allyear[i])   # %VARTT% (L25)
             end
-            addterm!(expr, k * gv(x.rcom, (r, v, t, p, c)), tm, "VAR_RCAP", r, v, t, p)
+            addterm!(expr, k * gv(x.rcom, (r, v, t, p, c)), tm, "VAR_RCAP", r, v, t, p; at=t)  # %VART% (L26)
         end
     end
     return expr

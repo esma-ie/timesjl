@@ -38,7 +38,9 @@
 #
 # Not translated (the features are refused): VAR_ELAST (L211, L276; elastic
 # demand) and VAR_DAM (L212; damage); the REG_FIXT loops (L199, L234, L266,
-# L282; FIXBOH); L236-264 (MY_FYEAR, FIXBOH); the %SOW% forms (STAGES).
+# L282; FIXBOH); L236-264 (MY_FYEAR, FIXBOH). The %SOW% of L200-233 is read
+# through the SOW tags (`setbound!` with `sw = :sow`; M1.3 change 73); a STAGES
+# run itself stays refused until change 74.
 
 "The bound table of the stepped run (see `stp_bounds_init!`)."
 stp_bounds(tm::TimesModel) = tm.cache["STP_BOUNDS"]::BoundTable
@@ -67,8 +69,11 @@ function stp_bounds_init!(tm::TimesModel)
 end
 
 # VAR.FX(key) = VAR.L(key) for a fixed period, = 0 for a pending one (`L === nothing`).
+# The SOW tags (sow_tags.jl): the statements of the fixed periods are `%VAR%_X.FX(.. %SOW%) = VAR_X.L(..)`
+# (solve.stp L200-212, L220, L233), every SOW taking the level of the untagged variable (`sw = :sow`); those
+# of the pending periods are literal `VAR_X.FX(..) = 0` (L268-281). GAMS: solve.stp L200-233, L268-281, v4.9.7.
 _stp_fix!(bt, tm, var, key, L) =
-    setbound!(bt, tm, var, key, :fx, GNum(L === nothing ? 0.0 : get(L, key, 0.0)))
+    setbound!(bt, tm, var, key, :fx, GNum(L === nothing ? 0.0 : get(L, key, 0.0)); sw=(L === nothing ? nothing : :sow))
 
 # The process variables of the periods `periods`: fixed at their levels (solve.stp L200-207) when
 # `backward`, at zero (L268-272) otherwise. V is the control index of RTP_VINTYR(R,V,T,P).
@@ -185,6 +190,12 @@ Notes.
   demo12_step3, blending is free in the periods of the first step only
   (docs/discrepancies.md, D43; docs/m15-plan.md, "Change 7 as built").
 
+The SOW tags (sow_tags.jl): solve.stp writes the bounds of the fixed periods
+as `%VAR%_X.x(.. %SOW%)` (L200-233), every SOW (`setbound!` with `sw = :sow`),
+and those of the pending periods on the literal `VAR_X` (L268-281). solve.stp
+runs with STAGES too when the run fixes the beginning of the horizon (L30-36);
+a stepped run with STAGES and no SPINES is stopped at L13.
+
 GAMS: solve.stp L193, L199-233, L267-281; bnd_ucw.mod with bnd_ucv.mod;
 bnd_cum.mod L23-24, L39-40, L44-48, v4.9.7.
 """
@@ -210,18 +221,18 @@ function stp_step_bounds!(tm::TimesModel)
     end
     ncap_l = stp_level(tm, "VAR_NCAP", 3)
     for (r, p) in S("RP", 2).keys, (t,) in backward.keys                        # L214
-        setbound!(bt, tm, "VAR_NCAP", (r, t, p), :fx, GNum(max(0.0, get(ncap_l, (r, t, p), 0.0))))
+        setbound!(bt, tm, "VAR_NCAP", (r, t, p), :fx, GNum(max(0.0, get(ncap_l, (r, t, p), 0.0))); sw=:sow)   # %VAR%_NCAP.FX(R,BACKWARD(T),P%SOW%)
     end
     rtp = S("RTP", 3)
     for k in rtp.keys                                                           # L215-216
         (k[2],) in backward || continue
-        setbound!(bt, tm, "VAR_CAP", k, :up, GNum(Inf))
-        setbound!(bt, tm, "VAR_CAP", k, :lo, GNum(0.0))
+        setbound!(bt, tm, "VAR_CAP", k, :up, GNum(Inf); sw=:sow)                # %VAR%_CAP.UP(RTP(R,BACKWARD(T),P)%SOW%)
+        setbound!(bt, tm, "VAR_CAP", k, :lo, GNum(0.0); sw=:sow)
     end
     cap_bnd = gparam_opt(d, "CAP_BND", 4)
     for k in S("NO_RVP", 3).keys                                                # L218-219
-        setbound_if!(bt, tm, "VAR_CAP", k, :up, gv(cap_bnd, (k..., "UP")))
-        setbound_if!(bt, tm, "VAR_CAP", k, :lo, gv(cap_bnd, (k..., "LO")))
+        setbound_if!(bt, tm, "VAR_CAP", k, :up, gv(cap_bnd, (k..., "UP")); sw=:sow)   # %VAR%_CAP.UP(NO_RVP(R,T,P)%SOW%)
+        setbound_if!(bt, tm, "VAR_CAP", k, :lo, gv(cap_bnd, (k..., "LO")); sw=:sow)
     end
     prc_rcap = S("PRC_RCAP", 2)
     if !isempty(prc_rcap)                                                       # L220
@@ -237,7 +248,7 @@ function stp_step_bounds!(tm::TimesModel)
     flo_cum, com_cum = gparam_opt(d, "FLO_CUM", 6), gparam_opt(d, "COM_CUM", 6)
     for (var, isn) in (("VAR_CUMFLO", k -> haskey(flo_cum, (k[1], k[2], k[3], k[4], k[5], "N"))),      # L229
                        ("VAR_CUMCOM", k -> haskey(com_cum, (k[1], k[3], k[4], k[5], k[2], "N"))))      # L230
-        recs = get(bt.recs, var, nothing)
+        recs = get(bt.recs, vartag(tm, var), nothing)                           # %VAR%_CUMFLO.LO(.. %SOW%), %VAR%_CUMCOM.LO(.. %SOW%)
         recs === nothing && continue
         for (k, (lo, up)) in collect(recs)
             ((k[5],) in fil && lo != 0 && !isn(k)) && (recs[k] = (0.0, up))
@@ -262,7 +273,7 @@ function stp_step_bounds!(tm::TimesModel)
     end
     for k in rtp.keys                                                           # L278-279
         (k[2],) in forward || continue
-        setbound!(bt, tm, "VAR_CAP", k, :lo, GNum(0.0))
+        setbound!(bt, tm, "VAR_CAP", k, :lo, GNum(0.0))                         # literal VAR_CAP (L278-279): no tag
         setbound_if!(bt, tm, "VAR_CAP", k, :up, gv(cap_bnd, (k..., "UP")))
     end
     for (r, ble, opr) in ble_opr.keys, (t,) in forward.keys                     # L281
@@ -301,11 +312,11 @@ bnd_stg.mod; bnd_set.mod; bnd_ucw.mod, v4.9.7.
 function stp_bndmain!(tm::TimesModel)
     bt = stp_bounds(tm)
     for var in ("VAR_ACT", "VAR_FLO", "VAR_NCAP", "VAR_CAP", "VAR_COMNET", "VAR_COMPRD")
-        delete!(bt.recs, var)                                                   # every record at its default
+        delete!(bt.recs, vartag(tm, var))                                       # every record at its default: %VAR%_X.LO(.. %SWD%) = 0
     end
     stg = Set((r, p) for (r, m, p) in gset(tm, "PRC_MAP") if m == "STG")
     for var in ("VAR_SIN", "VAR_SOUT")                                          # bnd_stg.mod L12-13
-        recs = get(bt.recs, var, nothing)
+        recs = get(bt.recs, vartag(tm, var), nothing)                           # %VAR%_%1.LO(.. %SWD%)$PRC_MAP(R,'STG',P)
         recs === nothing || filter!(kv -> !((kv.first[1], kv.first[4]) in stg), recs)
     end
     bnd_act!(bt, tm)                                                            # bndmain.mod L26
@@ -343,5 +354,6 @@ function stp_model(tm::TimesModel)
     for k in ("QLOG", "GAMS_WARNINGS")
         haskey(tm.cache, k) && (cache[k] = tm.cache[k])
     end
-    return TimesModel(model, VariableStore(model), EquationStore(), tm.data, tm.reduce, tm.switches, cache)
+    return TimesModel(model, VariableStore(model), EquationStore(), tm.data, tm.reduce, tm.switches, cache,
+                      sow_tags(tm.data, tm.switches))
 end

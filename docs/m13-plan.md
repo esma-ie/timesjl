@@ -2577,6 +2577,46 @@ GAMS 54.6.1 with CPLEX and HiGHS, both variants, on James's workstation.
 No suite model uses the extension, so these cases are its only check, in CI
 as for every crafted case.
 
+### Change 73 as built (26 Nov 2026)
+
+The tags are in `src/model/sow_tags.jl`, with the table of SW_NOTAGS
+(setglobs.gms L348) and SW_TAGS (stages.stc L12-15). Every equation and bound
+builder asks them where its GAMS file has a tag:
+
+| GAMS | TIMES.jl |
+| --- | --- |
+| `%EQ%_X(... %SWT%)` | a row per SOW of SW_T(T,SOW): `sw_rows(tm, t)`, `eqtag`, `swt` |
+| `%EQ%_X(... %SOW%)` (EQ_CUMFLO, EQ_CUMNET/CUMPRD, EQ_BNDCST, the objective components, EQ_DAMAGE, EQE_UC, EQE_UCR, the dynamic user constraints, EQG_UCMAX, EQL_SCAP) | a row per SOW: `sow_rows(tm)`, `eqtag`, `sowkey` |
+| `EQx(... %SWX%)$(%SWTX% ...)` (EQ(l)_CAPVAC, EQ(l)_BLND, EQ_STSLEV, EQL_STGCCL, eq_sd*, EQ_OBJBAL) | the name stays; the last index is `swx(tm)` ('1' in a deterministic run) |
+| `%VAR%_X(... %SOW%)` | `addterm!` (the SOW of the row) |
+| `%VART%`, `%VARV%`, `%VARM%`, `%VARTT%_X(... %SWS%)` | `addterm!` with `at` the period of the tag |
+| a literal `VAR_X(...)` (objZ; every variable of gasgrids.vda) | `addterm!` with `tagged=false` |
+| `%VAR%_X.LO(... %SOW%)`, with or without SW_T(T,SOW) | `setbound!` with `sw = :sow` or `sw = t` (`sw_bnd`) |
+
+Some files set a tag again for their own lines (eqcumflo.mod L16, eqbndcst.mod
+L78-83, eqobjvar.mod L24, equserco.mod L29 and L55, equcwrap.mod L16,
+ucbet.vda L55, powerflo.vda L407, eqdamage.mod L95): there the builders read
+what the file's text gives with STAGES and no %SCUM% (a term summed over
+SW_TSW(SOW,T,WW) is `at = t`), and say so in their docstrings.
+
+Left to change 74, because it is data or a declaration and not a tag: the
+variable and equation declarations (mod_vars.mod, eqdeclr.mod, mod_equa.mod:
+the VAS_ families over ALLSOW), the uncertain data (the S_ attributes, %MX%,
+the %SHFF%S shape factor, RTDAM per SOW with WWDAM, SW_UCT and SUC_L for the
+dynamic user constraints), and the stochastic objective (eqobj.mod L75-121).
+The %SCUM% forms are SPINES (change 75). The bounds of solve.stp (L200-233:
+`%VAR%_X.FX(.. %SOW%)` for the fixed periods; literal `VAR_X` for the pending
+ones, L268-281) carry their tags in `bnd_stp.jl`. Its other tagged lines (the
+marginals of L31-33 and L325-330, the trade bounds of L251-255, clearsol.stp)
+belong to the solve loops of change 76. A stepped run with STAGES and no
+SPINES is stopped (solve.stp L13).
+
+Check: no deterministic model changes. The test suite passes unchanged
+(36,034 of 36,034 before and after; 36,054 of 36,054 with the 20 new unit tests, 26 Nov 2026), with every fixture and
+crafted case at layer 2. The tests cannot see a wrong tag: each `at`,
+`tagged=false` and `sw` was set from the GAMS line cited beside it, and is
+first checked against GAMS by the stochastic cases of change 74.
+
 ### Time
 
 About four to five working days, longer than the two to three given at the

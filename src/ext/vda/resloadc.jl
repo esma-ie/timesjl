@@ -294,9 +294,10 @@ resloadc.vda L69: `VAR_RLD.LO(R,T,S,'RL-DISP') = -INF`, for the columns the equa
 GAMS: resloadc.vda L69, v4.9.7.
 """
 function bnd_rld!(bt, tm)
-    haskey(tm.vars.families, "VAR_RLD") || return bt
-    recs = get!(() -> Dict{Tuple,Tuple{Float64,Float64}}(), bt.recs, "VAR_RLD")
-    for k in tm.vars.families["VAR_RLD"].keys
+    var = vartag(tm, "VAR_RLD")       # %VAS%_RLD.LO(R,T,S,'RL-DISP'%SOW%), %VAS% being %VAR% (equ_ext.vda L73): every SOW
+    haskey(tm.vars.families, var) || return bt
+    recs = get!(() -> Dict{Tuple,Tuple{Float64,Float64}}(), bt.recs, var)
+    for k in tm.vars.families[var].keys
         k[4] == "RL-DISP" && (recs[k] = (-Inf, Inf))
     end
     return bt
@@ -354,6 +355,11 @@ before `>=` (G13): `DIAG(V,K)>=1\$PRC_VINT(R,P)` is K = V for a vintaged process
 %RCAPSUB%/%RCAPSBM% take off the capacity retired early (`rcapsub!`), %UPSCAPS% the off-line capacity
 of dispatching (VAR_UPS 'N' at the timeslices above S with RPS_UPS, coef_ext.vda L30). 'RL_THMIN'
 (underscore) is its own column (see the file header). Returns the number of rows.
+
+The SOW tags (sow_tags.jl): every row is `%EQ%_RL_x(... %SWT%)` (L72, L92,
+L101, L120, L142) and every term `%VAR%_X(... %SOW%)`, but for the capacity:
+`%VARV%_NCAP(R,V,P %SWS%)` (L109, L125, L132; `at = v`) with %RCAPSUB%, and
+`%VARM%_NCAP(R,K,P %SWS%)` (L154; `at = k`) with %RCAPSBM%.
 
 GAMS: resloadc.vda L72-153, v4.9.7.
 """
@@ -430,7 +436,7 @@ function eq_rl!(tm::TimesModel)
         return pr
     end
     function capterm!(e, k, r, v, t, p, ms, ps)
-        (v,) in ms && addterm!(e, k, tm, "VAR_NCAP", r, v, p)
+        (v,) in ms && addterm!(e, k, tm, "VAR_NCAP", r, v, p; at=v)   # %VARV%_NCAP(R,V,P %SWS%) (L109, L125, L132)
         (v,) in ps && addconst!(e, k * gv(pasti, (r, v, p)))
         rcapsub!(e, k, tm, r, v, t, p)
     end
@@ -466,130 +472,145 @@ function eq_rl!(tm::TimesModel)
     for (r, t) in rows, s in get(fin_of, r, String[])
         off(r, t, s) && continue         # RTS(S) (M1.3 change 67)
         yr = gv(g_yrfr, (r, s))
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        production!(lhs, r, t, s, p -> haskey(genmap.values, (r, p, "RL-DISP")))
-        "RL-THMIN" in rldc && rld!(lhs, yr, r, t, s, "RL-THMIN")
-        for k in top.keys
-            (k[1] == r && (r, k[2], k[3]) in rpc_stg && (r, k[3]) in nrg_elc) || continue
-            p, c, io = k[2], k[3], k[4]
-            for (_, v, _, _) in get(vint_of, (r, t, p), no4), (_, _, _, ts) in get(rpcs_of, (r, p, c), no4)
-                haskey(rs_fr.values, (r, s, ts)) || continue
-                f = gv(rs_fr, (r, s, ts))
-                if (io,) in ips
-                    addterm!(lhs, -f, tm, "VAR_SIN", r, v, t, p, c, ts)
-                else
-                    addterm!(lhs, gv(stg_eff, (r, v, p)) * f, tm, "VAR_SOUT", r, v, t, p, c, ts)
+        for sow in sw_rows(tm, t)   # %SWT% (L72)
+            set_sow!(tm, sow)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            production!(lhs, r, t, s, p -> haskey(genmap.values, (r, p, "RL-DISP")))
+            "RL-THMIN" in rldc && rld!(lhs, yr, r, t, s, "RL-THMIN")
+            for k in top.keys
+                (k[1] == r && (r, k[2], k[3]) in rpc_stg && (r, k[3]) in nrg_elc) || continue
+                p, c, io = k[2], k[3], k[4]
+                for (_, v, _, _) in get(vint_of, (r, t, p), no4), (_, _, _, ts) in get(rpcs_of, (r, p, c), no4)
+                    haskey(rs_fr.values, (r, s, ts)) || continue
+                    f = gv(rs_fr, (r, s, ts))
+                    if (io,) in ips
+                        addterm!(lhs, -f, tm, "VAR_SIN", r, v, t, p, c, ts)
+                    else
+                        addterm!(lhs, gv(stg_eff, (r, v, p)) * f, tm, "VAR_SOUT", r, v, t, p, c, ts)
+                    end
                 end
             end
-        end
-        if (r, "0") in gr_rldc
-            for (_, _, c, ts) in get(combal_of, (r, t), no4)
-                (haskey(rs_fr.values, (r, s, ts)) && (r, c) in nrg_elc && !((r, t, c) in agg)) || continue
-                k = one / gv(com_ie, (r, t, c, ts)) * gv(rs_fr, (r, s, ts)) * (1 + gv(rtcs_fr, (r, t, c, s, ts)))
-                addterm!(lhs, -k, tm, "VAR_COMNET", r, t, c, ts)
+            if (r, "0") in gr_rldc
+                for (_, _, c, ts) in get(combal_of, (r, t), no4)
+                    (haskey(rs_fr.values, (r, s, ts)) && (r, c) in nrg_elc && !((r, t, c) in agg)) || continue
+                    k = one / gv(com_ie, (r, t, c, ts)) * gv(rs_fr, (r, s, ts)) * (1 + gv(rtcs_fr, (r, t, c, s, ts)))
+                    addterm!(lhs, -k, tm, "VAR_COMNET", r, t, c, ts)
+                end
             end
+            rld!(rhs, yr, r, t, s, "RL-DISP")
+            gconstraint!(tm, eqtag(tm, "EQ_RL_LOAD"), swt(tm, (r, t, s), t), "E", lhs, rhs) === nothing || (n += 1)
         end
-        rld!(rhs, yr, r, t, s, "RL-DISP")
-        gconstraint!(tm, "EQ_RL_LOAD", (r, t, s), "E", lhs, rhs) === nothing || (n += 1)
     end
     # EQ_RL_NDIS
     for (r, t) in rows, s in get(fin_of, r, String[]), item in rldc
         off(r, t, s) && continue         # RTS(S) (M1.3 change 67)
         haskey(vargen.values, (r, "ANNUAL", item, "FX")) || continue
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        production!(lhs, r, t, s, p -> (r, p, item) in gr_rlgt)
-        rld!(rhs, gv(g_yrfr, (r, s)), r, t, s, item)
-        gconstraint!(tm, "EQ_RL_NDIS", (r, t, s, item), "E", lhs, rhs) === nothing || (n += 1)
+        for sow in sw_rows(tm, t)   # %SWT% (L92)
+            set_sow!(tm, sow)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            production!(lhs, r, t, s, p -> (r, p, item) in gr_rlgt)
+            rld!(rhs, gv(g_yrfr, (r, s)), r, t, s, item)
+            gconstraint!(tm, eqtag(tm, "EQ_RL_NDIS"), swt(tm, (r, t, s, item), t), "E", lhs, rhs) === nothing || (n += 1)
+        end
     end
     # EQ_RL_STCAP
     for (r, t) in rows, s in get(fin_of, r, String[])
         off(r, t, s) && continue         # RTS(S) (M1.3 change 67)
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        for (p, c) in get(stg_out_of, r, NTuple{2,String}[])
-            ((r, p) in prc_cap && (r, p, s) in prc_ts) || continue
-            base = gv(capact, (r, p)) * gv(rs_stgprd, (r, s))
-            for (_, v, _, _) in get(cptyr_of, (r, t, p), no4)
-                sm = nothing
-                for (_, ts, _) in get(tsmap_to, (r, s), no3)
-                    haskey(coef_af.values, (r, v, t, p, ts, "UP")) || continue
-                    x = gv(coef_af, (r, v, t, p, ts, "UP")) / gv(rs_fr, (r, s, ts)) * cafprod(r, v, p, c, s, ts)
-                    sm = sm === nothing ? x : gmin(sm, x)
+        for sow in sw_rows(tm, t)   # %SWT% (L101)
+            set_sow!(tm, sow)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            for (p, c) in get(stg_out_of, r, NTuple{2,String}[])
+                ((r, p) in prc_cap && (r, p, s) in prc_ts) || continue
+                base = gv(capact, (r, p)) * gv(rs_stgprd, (r, s))
+                for (_, v, _, _) in get(cptyr_of, (r, t, p), no4)
+                    sm = nothing
+                    for (_, ts, _) in get(tsmap_to, (r, s), no3)
+                        haskey(coef_af.values, (r, v, t, p, ts, "UP")) || continue
+                        x = gv(coef_af, (r, v, t, p, ts, "UP")) / gv(rs_fr, (r, s, ts)) * cafprod(r, v, p, c, s, ts)
+                        sm = sm === nothing ? x : gmin(sm, x)
+                    end
+                    sm === nothing && throw(DomainError((r, v, t, p, s), "resloadc.vda L105: SMIN over no COEF_AF 'UP' (+INF)"))
+                    capterm!(lhs, base * (gv(coef_cpt, (r, v, t, p)) * gv(actflo, (r, v, p, c)) * sm), r, v, t, p, milestonyr, pastyear)
                 end
-                sm === nothing && throw(DomainError((r, v, t, p, s), "resloadc.vda L105: SMIN over no COEF_AF 'UP' (+INF)"))
-                capterm!(lhs, base * (gv(coef_cpt, (r, v, t, p)) * gv(actflo, (r, v, p, c)) * sm), r, v, t, p, milestonyr, pastyear)
             end
+            rld!(rhs, one, r, t, s, "RL_THMIN")
+            rld!(rhs, -one, r, t, s, "RL-DISP")
+            variations!(rhs, r, t, s, "LO")
+            gconstraint!(tm, eqtag(tm, "EQ_RL_STCAP"), swt(tm, (r, t, s), t), "G", lhs, rhs) === nothing || (n += 1)
         end
-        rld!(rhs, one, r, t, s, "RL_THMIN")
-        rld!(rhs, -one, r, t, s, "RL-DISP")
-        variations!(rhs, r, t, s, "LO")
-        gconstraint!(tm, "EQ_RL_STCAP", (r, t, s), "G", lhs, rhs) === nothing || (n += 1)
     end
     # EQ_RL_PKCAP
     for (r, t) in rows, s in get(fin_of, r, String[])
         off(r, t, s) && continue         # RTS(S) (M1.3 change 67)
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        for (rr, p, item) in gr_rlgt.keys
-            (rr == r && item == "RL-DISP" && (r, p) in prc_cap) || continue
-            ca = gv(capact, (r, p))
-            nts = count(k -> haskey(rs_fr.values, (r, s, k[3])), get(ts_of_rp, (r, p), no3))
-            for (_, v, _, _) in get(cpt_of, (r, t, p), no4)
-                af = gv(coef_af, (r, v, t, p, s, "UP")) * GNum(nts)
-                capterm!(lhs, ca * (gv(coef_cpt, (r, v, t, p)) * smaxflo(r, v, p) * af), r, v, t, p, milestonyr, pyr)
+        for sow in sw_rows(tm, t)   # %SWT% (L120)
+            set_sow!(tm, sow)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            for (rr, p, item) in gr_rlgt.keys
+                (rr == r && item == "RL-DISP" && (r, p) in prc_cap) || continue
+                ca = gv(capact, (r, p))
+                nts = count(k -> haskey(rs_fr.values, (r, s, k[3])), get(ts_of_rp, (r, p), no3))
+                for (_, v, _, _) in get(cpt_of, (r, t, p), no4)
+                    af = gv(coef_af, (r, v, t, p, s, "UP")) * GNum(nts)
+                    capterm!(lhs, ca * (gv(coef_cpt, (r, v, t, p)) * smaxflo(r, v, p) * af), r, v, t, p, milestonyr, pyr)
+                end
             end
-        end
-        for (p, c) in get(stg_out_of, r, NTuple{2,String}[])
-            ((r, p) in prc_cap && (r, p, s) in prc_ts) || continue
-            base = gv(capact, (r, p)) * gv(rs_stgprd, (r, s))
-            for (_, v, _, _) in get(cptyr_of, (r, t, p), no4)
-                k = gv(coef_cpt, (r, v, t, p)) * gv(coef_af, (r, v, t, p, s, "UP")) * gv(actflo, (r, v, p, c)) *
-                    gv(stg_eff, (r, v, p)) * cafprod(r, v, p, c, s, s)
-                capterm!(lhs, base * k, r, v, t, p, milestonyr, pyr)
+            for (p, c) in get(stg_out_of, r, NTuple{2,String}[])
+                ((r, p) in prc_cap && (r, p, s) in prc_ts) || continue
+                base = gv(capact, (r, p)) * gv(rs_stgprd, (r, s))
+                for (_, v, _, _) in get(cptyr_of, (r, t, p), no4)
+                    k = gv(coef_cpt, (r, v, t, p)) * gv(coef_af, (r, v, t, p, s, "UP")) * gv(actflo, (r, v, p, c)) *
+                        gv(stg_eff, (r, v, p)) * cafprod(r, v, p, c, s, s)
+                    capterm!(lhs, base * k, r, v, t, p, milestonyr, pyr)
+                end
             end
+            rld!(rhs, one, r, t, s, "RL-DISP")
+            variations!(rhs, r, t, s, "UP")
+            gconstraint!(tm, eqtag(tm, "EQ_RL_PKCAP"), swt(tm, (r, t, s), t), "G", lhs, rhs) === nothing || (n += 1)
         end
-        rld!(rhs, one, r, t, s, "RL-DISP")
-        variations!(rhs, r, t, s, "UP")
-        gconstraint!(tm, "EQ_RL_PKCAP", (r, t, s), "G", lhs, rhs) === nothing || (n += 1)
     end
     # EQ_RL_THMIN
     for (r, t) in rows, ts in get(fin_of, r, String[]), bd in ("LO", "UP")
         off(r, t, ts) && continue        # RTS(TS) (M1.3 change 67)
         (bd == "LO" || "RL-THMIN" in rldc) || continue                    # BDLOX(BDNEQ)+RLDC('RL-THMIN')
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        rld!(lhs, gv(bdsig, (bd,)), r, t, ts, "RL_THMIN")
-        bd == "UP" && rld!(lhs, one, r, t, ts, "RL-THMIN")               # BDUPX(BDNEQ)
-        if bd == "LO"                                                    # $BDLOX(BDNEQ)
-            for (rr, p, item) in gr_rlgt.keys
-                (rr == r && item == "RL-THMIN" && (r, p) in prc_cap) || continue
-                ca = gv(capact, (r, p))
-                addconst!(rhs, ca * gv(thbnd, (r, t, p, "FX")))
-                vint = (r, p) in prc_vint
-                for (_, v, _, _) in get(vint_of, (r, t, p), no4)
-                    sf = smaxflo(r, v, p)
-                    for (_, _, s) in get(ts_of_rp, (r, p), no3)
-                        haskey(rs_fr.values, (r, ts, s)) || continue
-                        b = gv(thbnd, (r, t, p, "LO")) + gv(thbnd, (r, t, p, "UP"))
-                        if !haskey(thmin.values, (r, t, p))
-                            for (_, sl) in get(ts_ann_of, (s,), NTuple{2,String}[])
-                                b = b + gv(act_ups, (r, v, p, sl, "FX"))
+        for sow in sw_rows(tm, t)   # %SWT% (L142)
+            set_sow!(tm, sow)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            rld!(lhs, gv(bdsig, (bd,)), r, t, ts, "RL_THMIN")
+            bd == "UP" && rld!(lhs, one, r, t, ts, "RL-THMIN")               # BDUPX(BDNEQ)
+            if bd == "LO"                                                    # $BDLOX(BDNEQ)
+                for (rr, p, item) in gr_rlgt.keys
+                    (rr == r && item == "RL-THMIN" && (r, p) in prc_cap) || continue
+                    ca = gv(capact, (r, p))
+                    addconst!(rhs, ca * gv(thbnd, (r, t, p, "FX")))
+                    vint = (r, p) in prc_vint
+                    for (_, v, _, _) in get(vint_of, (r, t, p), no4)
+                        sf = smaxflo(r, v, p)
+                        for (_, _, s) in get(ts_of_rp, (r, p), no3)
+                            haskey(rs_fr.values, (r, ts, s)) || continue
+                            b = gv(thbnd, (r, t, p, "LO")) + gv(thbnd, (r, t, p, "UP"))
+                            if !haskey(thmin.values, (r, t, p))
+                                for (_, sl) in get(ts_ann_of, (s,), NTuple{2,String}[])
+                                    b = b + gv(act_ups, (r, v, p, sl, "FX"))
+                                end
                             end
-                        end
-                        w = ca * (sf * b)
-                        for (_, kv, _, _) in get(cpt_of, (r, t, p), no4)
-                            ((kv,) in modlyear && (!vint || kv == v)) || continue
-                            c = w * gv(coef_cpt, (r, kv, t, p))
-                            (kv,) in milestonyr && addterm!(rhs, c, tm, "VAR_NCAP", r, kv, p)
-                            (kv,) in pyr && addconst!(rhs, c * gv(pasti, (r, kv, p)))
-                            rcapsub!(rhs, c, tm, r, kv, t, p)                    # %RCAPSBM%
-                        end
-                        for (_, a, _) in get(tsmap_to, (r, s), no3)               # %UPSCAPS%
-                            (r, p, a) in rps_ups || continue
-                            addterm!(rhs, -w, tm, "VAR_UPS", r, v, t, p, a, "N")
+                            w = ca * (sf * b)
+                            for (_, kv, _, _) in get(cpt_of, (r, t, p), no4)
+                                ((kv,) in modlyear && (!vint || kv == v)) || continue
+                                c = w * gv(coef_cpt, (r, kv, t, p))
+                                (kv,) in milestonyr && addterm!(rhs, c, tm, "VAR_NCAP", r, kv, p; at=kv)   # %VARM%_NCAP(R,K,P %SWS%) (L154)
+                                (kv,) in pyr && addconst!(rhs, c * gv(pasti, (r, kv, p)))
+                                rcapsub!(rhs, c, tm, r, kv, t, p)                    # %RCAPSBM%
+                            end
+                            for (_, a, _) in get(tsmap_to, (r, s), no3)               # %UPSCAPS%
+                                (r, p, a) in rps_ups || continue
+                                addterm!(rhs, -w, tm, "VAR_UPS", r, v, t, p, a, "N")
+                            end
                         end
                     end
                 end
             end
+            gconstraint!(tm, eqtag(tm, "EQ_RL_THMIN"), swt(tm, (r, t, ts, bd), t), "G", lhs, rhs) === nothing || (n += 1)
         end
-        gconstraint!(tm, "EQ_RL_THMIN", (r, t, ts, bd), "G", lhs, rhs) === nothing || (n += 1)
     end
     return n
 end

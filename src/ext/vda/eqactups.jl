@@ -294,6 +294,11 @@ In EQ_ACTRMPC S runs over the process's timeslices and TS is the slice
 before S in its cycle (`stg_prev`); the row carries the label of TS. Returns
 the number of rows.
 
+The SOW tags (sow_tags.jl): every row is `%EQ%x(... %SWT%)` (L39, L50, L65,
+L76, L86, L99, L113) and every term `%VAR%_X(... %SOW%)`, but for the
+capacity: %CAPON% reads `%VARV%_NCAP(R,V,P%SWS%)` (L34, `at = v`) and %MX%
+`%VARM%_NCAP(R,K,P%SWS%)` (L35, `at = k`), with %RCAPSUB% and %RCAPSBM%.
+
 GAMS: eqactups.vda L34-117, v4.9.7.
 """
 function eq_actups!(tm::TimesModel)
@@ -345,7 +350,7 @@ function eq_actups!(tm::TimesModel)
     function capon!(e, c::GNum, r, v, t, p)
         if (r, p) in prc_vint
             k = c * gv(coef_cpt, (r, v, t, p))
-            (v,) in T && addterm!(e, k, tm, "VAR_NCAP", r, v, p)
+            (v,) in T && addterm!(e, k, tm, "VAR_NCAP", r, v, p; at=v)   # %CAPON%: %VARV%_NCAP(R,V,P%SWS%) (L34)
             addconst!(e, k * gv(pasti, (r, v, p)))
             rcapsub!(e, k, tm, r, v, t, p)                                  # %RCAPSUB%
         end
@@ -360,7 +365,7 @@ function eq_actups!(tm::TimesModel)
             for (_, _, _, k) in get(kmap, (r, v, p), no4)
                 (k,) in modlyear || continue                                # MODLYEAR(K)
                 ck = c * gv(coef_vnt, (r, t, p, k))
-                (k,) in T && addterm!(e, ck, tm, "VAR_NCAP", r, k, p)
+                (k,) in T && addterm!(e, ck, tm, "VAR_NCAP", r, k, p; at=k)   # %MX%: %VARM%_NCAP(R,K,P%SWS%) (L35)
                 addconst!(e, ck * gv(pasti, (r, k, p)))
                 rcapsub!(e, ck, tm, r, k, t, p)                             # %RCAPSBM%, MODLYEAR = K (G48)
             end
@@ -375,21 +380,24 @@ function eq_actups!(tm::TimesModel)
         vt_ok(v, t) && push!(rows6, (r, v, t, p, s, bd))
     end
     for (r, v, t, p, s, bd) in gams_sort!(rows6, d)
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        sig = _ups_bdsig(bd)
-        act!(lhs, sig, r, v, t, p, s)
-        pl = (r, v, p) in rtp_pl
-        (pl && bd == "LO") && ups!(rhs, one, r, v, t, p, s, "FX")
-        minl = GZERO                                                       # SUM(TS_ANN(S,TS)$(NOT RTP_PL), ACT_UPS(..,'FX'))$BDLOX(BD)
-        if bd == "LO" && !pl
-            for (_, ts) in get(tsann_of_s, (s,), no2)
-                minl = minl + gv(act_ups, (r, v, p, ts, "FX"))
+        for sow in sw_rows(tm, t)   # %SWT% (L39)
+            set_sow!(tm, sow)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            sig = _ups_bdsig(bd)
+            act!(lhs, sig, r, v, t, p, s)
+            pl = (r, v, p) in rtp_pl
+            (pl && bd == "LO") && ups!(rhs, one, r, v, t, p, s, "FX")
+            minl = GZERO                                                       # SUM(TS_ANN(S,TS)$(NOT RTP_PL), ACT_UPS(..,'FX'))$BDLOX(BD)
+            if bd == "LO" && !pl
+                for (_, ts) in get(tsann_of_s, (s,), no2)
+                    minl = minl + gv(act_ups, (r, v, p, ts, "FX"))
+                end
             end
+            m = gmin(gv(coef_af, (r, v, t, p, s, "UP")) * sig, minl) * gv(capact, (r, p)) * gv(yrfr, (r, s))
+            capon!(rhs, m, r, v, t, p)
+            upscaps!(rhs, m, r, v, t, p, s)
+            gconstraint!(tm, eqtag(tm, "EQ_CAPLOAD"), swt(tm, (r, v, t, p, s, bd), t), "G", lhs, rhs) === nothing || (n += 1)
         end
-        m = gmin(gv(coef_af, (r, v, t, p, s, "UP")) * sig, minl) * gv(capact, (r, p)) * gv(yrfr, (r, s))
-        capon!(rhs, m, r, v, t, p)
-        upscaps!(rhs, m, r, v, t, p, s)
-        gconstraint!(tm, "EQ_CAPLOAD", (r, v, t, p, s, bd), "G", lhs, rhs) === nothing || (n += 1)
     end
 
     # EQ_ACTRAMP, L50-61
@@ -402,31 +410,34 @@ function eq_actups!(tm::TimesModel)
         end
     end
     for (r, v, t, p, s, bd) in gams_sort!(rows6, d)
-        lhs = JuMP.AffExpr(0.0)
-        sig = _ups_bdsig(bd)
-        ups_s = (r, p, s) in rps_ups
-        for (_, _, ts) in get(prev_of_rs, (r, s), no3)
-            (r, p, ts) in prc_ts || continue
-            a = GZERO
-            for (_, sl) in get(tsann_of_s, (s,), no2)
-                a = a + gv(act_ups, (r, v, p, sl, bd))
+        for sow in sw_rows(tm, t)   # %SWT% (L50)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            sig = _ups_bdsig(bd)
+            ups_s = (r, p, s) in rps_ups
+            for (_, _, ts) in get(prev_of_rs, (r, s), no3)
+                (r, p, ts) in prc_ts || continue
+                a = GZERO
+                for (_, sl) in get(tsann_of_s, (s,), no2)
+                    a = a + gv(act_ups, (r, v, p, sl, bd))
+                end
+                a = gv(capact, (r, p)) * a
+                mxtmp!(lhs, a, r, v, t, p, s)
+                if ups_s && bd == "LO"                                         # $BDLOX(BD)
+                    ups!(lhs, a, r, v, t, p, s, "N")
+                    ups!(lhs, -a, r, v, t, p, ts, "N")
+                end
+                c = gv(stgprd, (r, s)) * 2 / (gv(yrfr, (r, s)) + gv(yrfr, (r, ts))) / 8760 * sig
+                act!(lhs, c / gv(yrfr, (r, s)), r, v, t, p, s)
+                act!(lhs, -(c / gv(yrfr, (r, ts))), r, v, t, p, ts)
+                if ups_s
+                    k = c * gv(capact, (r, p)) * gv(minld, (r, v, p))
+                    ups!(lhs, k, r, v, t, p, s, "N")
+                    ups!(lhs, -k, r, v, t, p, ts, "N")
+                end
             end
-            a = gv(capact, (r, p)) * a
-            mxtmp!(lhs, a, r, v, t, p, s)
-            if ups_s && bd == "LO"                                         # $BDLOX(BD)
-                ups!(lhs, a, r, v, t, p, s, "N")
-                ups!(lhs, -a, r, v, t, p, ts, "N")
-            end
-            c = gv(stgprd, (r, s)) * 2 / (gv(yrfr, (r, s)) + gv(yrfr, (r, ts))) / 8760 * sig
-            act!(lhs, c / gv(yrfr, (r, s)), r, v, t, p, s)
-            act!(lhs, -(c / gv(yrfr, (r, ts))), r, v, t, p, ts)
-            if ups_s
-                k = c * gv(capact, (r, p)) * gv(minld, (r, v, p))
-                ups!(lhs, k, r, v, t, p, s, "N")
-                ups!(lhs, -k, r, v, t, p, ts, "N")
-            end
+            gconstraint!(tm, eqtag(tm, "EQ_ACTRAMP"), swt(tm, (r, v, t, p, s, bd), t), "G", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
         end
-        gconstraint!(tm, "EQ_ACTRAMP", (r, v, t, p, s, bd), "G", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
     end
 
     # EQE_ACTUPS, L65-72, and EQL_ACTUPS, L76-82
@@ -437,42 +448,48 @@ function eq_actups!(tm::TimesModel)
         l in ("FX", "N") && push!(rows_l, (r, v, t, p, tsl, l, s))         # LNX(L)
     end
     for (r, v, t, p, tsl, l, s) in gams_sort!(rows_e, d)
-        lhs = JuMP.AffExpr(0.0)
-        if l == "UP"                                                       # $(BDSIG(L)<0)
-            if haskey(stoa, (s,))
-                for (_, _, ts) in get(prev_of_rs, (r, s), no3)
-                    ups!(lhs, one, r, v, t, p, s, "N")
-                    ups!(lhs, -one, r, v, t, p, ts, "N")
-                    ups!(lhs, -one, r, v, t, p, s, "LO")                   # -SUM(BD, VAR_UPS(..,BD)*BDSIG(BD))
-                    ups!(lhs, one, r, v, t, p, s, "UP")
+        for sow in sw_rows(tm, t)   # %SWT% (L65)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            if l == "UP"                                                       # $(BDSIG(L)<0)
+                if haskey(stoa, (s,))
+                    for (_, _, ts) in get(prev_of_rs, (r, s), no3)
+                        ups!(lhs, one, r, v, t, p, s, "N")
+                        ups!(lhs, -one, r, v, t, p, ts, "N")
+                        ups!(lhs, -one, r, v, t, p, s, "LO")                   # -SUM(BD, VAR_UPS(..,BD)*BDSIG(BD))
+                        ups!(lhs, one, r, v, t, p, s, "UP")
+                    end
                 end
-            end
-            if (s,) in annual && (r, p, "N") in rp_pl
-                ups!(lhs, one, r, v, t, p, s, l)
-                for (_, _, ts) in get(ts_of_rp, (r, p), no3)
-                    ups!(lhs, -one, r, v, t, p, ts, "FX")
+                if (s,) in annual && (r, p, "N") in rp_pl
+                    ups!(lhs, one, r, v, t, p, s, l)
+                    for (_, _, ts) in get(ts_of_rp, (r, p), no3)
+                        ups!(lhs, -one, r, v, t, p, ts, "FX")
+                    end
                 end
+            else                                                               # SUM(BDLOX(BD(L)), ...)
+                mxtmp!(lhs, one, r, v, t, p, s)
+                addterm!(lhs, -one, tm, "VAR_UDP", r, v, t, p, s, "FX")
+                (r, p, "FX") in rp_upl && ups!(lhs, -one, r, v, t, p, s, "FX")
             end
-        else                                                               # SUM(BDLOX(BD(L)), ...)
-            mxtmp!(lhs, one, r, v, t, p, s)
-            addterm!(lhs, -one, tm, "VAR_UDP", r, v, t, p, s, "FX")
-            (r, p, "FX") in rp_upl && ups!(lhs, -one, r, v, t, p, s, "FX")
+            gconstraint!(tm, eqtag(tm, "EQE_ACTUPS"), swt(tm, (r, v, t, p, tsl, l, s), t), "E", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
         end
-        gconstraint!(tm, "EQE_ACTUPS", (r, v, t, p, tsl, l, s), "E", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
     end
     for (r, v, t, p, tsl, l, s) in gams_sort!(rows_l, d)
-        lhs = JuMP.AffExpr(0.0)
-        ups!(lhs, one, r, v, t, p, s, l)
-        if l == "N"                                                        # $IPS(L)
-            for (_, ts, _) in get(parent_of, (r, s), no3)
-                ups!(lhs, -one, r, v, t, p, ts, "FX")
+        for sow in sw_rows(tm, t)   # %SWT% (L76)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            ups!(lhs, one, r, v, t, p, s, l)
+            if l == "N"                                                        # $IPS(L)
+                for (_, ts, _) in get(parent_of, (r, s), no3)
+                    ups!(lhs, -one, r, v, t, p, ts, "FX")
+                end
+            else                                                               # $BD(L)
+                for (_, _, ts) in get(child_of, (r, s), no3)
+                    ups!(lhs, -one, r, v, t, p, ts, "UP")
+                end
             end
-        else                                                               # $BD(L)
-            for (_, _, ts) in get(child_of, (r, s), no3)
-                ups!(lhs, -one, r, v, t, p, ts, "UP")
-            end
+            gconstraint!(tm, eqtag(tm, "EQL_ACTUPS"), swt(tm, (r, v, t, p, tsl, l, s), t), "L", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
         end
-        gconstraint!(tm, "EQL_ACTUPS", (r, v, t, p, tsl, l, s), "L", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
     end
 
     # EQL_ACTUPC, L86-95
@@ -481,24 +498,27 @@ function eq_actups!(tm::TimesModel)
         vt_ok(v, t) && !off(r, t, s) && push!(rows7, (r, v, t, p, tsl, l, s))     # RTS(S), L86
     end
     for (r, v, t, p, tsl, l, s) in gams_sort!(rows7, d)
-        lhs = JuMP.AffExpr(0.0)
-        at = gv(act_time, (r, t, p, l))
-        if l == "N"                                                        # $IPS(L): the maximum number of cycles
-            for (_, _, sl) in get(child_of, (r, s), no3)
-                ups!(lhs, one, r, v, t, p, sl, "UP")
-            end
-            capon!(lhs, -at, r, v, t, p)
-            upscaps!(lhs, -at, r, v, t, p, s)
-        else                                                               # SUM(BD(L), ...): the minimum on-line and off-line hours
-            for (_, _, j, s2) in get(rsup_of_rs, (r, s), no4)
-                for (_, _, _, sl) in get(rjsl_of_rjs, (r, j, s2), no4)
-                    gv(modus, (r, s, j, s2, sl)).v < at.v / 8760 && ups!(lhs, one, r, v, t, p, sl, l)
+        for sow in sw_rows(tm, t)   # %SWT% (L86)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            at = gv(act_time, (r, t, p, l))
+            if l == "N"                                                        # $IPS(L): the maximum number of cycles
+                for (_, _, sl) in get(child_of, (r, s), no3)
+                    ups!(lhs, one, r, v, t, p, sl, "UP")
                 end
-                l in ("UP", "FX") && ups!(lhs, -one, r, v, t, p, s2, "FX")  # $BDUPX(BD)
+                capon!(lhs, -at, r, v, t, p)
+                upscaps!(lhs, -at, r, v, t, p, s)
+            else                                                               # SUM(BD(L), ...): the minimum on-line and off-line hours
+                for (_, _, j, s2) in get(rsup_of_rs, (r, s), no4)
+                    for (_, _, _, sl) in get(rjsl_of_rjs, (r, j, s2), no4)
+                        gv(modus, (r, s, j, s2, sl)).v < at.v / 8760 && ups!(lhs, one, r, v, t, p, sl, l)
+                    end
+                    l in ("UP", "FX") && ups!(lhs, -one, r, v, t, p, s2, "FX")  # $BDUPX(BD)
+                end
+                ups!(lhs, -_ups_bdsig(l), r, v, t, p, s, "N")
             end
-            ups!(lhs, -_ups_bdsig(l), r, v, t, p, s, "N")
+            gconstraint!(tm, eqtag(tm, "EQL_ACTUPC"), swt(tm, (r, v, t, p, tsl, l, s), t), "L", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
         end
-        gconstraint!(tm, "EQL_ACTUPC", (r, v, t, p, tsl, l, s), "L", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
     end
 
     # EQ_ACTPL, L99-105 (without the DP_UNS term of L106-109)
@@ -510,13 +530,16 @@ function eq_actups!(tm::TimesModel)
         end
     end
     for (r, v, t, p, s) in gams_sort!(rows5, d)
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        ups!(lhs, one, r, v, t, p, s, "FX")
-        up, lo = gv(lospl, (r, v, p, "UP")), gv(lospl, (r, v, p, "LO"))
-        den = up * (1 / lo - 1)                                            # division by zero is a GAMS error too
-        mxtmp!(rhs, gv(capact, (r, p)) * gv(yrfr, (r, s)) * (up + lo * (1 - up)) / den, r, v, t, p, s)
-        act!(rhs, -(one / den), r, v, t, p, s)
-        gconstraint!(tm, "EQ_ACTPL", (r, v, t, p, s), "G", lhs, rhs) === nothing || (n += 1)
+        for sow in sw_rows(tm, t)   # %SWT% (L99)
+            set_sow!(tm, sow)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            ups!(lhs, one, r, v, t, p, s, "FX")
+            up, lo = gv(lospl, (r, v, p, "UP")), gv(lospl, (r, v, p, "LO"))
+            den = up * (1 / lo - 1)                                            # division by zero is a GAMS error too
+            mxtmp!(rhs, gv(capact, (r, p)) * gv(yrfr, (r, s)) * (up + lo * (1 - up)) / den, r, v, t, p, s)
+            act!(rhs, -(one / den), r, v, t, p, s)
+            gconstraint!(tm, eqtag(tm, "EQ_ACTPL"), swt(tm, (r, v, t, p, s), t), "G", lhs, rhs) === nothing || (n += 1)
+        end
     end
 
     # EQ_ACTRMPC, L113-117
@@ -534,17 +557,20 @@ function eq_actups!(tm::TimesModel)
     for row in gams_sort!(rows5, d)
         r, v, t, p, ts = row
         s = slice_of[row]
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        act!(lhs, one / gv(yrfr, (r, ts)) / gv(capact, (r, p)), r, v, t, p, ts)
-        act!(lhs, -(one / gv(yrfr, (r, s)) / gv(capact, (r, p))), r, v, t, p, s)
-        addterm!(rhs, one, tm, "VAR_UDP", r, v, t, p, s, "LO")
-        addterm!(rhs, -one, tm, "VAR_UDP", r, v, t, p, s, "UP")
-        if (r, p, s) in rps_ups
-            k = gv(minld, (r, v, p))
-            ups!(rhs, -k, r, v, t, p, ts, "N")
-            ups!(rhs, k, r, v, t, p, s, "N")
+        for sow in sw_rows(tm, t)   # %SWT% (L113)
+            set_sow!(tm, sow)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            act!(lhs, one / gv(yrfr, (r, ts)) / gv(capact, (r, p)), r, v, t, p, ts)
+            act!(lhs, -(one / gv(yrfr, (r, s)) / gv(capact, (r, p))), r, v, t, p, s)
+            addterm!(rhs, one, tm, "VAR_UDP", r, v, t, p, s, "LO")
+            addterm!(rhs, -one, tm, "VAR_UDP", r, v, t, p, s, "UP")
+            if (r, p, s) in rps_ups
+                k = gv(minld, (r, v, p))
+                ups!(rhs, -k, r, v, t, p, ts, "N")
+                ups!(rhs, k, r, v, t, p, s, "N")
+            end
+            gconstraint!(tm, eqtag(tm, "EQ_ACTRMPC"), swt(tm, (r, v, t, p, ts), t), "E", lhs, rhs) === nothing || (n += 1)
         end
-        gconstraint!(tm, "EQ_ACTRMPC", (r, v, t, p, ts), "E", lhs, rhs) === nothing || (n += 1)
     end
     return n
 end
@@ -597,29 +623,32 @@ function eql_stgccl!(tm::TimesModel)
     end
     n = 0
     for (r, v, t, p) in gams_sort!(rows, d)
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        smax = nothing                                                     # SMAX over a non-empty RPS_STG(R,P,S)
-        for (_, _, s) in get(stg_of_rp, (r, p), no3)
-            a = gv(afups, (r, v, p, s))
-            smax = smax === nothing ? a : gmax(smax, a)
-        end
-        c = GNum(1.0) / gexp(gv(prc_sc, (r, p))) * smax * gv(capact, (r, p))
-        for (_, _, _, k) in get(kmap, (r, v, p), no4)                      # %MX%
-            (k,) in modlyear || continue
-            ck = c * gv(coef_vnt, (r, t, p, k))
-            (k,) in T && addterm!(lhs, ck, tm, "VAR_NCAP", r, k, p)
-            addconst!(lhs, ck * gv(pasti, (r, k, p)))
-            rcapsub!(lhs, ck, tm, r, k, t, p)                              # %RCAPSBM%
-        end
-        addterm!(lhs, c, tm, "VAR_UPS", r, v, t, p, "ANNUAL", "UP")
-        f = gv(tlife, (r, v, p)) / gv(maxcyc, (r, v, p))
-        for (_, _, com) in get(rpc_stg, (r, p), no3)
-            (r, p, com, "OUT") in top || continue
-            for (_, _, _, s) in get(rpcs_var, (r, p, com), no4)
-                addterm!(rhs, GNum(1.0) / gv(actflo, (r, v, p, com)) * f, tm, "VAR_SOUT", r, v, t, p, com, s)
+        for sow in sw_rows(tm, t)   # %SWTX% (L121): SW_T(T,SOW)
+            set_sow!(tm, sow)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            smax = nothing                                                     # SMAX over a non-empty RPS_STG(R,P,S)
+            for (_, _, s) in get(stg_of_rp, (r, p), no3)
+                a = gv(afups, (r, v, p, s))
+                smax = smax === nothing ? a : gmax(smax, a)
             end
+            c = GNum(1.0) / gexp(gv(prc_sc, (r, p))) * smax * gv(capact, (r, p))
+            for (_, _, _, k) in get(kmap, (r, v, p), no4)                      # %MX%
+                (k,) in modlyear || continue
+                ck = c * gv(coef_vnt, (r, t, p, k))
+                (k,) in T && addterm!(lhs, ck, tm, "VAR_NCAP", r, k, p; at=k)   # %MX%: %VARM%_NCAP(R,K,P%SWS%) (L35)
+                addconst!(lhs, ck * gv(pasti, (r, k, p)))
+                rcapsub!(lhs, ck, tm, r, k, t, p)                              # %RCAPSBM%
+            end
+            addterm!(lhs, c, tm, "VAR_UPS", r, v, t, p, "ANNUAL", "UP")
+            f = gv(tlife, (r, v, p)) / gv(maxcyc, (r, v, p))
+            for (_, _, com) in get(rpc_stg, (r, p), no3)
+                (r, p, com, "OUT") in top || continue
+                for (_, _, _, s) in get(rpcs_var, (r, p, com), no4)
+                    addterm!(rhs, GNum(1.0) / gv(actflo, (r, v, p, com)) * f, tm, "VAR_SOUT", r, v, t, p, com, s)
+                end
+            end
+            gconstraint!(tm, "EQL_STGCCL", (r, v, t, p, swx(tm)), "G", lhs, rhs) === nothing || (n += 1)
         end
-        gconstraint!(tm, "EQL_STGCCL", (r, v, t, p, "1"), "G", lhs, rhs) === nothing || (n += 1)
     end
     return n
 end

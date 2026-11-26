@@ -37,6 +37,9 @@ const STGFLO_VARIANTS = (("IN", "G", "LO"), ("IN", "E", "FX"), ("IN", "L", "UP")
 Generate every EQ(l)_STGIN and EQ(l)_STGOUT row (eqmain.mod L180-185).
 Returns the number of rows.
 
+The SOW tags (sow_tags.jl): the row is `%EQ%%2_STG%1(... %SWT%)` (L20); the
+term is `%VAR%_S%1(... %SOW%)` (L25).
+
 GAMS: eqstgflo.mod L16-30, v4.9.7.
 """
 function eq_stgflo!(tm::TimesModel)
@@ -75,19 +78,22 @@ function eq_stgflo!(tm::TimesModel, io::String, eqtype::String, bd::String)
     n = 0
     for (r, t, p, c, s) in rows
         nst = (r, "NST", p) in x.prc_map
-        lhs = JuMP.AffExpr(0.0)
-        for (_, _, _, ts) in get(varts_of, (r, p, c), NTuple{4,String}[])
-            nstts = (r, p, ts) in x.prc_nstts
-            (io == "IN" ? (!nst || nstts) : !nstts) || continue                         # %TMP% PRC_NSTTS
-            haskey(x.rs_fr, (r, s, ts)) || continue                                     # $RS_FR(R,S,TS)
-            w = gv(x.rs_fr, (r, s, ts)) * (one + gv(x.rtcs_fr, (r, t, c, s, ts)))
-            for (_, vv, _, _) in get(v_of_rtp, (r, t, p), NTuple{4,String}[])
-                (vv,) in modlyear || continue                                           # V = MODLYEAR (G8)
-                addterm!(lhs, w, tm, "VAR_S$(io)", r, vv, t, p, c, ts)
+        for sow in sw_rows(tm, t)   # %SWT% (L20)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            for (_, _, _, ts) in get(varts_of, (r, p, c), NTuple{4,String}[])
+                nstts = (r, p, ts) in x.prc_nstts
+                (io == "IN" ? (!nst || nstts) : !nstts) || continue                         # %TMP% PRC_NSTTS
+                haskey(x.rs_fr, (r, s, ts)) || continue                                     # $RS_FR(R,S,TS)
+                w = gv(x.rs_fr, (r, s, ts)) * (one + gv(x.rtcs_fr, (r, t, c, s, ts)))
+                for (_, vv, _, _) in get(v_of_rtp, (r, t, p), NTuple{4,String}[])
+                    (vv,) in modlyear || continue                                           # V = MODLYEAR (G8)
+                    addterm!(lhs, w, tm, "VAR_S$(io)", r, vv, t, p, c, ts)
+                end
             end
+            rhs = addconst!(JuMP.AffExpr(0.0), gv(bnd, (r, t, p, c, s, bd)))
+            gconstraint!(tm, eqtag(tm, name), swt(tm, (r, t, p, c, s), t), eqtype, lhs, rhs) === nothing || (n += 1)
         end
-        rhs = addconst!(JuMP.AffExpr(0.0), gv(bnd, (r, t, p, c, s, bd)))
-        gconstraint!(tm, name, (r, t, p, c, s), eqtype, lhs, rhs) === nothing || (n += 1)
     end
     return n
 end

@@ -369,7 +369,8 @@ end
 GAMS: uc_flo.mod L4-59, v4.9.7.
 """
 function uc_flo!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String, s::String;
-                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false)
+                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false, sws::Bool=false)
+    at = sws ? t : nothing                     # the term's SOW columns: see `uc_lhs!`
     x = uc_context(tm)
     several && (k0 = k0 * _uc_perdisc(x, r, n, "FLO", t))
     for (_, _, _, p, c) in get(x.mapflo_of_nr, (n, side, r), _NO5)
@@ -380,7 +381,7 @@ function uc_flo!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::St
                 coef = gv(x.uc_flo, (n, side, r, tc, p, c, ts))
                 k = k0 * coef * _uc_tsw(x, r, t, c, s, ts) * _uc_growth(x, r, n, side, "FLO", coef, lagt) *
                     _uc_perds(x, r, n, side, "FLO", v, t, p) * _uc_fcost(x, r, n, side, "FLO", t, p, c, ts)
-                cal_nored!(expr, tm, k, r, v, t, p, c, ts)
+                cal_nored!(expr, tm, k, r, v, t, p, c, ts; at)
             end
         end
     end
@@ -468,7 +469,7 @@ function cal_caps!(expr::JuMP.AffExpr, tm::TimesModel, k::GNum, r, t, p, c, s, u
         ic = gv(y.icom, (r, v, t, p, c)) + gv(y.ocom, (r, v, t, p, c))
         if !iszero(ic)
             kk = k * (ic * yrfr * uf)
-            (v,) in y.milestonyr && addterm!(expr, kk, tm, "VAR_NCAP", r, v, p)
+            (v,) in y.milestonyr && addterm!(expr, kk, tm, "VAR_NCAP", r, v, p; at=v)   # %VARV%_NCAP%4(R,V,P %SWS%)
             addconst!(expr, kk * gv(y.pasti, (r, v, p)))
         end
         (r, v, t, p) in y.cptyr || continue
@@ -476,9 +477,9 @@ function cal_caps!(expr::JuMP.AffExpr, tm::TimesModel, k::GNum, r, t, p, c, s, u
             ncom = gv(y.ncom, (r, v, p, c, io))
             iszero(ncom) && continue
             kk = k * (gv(y.coef_cpt, (r, v, t, p)) * ncom * yrfr * uf * (1 + gv(y.coef_cio, (r, v, t, p, c, io))))
-            (v,) in y.milestonyr && addterm!(expr, kk, tm, "VAR_NCAP", r, v, p)
+            (v,) in y.milestonyr && addterm!(expr, kk, tm, "VAR_NCAP", r, v, p; at=v)   # %VARV%_NCAP%4(R,V,P %SWS%)
             addconst!(expr, kk * gv(y.pasti, (r, v, p)))
-            ((r, p) in y.prc_rcap && (v, t) in y.vntrt && (t,) in y.modlyear) && addterm!(expr, -kk, tm, "VAR_SCAP", r, v, t, p)
+            ((r, p) in y.prc_rcap && (v, t) in y.vntrt && (t,) in y.modlyear) && addterm!(expr, -kk, tm, "VAR_SCAP", r, v, t, p; at=t)   # %VARM%_SCAP%4(R,V,%1,P%SWS%), MODLYEAR(%1)
         end
     end
     return expr
@@ -517,7 +518,8 @@ GAMS: uc_ncap.mod L3-50, v4.9.7.
 """
 function uc_ncap!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String;
                   side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false,
-                  annul::Bool=false)
+                  annul::Bool=false, sws::Bool=false)
+    at = sws ? t : nothing                     # the term's SOW columns: see `uc_lhs!`
     x = uc_context(tm)
     period = _uc_has(x, r, n, side, "NCAP", "PERIOD")
     buildup = _uc_has(x, r, n, side, "NCAP", "BUILDUP")
@@ -542,13 +544,13 @@ function uc_ncap!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::S
             end
             k = k * f
         end
-        (r, t, p) in x.rtp_off || addterm!(expr, k, tm, "VAR_NCAP", r, t, p)
+        (r, t, p) in x.rtp_off || addterm!(expr, k, tm, "VAR_NCAP", r, t, p; at)   # %VAR%_NCAP(R,%3,P %SOW%) (uc_ncap.mod L28)
         if period
             for (_, v, _, _) in get(x.rvpt_to, (r, p, t), _NO4)
-                addterm!(expr, k, tm, "VAR_NCAP", r, v, p)
+                addterm!(expr, k, tm, "VAR_NCAP", r, v, p; at=v)                 # %VARV%_NCAP(R,V,P %SWS%) (L29)
             end
             nrvpt = count(kk -> (kk[4],) in x.milestonyr, get(x.rvpt_from, (r, t, p), _NO4))
-            addterm!(expr, k * (gv(x.coef_rpti, (r, t, p)) - GNum(2.0^nrvpt)), tm, "VAR_NCAP", r, t, p)
+            addterm!(expr, k * (gv(x.coef_rpti, (r, t, p)) - GNum(2.0^nrvpt)), tm, "VAR_NCAP", r, t, p; at)
         end
     end
     return expr
@@ -566,7 +568,8 @@ GAMS: uc_cap.mod L3-34, v4.9.7 (L36-50, VDA ONLINE and ABS reserves, only
 for the RS family: ONLINE is `uc_cap_online!`, ABS is refused).
 """
 function uc_cap!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String;
-                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false)
+                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false, sws::Bool=false)
+    at = sws ? t : nothing                     # the term's SOW columns: see `uc_lhs!`
     x = uc_context(tm)
     capact = _uc_has(x, r, n, side, "CAP", "CAPACT")
     for (_, _, _, p) in get(x.gmapp_of_rnk, (r, n, "CAP"), _NO4)
@@ -574,7 +577,7 @@ function uc_cap!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::St
         coef = gv(x.uc_cap, (n, side, r, tc, p))
         k = k0 * coef * _uc_growth(x, r, n, side, "CAP", coef, lagt)
         capact && (k = k * gv(x.prc_capact, (r, p)))
-        addterm!(expr, k, tm, "VAR_CAP", r, t, p)
+        addterm!(expr, k, tm, "VAR_CAP", r, t, p; at)
     end
     return expr
 end
@@ -633,7 +636,8 @@ OBJ_ACOST(r,y,p,m) is OB_ACT(r,p,m,y) (coef_obj.mod L165).
 GAMS: uc_act.mod L4-52, v4.9.7.
 """
 function uc_act!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String, s::String;
-                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false)
+                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false, sws::Bool=false)
+    at = sws ? t : nothing                     # the term's SOW columns: see `uc_lhs!`
     x = uc_context(tm)
     several && (k0 = k0 * _uc_perdisc(x, r, n, "ACT", t))
     cost = _uc_has(x, r, n, side, "ACT", "COST")
@@ -653,7 +657,7 @@ function uc_act!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::St
                 coef = gv(x.uc_act, (n, side, r, tc, p, ts))
                 k = k0 * coef * gv(x.rs_fr, (r, s, ts)) * _uc_growth(x, r, n, side, "ACT", coef, lagt) *
                     _uc_perds(x, r, n, side, "ACT", v, t, p) * fc
-                addterm!(expr, k, tm, "VAR_ACT", r, v, t, p, ts)
+                addterm!(expr, k, tm, "VAR_ACT", r, v, t, p, ts; at)
             end
         end
     end
@@ -685,7 +689,8 @@ and NT for NET (OBJ_COMPD, OBJ_COMNT).
 GAMS: uc_com.mod L4-47, v4.9.7.
 """
 function uc_com!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String, s::String, kind::String;
-                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false)
+                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false, sws::Bool=false)
+    at = sws ? t : nothing                     # the term's SOW columns: see `uc_lhs!`
     x = uc_context(tm)
     kind in ("NET", "PRD") || throw(ArgumentError("uc_com kind must be NET or PRD, got $kind"))
     rhs_of = kind == "NET" ? x.rhs_combal_of_rtc : x.rhs_comprd_of_rtc
@@ -709,7 +714,7 @@ function uc_com!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::St
                 end
                 k = k * fc
             end
-            addterm!(expr, k, tm, var, r, t, c, ts)
+            addterm!(expr, k, tm, var, r, t, c, ts; at)
         end
     end
     return expr
@@ -729,7 +734,8 @@ UC_MAP_IRE has no side index: the same exchanges enter both sides.
 GAMS: uc_ire.mod L4-57, v4.9.7.
 """
 function uc_ire!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::String, s::String;
-                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false)
+                 side::String="LHS", k0::GNum=GNum(1.0), lagt=nothing, tc::String=t, several::Bool=false, sws::Bool=false)
+    at = sws ? t : nothing                     # the term's SOW columns: see `uc_lhs!`
     x = uc_context(tm)
     several && (k0 = k0 * _uc_perdisc(x, r, n, "IRE", t))
     for (_, _, p, c, ie) in get(x.mapire_of_nr, (n, r), _NO5)
@@ -741,9 +747,9 @@ function uc_ire!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, t::St
                 k = k0 * coef * _uc_tsw(x, r, t, c, s, ts) * _uc_growth(x, r, n, side, "IRE", coef, lagt) *
                     _uc_perds(x, r, n, side, "IRE", v, t, p) * _uc_fcost(x, r, n, side, "IRE", t, p, c, ts)
                 if !((r, p, c) in x.rpc_aire)
-                    addterm!(expr, k, tm, "VAR_IRE", r, v, t, p, c, ts, ie)
+                    addterm!(expr, k, tm, "VAR_IRE", r, v, t, p, c, ts, ie; at)
                 else
-                    addterm!(expr, gv(x.prc_actflo, (r, v, p, c)) * k, tm, "VAR_ACT", r, v, t, p, ts)
+                    addterm!(expr, gv(x.prc_actflo, (r, v, p, c)) * k, tm, "VAR_ACT", r, v, t, p, ts; at)
                 end
             end
         end
@@ -811,12 +817,12 @@ GAMS: equserco.mod L75-76 (LHS direction, the %TSUM% of L60) and L98-99 (RHS dir
 %TSUM%'UCN'%TUCN% of L82), v4.9.7.
 """
 function uc_ucn!(expr::JuMP.AffExpr, tm::TimesModel, n::String, r::String, ucn::String, tt::String,
-                 side::String; tc::String=tt)
+                 side::String; tc::String=tt, sws::Bool=false)
     x = uc_context(tm)
     rhsrt = get!(() -> gparam_opt(tm.data, "UC_RHSRT", 4), tm.cache, "UC_UCN/UC_RHSRT")
     haskey(rhsrt, (r, ucn, tt, "N")) || return expr
     ucn_p = get!(() -> gparam_opt(tm.data, "UC_UCN", 5), tm.cache, "UC_UCN/UC_UCN")
-    return addterm!(expr, gv(x.uc_sign, (side,)) * gv(ucn_p, (n, side, r, tc, ucn)), tm, "VAR_UCRT", ucn, r, tt)
+    return addterm!(expr, gv(x.uc_sign, (side,)) * gv(ucn_p, (n, side, r, tc, ucn)), tm, "VAR_UCRT", ucn, r, tt; at=sws ? tt : nothing)
 end
 
 """
@@ -863,7 +869,7 @@ function uc_dyn!(expr::JuMP.AffExpr, tm::TimesModel, n::String, regions, t::Stri
     x = uc_context(tm)
     lagt = gv(gparam(tm, "LAGT"), (t,))
     pairs = uc_tmap_n(tm)[t]
-    kw(tt, side) = (; side, k0=gv(x.uc_sign, (side,)), lagt)
+    kw(tt, side) = (; side, k0=gv(x.uc_sign, (side,)), lagt, sws=true)   # equserco.mod L55: the dynamic form
     for r in regions, (tt, side) in pairs, s in ts_of(r)
         uc_flo!(expr, tm, n, r, tt, s; kw(tt, side)...)
     end
@@ -883,7 +889,7 @@ function uc_dyn!(expr::JuMP.AffExpr, tm::TimesModel, n::String, regions, t::Stri
         uc_ire!(expr, tm, n, r, tt, s; kw(tt, side)...)
     end
     for r in regions, ucn in uc_nested(tm, r, n), (tt, side) in pairs     # L76 (M1.3 change 46)
-        uc_ucn!(expr, tm, n, r, ucn, tt, side; tc=tt)
+        uc_ucn!(expr, tm, n, r, ucn, tt, side; tc=tt, sws=true)
     end
     return expr
 end
@@ -984,7 +990,7 @@ function uc_dyn_rhs!(expr::JuMP.AffExpr, tm::TimesModel, n::String, regions, t::
     entries = get(uc_tmap_of_t(tm), t, _NO4)
     take(r, grp) = [(ll, tt, side) for (ll, tt, side, dynt) in entries
                     if (dynt == "N") ⊻ ((r, n, side, grp, dynt) in x.uc_attr)]
-    kw(ll, side) = (; side, k0=gv(x.uc_sign, (side,)), lagt=mlead, tc=ll)
+    kw(ll, side) = (; side, k0=gv(x.uc_sign, (side,)), lagt=mlead, tc=ll, sws=true)   # equserco.mod L55
     for r in regions, (ll, tt, side) in take(r, "FLO"), s in ts_of(r)
         uc_flo!(expr, tm, n, r, tt, s; kw(ll, side)...)
     end
@@ -1004,7 +1010,7 @@ function uc_dyn_rhs!(expr::JuMP.AffExpr, tm::TimesModel, n::String, regions, t::
         uc_ire!(expr, tm, n, r, tt, s; kw(ll, side)...)
     end
     for r in regions, ucn in uc_nested(tm, r, n), (ll, tt, side) in take(r, "UCN")   # L99 (M1.3 change 46)
-        uc_ucn!(expr, tm, n, r, ucn, tt, side; tc=ll)
+        uc_ucn!(expr, tm, n, r, ucn, tt, side; tc=ll, sws=true)
     end
     return uc_pasti!(expr, tm, n, regions, t)
 end
@@ -1087,22 +1093,22 @@ function uc_several_lhs!(expr::JuMP.AffExpr, tm::TimesModel, n::String, regions,
     tsum_of_rn = get!(() -> indexby(gset(tm, "UC_T_SUM"), (1, 2)), tm.cache, "UC_T_SUM/rn")
     periods(r) = [k[3] for k in get(tsum_of_rn, (r, n), _NO3) if (k[3],) in milestonyr]
     for r in regions, t in periods(r), s in ts_of(r)
-        uc_flo!(expr, tm, n, r, t, s; several=true)
+        uc_flo!(expr, tm, n, r, t, s; several=true, sws=true)
     end
     for r in regions, t in periods(r)
-        uc_ncap!(expr, tm, n, r, t)
+        uc_ncap!(expr, tm, n, r, t; sws=true)
     end
     for r in regions, t in periods(r)
-        uc_cap!(expr, tm, n, r, t)
+        uc_cap!(expr, tm, n, r, t; sws=true)
     end
     for r in regions, t in periods(r), s in ts_of(r)
-        uc_act!(expr, tm, n, r, t, s; several=true)
+        uc_act!(expr, tm, n, r, t, s; several=true, sws=true)
     end
     for kind in ("PRD", "NET"), r in regions, t in periods(r), s in ts_of(r)
-        uc_com!(expr, tm, n, r, t, s, kind; several=true)
+        uc_com!(expr, tm, n, r, t, s, kind; several=true, sws=true)
     end
     for r in regions, t in periods(r), s in ts_of(r)
-        uc_ire!(expr, tm, n, r, t, s; several=true)
+        uc_ire!(expr, tm, n, r, t, s; several=true, sws=true)
     end
     # Cumulative flows (uc_flo.mod L77) and commodities (equserco.mod L49).
     cufscal = parse(Float64, gswitch(tm, "CUFSCAL", "10"))
@@ -1246,6 +1252,22 @@ and the dynamic rows (UC_T_SUCC), whose left-hand side is [`uc_dyn!`](@ref):
 `V(T)` with T controlled is a membership test (docs/discrepancies.md G14).
 Returns the number of rows.
 
+The SOW tags (sow_tags.jl), as equcwrap.mod and equserco.mod write them. (1)
+EQE_UC and EQE_UCR: the head ends in `%SOW%` (L22, L24), one row per SOW;
+equserco.mod L29 (%8 = 2) sets %SOW% to `%SWD%` (`,WW`) and %SWT% to `,SOW`,
+and the %TSUM% of equcwrap.mod L16 sums over SW_TSW(SOW,T,WW), so every term
+of period T is read `at = t` (`sws` of the uc_x! functions) while VAR_CUMFLO
+and VAR_CUMCOM (`%SWT%`: uc_flo.mod L77, equserco.mod L49) and the slack
+`%VAR%_UC(UC_N%SW1%)` are the row's own SOW. (2) EQE_UCT, UCRT, UCTS, UCRTS
+and UCRS: the head ends in `%SWT%` (L26-32, L42) and the terms are
+`%VAR%_X(... %SOW%)`. (3) The dynamic EQE_UCSU, UCRSU, UCRSUS and UCSUS: the
+head ends in `%SOW%` under SW_UCT(UC_N,T,SOW) (the local %SWS%, L16, L34-40),
+and equserco.mod L55 turns every variable into
+`SUM(SW_TSW(SOW,TT,WW),VAS_X(..,WW))` at the term's own period (`sws`). In all
+of them uc_ncap.mod L29 and cal_caps.mod L21-26 read `%VARV%_NCAP` and
+`%VARM%_SCAP` (`at = v`, `at = t`). The %SCUM% forms (equcwrap.mod L17:
+SPINES) are change 75, S_UC_RHS and S_UCOBJ change 74.
+
 GAMS: equcwrap.mod L22-42 with equserco.mod L23-78, L108-120, v4.9.7.
 """
 function eq_uc!(tm::TimesModel)
@@ -1289,6 +1311,10 @@ function eq_uc!(tm::TimesModel)
         return rhs
     end
     t_succ, rtsuc = gset(tm, "UC_T_SUCC"), setup.rtsuc
+    # The rows of the dynamic families: `%SOW%` with the local `%SWS%`, SW_UCT(UC_N,T,SOW) (equcwrap.mod L16, L34-40;
+    # the set is built by stages.stc L176-178, change 72). One pass with no SOW in a deterministic run.
+    sw_uct = gset_opt(tm.data, "SW_UCT", 3)
+    uct_rows(n, t) = tm.tags.stochastic ? String[w for w in tm.tags.sows if (n, t, w) in sw_uct] : sow_rows(tm)
     # The dynamic body (equserco.mod L56-106): the LHS direction (L56-78) or the RHS
     # direction (L80-106), each under its UC_DYNDIR condition; `r` is the row's region
     # or `nothing` for the region-summed families.
@@ -1317,118 +1343,151 @@ function eq_uc!(tm::TimesModel)
         regs = get(regs_of_n, n, String[])
         any(r -> !isempty(tssum(r, n)), regs) || continue
         isempty(get(tsum_of_n, (n,), _NO3)) && continue
-        lhs = uc_several_lhs!(JuMP.AffExpr(0.0), tm, n, regs, r -> tssum(r, n))
-        rhs = JuMP.AffExpr(0.0)
-        addterm!(rhs, GNum(1.0), tm, "VAR_UC", n)
-        add_time_several!(rhs, n, regs)
-        gconstraint!(tm, "EQE_UC", (n,), "E", lhs, rhs) === nothing || (n_rows += 1)
+        for sow in sow_rows(tm)   # %SOW% (equcwrap.mod L22)
+            set_sow!(tm, sow)
+            lhs = uc_several_lhs!(JuMP.AffExpr(0.0), tm, n, regs, r -> tssum(r, n))
+            rhs = JuMP.AffExpr(0.0)
+            addterm!(rhs, GNum(1.0), tm, "VAR_UC", n)
+            add_time_several!(rhs, n, regs)
+            gconstraint!(tm, eqtag(tm, "EQE_UC"), sowkey(tm, (n,)), "E", lhs, rhs) === nothing || (n_rows += 1)
+        end
     end
     # EQE_UCR(R,UC_N), equcwrap L24, %8 = 2, over UC_R_EACH(R,UC_N).
     for (r, n) in gset(tm, "UC_R_EACH")
         (r,) in gset(tm, "REG") || continue
         any(bd -> haskey(uc_rhsr, (r, n, bd)), bds) || continue
         (!isempty(tssum(r, n)) && !isempty(get(tsum_of_rn, (r, n), _NO3))) || continue
-        lhs = uc_several_lhs!(JuMP.AffExpr(0.0), tm, n, (r,), rr -> tssum(rr, n))
-        rhs = JuMP.AffExpr(0.0)
-        addterm!(rhs, GNum(1.0), tm, "VAR_UCR", n, r)
-        add_time_several!(rhs, n, (r,))
-        gconstraint!(tm, "EQE_UCR", (r, n), "E", lhs, rhs) === nothing || (n_rows += 1)
+        for sow in sow_rows(tm)   # %SOW% (equcwrap.mod L24)
+            set_sow!(tm, sow)
+            lhs = uc_several_lhs!(JuMP.AffExpr(0.0), tm, n, (r,), rr -> tssum(rr, n))
+            rhs = JuMP.AffExpr(0.0)
+            addterm!(rhs, GNum(1.0), tm, "VAR_UCR", n, r)
+            add_time_several!(rhs, n, (r,))
+            gconstraint!(tm, eqtag(tm, "EQE_UCR"), sowkey(tm, (r, n)), "E", lhs, rhs) === nothing || (n_rows += 1)
+        end
     end
     # EQE_UCT(UC_N,T), equcwrap L26.
     for (n, t) in setup.ut
         (t,) in milestonyr || continue
         regs = get(regs_of_n, n, String[])
         any(r -> (r, n, t) in t_each && !isempty(tssum(r, n)), regs) || continue
-        lhs = uc_lhs!(JuMP.AffExpr(0.0), tm, n, regs, t, r -> tssum(r, n))
-        rhs = JuMP.AffExpr(0.0)
-        addterm!(rhs, GNum(1.0), tm, "VAR_UCT", n, t)
-        add_time!(rhs, n, regs, t)
-        gconstraint!(tm, "EQE_UCT", (n, t), "E", lhs, rhs) === nothing || (n_rows += 1)
+        for sow in sw_rows(tm, t)   # %SWT% (equcwrap.mod L26)
+            set_sow!(tm, sow)
+            lhs = uc_lhs!(JuMP.AffExpr(0.0), tm, n, regs, t, r -> tssum(r, n))
+            rhs = JuMP.AffExpr(0.0)
+            addterm!(rhs, GNum(1.0), tm, "VAR_UCT", n, t)
+            add_time!(rhs, n, regs, t)
+            gconstraint!(tm, eqtag(tm, "EQE_UCT"), swt(tm, (n, t), t), "E", lhs, rhs) === nothing || (n_rows += 1)
+        end
     end
     # EQE_UCRT(R,T,UC_N), equcwrap L28: RT(%R_T%,UC_N), SUBT in a stepped run (maindrv.mod L38-40).
     tx = eq_periods(tm)
     for (r, t, n, num, s) in setup.rhsmap
         (num == "SEVERAL" && s == "ANNUAL" && (t,) in tx) || continue
-        lhs = uc_lhs!(JuMP.AffExpr(0.0), tm, n, (r,), t, rr -> tssum(rr, n))
-        rhs = JuMP.AffExpr(0.0)
-        addterm!(rhs, GNum(1.0), tm, "VAR_UCRT", n, r, t)
-        add_time!(rhs, n, (r,), t)
-        gconstraint!(tm, "EQE_UCRT", (r, t, n), "E", lhs, rhs) === nothing || (n_rows += 1)
+        for sow in sw_rows(tm, t)   # %SWT% (equcwrap.mod L28)
+            set_sow!(tm, sow)
+            lhs = uc_lhs!(JuMP.AffExpr(0.0), tm, n, (r,), t, rr -> tssum(rr, n))
+            rhs = JuMP.AffExpr(0.0)
+            addterm!(rhs, GNum(1.0), tm, "VAR_UCRT", n, r, t)
+            add_time!(rhs, n, (r,), t)
+            gconstraint!(tm, eqtag(tm, "EQE_UCRT"), swt(tm, (r, t, n), t), "E", lhs, rhs) === nothing || (n_rows += 1)
+        end
     end
     # EQE_UCTS(UC_N,T,S), equcwrap L30.
     for (n, t, s) in setup.uts
         (t,) in milestonyr || continue
         regs = get(regs_of_n, n, String[])
         any(r -> (r, n, t) in t_each && (r, n, s) in ts_each, regs) || continue
-        lhs = uc_lhs!(JuMP.AffExpr(0.0), tm, n, regs, t, _ -> (s,))
-        rhs = JuMP.AffExpr(0.0)
-        addterm!(rhs, GNum(1.0), tm, "VAR_UCTS", n, t, s)
-        add_time!(rhs, n, regs, t)
-        gconstraint!(tm, "EQE_UCTS", (n, t, s), "E", lhs, rhs) === nothing || (n_rows += 1)
+        for sow in sw_rows(tm, t)   # %SWT% (equcwrap.mod L30)
+            set_sow!(tm, sow)
+            lhs = uc_lhs!(JuMP.AffExpr(0.0), tm, n, regs, t, _ -> (s,))
+            rhs = JuMP.AffExpr(0.0)
+            addterm!(rhs, GNum(1.0), tm, "VAR_UCTS", n, t, s)
+            add_time!(rhs, n, regs, t)
+            gconstraint!(tm, eqtag(tm, "EQE_UCTS"), swt(tm, (n, t, s), t), "E", lhs, rhs) === nothing || (n_rows += 1)
+        end
     end
     # EQE_UCRTS(R,T,UC_N,S), equcwrap L32: RTS(%R_T%,UC_N,RTS(S)).
     for (r, t, n, num, s) in setup.rhsmap
         (num == "EACH" && (t,) in tx) || continue
-        lhs = uc_lhs!(JuMP.AffExpr(0.0), tm, n, (r,), t, _ -> (s,))
-        rhs = JuMP.AffExpr(0.0)
-        addterm!(rhs, GNum(1.0), tm, "VAR_UCRTS", n, r, t, s)
-        add_time!(rhs, n, (r,), t)
-        gconstraint!(tm, "EQE_UCRTS", (r, t, n, s), "E", lhs, rhs) === nothing || (n_rows += 1)
+        for sow in sw_rows(tm, t)   # %SWT% (equcwrap.mod L32)
+            set_sow!(tm, sow)
+            lhs = uc_lhs!(JuMP.AffExpr(0.0), tm, n, (r,), t, _ -> (s,))
+            rhs = JuMP.AffExpr(0.0)
+            addterm!(rhs, GNum(1.0), tm, "VAR_UCRTS", n, r, t, s)
+            add_time!(rhs, n, (r,), t)
+            gconstraint!(tm, eqtag(tm, "EQE_UCRTS"), swt(tm, (r, t, n, s), t), "E", lhs, rhs) === nothing || (n_rows += 1)
+        end
     end
     # EQE_UCRS(R,T,UC_N,TSL,SL), equcwrap L42: RS(%R_T%,UC_N,TSL(UC_NUMBER),RTS(SL)).
     uc_ds = gset_opt(tm.data, "UC_DS", 3)
     for (r, t, n, tsl, sl) in setup.rhsmap
         ((r, n, tsl) in uc_ds && (t,) in tx) || continue
         pairs = uc_rs_pairs(tm, r, n, tsl, sl)
-        lhs = uc_rs_lhs!(JuMP.AffExpr(0.0), tm, n, r, t, pairs)
-        rhs = JuMP.AffExpr(0.0)
-        addterm!(rhs, GNum(1.0), tm, "VAR_UCRTS", n, r, t, sl)
-        if (t,) in modlyear && haskey(uc_time, (n, r, t))      # L117 with %5 = the (SIDE, S) sum
-            for (side, _) in pairs
-                addconst!(rhs, gv(gparam(tm, "UC_SIGN"), (side,)) * (gv(uc_time, (n, r, t)) * gv(fpd, (t,))))
+        for sow in sw_rows(tm, t)   # %SWT% (equcwrap.mod L42)
+            set_sow!(tm, sow)
+            lhs = uc_rs_lhs!(JuMP.AffExpr(0.0), tm, n, r, t, pairs)
+            rhs = JuMP.AffExpr(0.0)
+            addterm!(rhs, GNum(1.0), tm, "VAR_UCRTS", n, r, t, sl)
+            if (t,) in modlyear && haskey(uc_time, (n, r, t))      # L117 with %5 = the (SIDE, S) sum
+                for (side, _) in pairs
+                    addconst!(rhs, gv(gparam(tm, "UC_SIGN"), (side,)) * (gv(uc_time, (n, r, t)) * gv(fpd, (t,))))
+                end
             end
+            gconstraint!(tm, eqtag(tm, "EQE_UCRS"), swt(tm, (r, t, n, tsl, sl), t), "E", lhs, rhs) === nothing || (n_rows += 1)
         end
-        gconstraint!(tm, "EQE_UCRS", (r, t, n, tsl, sl), "E", lhs, rhs) === nothing || (n_rows += 1)
     end
     # EQE_UCSU(UC_N,T), equcwrap L34.
     for (n, t) in setup.ut
         (t,) in milestonyr || continue
         regs = get(regs_of_n, n, String[])
         any(r -> (r, n, t) in t_succ && !isempty(tssum(r, n)), regs) || continue
-        lhs = dyn!(JuMP.AffExpr(0.0), n, nothing, regs, t, r -> tssum(r, n))
-        rhs = JuMP.AffExpr(0.0)
-        addterm!(rhs, GNum(1.0), tm, "VAR_UCT", n, t)
-        add_time_dyn!(rhs, n, regs, t)
-        gconstraint!(tm, "EQE_UCSU", (n, t), "E", lhs, rhs) === nothing || (n_rows += 1)
+        for sow in uct_rows(n, t)   # %SOW% with SW_UCT(UC_N,T,SOW) (equcwrap.mod L16, L34)
+            set_sow!(tm, sow)
+            lhs = dyn!(JuMP.AffExpr(0.0), n, nothing, regs, t, r -> tssum(r, n))
+            rhs = JuMP.AffExpr(0.0)
+            addterm!(rhs, GNum(1.0), tm, "VAR_UCT", n, t)
+            add_time_dyn!(rhs, n, regs, t)
+            gconstraint!(tm, eqtag(tm, "EQE_UCSU"), sowkey(tm, (n, t)), "E", lhs, rhs) === nothing || (n_rows += 1)
+        end
     end
     # EQE_UCRSU(R,T,UC_N), equcwrap L36.
     for (r, t, n, num, s) in setup.rhsmap
         (num == "DYNAMIC" && s == "ANNUAL" && (r, t, n) in rtsuc) || continue
-        lhs = dyn!(JuMP.AffExpr(0.0), n, r, (r,), t, rr -> tssum(rr, n))
-        rhs = JuMP.AffExpr(0.0)
-        addterm!(rhs, GNum(1.0), tm, "VAR_UCRT", n, r, t)
-        add_time_dyn!(rhs, n, (r,), t)
-        gconstraint!(tm, "EQE_UCRSU", (r, t, n), "E", lhs, rhs) === nothing || (n_rows += 1)
+        for sow in uct_rows(n, t)   # %SOW% with SW_UCT(UC_N,T,SOW) (equcwrap.mod L16, L36)
+            set_sow!(tm, sow)
+            lhs = dyn!(JuMP.AffExpr(0.0), n, r, (r,), t, rr -> tssum(rr, n))
+            rhs = JuMP.AffExpr(0.0)
+            addterm!(rhs, GNum(1.0), tm, "VAR_UCRT", n, r, t)
+            add_time_dyn!(rhs, n, (r,), t)
+            gconstraint!(tm, eqtag(tm, "EQE_UCRSU"), sowkey(tm, (r, t, n)), "E", lhs, rhs) === nothing || (n_rows += 1)
+        end
     end
     # EQE_UCRSUS(R,T,UC_N,S), equcwrap L38.
     for (r, t, n, num, s) in setup.rhsmap
         (num == "SUCC" && (r, t, n) in rtsuc) || continue
-        lhs = dyn!(JuMP.AffExpr(0.0), n, r, (r,), t, _ -> (s,))
-        rhs = JuMP.AffExpr(0.0)
-        addterm!(rhs, GNum(1.0), tm, "VAR_UCRTS", n, r, t, s)
-        add_time_dyn!(rhs, n, (r,), t)
-        gconstraint!(tm, "EQE_UCRSUS", (r, t, n, s), "E", lhs, rhs) === nothing || (n_rows += 1)
+        for sow in uct_rows(n, t)   # %SOW% with SW_UCT(UC_N,T,SOW) (equcwrap.mod L16, L38)
+            set_sow!(tm, sow)
+            lhs = dyn!(JuMP.AffExpr(0.0), n, r, (r,), t, _ -> (s,))
+            rhs = JuMP.AffExpr(0.0)
+            addterm!(rhs, GNum(1.0), tm, "VAR_UCRTS", n, r, t, s)
+            add_time_dyn!(rhs, n, (r,), t)
+            gconstraint!(tm, eqtag(tm, "EQE_UCRSUS"), sowkey(tm, (r, t, n, s)), "E", lhs, rhs) === nothing || (n_rows += 1)
+        end
     end
     # EQE_UCSUS(UC_N,T,S), equcwrap L40.
     for (n, t, s) in setup.uts
         (t,) in milestonyr || continue
         regs = get(regs_of_n, n, String[])
         any(r -> (r, n, t) in t_succ && (r, n, s) in ts_each, regs) || continue
-        lhs = dyn!(JuMP.AffExpr(0.0), n, nothing, regs, t, _ -> (s,))
-        rhs = JuMP.AffExpr(0.0)
-        addterm!(rhs, GNum(1.0), tm, "VAR_UCTS", n, t, s)
-        add_time_dyn!(rhs, n, regs, t)
-        gconstraint!(tm, "EQE_UCSUS", (n, t, s), "E", lhs, rhs) === nothing || (n_rows += 1)
+        for sow in uct_rows(n, t)   # %SOW% with SW_UCT(UC_N,T,SOW) (equcwrap.mod L16, L40)
+            set_sow!(tm, sow)
+            lhs = dyn!(JuMP.AffExpr(0.0), n, nothing, regs, t, _ -> (s,))
+            rhs = JuMP.AffExpr(0.0)
+            addterm!(rhs, GNum(1.0), tm, "VAR_UCTS", n, t, s)
+            add_time_dyn!(rhs, n, regs, t)
+            gconstraint!(tm, eqtag(tm, "EQE_UCSUS"), sowkey(tm, (n, t, s)), "E", lhs, rhs) === nothing || (n_rows += 1)
+        end
     end
     return n_rows
 end

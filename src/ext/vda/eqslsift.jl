@@ -59,6 +59,10 @@ the previous slice of SL, so each SL whose previous slice is in RJ_SL is
 taken once. RS_UP(R,S,JS) and RJ_SL(R,JS,SL) carry JS = (J, S') as two
 indices (timslice.mod L110-121). Returns the number of rows.
 
+The SOW tags (sow_tags.jl): the row is `%EQ%_SLSIFT(... %SWT%)` (L131) and
+every term `%VAR%_X(... %SOW%)`, VAR_SIFT being the macro
+`%var%_udp(r,v,t,p,s,l%sow%)*...` of L128.
+
 GAMS: eqactups.vda L127-158, v4.9.7.
 """
 function eq_slsift!(tm::TimesModel)
@@ -125,110 +129,113 @@ function eq_slsift!(tm::TimesModel)
 
     n = 0
     for (r, t, p, com, s, lnx, l) in rows
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        prcts = (r, p, s) in prc_ts
-        annact = s == "ANNUAL" && (com,) in actcg
-        sift_act = haskey(stg_sift, (r, t, p, "ACT", s))
-        no_at = !any(lim -> has_at(r, t, p, lim), ("LO", "FX", "UP", "N"))
-        for (_, v, _, _) in get(vint_of_rtp, (r, t, p), no4)
-            if lnx in _SLS_BD                                          # $BD(LNX): the left-hand side
-                if l == "N" && (prcts || sift_act || annact)           # SUM(IPS(L)$(...), ...)
-                    if sift_act
-                        for (_, _, ts) in get(prcts_of_rp, (r, p), no3)
-                            (r, s, ts) in rs_below1 && addterm!(lhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, ts)
+        for sow in sw_rows(tm, t)   # %SWT% (eqactups.vda L131)
+            set_sow!(tm, sow)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            prcts = (r, p, s) in prc_ts
+            annact = s == "ANNUAL" && (com,) in actcg
+            sift_act = haskey(stg_sift, (r, t, p, "ACT", s))
+            no_at = !any(lim -> has_at(r, t, p, lim), ("LO", "FX", "UP", "N"))
+            for (_, v, _, _) in get(vint_of_rtp, (r, t, p), no4)
+                if lnx in _SLS_BD                                          # $BD(LNX): the left-hand side
+                    if l == "N" && (prcts || sift_act || annact)           # SUM(IPS(L)$(...), ...)
+                        if sift_act
+                            for (_, _, ts) in get(prcts_of_rp, (r, p), no3)
+                                (r, s, ts) in rs_below1 && addterm!(lhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, ts)
+                            end
+                        end
+                        if annact
+                            for c in get(stgc_out, (r, p), String[]), (_, _, _, ts) in get(rpcs_var_of_rpc, (r, p, c), no4)
+                                addterm!(lhs, GNum(1.0), tm, "VAR_SOUT", r, v, t, p, c, ts)
+                            end
+                        end
+                        if prcts
+                            addterm!(lhs, GNum(1.0), tm, "VAR_SIN", r, v, t, p, com, s)
+                            addterm!(lhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, s)
+                        end
+                        addterm!(lhs, GNum(1.0), tm, "VAR_SOUT", r, t, t, p, "ACT", s)
+                        for c in get(stgc_out, (r, p), String[])
+                            (r, t, c) in rtc || continue
+                            for (_, _, _, ts) in get(varc_of_rtc, (r, t, c), no4)
+                                haskey(rs_fr, (r, s, ts)) || continue
+                                f = gif(gv(stg_sift, (r, t, p, c, ts)), prcts || annact) + gv(stg_sift, (r, t, p, "ACT", s))
+                                k = f / gv(com_ie, (r, t, c, ts)) * w(r, t, c, s, ts)
+                                addterm!(lhs, -k, tm, "VAR_COMPRD", r, t, c, ts)
+                            end
                         end
                     end
-                    if annact
-                        for c in get(stgc_out, (r, p), String[]), (_, _, _, ts) in get(rpcs_var_of_rpc, (r, p, c), no4)
-                            addterm!(lhs, GNum(1.0), tm, "VAR_SOUT", r, v, t, p, c, ts)
+                    if l == "FX"                                           # - SUM(BD(L)$LNX(L), ...)
+                        if prcts
+                            for c in get(stgc_out, (r, p), String[]), (_, _, _, ts) in get(rpcs_var_of_rpc, (r, p, c), no4)
+                                haskey(rs_fr, (r, s, ts)) || continue
+                                addterm!(lhs, -w(r, t, c, s, ts), tm, "VAR_SOUT", r, v, t, p, c, ts)
+                            end
+                            for c in get(stgc_in, (r, p), String[])
+                                addterm!(lhs, GNum(1.0), tm, "VAR_SIN", r, v, t, p, c, s)
+                            end
+                            addterm!(lhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, s)
+                            addterm!(lhs, GNum(-1.0), tm, "VAR_SIN", r, v, t, p, com, s)
+                        end
+                        if no_at
+                            for (_, _, ts) in get(prcts_of_rp, (r, p), no3)
+                                (r, s, ts) in rs_below1 || continue
+                                addterm!(lhs, GNum(-1.0), tm, "VAR_SIN", r, v, t, p, com, ts)
+                                addterm!(lhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, ts)
+                            end
                         end
                     end
-                    if prcts
-                        addterm!(lhs, GNum(1.0), tm, "VAR_SIN", r, v, t, p, com, s)
-                        addterm!(lhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, s)
-                    end
-                    addterm!(lhs, GNum(1.0), tm, "VAR_SOUT", r, t, t, p, "ACT", s)
-                    for c in get(stgc_out, (r, p), String[])
-                        (r, t, c) in rtc || continue
-                        for (_, _, _, ts) in get(varc_of_rtc, (r, t, c), no4)
-                            haskey(rs_fr, (r, s, ts)) || continue
-                            f = gif(gv(stg_sift, (r, t, p, c, ts)), prcts || annact) + gv(stg_sift, (r, t, p, "ACT", s))
-                            k = f / gv(com_ie, (r, t, c, ts)) * w(r, t, c, s, ts)
-                            addterm!(lhs, -k, tm, "VAR_COMPRD", r, t, c, ts)
-                        end
-                    end
-                end
-                if l == "FX"                                           # - SUM(BD(L)$LNX(L), ...)
-                    if prcts
-                        for c in get(stgc_out, (r, p), String[]), (_, _, _, ts) in get(rpcs_var_of_rpc, (r, p, c), no4)
-                            haskey(rs_fr, (r, s, ts)) || continue
-                            addterm!(lhs, -w(r, t, c, s, ts), tm, "VAR_SOUT", r, v, t, p, c, ts)
-                        end
-                        for c in get(stgc_in, (r, p), String[])
-                            addterm!(lhs, GNum(1.0), tm, "VAR_SIN", r, v, t, p, c, s)
-                        end
-                        addterm!(lhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, s)
-                        addterm!(lhs, GNum(-1.0), tm, "VAR_SIN", r, v, t, p, com, s)
-                    end
-                    if no_at
-                        for (_, _, ts) in get(prcts_of_rp, (r, p), no3)
-                            (r, s, ts) in rs_below1 || continue
-                            addterm!(lhs, GNum(-1.0), tm, "VAR_SIN", r, v, t, p, com, ts)
-                            addterm!(lhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, ts)
-                        end
-                    end
-                end
-                if l in ("LO", "UP") && has_at(r, t, p, "LO")         # SUM(BDNEQ(BD(L))$ACT_TIME(RTP,'LO'), ...)
-                    sift!(lhs, GNum(1.0), r, v, t, p, s, l)
-                    sift!(lhs, GNum(1.0), r, "0", t, p, s, l)
-                    for (_, _, j, s2) in get(rsup_of_rs, (r, s), no4), (_, _, _, sl) in get(rjsl_of_rjs, (r, j, s2), no4)
-                        ccl = 1 / gv(js_ccl, (r, j, s2)).v
-                        m = gmod((gv(rs_hr, (r, s)).v - gv(rs_hr, (r, sl)).v + gv(g_yrfr, (r, s)).v / gv(rs_stgprd, (r, s)).v / 9) *
-                                 _SLS_BDSIG[l] + ccl, ccl)
-                        m < at(r, t, p, l) / 8760 && addterm!(lhs, GNum(-1.0), tm, "VAR_UPS", r, v, t, p, sl, l)
-                    end
-                end
-            end
-            if lnx == "N"                                              # $IPS(LNX): the right-hand side
-                if l == "UP"                                           # $(BDSIG(L)<0)
-                    ts = stg_prev(x, r, s)
-                    for bd in ("LO", "UP")
-                        sift!(rhs, GNum(_SLS_BDSIG[bd]), r, v, t, p, ts, bd)
-                        sift!(rhs, GNum(-_SLS_BDSIG[bd]), r, v, t, p, s, bd)
-                    end
-                    addterm!(rhs, GNum(1.0), tm, "VAR_SIN", r, v, t, p, com, s)
-                    addterm!(rhs, GNum(-1.0), tm, "VAR_ACT", r, v, t, p, s)
-                end
-                if l == "LO"                                           # $(BDSIG(L)>0)
-                    for bd in ("LO", "UP")
-                        addterm!(rhs, GNum(1.0), tm, "VAR_UPS", r, v, t, p, s, bd)
-                    end
-                    addterm!(rhs, GNum(-1.0), tm, "VAR_SIN", r, v, t, p, com, s)
-                end
-                if l in ("N", "FX")                                    # SUM(LASTLL$LNX(L), ...)
-                    for _ in 1:nlastll
-                        for lim in ("LO", "FX", "UP", "N")             # LIM$(IPS(L) XOR BD(LIM))
-                            ((l == "N") ⊻ (lim in _SLS_BD)) && sift!(rhs, GNum(1.0), r, v, t, p, s, lim)
-                        end
-                        for (_, _, j, s2) in get(rsup_of_rs, (r, s), no4), (_, _, _, ts) in get(rjsl_of_rjs, (r, j, s2), no4)
+                    if l in ("LO", "UP") && has_at(r, t, p, "LO")         # SUM(BDNEQ(BD(L))$ACT_TIME(RTP,'LO'), ...)
+                        sift!(lhs, GNum(1.0), r, v, t, p, s, l)
+                        sift!(lhs, GNum(1.0), r, "0", t, p, s, l)
+                        for (_, _, j, s2) in get(rsup_of_rs, (r, s), no4), (_, _, _, sl) in get(rjsl_of_rjs, (r, j, s2), no4)
                             ccl = 1 / gv(js_ccl, (r, j, s2)).v
-                            for sl in get(next_of, (r, ts), String[])
-                                m = gmod(gv(rs_hr, (r, s)).v - gv(rs_hr, (r, sl)).v +
-                                         gv(g_yrfr, (r, s)).v / gv(rs_stgprd, (r, s)).v / 9 + ccl, ccl)
-                                m < at(r, t, p, l) / 8760 || continue
-                                l == "N" && addterm!(rhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, sl)
-                                addterm!(rhs, GNum(-1.0), tm, "VAR_SIN", r, v, t, p, com, sl)
-                                if l in _SLS_BD
-                                    sift!(rhs, GNum(-1.0), r, v, t, p, sl, "UP")
-                                    sift!(rhs, GNum(1.0), r, v, t, p, ts, "UP")
+                            m = gmod((gv(rs_hr, (r, s)).v - gv(rs_hr, (r, sl)).v + gv(g_yrfr, (r, s)).v / gv(rs_stgprd, (r, s)).v / 9) *
+                                     _SLS_BDSIG[l] + ccl, ccl)
+                            m < at(r, t, p, l) / 8760 && addterm!(lhs, GNum(-1.0), tm, "VAR_UPS", r, v, t, p, sl, l)
+                        end
+                    end
+                end
+                if lnx == "N"                                              # $IPS(LNX): the right-hand side
+                    if l == "UP"                                           # $(BDSIG(L)<0)
+                        ts = stg_prev(x, r, s)
+                        for bd in ("LO", "UP")
+                            sift!(rhs, GNum(_SLS_BDSIG[bd]), r, v, t, p, ts, bd)
+                            sift!(rhs, GNum(-_SLS_BDSIG[bd]), r, v, t, p, s, bd)
+                        end
+                        addterm!(rhs, GNum(1.0), tm, "VAR_SIN", r, v, t, p, com, s)
+                        addterm!(rhs, GNum(-1.0), tm, "VAR_ACT", r, v, t, p, s)
+                    end
+                    if l == "LO"                                           # $(BDSIG(L)>0)
+                        for bd in ("LO", "UP")
+                            addterm!(rhs, GNum(1.0), tm, "VAR_UPS", r, v, t, p, s, bd)
+                        end
+                        addterm!(rhs, GNum(-1.0), tm, "VAR_SIN", r, v, t, p, com, s)
+                    end
+                    if l in ("N", "FX")                                    # SUM(LASTLL$LNX(L), ...)
+                        for _ in 1:nlastll
+                            for lim in ("LO", "FX", "UP", "N")             # LIM$(IPS(L) XOR BD(LIM))
+                                ((l == "N") ⊻ (lim in _SLS_BD)) && sift!(rhs, GNum(1.0), r, v, t, p, s, lim)
+                            end
+                            for (_, _, j, s2) in get(rsup_of_rs, (r, s), no4), (_, _, _, ts) in get(rjsl_of_rjs, (r, j, s2), no4)
+                                ccl = 1 / gv(js_ccl, (r, j, s2)).v
+                                for sl in get(next_of, (r, ts), String[])
+                                    m = gmod(gv(rs_hr, (r, s)).v - gv(rs_hr, (r, sl)).v +
+                                             gv(g_yrfr, (r, s)).v / gv(rs_stgprd, (r, s)).v / 9 + ccl, ccl)
+                                    m < at(r, t, p, l) / 8760 || continue
+                                    l == "N" && addterm!(rhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, sl)
+                                    addterm!(rhs, GNum(-1.0), tm, "VAR_SIN", r, v, t, p, com, sl)
+                                    if l in _SLS_BD
+                                        sift!(rhs, GNum(-1.0), r, v, t, p, sl, "UP")
+                                        sift!(rhs, GNum(1.0), r, v, t, p, ts, "UP")
+                                    end
                                 end
                             end
                         end
                     end
                 end
             end
+            gconstraint!(tm, eqtag(tm, "EQ_SLSIFT"), swt(tm, (r, t, p, com, s, lnx, l), t), "E", lhs, rhs) === nothing || (n += 1)
         end
-        gconstraint!(tm, "EQ_SLSIFT", (r, t, p, com, s, lnx, l), "E", lhs, rhs) === nothing || (n += 1)
     end
     return n
 end

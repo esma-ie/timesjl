@@ -64,6 +64,9 @@ flow variable by what stands for it (`cal_red!`); the variables of an
 aggregate flow (L17-18) are VAR_FLO itself. STOA(TS) is zero for ANNUAL only
 (timslice.mod L106).
 
+The SOW tags (sow_tags.jl): the row is `%EQ%%1_FLOFR(... %SWT%)` (L15); every
+term is `%VAR%_FLO(... %SOW%)` (L17-18, and %cal_red%).
+
 GAMS: eqflofr.mod L15-27 with eqmain.mod L118-120, v4.9.7.
 """
 function eq_flofr!(tm::TimesModel)
@@ -98,32 +101,35 @@ function eq_flofr!(tm::TimesModel)
             vints = get(vint_of_rtp, (r, t, p), no4)
             varf = get(varf_of_rtpc, (r, t, p, c), no5)
             isbd = (l,) in bd
-            lhs = JuMP.AffExpr(0.0)
-            for (_, v, _, _) in vints                                           # L17
-                (l,) in ips && addterm!(lhs, af, tm, "VAR_FLO", r, v, t, p, c, s)
-                isbd || continue                                                # L21, $BD(L)
-                for (_, sl, _) in get(parent_of, (r, s), no3)                   # L18
-                    if haskey(flo_fr, (r, t, p, c, sl, "N"))                    # $FLO_FR(RTPC,SL,'N'), true for an EPS
-                        for (_, ts) in get(ann_of, (sl,), no2)
-                            gv(flo_fr, (r, t, p, c, ts, "N")).v > 0 || continue # an EPS is not above zero
-                            addterm!(lhs, af, tm, "VAR_FLO", r, v, t, p, c, ts)
-                        end
-                    else                                                        # L19-21
-                        for (_, _, _, _, ts) in varf
-                            (haskey(rs_fr, (r, sl, ts)) ? f.v > -Inf : f.v > 0) || continue
-                            cal_nored!(lhs, tm, af, r, v, t, p, c, ts)
+            for sow in sw_rows(tm, t)   # %SWT% (eqflofr.mod L15)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                for (_, v, _, _) in vints                                           # L17
+                    (l,) in ips && addterm!(lhs, af, tm, "VAR_FLO", r, v, t, p, c, s)
+                    isbd || continue                                                # L21, $BD(L)
+                    for (_, sl, _) in get(parent_of, (r, s), no3)                   # L18
+                        if haskey(flo_fr, (r, t, p, c, sl, "N"))                    # $FLO_FR(RTPC,SL,'N'), true for an EPS
+                            for (_, ts) in get(ann_of, (sl,), no2)
+                                gv(flo_fr, (r, t, p, c, ts, "N")).v > 0 || continue # an EPS is not above zero
+                                addterm!(lhs, af, tm, "VAR_FLO", r, v, t, p, c, ts)
+                            end
+                        else                                                        # L19-21
+                            for (_, _, _, _, ts) in varf
+                                (haskey(rs_fr, (r, sl, ts)) ? f.v > -Inf : f.v > 0) || continue
+                                cal_nored!(lhs, tm, af, r, v, t, p, c, ts)
+                            end
                         end
                     end
                 end
-            end
-            rhs = JuMP.AffExpr(0.0)
-            if iszero(gmin(GZERO, f)) || isbd                                   # L27, MIN(0,FLO_FR) -> BD(L)
-                for (_, v, _, _) in vints, (_, _, _, _, ts) in varf             # L25
-                    (haskey(stoa, (ts,)) && (r, s, ts) in ts_map) || continue
-                    cal_nored!(rhs, tm, GNum(1.0), r, v, t, p, c, ts)           # L26
+                rhs = JuMP.AffExpr(0.0)
+                if iszero(gmin(GZERO, f)) || isbd                                   # L27, MIN(0,FLO_FR) -> BD(L)
+                    for (_, v, _, _) in vints, (_, _, _, _, ts) in varf             # L25
+                        (haskey(stoa, (ts,)) && (r, s, ts) in ts_map) || continue
+                        cal_nored!(rhs, tm, GNum(1.0), r, v, t, p, c, ts)           # L26
+                    end
                 end
+                gconstraint!(tm, eqtag(tm, name), swt(tm, (r, t, p, c, s, l), t), eqtype, lhs, rhs) === nothing || (n += 1)
             end
-            gconstraint!(tm, name, (r, t, p, c, s, l), eqtype, lhs, rhs) === nothing || (n += 1)
         end
     end
     return n

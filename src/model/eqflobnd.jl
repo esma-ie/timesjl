@@ -62,6 +62,9 @@ commodity group (CG not a commodity) the exports count negative, so the bound
 is on the net import, and with a single commodity imports and exports add up
 (L36-37).
 
+The SOW tags (sow_tags.jl): the row is `%EQ%%1_FLOBND(... %SWT%)` (L15); every
+term is `%VAR%_X(... %SOW%)` (%cal_red% L28-30; L33-35).
+
 GAMS: eqflobnd.mod L15-43 with eqmain.mod L111-113, v4.9.7.
 """
 function eq_flobnd!(tm::TimesModel)
@@ -98,24 +101,27 @@ function eq_flobnd!(tm::TimesModel)
             std, ire = (r, p) in rp_flo, (r, p) in rp_ire
             group = !((cg,) in com)                                                 # NOT COM(CG), L37
             vints = get(vint_of_rtp, (r, t, p), no4)
-            lhs = JuMP.AffExpr(0.0)
-            for (_, _, _, c, ts) in get(varf_of_rtp, (r, t, p), no5)                # L24
-                ((r, cg, c) in com_gmap && (r, s, ts) in ts_map) || continue
-                for (_, v, _, _) in vints                                           # L26
-                    std && cal_nored!(lhs, tm, GNum(1.0), r, v, t, p, c, ts)        # L28-30
-                    ire || continue
-                    for (_, _, _, ie) in get(ire_of_rpc, (r, p, c), no4)            # L33-37
-                        sign = GNum(group && (ie,) in xpt ? -1.0 : 1.0)
-                        if tm.reduce && (r, p, c) in rpc_aire                       # L34-35
-                            addterm!(lhs, sign * gv(prc_actflo, (r, v, p, c)), tm, "VAR_ACT", r, v, t, p, ts)
-                        else
-                            addterm!(lhs, sign, tm, "VAR_IRE", r, v, t, p, c, ts, ie)
+            for sow in sw_rows(tm, t)   # %SWT% (eqflobnd.mod L15)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                for (_, _, _, c, ts) in get(varf_of_rtp, (r, t, p), no5)                # L24
+                    ((r, cg, c) in com_gmap && (r, s, ts) in ts_map) || continue
+                    for (_, v, _, _) in vints                                           # L26
+                        std && cal_nored!(lhs, tm, GNum(1.0), r, v, t, p, c, ts)        # L28-30
+                        ire || continue
+                        for (_, _, _, ie) in get(ire_of_rpc, (r, p, c), no4)            # L33-37
+                            sign = GNum(group && (ie,) in xpt ? -1.0 : 1.0)
+                            if tm.reduce && (r, p, c) in rpc_aire                       # L34-35
+                                addterm!(lhs, sign * gv(prc_actflo, (r, v, p, c)), tm, "VAR_ACT", r, v, t, p, ts)
+                            else
+                                addterm!(lhs, sign, tm, "VAR_IRE", r, v, t, p, c, ts, ie)
+                            end
                         end
                     end
                 end
+                rhs = addconst!(JuMP.AffExpr(0.0), gv(flo_bnd, (r, t, p, cg, s, bd)))   # L41
+                gconstraint!(tm, eqtag(tm, name), swt(tm, (r, t, p, cg, s), t), eqtype, lhs, rhs) === nothing || (n += 1)
             end
-            rhs = addconst!(JuMP.AffExpr(0.0), gv(flo_bnd, (r, t, p, cg, s, bd)))   # L41
-            gconstraint!(tm, name, (r, t, p, cg, s), eqtype, lhs, rhs) === nothing || (n += 1)
         end
     end
     return n

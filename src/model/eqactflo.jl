@@ -29,6 +29,9 @@
 Generate every EQ_ACTFLO row from `tm.data`, creating the VAR_ACT, VAR_FLO
 and VAR_IRE columns it references. Returns the number of rows generated.
 
+The SOW tags (sow_tags.jl): the row is `%EQ%_ACTFLO(... %SWT%)` (L15) and
+every term `%VAR%_X(... %SOW%)` (L19, L26, L28).
+
 GAMS: eqactflo.mod L15-29, v4.9.7.
 """
 function eq_actflo!(tm::TimesModel)
@@ -58,27 +61,30 @@ function eq_actflo!(tm::TimesModel)
         for (_, _, s) in get(ts_of_rp, (r, p), NTuple{3,String}[])
             tm.reduce && (r, t, p, s) in rtps_off && continue
 
-            lhs = JuMP.AffExpr(0.0)
-            if (r, t, p) in rtp_vara
-                JuMP.add_to_expression!(lhs, 1.0, getvar!(tm, "VAR_ACT", r, v, t, p, s))
-            end
-
-            rhs = JuMP.AffExpr(0.0)
-            for (_, _, c) in get(pg_of_rp, (r, p), NTuple{3,String}[])
-                (r, t, p, c, s) in rtpcs_varf || continue
-                coef = 1.0 / nonzero(prc_actflo, (r, v, p, c))
-                if (r, p) in rp_flo
-                    JuMP.add_to_expression!(rhs, coef, getvar!(tm, "VAR_FLO", r, v, t, p, c, s))
+            for sow in sw_rows(tm, t)   # %SWT% (L15)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                if (r, t, p) in rtp_vara
+                    addterm!(lhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, s)                   # %VAR%_ACT(... %SOW%), L19
                 end
-                if (r, p) in rp_ire
-                    for (_, _, _, ie) in get(ire_of_rpc, (r, p, c), NTuple{4,String}[])
-                        (r, p, ie) in rp_aire || continue
-                        JuMP.add_to_expression!(rhs, coef, getvar!(tm, "VAR_IRE", r, v, t, p, c, s, ie))
+
+                rhs = JuMP.AffExpr(0.0)
+                for (_, _, c) in get(pg_of_rp, (r, p), NTuple{3,String}[])
+                    (r, t, p, c, s) in rtpcs_varf || continue
+                    coef = 1.0 / nonzero(prc_actflo, (r, v, p, c))
+                    if (r, p) in rp_flo
+                        addterm!(rhs, GNum(coef), tm, "VAR_FLO", r, v, t, p, c, s)           # L26
+                    end
+                    if (r, p) in rp_ire
+                        for (_, _, _, ie) in get(ire_of_rpc, (r, p, c), NTuple{4,String}[])
+                            (r, p, ie) in rp_aire || continue
+                            addterm!(rhs, GNum(coef), tm, "VAR_IRE", r, v, t, p, c, s, ie)   # L28
+                        end
                     end
                 end
-            end
 
-            gconstraint!(tm, "EQ_ACTFLO", (r, v, t, p, s), "E", lhs, rhs) === nothing || (n += 1)
+                gconstraint!(tm, eqtag(tm, "EQ_ACTFLO"), swt(tm, (r, v, t, p, s), t), "E", lhs, rhs) === nothing || (n += 1)
+            end
         end
     end
     return n

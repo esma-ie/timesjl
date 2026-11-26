@@ -262,6 +262,13 @@ end
 Generate every EQN_UCRTP, EQE_UCRTP and EQN_UCRTC row (equ_ext.vda
 L105-106) from `tm.data`. Returns the number of rows generated.
 
+The SOW tags (sow_tags.jl): the row is `%EQ%%2_UCRTP(... %SWT%)` (L75) or
+`%EQ%%2_UCRTC(... %SWT%)` (L103). The terms of the period before are
+`%VARV%_CAP`, `%VARV%_NCAP(R,V,P %SWS%)`, `%VARTT%_ACT(R,MODLYEAR,V,P,S
+%SWS%)` with V(TT), and `%VARTT%_COMNET/COMPRD(R,Y,C,S %SWS%)` with Y(TT)
+(L80-92, L108-114; `at` that period); those of T are `%VAR%_X(... %SOW%)`.
+PRC_DYNUC%MX% (L75) is change 71.
+
 GAMS: equcrtp.vda L73-121, v4.9.7.
 """
 function eq_ucrtp!(tm::TimesModel)
@@ -284,10 +291,11 @@ function eq_ucrtp!(tm::TimesModel)
         prc_ts_of = indexby(gset(tm, "PRC_TS"), (1, 2))                   # (r,p) -> PRC_TS(r,p,s)
         vint_of_rtp = indexby(rtp_vintyr, (1, 3, 4))                      # (r,t,p) -> RTP_VINTYR(r,m,t,p)
         # SUM((RTP_VINTYR(R,MODLYEAR,Y,P),PRC_TS(R,P,S)), VAR_ACT(R,MODLYEAR,Y,P,S)) with coefficient k
-        function act_terms!(expr, k, r, y, p)
+        # `at`: the period before, %VARTT%_ACT(R,MODLYEAR,V,P,S %SWS%) with V(TT) (L92); else %VAR%_ACT(.. %SOW%) (L93)
+        function act_terms!(expr, k, r, y, p; at=nothing)
             for (_, m, _, _) in get(vint_of_rtp, (r, y, p), NTuple{4,String}[]),
                 (_, _, s) in get(prc_ts_of, (r, p), NTuple{3,String}[])
-                addterm!(expr, k, tm, "VAR_ACT", r, m, y, p, s)
+                addterm!(expr, k, tm, "VAR_ACT", r, m, y, p, s; at)
             end
         end
         for (u, side, r, t, p, grp, bd) in dynuc.keys
@@ -296,20 +304,23 @@ function eq_ucrtp!(tm::TimesModel)
             name, eqtype = bd == "FX" ? ("EQE_UCRTP", "E") : bd in ("LO", "UP") ? ("EQN_UCRTP", "L") : continue
             s = sgn(bd)
             lt = gv(lead, (t,))
-            lhs = JuMP.AffExpr(0.0)
-            g = gpower(gv(dynuc, (u, "LHS", r, t, p, grp, bd)), lt)  # POWER(PRC_DYNUC(..'LHS'..),LEAD(T))
-            v = get(t_prev, t, nothing)
-            if grp == "CAP" || grp == "NCAP"                         # L79-81, L85-87
-                var = "VAR_" * grp
-                v !== nothing && (r, v, p) in rtp && addterm!(lhs, g * s, tm, var, r, v, p)
-                addterm!(lhs, -s, tm, var, r, t, p)
-            elseif grp == "ACT"                                       # L91-93
-                v !== nothing && (r, v, p) in rtp_vara && act_terms!(lhs, g * s, r, v, p)
-                act_terms!(lhs, -s, r, t, p)
+            for sow in sw_rows(tm, t)   # %SWT% (equcrtp.vda L75)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                g = gpower(gv(dynuc, (u, "LHS", r, t, p, grp, bd)), lt)  # POWER(PRC_DYNUC(..'LHS'..),LEAD(T))
+                v = get(t_prev, t, nothing)
+                if grp == "CAP" || grp == "NCAP"                         # L79-81, L85-87
+                    var = "VAR_" * grp
+                    v !== nothing && (r, v, p) in rtp && addterm!(lhs, g * s, tm, var, r, v, p; at=v)   # %VARV%_CAP/NCAP(R,V,P %SWS%) (L80, L86)
+                    addterm!(lhs, -s, tm, var, r, t, p)
+                elseif grp == "ACT"                                       # L91-93
+                    v !== nothing && (r, v, p) in rtp_vara && act_terms!(lhs, g * s, r, v, p; at=v)
+                    act_terms!(lhs, -s, r, t, p)
+                end
+                rhs = JuMP.AffExpr(0.0)
+                addconst!(rhs, gv(dynuc, (u, side, r, t, p, grp, bd)) * lt * (-s))    # L98
+                gconstraint!(tm, eqtag(tm, name), swt(tm, (u, r, t, p, grp, bd), t), eqtype, lhs, rhs) === nothing || (n += 1)
             end
-            rhs = JuMP.AffExpr(0.0)
-            addconst!(rhs, gv(dynuc, (u, side, r, t, p, grp, bd)) * lt * (-s))    # L98
-            gconstraint!(tm, name, (u, r, t, p, grp, bd), eqtype, lhs, rhs) === nothing || (n += 1)
         end
     end
 
@@ -326,17 +337,21 @@ function eq_ucrtp!(tm::TimesModel)
                 bd in ("LO", "UP") || continue                             # BD(BDNEQ)
                 sg = sgn(bd)
                 lt = gv(lead, (t,))
-                lhs = JuMP.AffExpr(0.0)
-                g = gpower(gv(uc_com, (u, cv, "LHS", r, t, c, s, "UCN")), lt)
-                y = get(t_prev, t, nothing)
-                if cv == "NET" || cv == "PRD"                              # L107-109, L113-115
-                    rhsset, var = cv == "NET" ? (rhs_combal, "VAR_COMNET") : (rhs_comprd, "VAR_COMPRD")
-                    y !== nothing && (r, y, c) in rtc && (r, y, c, s) in rhsset && addterm!(lhs, g * sg, tm, var, r, y, c, s)
-                    (r, t, c, s) in rhsset && addterm!(lhs, -sg, tm, var, r, t, c, s)
+                for sow in sw_rows(tm, t)   # %SWT% (equcrtp.vda L103)
+                    set_sow!(tm, sow)
+                    lhs = JuMP.AffExpr(0.0)
+                    g = gpower(gv(uc_com, (u, cv, "LHS", r, t, c, s, "UCN")), lt)
+                    y = get(t_prev, t, nothing)
+                    if cv == "NET" || cv == "PRD"                              # L107-109, L113-115
+                        rhsset, var = cv == "NET" ? (rhs_combal, "VAR_COMNET") : (rhs_comprd, "VAR_COMPRD")
+                        y !== nothing && (r, y, c) in rtc && (r, y, c, s) in rhsset &&
+                            addterm!(lhs, g * sg, tm, var, r, y, c, s; at=y)   # %VARTT%_COMNET/COMPRD(R,Y,C,S %SWS%), Y(TT) (L108, L114)
+                        (r, t, c, s) in rhsset && addterm!(lhs, -sg, tm, var, r, t, c, s)
+                    end
+                    rhs = JuMP.AffExpr(0.0)
+                    addconst!(rhs, gv(uc_com, (u, cv, side, r, t, c, s, tag)) * lt * (-sg))  # L120
+                    gconstraint!(tm, eqtag(tm, "EQN_UCRTC"), swt(tm, (u, cv, r, t, c, s, bd), t), "L", lhs, rhs) === nothing || (n += 1)
                 end
-                rhs = JuMP.AffExpr(0.0)
-                addconst!(rhs, gv(uc_com, (u, cv, side, r, t, c, s, tag)) * lt * (-sg))  # L120
-                gconstraint!(tm, "EQN_UCRTC", (u, cv, r, t, c, s, bd), "L", lhs, rhs) === nothing || (n += 1)
             end
         end
     end

@@ -141,6 +141,12 @@ In the flow branches V comes from RTP_VINTYR inside the RTPCS_VARF sum, and the 
 is the general case (%7 empty: vintage V). PERDISC is read under the group 'ACT' for flows and
 activities alike. Under %STAGES% (not translated) the sums would run over SW_TSW.
 
+The SOW tags (sow_tags.jl): the rows are `%EQ%G_UCMAX(UC_GMAX(...)%SOW%)`
+(L46) and `%EQ%G_UCSUMAX(UC_N%SOW%)` (L125), one per SOW, with
+`%VAR%_UC(UC_N%SOW%)` and `%VAR%_UCR(UC_N,R%SOW%)` (L50-51, L127). Under
+STAGES, L55 sets %SWTD% to `,SW_TSW(SOW,T,W)` and %SOW% to `,W` for the sums
+of L58-117, so their terms are read `at = t`; L122 sets %SOW% back.
+
 GAMS: ucbet.vda L46-125, v4.9.7.
 """
 function eq_ucbet!(tm::TimesModel)
@@ -171,9 +177,9 @@ function eq_ucbet!(tm::TimesModel)
     # VAR_IRE(R,V,T,P,COM,S,'IMP')$(NOT RPC_AIRE(R,P,COM)) + (VAR_ACT(R,V,T,P,S)*PRC_ACTFLO(R,V,P,COM))$RPC_AIRE(R,P,COM)
     function imports!(e, w, r, v, t, p, com, s)
         if (r, p, com) in rpc_aire
-            addterm!(e, w * gv(prc_actflo, (r, v, p, com)), tm, "VAR_ACT", r, v, t, p, s)
+            addterm!(e, w * gv(prc_actflo, (r, v, p, com)), tm, "VAR_ACT", r, v, t, p, s; at=t)
         else
-            addterm!(e, w, tm, "VAR_IRE", r, v, t, p, com, s, "IMP")
+            addterm!(e, w, tm, "VAR_IRE", r, v, t, p, com, s, "IMP"; at=t)
         end
     end
     # M(R,T) * [FLOWS] for one (R,T)
@@ -184,7 +190,7 @@ function eq_ucbet!(tm::TimesModel)
             for (_, _, _, com, s) in get(varf_of_rtp, (r, t, p), no5)
                 (r, c, com) in com_gmap || continue
                 for (_, v, _, _) in get(v_of_rtp, (r, t, p), no4)
-                    (r, p) in rp_std && cal_nored!(e, tm, w, r, v, t, p, com, s)
+                    (r, p) in rp_std && cal_nored!(e, tm, w, r, v, t, p, com, s; at=t)
                     if (r, p) in rp_ire
                         for (_, _, cm, _) in get(imp_of_rp, (r, p), no4)
                             cm == com && imports!(e, w, r, v, t, p, com, s)
@@ -201,7 +207,7 @@ function eq_ucbet!(tm::TimesModel)
         for (_, v, _, _) in get(v_of_rtp, (r, t, p), no4)
             if (r, p) in rp_std && (r, t, p) in rtp_vara
                 for (_, _, s) in get(ts_of_rp, (r, p), no3)
-                    addterm!(e, w, tm, "VAR_ACT", r, v, t, p, s)
+                    addterm!(e, w, tm, "VAR_ACT", r, v, t, p, s; at=t)
                 end
             end
             if (r, p) in rp_ire
@@ -216,46 +222,52 @@ function eq_ucbet!(tm::TimesModel)
 
     nrows = 0
     for (n, allr, item, c, name) in gmax.keys
-        lhs = JuMP.AffExpr(0.0)
-        ingmaxr = (allr, n) in gmaxr
-        ingmaxr || addterm!(lhs, GNum(1.0), tm, "VAR_UC", n)
-        ((allr,) in reg && ingmaxr) && addterm!(lhs, GNum(1.0), tm, "VAR_UCR", n, allr)
-        rhs = JuMP.AffExpr(0.0)
-        isreg = (allr,) in reg
-        if (name,) in lim
-            if isreg && ingmaxr                                                  # L57-71
-                for (_, _, t) in get(tsum_of_rn, (allr, n), no3)
-                    flows!(rhs, n, allr, t, c)
+        for sow in sow_rows(tm)   # %SOW% (ucbet.vda L46)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            ingmaxr = (allr, n) in gmaxr
+            ingmaxr || addterm!(lhs, GNum(1.0), tm, "VAR_UC", n)
+            ((allr,) in reg && ingmaxr) && addterm!(lhs, GNum(1.0), tm, "VAR_UCR", n, allr)
+            rhs = JuMP.AffExpr(0.0)
+            isreg = (allr,) in reg
+            if (name,) in lim
+                if isreg && ingmaxr                                                  # L57-71
+                    for (_, _, t) in get(tsum_of_rn, (allr, n), no3)
+                        flows!(rhs, n, allr, t, c)
+                    end
+                end
+                if !isreg                                                            # L73-87
+                    for (r, _, t) in get(tsum_of_n, (n,), no3)
+                        (r, n) in gmaxr || flows!(rhs, n, r, t, c)
+                    end
                 end
             end
-            if !isreg                                                            # L73-87
-                for (r, _, t) in get(tsum_of_n, (n,), no3)
-                    (r, n) in gmaxr || flows!(rhs, n, r, t, c)
+            if (name,) in uc_number
+                if isreg                                                             # L89-103
+                    for (_, _, t) in get(tsum_of_rn, (allr, n), no3)
+                        activity!(rhs, n, allr, t, item)
+                    end
+                else                                                                 # L105-119
+                    for (r, _, t) in get(tsum_of_n, (n,), no3)
+                        activity!(rhs, n, r, t, item)
+                    end
                 end
             end
+            gconstraint!(tm, eqtag(tm, "EQG_UCMAX"), sowkey(tm, (n, allr, item, c, name)), "G", lhs, rhs) === nothing || (nrows += 1)
         end
-        if (name,) in uc_number
-            if isreg                                                             # L89-103
-                for (_, _, t) in get(tsum_of_rn, (allr, n), no3)
-                    activity!(rhs, n, allr, t, item)
-                end
-            else                                                                 # L105-119
-                for (r, _, t) in get(tsum_of_n, (n,), no3)
-                    activity!(rhs, n, r, t, item)
-                end
-            end
-        end
-        gconstraint!(tm, "EQG_UCMAX", (n, allr, item, c, name), "G", lhs, rhs) === nothing || (nrows += 1)
     end
     # L123-125
     sumax = unique(k[2] for k in gmaxr.keys)
     for n in sort!(sumax; by = x -> findfirst(k -> k[1] == x, gset(tm, "UC_N").keys))
-        lhs = JuMP.AffExpr(0.0); addterm!(lhs, GNum(1.0), tm, "VAR_UC", n)
-        rhs = JuMP.AffExpr(0.0)
-        for (r, m) in gmaxr.keys
-            (m == n && (r,) in reg) && addterm!(rhs, GNum(1.0), tm, "VAR_UCR", n, r)
+        for sow in sow_rows(tm)   # %SOW% (ucbet.vda L125)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0); addterm!(lhs, GNum(1.0), tm, "VAR_UC", n)
+            rhs = JuMP.AffExpr(0.0)
+            for (r, m) in gmaxr.keys
+                (m == n && (r,) in reg) && addterm!(rhs, GNum(1.0), tm, "VAR_UCR", n, r)
+            end
+            gconstraint!(tm, eqtag(tm, "EQG_UCSUMAX"), sowkey(tm, (n,)), "G", lhs, rhs) === nothing || (nrows += 1)
         end
-        gconstraint!(tm, "EQG_UCSUMAX", (n,), "G", lhs, rhs) === nothing || (nrows += 1)
     end
     return nrows
 end
