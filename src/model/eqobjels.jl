@@ -141,6 +141,11 @@ demand in the timeslice and COM_BQTY, times COM_VOC; INF for a CES component (MI
     VAR_ELAST.UP(RTCS_VARC(R,T,C,S),J,BDNEQ(BD))\$RCJ(R,C,J,BD) = INF\$MI_DOPE(R,T,C) +
       (MAX(DDF_QREF(R,T,C) * COM_FR(R,T,C,S), COM_BQTY(R,C,S)) * COM_VOC(R,T,C,BD)) / COM_STEP(R,C,BD);
 
+The SOW tags (sow_tags.jl): under STAGES the statement runs inside
+`LOOP(SW_T(T%SOW%),` (bnd_elas.mod L21) on `%VAR%_ELAST.UP(.. %SOW%)` (L23):
+the SOWs of period T (`setbound!` with `sw = t`). COM_FR%MX% (L24) is change
+71.
+
 GAMS: bndmain.mod L19, bnd_elas.mod L19-24, v4.9.7.
 """
 function bnd_elas!(bt, tm::TimesModel)
@@ -153,7 +158,7 @@ function bnd_elas!(bt, tm::TimesModel)
     for (r, t, c, s) in gset(tm, "RTCS_VARC").keys, (_, _, j, b) in get(rcj_of, (r, c), NTuple{4,String}[])
         b in bdneq || continue
         v = gmax(gv(qref, (r, t, c)) * gv(cfr, (r, t, c, s)), gv(bqty, (r, c, s))) * gv(voc, (r, t, c, b)) / gv(step, (r, c, b))
-        setbound!(bt, tm, "VAR_ELAST", (r, t, c, s, j, b), :up, haskey(dope.values, (r, t, c)) ? GNum(Inf) + v : v)
+        setbound!(bt, tm, "VAR_ELAST", (r, t, c, s, j, b), :up, haskey(dope.values, (r, t, c)) ? GNum(Inf) + v : v; sw=t)
     end
     return bt
 end
@@ -176,6 +181,10 @@ end
 
 `JJ(AGE)` gives AGE the label of the shape index JJ, so SPAN is the age at position
 CEIL((ORD(J)-.5)*COM_VOC/COM_STEP*100), none beyond the last age (initsys.mod L80: 200).
+
+The SOW tags (sow_tags.jl): the row is `%EQ%_OBJELS(R,BD,CUR %SOW%)` (L12),
+one per SOW; the steps are `%VART%_ELAST(R,T,C,S,J,BD %SWS%)` (L20, L27, L28;
+`at = t`) and the right-hand side `%VAR%_OBJELS(R,BD,CUR %SOW%)` (L44).
 
 GAMS: eqobjels.mod L12-49, v4.9.7 (L33-41, %MICRO% YES, refused).
 """
@@ -200,39 +209,42 @@ function eq_objels!(tm::TimesModel)
     for (r, cur) in gset(tm, "RDCUR").keys
         r in regs || continue
         for b in bd
-            lhs = JuMP.AffExpr(0.0)
-            if b in bdneq
-                for (_, t, c, s) in get(varc_of, (r,), NTuple{4,String}[])
-                    e = gv(cel, (r, t, c, s, b))
-                    (iszero(e) || iszero(gv(step, (r, c, b)))) && continue
-                    k0 = gv(pvt, (r, t)) * gv(bprice, (r, t, c, s, cur))
-                    rcj = get(rcj_of, (r, c, b), NTuple{4,String}[])
-                    x(j) = GNum(1.0) - GNum(bdsig(b) * (jord[j] - 0.5)) * gv(voc, (r, t, c, b)) / gv(step, (r, c, b))
-                    if iszero(gv(elx, (r, t, c, b)))
-                        for (_, _, j, _) in rcj
-                            addterm!(lhs, k0 * gpow(x(j), GNum(1.0) / e), tm, "VAR_ELAST", r, t, c, s, j, b)
+            for sow in sow_rows(tm)   # %SOW% (eqobjels.mod L12)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                if b in bdneq
+                    for (_, t, c, s) in get(varc_of, (r,), NTuple{4,String}[])
+                        e = gv(cel, (r, t, c, s, b))
+                        (iszero(e) || iszero(gv(step, (r, c, b)))) && continue
+                        k0 = gv(pvt, (r, t)) * gv(bprice, (r, t, c, s, cur))
+                        rcj = get(rcj_of, (r, c, b), NTuple{4,String}[])
+                        x(j) = GNum(1.0) - GNum(bdsig(b) * (jord[j] - 0.5)) * gv(voc, (r, t, c, b)) / gv(step, (r, c, b))
+                        if iszero(gv(elx, (r, t, c, b)))
+                            for (_, _, j, _) in rcj
+                                addterm!(lhs, k0 * gpow(x(j), GNum(1.0) / e), tm, "VAR_ELAST", r, t, c, s, j, b; at=t)
+                            end
                         end
-                    end
-                    for (_, _, _, _, jj) in get(shed_of, (r, t, c, b), NTuple{5,String}[])
-                        jj in ages || continue                                           # JJ(AGE)
-                        for (_, _, j, _) in rcj
-                            pos = ceil(Int, (jord[j] - 0.5) * gv(voc, (r, t, c, b)).v / gv(step, (r, c, b)).v * 100)
-                            1 <= pos <= length(ages) || continue
-                            sp = ages[pos]
-                            f = gpow(gv(shaped, (b, jj, sp)) * gpow(x(j) / gv(shaped, (b, "1", sp)), GNum(1.0) / gmax(GNum(1e-3), gv(shape, (jj, sp)))), GNum(1.0) / e)
-                            addterm!(lhs, k0 * f, tm, "VAR_ELAST", r, t, c, s, j, b)
+                        for (_, _, _, _, jj) in get(shed_of, (r, t, c, b), NTuple{5,String}[])
+                            jj in ages || continue                                           # JJ(AGE)
+                            for (_, _, j, _) in rcj
+                                pos = ceil(Int, (jord[j] - 0.5) * gv(voc, (r, t, c, b)).v / gv(step, (r, c, b)).v * 100)
+                                1 <= pos <= length(ages) || continue
+                                sp = ages[pos]
+                                f = gpow(gv(shaped, (b, jj, sp)) * gpow(x(j) / gv(shaped, (b, "1", sp)), GNum(1.0) / gmax(GNum(1e-3), gv(shape, (jj, sp)))), GNum(1.0) / e)
+                                addterm!(lhs, k0 * f, tm, "VAR_ELAST", r, t, c, s, j, b; at=t)
+                            end
                         end
-                    end
-                    if haskey(dope.values, (r, t, c))
-                        for (_, com, _) in get(dmas_of, (r, c), NTuple{3,String}[]), (_, _, j, _) in rcj
-                            addterm!(lhs, k0 * gv(agc, (r, t, com, c, j, b)), tm, "VAR_ELAST", r, t, c, s, j, b)
+                        if haskey(dope.values, (r, t, c))
+                            for (_, com, _) in get(dmas_of, (r, c), NTuple{3,String}[]), (_, _, j, _) in rcj
+                                addterm!(lhs, k0 * gv(agc, (r, t, com, c, j, b)), tm, "VAR_ELAST", r, t, c, s, j, b; at=t)
+                            end
                         end
                     end
                 end
+                rhs = JuMP.AffExpr(0.0)
+                addterm!(rhs, GNum(1.0), tm, "VAR_OBJELS", r, b, cur)
+                gconstraint!(tm, eqtag(tm, "EQ_OBJELS"), sowkey(tm, (r, b, cur)), "E", lhs, rhs) === nothing || (n += 1)
             end
-            rhs = JuMP.AffExpr(0.0)
-            addterm!(rhs, GNum(1.0), tm, "VAR_OBJELS", r, b, cur)
-            gconstraint!(tm, "EQ_OBJELS", (r, b, cur), "E", lhs, rhs) === nothing || (n += 1)
         end
     end
     return n
@@ -245,6 +257,10 @@ end
       SUM(RCJ(R,C,J,BDNEQ(BD))\$COM_ELAST(R,T,C,S,BD),
           VAR_ELAST(R,T,C,S,J,BD)*COM_STEP(R,C,BD)/ORD(J)/(DDF_QREF(R,T,C)*COM_FR(R,T,C,S)*COM_VOC(R,T,C,BD)))
       =L= VAR_COMPRD(R,T,COM,'ANNUAL')/DDF_QREF(R,T,COM);
+
+The SOW tags (sow_tags.jl): the row is `%EQ%L_COMCES(... %SWT%)` (L49) and the
+terms `%VAR%_ELAST(... %SOW%)` and `%VAR%_COMPRD(... %SOW%)` (L50-51);
+COM_FR%MX% (L50) is change 71.
 
 GAMS: eqobjels.mod L46-49 (mod_equa.mod L80), v4.9.7.
 """
@@ -263,15 +279,18 @@ function eql_comces!(tm::TimesModel)
     for (r, com, c) in gset_opt(d, "MI_DMAS", 3).keys, (t,) in gset(tm, "MILESTONYR").keys
         ((r, t, com) in rtc && haskey(dope.values, (r, t, c))) || continue
         for (_, _, _, s) in get(varc_of, (r, t, c), NTuple{4,String}[])
-            lhs = JuMP.AffExpr(0.0)
-            for (_, _, j, b) in get(rcj_of, (r, c), NTuple{4,String}[])
-                (b in bdneq && !iszero(gv(cel, (r, t, c, s, b)))) || continue
-                coef = gv(step, (r, c, b)) / GNum(jord[j]) / (gv(qref, (r, t, c)) * gv(cfr, (r, t, c, s)) * gv(voc, (r, t, c, b)))
-                addterm!(lhs, coef, tm, "VAR_ELAST", r, t, c, s, j, b)
+            for sow in sw_rows(tm, t)   # %SWT% (eqobjels.mod L49)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                for (_, _, j, b) in get(rcj_of, (r, c), NTuple{4,String}[])
+                    (b in bdneq && !iszero(gv(cel, (r, t, c, s, b)))) || continue
+                    coef = gv(step, (r, c, b)) / GNum(jord[j]) / (gv(qref, (r, t, c)) * gv(cfr, (r, t, c, s)) * gv(voc, (r, t, c, b)))
+                    addterm!(lhs, coef, tm, "VAR_ELAST", r, t, c, s, j, b)
+                end
+                rhs = JuMP.AffExpr(0.0)
+                addterm!(rhs, GNum(1.0) / gv(qref, (r, t, com)), tm, "VAR_COMPRD", r, t, com, "ANNUAL")
+                gconstraint!(tm, eqtag(tm, "EQL_COMCES"), swt(tm, (r, t, com, c, s), t), "L", lhs, rhs) === nothing || (n += 1)
             end
-            rhs = JuMP.AffExpr(0.0)
-            addterm!(rhs, GNum(1.0) / gv(qref, (r, t, com)), tm, "VAR_COMPRD", r, t, com, "ANNUAL")
-            gconstraint!(tm, "EQL_COMCES", (r, t, com, c, s), "L", lhs, rhs) === nothing || (n += 1)
         end
     end
     return n
