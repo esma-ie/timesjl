@@ -35,6 +35,9 @@ L54-59 (NET: G, E, L; then PRD: G, E, L). Returns the number of rows.
         SUM(RTCS_VARC(R,T,C,TS)\$TS_MAP(R,S,TS), VAR_COM%4(R,T,C,TS))
         =%1= COM_BND%4(R,T,C,S,'%2');
 
+The SOW tags (sow_tags.jl): the row is `%EQ%%1_BND%4(... %SWT%)` (eqbndcom.mod
+L16) and the term `%VAR%_COM%4(... %SOW%)` (L19).
+
 GAMS: eqbndcom.mod L16-24 with eqmain.mod L54-59, v4.9.7.
 """
 function eq_bndcom!(tm::TimesModel)
@@ -61,13 +64,16 @@ function eq_bndcom!(tm::TimesModel)
         end
         gams_sort!(rows, tm.data)
         for (r, t, c, s) in rows
-            lhs = JuMP.AffExpr(0.0)
-            for (_, _, _, ts) in get(varc_of_rtc, (r, t, c), no4)
-                (r, s, ts) in ts_map || continue
-                addterm!(lhs, GNum(1.0), tm, "VAR_COM$kind", r, t, c, ts)
+            for sow in sw_rows(tm, t)   # %SWT% (eqbndcom.mod L16)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                for (_, _, _, ts) in get(varc_of_rtc, (r, t, c), no4)
+                    (r, s, ts) in ts_map || continue
+                    addterm!(lhs, GNum(1.0), tm, "VAR_COM$kind", r, t, c, ts)
+                end
+                rhs = addconst!(JuMP.AffExpr(0.0), gv(bnd, (r, t, c, s, bd)))
+                gconstraint!(tm, eqtag(tm, name), swt(tm, (r, t, c, s), t), eqtype, lhs, rhs) === nothing || (n += 1)
             end
-            rhs = addconst!(JuMP.AffExpr(0.0), gv(bnd, (r, t, c, s, bd)))
-            gconstraint!(tm, name, (r, t, c, s), eqtype, lhs, rhs) === nothing || (n += 1)
         end
     end
     return n
