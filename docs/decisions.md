@@ -170,6 +170,12 @@ Asked for by James on 22 Nov 2026, answering #184 d6: "only move CPLEX timings o
 | 6 | Keep `esma-ie/timesjl-unpublished` current from the nightly (the local script commits `run-timing-unpublished.json` to its clone)? Today it holds a snapshot of 22 Nov 2026. | none built; recommended: yes | open (Open decisions) |
 | 7 | CLAUDE.md (Repository) gains the rule: no timing of CPLEX or another Restricted Solver, nor a figure taken from such a run, in the public repository; they go to the local board and `esma-ie/timesjl-unpublished`. Rule-level. | Built in, from James's instruction of 22 Nov 2026. | open |
 
+### #193 Elastic demand: cite readbprice.mod, wrtbprice.mod and pp_micro.mod by their real line numbers (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | Known difference K4: its line numbers corrected; the difference itself unchanged. Rule-level. | Yes | James, 22 Nov 2026, in the chat: "#193 d1 yes" (explicit yes) |
+
 ### #192 M1.3 gate: the stochastic extension out of the gate; gate audit of 22 Nov 2026 (open)
 
 | # | Decision | Default | Outcome |
