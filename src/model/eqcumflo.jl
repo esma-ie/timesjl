@@ -42,6 +42,14 @@ and when %OBJ% is LIN (L21, L24):
   overlap: M(T)+LAGT(T) > YEARVAL(ALLYEAR) and M(T)-LEAD(T) < YEARVAL(LL);
   W(T) = SUM(TPULSEYR(T,YEAR)\$(ORD(YEAR) >= ORD(ALLYEAR) and ORD(YEAR) <= ORD(LL)), TPULSE(T,YEAR)).
 
+The SOW tags (sow_tags.jl): the row is `%EQ%_CUMFLO(... %SOW%)` (L14), one per
+SOW. With STAGES and no %SCUM%, L16 sets %SOW% to `,WW` and %SWT% to `,SOW`:
+the flow terms are summed over SW_TSW(SOW,T,WW) (%SWSW%, L26-31) and the
+activity is `%VARTT%_ACT(... %SWS%)` with TT(T) (L36), both `at = t`; the
+right-hand side `%VAR%_CUMFLO(... %SWT%)` is the row's own SOW (L44). The
+%SCUM% form (SPINES, recurrin.stc) and S_FLO_CUM in the L44 test are changes
+74 and 75.
+
 GAMS: eqcumflo.mod L14-45, v4.9.7. The LIN branch is checked on the crafted
 case demo12_cumlin (layer 2; test/unit/test_cum_lin.jl).
 """
@@ -97,44 +105,48 @@ function eq_cumflo!(tm::TimesModel)
     n = 0
     for (r, p, c, y1, y2) in rpc_cumflo
         (r, p) in rp || continue
-        lhs = JuMP.AffExpr(0.0)
-        for (t,) in milestonyr
-            w = weight(t, y1, y2)
-            w === nothing && continue
-            ws = w / cufscal
-            vints = get(vint_of_rtp, (r, t, p), NTuple{4,String}[])
-            if (r, p, c) in rpc
-                for (_, v, _, _) in vints
-                    (v,) in modlyear || continue
-                    for (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, c), NTuple{5,String}[])
-                        (r, p) in rp_std && cal_nored!(lhs, tm, ws, r, v, t, p, c, ts)
-                        if (r, p) in rp_ire
-                            if !((r, p, c) in rpc_aire)
-                                for (_, _, _, ie) in get(ire_of_rpc, (r, p, c), NTuple{4,String}[])
-                                    addterm!(lhs, ws, tm, "VAR_IRE", r, v, t, p, c, ts, ie)
+        for sow in sow_rows(tm)   # %SOW% (L14)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            for (t,) in milestonyr
+                w = weight(t, y1, y2)
+                w === nothing && continue
+                ws = w / cufscal
+                vints = get(vint_of_rtp, (r, t, p), NTuple{4,String}[])
+                if (r, p, c) in rpc
+                    for (_, v, _, _) in vints
+                        (v,) in modlyear || continue
+                        for (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, c), NTuple{5,String}[])
+                            # L26-31: SUM(%SWSW% (...)) with %SOW% set to ,WW (L16): the sum over SW_TSW(SOW,T,WW), `at=t`
+                            (r, p) in rp_std && cal_nored!(lhs, tm, ws, r, v, t, p, c, ts; at=t)
+                            if (r, p) in rp_ire
+                                if !((r, p, c) in rpc_aire)
+                                    for (_, _, _, ie) in get(ire_of_rpc, (r, p, c), NTuple{4,String}[])
+                                        addterm!(lhs, ws, tm, "VAR_IRE", r, v, t, p, c, ts, ie; at=t)
+                                    end
+                                else
+                                    addterm!(lhs, ws * gv(prc_actflo, (r, v, p, c)), tm, "VAR_ACT", r, v, t, p, ts; at=t)
                                 end
-                            else
-                                addterm!(lhs, ws * gv(prc_actflo, (r, v, p, c)), tm, "VAR_ACT", r, v, t, p, ts)
                             end
                         end
                     end
                 end
-            end
-            if uppercase(c) == pgprim && (r, t, p) in rtp_vara
-                for (_, v, _, _) in vints
-                    (v,) in modlyear || continue
-                    for (_, _, ts) in get(ts_of_rp, (r, p), NTuple{3,String}[])
-                        addterm!(lhs, ws, tm, "VAR_ACT", r, v, t, p, ts)
+                if uppercase(c) == pgprim && (r, t, p) in rtp_vara
+                    for (_, v, _, _) in vints
+                        (v,) in modlyear || continue
+                        for (_, _, ts) in get(ts_of_rp, (r, p), NTuple{3,String}[])
+                            addterm!(lhs, ws, tm, "VAR_ACT", r, v, t, p, ts; at=t)   # %VARTT%_ACT(R,V,T,P,TS %SWS%), TT(T) (L36)
+                        end
                     end
                 end
             end
-        end
 
-        rhs = JuMP.AffExpr(0.0)
-        if !iseps(flo_cum, (r, p, c, y1, y2, "UP"))
-            addterm!(rhs, GNum(1.0), tm, "VAR_CUMFLO", r, p, c, y1, y2)
+            rhs = JuMP.AffExpr(0.0)
+            if !iseps(flo_cum, (r, p, c, y1, y2, "UP"))
+                addterm!(rhs, GNum(1.0), tm, "VAR_CUMFLO", r, p, c, y1, y2)   # %VAR%_CUMFLO(... %SWT%), %SWT% set to ,SOW (L16, L44)
+            end
+            gconstraint!(tm, eqtag(tm, "EQ_CUMFLO"), sowkey(tm, (r, p, c, y1, y2)), "E", lhs, rhs) === nothing || (n += 1)
         end
-        gconstraint!(tm, "EQ_CUMFLO", (r, p, c, y1, y2), "E", lhs, rhs) === nothing || (n += 1)
     end
     return n
 end
