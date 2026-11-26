@@ -150,6 +150,14 @@ Any mismatch blocks the merge. Justified differences go in
   MaREI-EPMG/times-ireland-model with DD files James generates. It runs on
   James's machine only; nothing derived from it is committed, published or
   made a fixture.
+- OTAI (ESMA; `esma-ie/otai`, CC BY-SA 4.0) joins the suite from James's DD
+  scenarios, which stay off GitHub until the paper and model are published
+  (James, 26 Nov 2026). Until then they are handled like TIM: a local source
+  (`timesjl-sources/OTAI`), `redistribute = "private"`, neutral scenario
+  names, results on the local board only, and nothing derived from them
+  (sizes, objectives, timings, logs, fixtures) in this repository, its
+  issues or its pull requests. On publication it becomes `public`, pinned to
+  the repository commit.
 - Never use anything from the `esma-cgep` GitHub organisation (an archived
   Columbia institution kept for transparency only), including
   `esma-cgep/tim-gams`: no models, DD files, licences or code.
