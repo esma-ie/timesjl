@@ -240,7 +240,7 @@ function eq_objbal!(tm::TimesModel)
                     has(r, t, c, s, ie, cur) || continue
                     w = wsum(r, t, c, s, ie, cur)
                     for (_, v, _, _) in get(vint_of, (r, t, p), no4)
-                        gr_trade!(rhs, tm, w, r, v, t, p, c, s, ie)
+                        gr_trade!(rhs, tm, w, r, v, t, p, c, s, ie; at=t)
                     end
                 end
             end

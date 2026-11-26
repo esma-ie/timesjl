@@ -1222,12 +1222,18 @@ end
 
 `VAR_IRE(R,V,T,P,C,TS,IE)\$(NOT RPC_AIRE(R,P,C)) + (VAR_ACT(R,V,T,P,TS)*PRC_ACTFLO(R,V,P,C))\$RPC_AIRE(R,P,C)`
 times `k` (powerflo.vda L302-303, L330-331).
+
+The SOW tags (sow_tags.jl): both are `%VAR%_X(... %SOW%)`. `at` is for
+EQ_OBJBAL (L430), where L407-408 set %SOW% to `,WW` inside a sum over
+SW_TSW(SOW,T,WW) (`at = t`, `eq_objbal!`).
+
+GAMS: powerflo.vda L302-303, L330-331, L430, v4.9.7.
 """
-function gr_trade!(expr, tm, k::GNum, r, v, t, p, c, ts, ie)
+function gr_trade!(expr, tm, k::GNum, r, v, t, p, c, ts, ie; at::Union{Nothing,AbstractString}=nothing)
     if (r, p, c) in gset(tm, "RPC_AIRE")
-        addterm!(expr, k * gv(gparam(tm, "PRC_ACTFLO"), (r, v, p, c)), tm, "VAR_ACT", r, v, t, p, ts)
+        addterm!(expr, k * gv(gparam(tm, "PRC_ACTFLO"), (r, v, p, c)), tm, "VAR_ACT", r, v, t, p, ts; at)
     else
-        addterm!(expr, k, tm, "VAR_IRE", r, v, t, p, c, ts, ie)
+        addterm!(expr, k, tm, "VAR_IRE", r, v, t, p, c, ts, ie; at)
     end
     return expr
 end
