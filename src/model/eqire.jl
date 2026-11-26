@@ -57,6 +57,9 @@ Generate every EQ_IRE row from `tm.data`. Returns the number of rows.
             * RS_FR(R,ALL_TS,TS)*(1+RTCS_FR(R,T,C,ALL_TS,TS))
         ) * IRE_CCVT(R,C,REG,COM))\$IMP(IE);
 
+The SOW tags (sow_tags.jl): the row is `%EQ%_IRE(... %SWT%)` (L14); every term
+is `%VAR%_IRE(... %SOW%)` or `%VAR%_ACT(... %SOW%)` (L19, L25, L34, L45).
+
 GAMS: eqire.mod L14-52, v4.9.7.
 """
 function eq_ire!(tm::TimesModel)
@@ -126,63 +129,66 @@ function eq_ire!(tm::TimesModel)
     for (rg, t, p, com, ie, s) in rows
         # LHS, L18-20: own trade flow, signed by (1-2*XPT(IE)).
         sign = GNum(1.0) - 2 * GNum((ie,) in xpt ? 1.0 : 0.0)
-        lhs = JuMP.AffExpr(0.0)
-        if (rg, t, p, com, s) in rtpcs_varf
-            for (_, _, _, v) in get(vint_of_rtp, (rg, t, p), no4)
-                if !((rg, p, com) in rpc_aire)
-                    addterm!(lhs, sign, tm, "VAR_IRE", rg, v, t, p, com, s, ie)
-                else
-                    addterm!(lhs, gv(prc_actflo, (rg, v, p, com)) * sign, tm, "VAR_ACT", rg, v, t, p, s)
+        for sow in sw_rows(tm, t)   # %SWT% (eqire.mod L14)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            if (rg, t, p, com, s) in rtpcs_varf
+                for (_, _, _, v) in get(vint_of_rtp, (rg, t, p), no4)
+                    if !((rg, p, com) in rpc_aire)
+                        addterm!(lhs, sign, tm, "VAR_IRE", rg, v, t, p, com, s, ie)
+                    else
+                        addterm!(lhs, gv(prc_actflo, (rg, v, p, com)) * sign, tm, "VAR_ACT", rg, v, t, p, s)
+                    end
                 end
             end
-        end
 
-        # L23-29: the imports of the regions the marketplace's export commodities reach.
-        if (rg, p, com, "IMP") in rpc_market
-            for (_, com1, r, c, _) in get(top_from_regp, (rg, p), no5)
-                (r != rg && (rg, p, com1, "EXP") in rpc_market) || continue
-                ccvt1 = gv(ire_ccvt, (r, c, rg, com1))
-                imports_of!(lhs, gv(ire_ccvt, (rg, com1, rg, com)), r, t, p, c, rg, s, (v, ts) -> ccvt1)
-            end
-        end
-        # L32-38: the export rows of a marketplace, the imports of every region it is linked to.
-        if (ie,) in xpt
-            for (_, cc, r, c, _) in get(top_from_regp, (rg, p), no5)
-                cc == com || continue
-                function wflo(v, ts)
-                    fl = gv(ire_flo, (rg, v, p, com, r, c, ts))
-                    iszero(fl) && throw(DomainError((rg, v, p, com, r, c, ts),
-                        "eqire.mod L35: IRE_FLO is zero, GAMS divides by zero in EQ_IRE"))
-                    return GNum(1.0) / fl
+            # L23-29: the imports of the regions the marketplace's export commodities reach.
+            if (rg, p, com, "IMP") in rpc_market
+                for (_, com1, r, c, _) in get(top_from_regp, (rg, p), no5)
+                    (r != rg && (rg, p, com1, "EXP") in rpc_market) || continue
+                    ccvt1 = gv(ire_ccvt, (r, c, rg, com1))
+                    imports_of!(lhs, gv(ire_ccvt, (rg, com1, rg, com)), r, t, p, c, rg, s, (v, ts) -> ccvt1)
                 end
-                imports_of!(lhs, gv(ire_ccvt, (r, c, rg, com)), r, t, p, c, rg, s, wflo)
             end
-        end
+            # L32-38: the export rows of a marketplace, the imports of every region it is linked to.
+            if (ie,) in xpt
+                for (_, cc, r, c, _) in get(top_from_regp, (rg, p), no5)
+                    cc == com || continue
+                    function wflo(v, ts)
+                        fl = gv(ire_flo, (rg, v, p, com, r, c, ts))
+                        iszero(fl) && throw(DomainError((rg, v, p, com, r, c, ts),
+                            "eqire.mod L35: IRE_FLO is zero, GAMS divides by zero in EQ_IRE"))
+                        return GNum(1.0) / fl
+                    end
+                    imports_of!(lhs, gv(ire_ccvt, (r, c, rg, com)), r, t, p, c, rg, s, wflo)
+                end
+            end
 
-        # RHS, L43-50: the partner regions' exports, imports rows only.
-        rhs = JuMP.AffExpr(0.0)
-        if (ie,) in imp
-            for (r, c, _, _, _) in get(top_of_regcomp, (rg, com, p), no5)
-                (r,) in reg || continue                                    # R: ALIAS(REG,R)
-                ccvt = gv(ire_ccvt, (r, c, rg, com))
-                for (_, all_ts, _, _) in get(tscvt_of_rregs, (r, rg, s), no4)
-                    tscvt = gv(ire_tscvt, (r, all_ts, rg, s))
-                    for (_, _, _, v) in get(vint_of_rtp, (r, t, p), no4),
-                        (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, c), no5)
-                        haskey(rs_fr, (r, all_ts, ts)) || continue
-                        w = gv(ire_flo, (r, v, p, c, rg, com, s)) * tscvt *
-                            gv(rs_fr, (r, all_ts, ts)) * (1 + gv(rtcs_fr, (r, t, c, all_ts, ts)))
-                        if !((r, p, c) in rpc_aire)
-                            addterm!(rhs, w * ccvt, tm, "VAR_IRE", r, v, t, p, c, ts, "EXP")
-                        else
-                            addterm!(rhs, gv(prc_actflo, (r, v, p, c)) * w * ccvt, tm, "VAR_ACT", r, v, t, p, ts)
+            # RHS, L43-50: the partner regions' exports, imports rows only.
+            rhs = JuMP.AffExpr(0.0)
+            if (ie,) in imp
+                for (r, c, _, _, _) in get(top_of_regcomp, (rg, com, p), no5)
+                    (r,) in reg || continue                                    # R: ALIAS(REG,R)
+                    ccvt = gv(ire_ccvt, (r, c, rg, com))
+                    for (_, all_ts, _, _) in get(tscvt_of_rregs, (r, rg, s), no4)
+                        tscvt = gv(ire_tscvt, (r, all_ts, rg, s))
+                        for (_, _, _, v) in get(vint_of_rtp, (r, t, p), no4),
+                            (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, c), no5)
+                            haskey(rs_fr, (r, all_ts, ts)) || continue
+                            w = gv(ire_flo, (r, v, p, c, rg, com, s)) * tscvt *
+                                gv(rs_fr, (r, all_ts, ts)) * (1 + gv(rtcs_fr, (r, t, c, all_ts, ts)))
+                            if !((r, p, c) in rpc_aire)
+                                addterm!(rhs, w * ccvt, tm, "VAR_IRE", r, v, t, p, c, ts, "EXP")
+                            else
+                                addterm!(rhs, gv(prc_actflo, (r, v, p, c)) * w * ccvt, tm, "VAR_ACT", r, v, t, p, ts)
+                            end
                         end
                     end
                 end
             end
-        end
 
-        gconstraint!(tm, name, (rg, t, p, com, ie, s), "E", lhs, rhs) === nothing || (n += 1)
+            gconstraint!(tm, eqtag(tm, name), swt(tm, (rg, t, p, com, ie, s), t), "E", lhs, rhs) === nothing || (n += 1)
+        end
     end
     return n
 end
