@@ -11,7 +11,7 @@ const REFGAMS = joinpath(@__DIR__, "..", "reference", "gams")
 const SUITE_FILES = [joinpath(@__DIR__, "..", "reference", "suite.toml"), joinpath(@__DIR__, "..", "reference", "crafted.toml")]
 # {root} -> folder of timesjl-sources (scripts/run_references.ps1, $Sources and $LocalSources)
 const SOURCE_DIRS = Dict("times_source" => "TIMES_model", "times_demo" => "TIMES_Demo", "times_nz_dd" => "TIMES-NZ",
-                         "otus" => "OTUS9r", "otcgen" => "OTCGEN", "otnyc" => "OTNYC", "tim" => "TIM",
+                         "otus" => "OTUS9r", "otcgen" => "OTCGEN", "otnyc" => "OTNYC", "tim" => "TIM", "otai" => "OTAI",
                          "jrc_eu_times" => "JRC-EU-TIMES")
 const LOCAL_OK = Ref(false)
 

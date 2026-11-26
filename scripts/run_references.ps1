@@ -132,7 +132,9 @@ $Suite = Join-Path (Join-Path $Repo 'reference') 'suite.toml'
 
 # Repositories and pinned commits; must match the header of reference/suite.toml.
 $Sources = @(
-    @{ Root = 'times_source'; Dir = 'TIMES_model';          Commit = 'd9a6a25'; Url = 'https://github.com/etsap-TIMES/TIMES_model.git' },
+    # TIMES v4.9.8 (26 Nov 2026) in its own clone: TIMES_model stays at d9a6a25 (v4.9.7) for the
+    # references made with it, which make_reference.py never mixes with v4.9.8 runs.
+    @{ Root = 'times_source'; Dir = 'TIMES_model-v4.9.8';   Commit = '7064680'; Url = 'https://github.com/etsap-TIMES/TIMES_model.git' },
     @{ Root = 'times_demo';   Dir = 'TIMES_Demo';           Commit = '962db86'; Url = 'https://github.com/etsap-TIMES/TIMES_Demo.git' },
     # OTUS9r, public from 30 Oct 2026: dd/ added in 68588a6 (EPA original at tag epaus9rt-v20.4)
     @{ Root = 'otus';         Dir = 'OTUS9r';               Commit = '598e179'; Url = 'https://github.com/esma-ie/OTUS9r.git' },
@@ -150,7 +152,9 @@ $LocalSources = @(
     @{ Root = 'times_nz_dd';  Dir = 'TIMES-NZ';     Pin = 'dd/manifest.json';
        Sha256 = 'a4b7514e65143c5aebf4dcf48b2ca0e98076545bd4f1b1516d2785fe7e081b45' },
     @{ Root = 'tim';          Dir = 'TIM';          Pin = 'dd/manifest.json';
-       Sha256 = '3ccfc10e1b8df9b6b428988107930d45b2e8790d74abccd547c66fc1dd3f93ef' }
+       Sha256 = '3ccfc10e1b8df9b6b428988107930d45b2e8790d74abccd547c66fc1dd3f93ef' },
+    @{ Root = 'otai';         Dir = 'OTAI';         Pin = 'dd/manifest.json';
+       Sha256 = '836edf4d8e06ee2a4e603c90d13f67afb889ec89e424258e69befb9343013a53' }
 )
 
 # Models the M1.1 gate needs. Only openly licensed models, plus TIM as a named
