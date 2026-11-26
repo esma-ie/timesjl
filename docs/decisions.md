@@ -31,12 +31,12 @@ answer yet.
 | 8 Nov 2026 | chat | Harness fix as one small PR: CHECK status for a non-optimal solve; redo `ppm/` and `coef/` made with older GAMS | one small PR | Open; no PR yet. Checked 14 Nov 2026: `make_reference.py` still reports OK for a run that GAMS ends without an optimum. |
 | 10 Nov 2026 | #89 | Keep P2-5 (data and equation schemas) on the Phase 2 backlog, with its three pilots after M1.7? | keep; all pilots after M1.7 | Open (#89, decisions 1 and 2); provisional until James confirms. |
 | 10 Nov 2026 | #90 | Which other outcomes turn the cuOpt nightly red? | proposed in the chat | Open (#90, decision 3) |
-| 10 Nov 2026 | #90 | Wednesday's full cuOpt suite: set `CUOPT_FIXTURES=all` and `CUOPT_GPU_SHARES=100`? | yes | Open (#90, decision 2); a GitHub setting only James can make. Checked 14 Nov 2026: the repository has no Actions variable set, so the nightly runs demo12_off at 25, 50 and 100%. |
+| 10 Nov 2026 | #90 | Wednesday's full cuOpt suite: set `CUOPT_FIXTURES=all` and `CUOPT_GPU_SHARES=100`? | yes | Open (#90, decision 2); a GitHub setting only James can make. Checked 14 Nov 2026: the repository has no Actions variable set, so the nightly runs demo12_off at 25, 50 and 100%. Since 22 Nov 2026 it also waits for the rule "no GPU runner test until it passes locally" (below, Decisions in the chat): in the local nightly, `all` fails barrier on most demo12 variants (1.0e-6 to 2.3e-6 against 1e-6) and outright on flomrk and ashar. |
 | 14 Nov 2026 | chat (issue #97) | After #101 (the early part of #97: the solution of a solve written for downstream tools): may more of #97 start before M1.5 closes, beyond the levels and marginals approved on 12 Nov 2026? Rule-level (milestone order). | no; the rest waits for M1.6 in its order | Open; added to the list at the review of 14 Nov 2026. |
 | 14 Nov 2026 | chat | Remove the unused git worktree `TIMESjl-m14` on the workstation? M1.4 has been developed in the main working copy; the worktree is 213 commits behind `main` and has no commits of its own. | yes | Open; added to the list at the review of 14 Nov 2026. Nothing is removed without James's word. |
 | 14 Nov 2026 | chat | The commit trailer Claude Code supplies no longer names the model (`Co-Authored-By: Claude`), while the README points readers to that line to see which model wrote each commit. Keep the trailer as supplied and reword the README, or write the model's name in each commit message? | keep the trailer as supplied; reword the README | Open; added to the list at the review of 14 Nov 2026. Commits keep the supplied line meanwhile (`CLAUDE.md`). |
 | 14 Nov 2026 | chat | Workstation batch: count jobs by threads (up to 8 jobs within 36 threads, since most checks use one core) instead of "at most 4 CPU-heavy runs"? Rule-level (the run limits in `CLAUDE.md`). | yes | Open; the batch keeps to 4 runs (3 while development runs use the fourth slot). |
-| 14 Nov 2026 | chat (issue #100) | cuOpt lane: switch its check to PDLP with crossover, and report the barrier-with-crossover behaviour of issue #100 to the cuOpt project with the open demo12 case? | yes to both; reviewed with the cuOpt results on 8 Dec 2026 | Open; added to the list at the review of 14 Nov 2026. A report to another project is James's to approve. |
+| 14 Nov 2026 | chat (issue #100) | cuOpt lane: switch its check to PDLP with crossover, and report the barrier-with-crossover behaviour of issue #100 to the cuOpt project with the open demo12 case? | yes to both; reviewed with the cuOpt results on 8 Dec 2026 | Open; added to the list at the review of 14 Nov 2026. A report to another project is James's to approve. More evidence, 22 Nov 2026: on the six open reference runs (reduce_off), cuOpt barrier with crossover found no optimum on any of them, on the GitHub T4 (cuOpt 26.10.1, [run 45055717888](https://github.com/esma-ie/TIMESjl/actions/runs/45055717888)) and, for OTNYC and OTCGEN, on the workstation's Quadro (cuOpt 26.10.0, local nightly): a numerical error or the 1800 s limit; PDLP neither (one point 1.5e-4 off). Layer 2 passed on all six. On the local fixtures, barrier misses 1e-6 by a little (1.0e-6 to 2.3e-6) on most demo12 variants. Asked again at the 9:00 check-in of 23 Nov 2026 as q1 (James, 22 Nov 2026). |
 | 14 Nov 2026 | chat (issue #17) | The DD reader as a separate package (issue #17): decide after the M1.4 gate? | keep it in this repository until Phase 1 ends, and answer on the issue then | Open; added to the list at the review of 14 Nov 2026. |
 | 14 Nov 2026 | #109 | Is the M1.3 gate passed? Rule-level (a milestone gate). The evidence for each criterion is in docs/m13-plan.md, "Gate close-out, 14 Nov 2026". | yes | James, 14 Nov 2026: not passed yet (#109, decision 1); every remaining refused feature is translated first (linear dispatching is #120; unit commitment next, then the others in the order of the 16:30 check-in). Stays here: asked again when they are translated and tested. Asked again on 22 Nov 2026 ("now can we close M1.3 and M1.4?"), with the stochastic extension out of the gate: evidence in docs/m13-plan.md, "Gate audit, 22 Nov 2026"; recommended yes once a batch pass and the timing rerun pass on the merged stack (the DAM_ELAST question was answered on 22 Nov 2026: out of the gate, #192 d1). |
 | 14 Nov 2026 | #117 | Is the M1.4 gate passed? Rule-level (a milestone gate); it waits for the M1.3 gate (#109). The evidence for each criterion is in docs/m14-plan.md, "Gate close-out, 14 Nov 2026". | yes, once the M1.3 gate is passed and the batch has rerun the chain from DD files on the merged stack | Open (#117, decision 1); needs James's explicit yes. Its CI criterion is met: #124 merged on 14 Nov 2026, so the unit commitment is translated and demo12_uc runs in the chain from DD files (#118, decision 2; #124, decision 6). Asked again on 22 Nov 2026 with #109: evidence in docs/m13-plan.md, "Gate audit, 22 Nov 2026". |
@@ -66,10 +66,14 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 
 On 22 Nov 2026 James answered #192 decisions 1 and 2 (in the log of that pull request): damage costs as elastic supply curves from a base run leave the M1.3 gate and are listed for completion before Phase 1 closes; changes 71-76 of the stochastic extension resume after the move to v4.9.8. Those two rows left this list.
 
+On 25 Nov 2026 James answered the question of 22 Nov 2026 on the cuOpt pause: "keep the nightly on" (below, Decisions in the chat). That row left this list.
+
 ## Decisions in the chat (not in a PR list)
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 25 Nov 2026 | "keep the nightly on", answering the open question of 22 Nov 2026: the pause on GPU runner tests ("until they pass locally") does not include the scheduled GitHub nightly. It keeps running demo12_off at 25, 50 and 100% with barrier and PDLP; `CUOPT_NIGHTLY` stays unset. | this log; `scripts/cuopt/README.md`; `.github/workflows/nightly-gpu.yml` (header) |
+| 22 Nov 2026 | "yes, add it to the 9:00 check-in. cancel any further GPU runner tests until they pass locally" (after the first full run of the six open reference runs on the GitHub GPU runner, run 45055717888: no model solved). No manual run of `nightly-gpu.yml` (input `ref_release`, or any model or fixture beyond the nightly's) starts until the same models pass in the local WSL2 nightly. Nothing was running or queued. The scheduled nightly (demo12_off, which passes locally) stays on (James, 25 Nov 2026, above). Issue #100 is asked again at the 9:00 check-in of 23 Nov 2026. | this log; `scripts/cuopt/README.md`; `.github/workflows/nightly-gpu.yml` (header) |
 | 22 Nov 2026 | Slide 12 compared GAMS·CPLEX with TIMES.jl·HiGHS; James asked to "also show results for TIMES.jl with cplex". Asked again with the three ways forward ((1) an IBM CPLEX licence and CPLEX.jl; (2) TIMES.jl's LP to GAMS's CPLEX through GAMS.jl; (3) like-for-like HiGHS rows only), James answered "2, go ahead". This reverses #182 d5 ("(c) HiGHS only for now") for the timings: option (b) of #182 d5 is built, in the scripts only (`run_model` is unchanged). The times are CPLEX's, so they stay on the local board (#184, #195). Explicit yes. | #196; `scripts/gams_cplex.jl`; `scripts/m13_gate.jl --solver cplex`; `docs/dashboard/README.md` |
 | 22 Nov 2026 | The M1.3 audit of 22 Nov in the chat, options 1 (finish changes 71-76, then the gate) and 2 (the stochastic extension out of the gate): "option 2, move stochastics out of the gate, but do not start tests with v4.9.8 until Monday's nightly's not todays". Rule-level (the gate's scope, a departure from the plan approved on 20 Nov 2026); James's explicit yes. The stochastic extension leaves the M1.3 gate: change 70 (#185) is merged, changes 71-76 come after the gate, and STAGES, SPINES and SENSIS runs stay refused at init_ext. The baseline's move to TIMES v4.9.8 follows the gate, with no v4.9.8 test before the nightly of Monday 23 Nov 2026; the nightly of Sunday 22 Nov runs on v4.9.7. Then asked: "now can we close M1.3 and M1.4?" (the gate questions #109 and #117, Open decisions). | docs/m13-plan.md ("Gate", "Gate audit, 22 Nov 2026", "Plan: the stochastic extension"); this log |
 | 22 Nov 2026 | #184 d6, answered in the chat after the reading of the GAMS EULA's "Publication of Benchmarks": "only move CPLEX timings out of the public repo & dashboard and into the local dashboard and a private repo [...] The GAMS data that does not relate to proprietry solvers, like cplex, can stay, such as GAMS-HiGHS runs", and "use esma-ie/timesjl-unpublished and build the follow-up PR". Only the timings of CPLEX and the EULA's other Restricted Solvers (and figures taken from their runs) leave the public repository; GAMS/HiGHS timings come back to the public board, which reverses #184 d5. The private repository `esma-ie/timesjl-unpublished` holds them, open models only. Rule-level; explicit yes. A question to GAMS on the clause (what counts as publication, timings from runs that call no solver, CPLEX figures apart from other solvers' ones) is drafted for James to send. | #195; this log; `docs/dashboard/README.md`; `scripts/run_timing.jl` |
@@ -159,7 +163,11 @@ On 22 Nov 2026 James answered #192 decisions 1 and 2 (in the log of that pull re
 
 ## Log by pull request
 
-### #196 TIMES.jl with CPLEX inside GAMS (GAMS.jl): slide 12's TIMES.jl · CPLEX rows, local board only (open)
+### #197 cuOpt lane: no GPU runner test until it passes locally; issue #100 to the 9:00 check-in (open)
+
+No new decisions: it records James's two answers of 22 Nov 2026 (above, Decisions in the chat). The open question of the same day (whether the pause includes the scheduled nightly) was answered on 25 Nov 2026: "keep the nightly on".
+
+### #196 TIMES.jl with CPLEX inside GAMS (GAMS.jl): slide 12's TIMES.jl · CPLEX rows, local board only (merged 26 Nov 2026)
 
 Asked for by James on 22 Nov 2026: "also show results for TIMES.jl with cplex" on slide 12; then "2, go ahead" (option (b) of #182 d5, GAMS.jl). Stacked on #195.
 
@@ -174,7 +182,6 @@ Asked for by James on 22 Nov 2026: "also show results for TIMES.jl with cplex" o
 | 7 | GAMS.jl 0.5.4 swaps the system and work folders when both are set; worked around (the work folder is asked for after the solve). Report it to `GAMS-dev/gams.jl`? | none built; recommended: yes | open (Open decisions) |
 | 8 | GAMS.jl joins `test/Project.toml` (compat 0.5: `etSolver` is read with GAMS.jl's own GDX functions, which are internal). CI installs it but never loads it: the gate loads it only with `--solver cplex`, and GAMS.jl needs GAMS only when it solves. | Recommended: yes. Built in. | open |
 
-### #195 Timings: only CPLEX's off the public repository; GAMS/HiGHS back on the board (#184 d6) (open)
 ### #195 Timings: only CPLEX's off the public repository; GAMS/HiGHS back on the board (#184 d6) (merged 23 Nov 2026)
 
 Asked for by James on 22 Nov 2026, answering #184 d6: "only move CPLEX timings out of the public repo & dashboard and into the local dashboard and a private repo", "The GAMS data that does not relate to proprietry solvers, like cplex, can stay, such as GAMS-HiGHS runs", and "use esma-ie/timesjl-unpublished".
@@ -189,7 +196,7 @@ Asked for by James on 22 Nov 2026, answering #184 d6: "only move CPLEX timings o
 | 6 | Keep `esma-ie/timesjl-unpublished` current from the nightly (the local script commits `run-timing-unpublished.json` to its clone)? Today it holds a snapshot of 22 Nov 2026. | none built; recommended: yes | open (Open decisions) |
 | 7 | CLAUDE.md (Repository) gains the rule: no timing of CPLEX or another Restricted Solver, nor a figure taken from such a run, in the public repository; they go to the local board and `esma-ie/timesjl-unpublished`. Rule-level. | Built in, from James's instruction of 22 Nov 2026. | open |
 
-### #194 Step probe: check what prepret.dsc EQOBJ changes after the step that runs it (open)
+### #194 Step probe: check what prepret.dsc EQOBJ changes after the step that runs it (merged 26 Nov 2026)
 
 No decisions: a fix to the step probe's symbol lists (prepret.dsc L120-131 are checked after `eqobjinv_prep!`, which runs them).
 
@@ -199,13 +206,13 @@ No decisions: a fix to the step probe's symbol lists (prepret.dsc L120-131 are c
 | --- | --- | --- | --- |
 | 1 | Known difference K4: its line numbers corrected; the difference itself unchanged. Rule-level. | Yes | James, 22 Nov 2026, in the chat: "#193 d1 yes" (explicit yes) |
 
-### #192 M1.3 gate: the stochastic extension out of the gate; gate audit of 22 Nov 2026 (open)
+### #192 M1.3 gate: the stochastic extension out of the gate; gate audit of 22 Nov 2026 (merged 25 Nov 2026)
 
 | # | Decision | Default | Outcome |
 | --- | --- | --- | --- |
 | 1 | Damage costs as elastic supply curves from a base run (DAM_ELAST 'N'; wrtbprice.mod L21-25, readbprice.mod L24-25 and L37-45): translate before the gate (change 69b) or move out with the stochastic extension? Rule-level. | Recommended: move them out. Not built in. | James, 22 Nov 2026: "move them out of the gate and list them for completion before phase 1 close". Rule-level; explicit yes. Out of the M1.3 gate, refused with their message until then; listed in docs/m13-plan.md ("After the gate, before Phase 1 closes") and docs/translation-guide.md. Confirmed 23 Nov 2026: "#192 d1 yes, move it out". |
 | 2 | Changes 71-76 resume after the move to v4.9.8; change 73 finishes and merges first | Recommended: yes. Not built in. | James, 22 Nov 2026: "yes, after move to v4.9.8". docs/m13-plan.md ("Plan: the stochastic extension"). |
-| 3 | The timing rerun of q2 (21 Nov 2026) moves to now, on the merged stack, figures on the local board only (#184 d5) | Recommended: yes. Built in. | pending merge |
+| 3 | The timing rerun of q2 (21 Nov 2026) moves to now, on the merged stack, figures on the local board only (#184 d5) | Recommended: yes. Built in. | accepted by merge, 25 Nov 2026 |
 
 ### #191 cuOpt lane: download the reference runs with curl (the GPU image has no gh) (merged 22 Nov 2026)
 
@@ -215,8 +222,8 @@ No decisions: a fix to #189, whose first run (22 Nov 2026, run 45015140242) stop
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | Each solve on the runner is capped at 1800 s (input `time_limit`), and at most 3 model jobs run at once (each on its own runner, so timings do not share a GPU). | Recommended: yes. Built in. | open |
-| 2 | Keep the pre-release `cuopt-ref-2026-11-22` and its assets until the cuOpt review of 8 Dec 2026, then decide whether to keep refreshing it. | Recommended: yes. Built in (nothing deletes it). | open |
+| 1 | Each solve on the runner is capped at 1800 s (input `time_limit`), and at most 3 model jobs run at once (each on its own runner, so timings do not share a GPU). | Recommended: yes. Built in. | accepted by merge, 22 Nov 2026 |
+| 2 | Keep the pre-release `cuopt-ref-2026-11-22` and its assets until the cuOpt review of 8 Dec 2026, then decide whether to keep refreshing it. | Recommended: yes. Built in (nothing deletes it). | accepted by merge, 22 Nov 2026 |
 
 ### #185 M1.3 (70): the stochastic extension's DD reader (initmty.stc); eight crafted cases (merged 22 Nov 2026)
 
