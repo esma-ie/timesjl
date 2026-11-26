@@ -38,7 +38,9 @@
 #
 # Not translated (the features are refused): VAR_ELAST (L211, L276; elastic
 # demand) and VAR_DAM (L212; damage); the REG_FIXT loops (L199, L234, L266,
-# L282; FIXBOH); L236-264 (MY_FYEAR, FIXBOH); the %SOW% forms (STAGES).
+# L282; FIXBOH); L236-264 (MY_FYEAR, FIXBOH). The %SOW% of L200-233 is read
+# through the SOW tags (`setbound!` with `sw = :sow`; M1.3 change 73); a STAGES
+# run itself stays refused until change 74.
 
 "The bound table of the stepped run (see `stp_bounds_init!`)."
 stp_bounds(tm::TimesModel) = tm.cache["STP_BOUNDS"]::BoundTable
