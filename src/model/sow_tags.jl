@@ -31,6 +31,12 @@
 # says so where its GAMS file does; the stochastic side of those lines is
 # change 74's.
 #
+# The period of %VART%, %VARV%, %VARM% and %VARTT% is the T, V, MODLYEAR or TT
+# that the term's sum controls. Where the sum is written with another index
+# over that set (`SUM(MODLYEAR(K)$...`, `SUM(TT(T)$...`, `V(TT)`, `Y(TT)`), the
+# set's own name is controlled together with the index (docs/discrepancies.md
+# G48), so the period is that index: the builders pass it as `at`.
+#
 # So a row `%EQ%_X(R,T,... %SWT%)` is EQ_X(R,T,...) in a deterministic run and
 # ES_X(R,T,...,T,SOW) for every SOW with SW_T(T,SOW) in a stochastic one; a
 # term `%VAR%_ACT(R,V,T,P,S %SOW%)` reads VAS_ACT(R,V,T,P,S,SOW), the row's own
