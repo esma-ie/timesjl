@@ -1,6 +1,6 @@
 # Parity dashboard
 
-`index.html` is the TIMES.jl parity board: twelve 16:9 slides in the ESMA brand
+`index.html` is the TIMES.jl parity board: thirteen 16:9 slides in the ESMA brand
 (DM Sans, Dark Green and Dark Yellow, the ESMA logo). Each slide follows the
 usual ESMA slide layout: a title and one-line message, a Dark Yellow accent
 line, then the chart, with the source in the footer.
@@ -9,7 +9,7 @@ Timings of CPLEX and the GAMS EULA's other Restricted Solvers are shown on
 the local board only (James, 20 and 22 Nov 2026; #182 d6, #184 d6). GAMS's
 timings with other solvers (GAMS/HiGHS) are on the public page. Slide 10's
 GAMS times come from CPLEX runs, so the public page has no slide 10, and its
-slides 11 and 12 are its slides 10 and 11. The numbers below are those of the
+slides 11 to 13 are its slides 10 to 12. The numbers below are those of the
 local board, which adds the CPLEX timings back (see Run timings).
 
 1. at a glance: headline figures and the milestones;
@@ -27,7 +27,10 @@ local board, which adds the CPLEX timings back (see Run timings).
     solve), one point per model-scenario pair, variant, language and solver;
 12. where the time goes: the seconds of each part of a run (read input,
     preprocessing, coefficients, generation, solve, reports), one row per
-    model-scenario pair, language and solver.
+    model-scenario pair, language and solver;
+13. cuOpt on the GPU against GAMS (informational, never a merge gate; public
+    from 23 Nov 2026, #102 d1): the CI test cases, a cell per method (barrier
+    and PDLP, each with crossover), and the open reference runs in one line.
 
 ## Slides for a deck
 
@@ -230,6 +233,19 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
   The coefficient-stage timings of slide 10 (M1.2, workstation; GAMS's from
   its CPLEX runs) are not in the page: the local board supplies them
   (`TIMINGS` reads its `timing-coef` block; #184, #184 d6).
+
+- `gpu-cuopt-fixtures` and `gpu-cuopt-reference` (slide 13): the reports of
+  the WSL2 cuOpt nightly at 100% of the GPU (`scripts/cuopt`), copied by hand
+  from `~/timesjl-cuopt/nightly/<date>/fixtures/share100.json` and
+  `.../reference/share100.json` in WSL2, with `meta.host` removed. Every run
+  in them must have `redistribute = "public"` (the CI fixtures and the open
+  reference runs; TIM never goes in). They hold cuOpt's own times and
+  objectives, and GAMS's objectives only: no CPLEX time. Now embedded: the
+  night of 26 Nov 2026 (TIMES.jl 3d5a4ae, cuOpt 26.10.0). Their ids do not
+  start with `cuopt-`: the local board reads every `cuopt-*` block for its own
+  cuOpt slide, which stays beside this one. `CUOPT_NOTES` (the GitHub T4
+  nightly) is written by hand from `gh run list --workflow nightly-gpu.yml`;
+  everything else on the slide is computed from the two blocks.
 
 ## Encoding
 

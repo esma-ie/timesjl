@@ -49,8 +49,6 @@ answer yet.
 | 15 Nov 2026 | chat | The workstation batch's DD-file stage: the HiGHS solve of TIMES-NZ shift with REDUCE off hit its one-hour limit on 14 Nov 2026 (3,625.7 s; with REDUCE on it solved in 2,658 s). Solve TIMES-NZ in that stage with REDUCE on only, its REDUCE-off model still compared with GAMS's matrix and cross-evaluated? | yes | Open; the batch keeps its one-hour limit meanwhile. |
 | 17 Nov 2026 | #155 | coef_nio.mod L58 computes COEF_RCOM from COEF_CPT before coef_alt.lin L77 fills COEF_CPT (coefmain.mod order), so COEF_RCOM is empty outside the capacity transfer and the VAR_RCAP term of cal_cap.mod is never reached; TIMES.jl does the same. Report it to the TIMES maintainers (ETSAP) as a possible ordering issue? | yes, as a note to ETSAP | Open (#155, decision 2). Nothing in TIMES.jl depends on it. |
 | 17 Nov 2026 | #156 | resloadc.vda L111 and L144 read VAR_RLD at 'RL_THMIN' (an underscore) beside 'RL-THMIN': two columns, likely a typo (D45). TIMES.jl follows the code. Report it to ETSAP, in one note with #155 d2 (COEF_RCOM)? | yes, in the same note | Open (#156, decision 3). Nothing in TIMES.jl depends on it. |
-| 22 Nov 2026 | #196 | GAMS.jl 0.5.4 swaps GAMS's system folder and its work folder when both are set (`src/MOI_wrapper.jl` L161 against `src/GAMS.jl` L243); `scripts/gams_cplex.jl` works around it. Report it to GAMS.jl's maintainers (`GAMS-dev/gams.jl`), with a three-line example and no model data? A report to another project. | yes | Open (#196, decision 7) |
-| 22 Nov 2026 | #196 | TIMES.jl with CPLEX runs CPLEX in a GAMS job that GAMS.jl starts (gams.exe on GAMS.jl's moi.gms), which this PR reads as use "within GAMS/Base" (GAMS EULA, Exhibit A). Add that reading to the question to GAMS drafted for #184 d6, so GAMS confirms it? | yes | Open (#196, decision 2) |
 | 26 Nov 2026 | #201 | Citations after the move to v4.9.8: the `v4.9.7` citations stay until each diff pull request moves its own file's to v4.9.8 (with the shifted lines: ppmain.mod +2 after L542, pp_qack.mod +1 at L199-200 and +7 after L201, pp_chp.mod +1 after L13), and a last scripted pull request relabels the rest (their files are identical in v4.9.8); CLAUDE.md's citation rule says v4.9.7 until then. Rule-level (CLAUDE.md). | yes | Open (#201, decision 2); not built in. |
 | 26 Nov 2026 | #201 | Change 73 (the SOW tags): docs/m13-plan.md says it finishes and merges before the move (#192 d2), but part 1 sits unfinished at `212fe19` (`m13-sowtags`, no pull request). (a) Finish it while the v4.9.8 references run (layer 2 only, no GAMS run) and merge it before the first diff pull request, or (b) park it until the diff is translated? Rule-level (the plan's order). | (a) | Open (#201, decision 4); nothing of change 73 moves until James answers. |
 | 26 Nov 2026 | #201 | When the nightly moves to the v4.9.8 references: (a) as soon as they exist (14 Nov 2026, #109 d3), or (b) after the last diff pull request? | (a) | Open (#201, decision 7) |
@@ -67,6 +65,8 @@ On 18 Nov 2026 James merged #147 to #168 (22 pull requests): their built-in defa
 On 22 Nov 2026 James answered #192 decisions 1 and 2 (in the log of that pull request): damage costs as elastic supply curves from a base run leave the M1.3 gate and are listed for completion before Phase 1 closes; changes 71-76 of the stochastic extension resume after the move to v4.9.8. Those two rows left this list.
 
 On 25 Nov 2026 James answered the question of 22 Nov 2026 on the cuOpt pause: "keep the nightly on" (below, Decisions in the chat). That row left this list.
+
+On 26 Nov 2026 James answered #196 decisions 2 and 7 (in the log of that pull request): "d2 yes, d7 no". The reading of GAMS.jl's CPLEX as use "within GAMS/Base" joins the question to GAMS drafted for #184 d6; the GAMS.jl folder bug is not reported. Those rows left this list.
 
 ## Decisions in the chat (not in a PR list)
 
@@ -135,7 +135,7 @@ On 25 Nov 2026 James answered the question of 22 Nov 2026 on the cuOpt pause: "k
 | 12 Nov 2026 | M1.6 reporting, order of outputs: results for downstream tools first, in Arrow format v1 (#97): the solution (levels and marginals), then the translated report parameters, as the default output of every solve; Veda `.vd` files second. The M1.6 gate is unchanged (report parameters and `.vd` against GAMS at 1e-6). Rule-level (a change to the plan); explicit yes. | `docs/translation-guide.md` (M1.6) when the M1.6 plan is written |
 | 12 Nov 2026 | MPS run files for each open model in its own repository: the GAMS `CONVERT` LP of each scenario, "as run" only, named `<model>+<scenario>+as_run` (`.mps.gz` and `.dict.txt.gz`), described in `mpsrunfiles/README.md` and attached to a release per TIMES version (`mps-times-v4.9.7`), not Git LFS (esma-ie's LFS quota is in use elsewhere and blocked; release assets have no quota). OTUS9r, OTCGEN, OTNYC and an esma-ie fork of TIMES_Demo; not TIMES-NZ (not ESMA's to share). | esma-ie/OTUS9r#1, OTCGEN#1, OTNYC#1, TIMES_Demo#1 (draft releases for James to publish) |
 | 12 Nov 2026 | GAMSPy (TIMES-2-GAMSPy) comparison: on the webinar list only, not in the core probes. | `_handoff` (local) |
-| 12 Nov 2026 | cuOpt results stay on the local dashboard for now and go onto the public dashboard on 23 Nov (#102 decision 1: no to the public slide until then). | #102 (slide removed; kept in commit 920b00b) |
+| 12 Nov 2026 | cuOpt results stay on the local dashboard for now and go onto the public dashboard on 23 Nov (#102 decision 1: no to the public slide until then). | #102 (slide removed; kept in commit 920b00b); put back in #204 (26 Nov 2026) |
 | 12 Nov 2026 | The M1.3 chain slide shows the open scenarios only; the crafted demo12 cases' last pass (9 Nov) stays in its note (#102 decision 2): yes. | #102 |
 | 11 Nov 2026 | The decision-log rule (#96 decision 1): yes. | `CLAUDE.md` (#96) |
 | 11 Nov 2026 | The four rule-level questions approved only by merge (#96 decision 2): yes to all four. #35 and #54: changes to internal code or data structures are allowed in Phase 1 when the generated LP stays identical (layer 2 at 1e-9, same rows, columns and order). #61: one-way cross-evaluation counts as OTUS9r's layer 3 at the M1.3 gate. #91: K2 approved. The other open decisions are to be reviewed with James. | `CLAUDE.md` (#96); `docs/known-differences.md` K2 |
@@ -174,6 +174,14 @@ On 25 Nov 2026 James answered the question of 22 Nov 2026 on the cuOpt pause: "k
 | 1 | NVIDIA's B200 results kept off this repository, its issues and pull requests until publishing is agreed with NVIDIA; held on James's workstation only. | Recommended: yes. Built in. | open |
 | 2 | The public record names NVIDIA, not the person James dealt with there. | Recommended: yes. Built in. | open |
 
+### #204 Dashboard: cuOpt on the GPU back on the public board (#102 d1, from 23 Nov) (open; d1 to d3 answered)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | The two open reference runs (OTNYC, OTCGEN, REDUCE off) on the public cuOpt slide, in one line, beside the CI fixtures that #102's slide showed. | Yes | James, 26 Nov 2026, in the chat: "d1 yes" |
+| 2 | The slide rebuilt rather than restored from 920b00b: 66 cases in three columns, and every statement computed from the embedded reports (920b00b's notes no longer held), the GitHub T4 line excepted. | Yes | James, 26 Nov 2026, in the chat: "d2 yes" |
+| 3 | The local board keeps its own cuOpt slide beside the public one (the public blocks' ids keep them apart), instead of stepping aside as planned on 12 Nov. | Yes | James, 26 Nov 2026, in the chat: "d3 yes" |
+
 ### #201 v4.9.8 re-pin: the TIMES source download, the harness and the baseline (open)
 
 | # | Question | Decided | How |
@@ -198,13 +206,13 @@ Asked for by James on 22 Nov 2026: "also show results for TIMES.jl with cplex" o
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
 | 1 | TIMES.jl's LP is solved by CPLEX inside GAMS through GAMS.jl 0.5 (`scripts/gams_cplex.jl`, `scripts/m13_gate.jl --solve --solver cplex`); CPLEX.jl is not used, and `run_model` is unchanged. Reverses #182 d5 for the timings. | Asked for by James. Built in. | James, 22 Nov 2026 ("2, go ahead") |
-| 2 | This reads a GAMS job started by GAMS.jl as use of CPLEX "within GAMS/Base" (GAMS EULA, Exhibit A). Add it to the question to GAMS drafted for #184 d6? | none built; recommended: yes | open (Open decisions) |
-| 3 | The solve of TIMES.jl / CPLEX is CPLEX's own time as GAMS reports it (`etSolver`, the measure of GAMS's CPLEX runs); the handover through GAMS.jl (writing the LP as a GAMS model, GAMS's compilation and generation of it, reading the solution back) is in no part, but in the whole run, and the hover gives it. | Recommended: yes. Built in. | open |
-| 4 | CPLEX gets the options of the GAMS/CPLEX reference run: the model's own `cplex.opt` (`solver_opt_dir`), every `threads` line at the run limit (12), and GAMS's `threads=` at the same limit (`make_reference.py`, `limit_threads`). | Recommended: yes. Built in. | open |
-| 5 | TIMES.jl / CPLEX times are a Restricted Solver's: on the local board and in `esma-ie/timesjl-unpublished` only (#184, #195). The public board's slide 12 keeps HiGHS against HiGHS. | Recommended: yes. Built in. | open |
-| 6 | The nightly (`run_overnight.ps1`, local) runs `dd-<model>-cplex` for the models that get the HiGHS solve (demo12, OTCGEN, OTNYC, TIMES-NZ steady and shift), once its checkout of `main` has `--solver`. OTUS9r is left out for now: GAMS.jl's handover of a model of two to three million columns is untried. A stepped run is not solved with CPLEX. | Recommended: yes; OTUS9r reference tried once by hand first. Built in. | open |
-| 7 | GAMS.jl 0.5.4 swaps the system and work folders when both are set; worked around (the work folder is asked for after the solve). Report it to `GAMS-dev/gams.jl`? | none built; recommended: yes | open (Open decisions) |
-| 8 | GAMS.jl joins `test/Project.toml` (compat 0.5: `etSolver` is read with GAMS.jl's own GDX functions, which are internal). CI installs it but never loads it: the gate loads it only with `--solver cplex`, and GAMS.jl needs GAMS only when it solves. | Recommended: yes. Built in. | open |
+| 2 | This reads a GAMS job started by GAMS.jl as use of CPLEX "within GAMS/Base" (GAMS EULA, Exhibit A). Add it to the question to GAMS drafted for #184 d6? | none built; recommended: yes | James, 26 Nov 2026: "d2 yes". Added as question 6 to the draft to GAMS of #184 d6 (James's email draft, not yet sent; he sends it) |
+| 3 | The solve of TIMES.jl / CPLEX is CPLEX's own time as GAMS reports it (`etSolver`, the measure of GAMS's CPLEX runs); the handover through GAMS.jl (writing the LP as a GAMS model, GAMS's compilation and generation of it, reading the solution back) is in no part, but in the whole run, and the hover gives it. | Recommended: yes. Built in. | accepted by merge, 26 Nov 2026 |
+| 4 | CPLEX gets the options of the GAMS/CPLEX reference run: the model's own `cplex.opt` (`solver_opt_dir`), every `threads` line at the run limit (12), and GAMS's `threads=` at the same limit (`make_reference.py`, `limit_threads`). | Recommended: yes. Built in. | accepted by merge, 26 Nov 2026 |
+| 5 | TIMES.jl / CPLEX times are a Restricted Solver's: on the local board and in `esma-ie/timesjl-unpublished` only (#184, #195). The public board's slide 12 keeps HiGHS against HiGHS. | Recommended: yes. Built in. | accepted by merge, 26 Nov 2026 |
+| 6 | The nightly (`run_overnight.ps1`, local) runs `dd-<model>-cplex` for the models that get the HiGHS solve (demo12, OTCGEN, OTNYC, TIMES-NZ steady and shift), once its checkout of `main` has `--solver`. OTUS9r is left out for now: GAMS.jl's handover of a model of two to three million columns is untried. A stepped run is not solved with CPLEX. | Recommended: yes; OTUS9r reference tried once by hand first. Built in. | accepted by merge, 26 Nov 2026 |
+| 7 | GAMS.jl 0.5.4 swaps the system and work folders when both are set; worked around (the work folder is asked for after the solve). Report it to `GAMS-dev/gams.jl`? | none built; recommended: yes | James, 26 Nov 2026: "d7 no". Not reported; the workaround in `scripts/gams_cplex.jl` stays |
+| 8 | GAMS.jl joins `test/Project.toml` (compat 0.5: `etSolver` is read with GAMS.jl's own GDX functions, which are internal). CI installs it but never loads it: the gate loads it only with `--solver cplex`, and GAMS.jl needs GAMS only when it solves. | Recommended: yes. Built in. | accepted by merge, 26 Nov 2026 |
 
 ### #195 Timings: only CPLEX's off the public repository; GAMS/HiGHS back on the board (#184 d6) (merged 23 Nov 2026)
 
@@ -923,7 +931,7 @@ Built from James's answers of 14 Nov 2026 on #125 (decisions 6, 8, 9 and 10).
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | cuOpt results on the public board? | No: on the local board until 23 Nov 2026 (the slide is kept in commit 920b00b). | James, 12 Nov 2026 |
+| 1 | cuOpt results on the public board? | No: on the local board until 23 Nov 2026 (the slide is kept in commit 920b00b). | James, 12 Nov 2026; carried out in #204 |
 | 2 | The chain slide shows the open scenarios only? | Yes. | James, 12 Nov 2026 |
 
 ### #101 M1.6 (#97, early): write_solution, the solution as a TIMES.jl dump (merged 2026-11-12)
