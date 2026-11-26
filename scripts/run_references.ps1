@@ -150,7 +150,9 @@ $LocalSources = @(
     @{ Root = 'times_nz_dd';  Dir = 'TIMES-NZ';     Pin = 'dd/manifest.json';
        Sha256 = 'a4b7514e65143c5aebf4dcf48b2ca0e98076545bd4f1b1516d2785fe7e081b45' },
     @{ Root = 'tim';          Dir = 'TIM';          Pin = 'dd/manifest.json';
-       Sha256 = '3ccfc10e1b8df9b6b428988107930d45b2e8790d74abccd547c66fc1dd3f93ef' }
+       Sha256 = '3ccfc10e1b8df9b6b428988107930d45b2e8790d74abccd547c66fc1dd3f93ef' },
+    @{ Root = 'otai';         Dir = 'OTAI';         Pin = 'dd/manifest.json';
+       Sha256 = '836edf4d8e06ee2a4e603c90d13f67afb889ec89e424258e69befb9343013a53' }
 )
 
 # Models the M1.1 gate needs. Only openly licensed models, plus TIM as a named
