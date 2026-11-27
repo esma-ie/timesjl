@@ -315,10 +315,16 @@ class _Lock:
                 time.sleep(0.05)
 
     def __exit__(self, *exc) -> None:
-        try:
-            self.path.unlink()
-        except OSError:
-            pass
+        # On Windows the file cannot be removed while another process has it open (a waiting run reading
+        # the pid): try again for a moment, or the lock would stay for as long as this process lives.
+        for _ in range(200):
+            try:
+                self.path.unlink()
+                return
+            except FileNotFoundError:
+                return
+            except OSError:
+                time.sleep(0.01)
 
 
 def _read_json(path: Path) -> dict | None:

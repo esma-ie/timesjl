@@ -128,6 +128,7 @@ include("model/solve_stp.jl")     # M1.5: the stepped (myopic) solve, solve.stp
 include("model/bnd_stp.jl")       # M1.5: the bounds of a stepped run and the model of one step
 include("model/solution.jl")      # #97: the solution as a TIMES.jl dump (M1.6, started early)
 include("solver_options.jl")      # run_model: the solver option file (<solver>.opt), as GAMS reads it (20 Nov 2026)
+include("pool.jl")                # the run pool's phase markers (reference/python/pool_run.py; 27 Nov 2026)
 include("run.jl")                 # run_model: a model from its run and DD files, without GAMS (18 Nov 2026)
 
 export run_model

@@ -28,6 +28,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "run_model: the solver option file (highs.opt), as GAMS reads <solver>.opt" begin
         include("unit/test_solver_options.jl")
     end
+    @testset "The run pool's phase markers (src/pool.jl; reference/python/pool_run.py)" begin
+        include("unit/test_pool.jl")
+    end
     @testset "Reference: layer 1 comparison" begin
         include("unit/test_compare.jl")
     end

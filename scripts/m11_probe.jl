@@ -59,7 +59,7 @@ function suite_switches(model, manifest, roots)
     return sw
 end
 
-function probe(refdir, model; variant="reduce_off", roots=Dict{String,String}())
+function probe(refdir, model; variant="reduce_off", roots=Dict{String,String}(), pool_last::Bool=false)
     dir = joinpath(refdir, model, variant)
     isfile(joinpath(dir, "manifest.json")) || return (; model, status="no reference")
     m = JSON.parsefile(joinpath(dir, "manifest.json"))
@@ -100,7 +100,7 @@ function probe(refdir, model; variant="reduce_off", roots=Dict{String,String}())
     println("   ", model, ": layer 2 PASS ($sz)"); flush(stdout)       # before the (long) solve
     mref = Ref{Any}(mine)
     mine = nothing
-    return (; model, status="PASS layer 2 ($sz); " * layer3(tm, mref, ref, dir, m), report=r, hasmatrix)
+    return (; model, status="PASS layer 2 ($sz); " * layer3(tm, mref, ref, dir, m; pool_last), report=r, hasmatrix)
 end
 
 """
@@ -132,7 +132,7 @@ each optimum feasible and optimal in the other model (rtol 1e-6). The GAMS
 optima are evaluated first; then the canonical TIMES.jl LP (`mref[]`) and
 the dump caches are released before the solve, to keep memory down.
 """
-function layer3(tm, mref, ref, dir, manifest)
+function layer3(tm, mref, ref, dir, manifest; pool_last::Bool=false)
     runs = manifest["runs"]
     gams = Dict{String,Tuple{Float64,String}}()
     skipped = String[]
@@ -169,6 +169,8 @@ function layer3(tm, mref, ref, dir, manifest)
     # Interior point (then crossover) above 100,000 rows; HiGHS's default below.
     length(ref.rows) > 100_000 && JuMP.set_attribute(tm.model, "solver", "ipm")
     t = @elapsed JuMP.optimize!(tm.model)
+    # the run pool (reference/python/pool_run.py): after the last solve of the process the run keeps 1 thread
+    pool_last && TIMES.pool_phase("reporting")
     JuMP.termination_status(tm.model) == JuMP.OPTIMAL || return "layer 3 FAIL: HiGHS " * string(JuMP.termination_status(tm.model))
     obj = JuMP.objective_value(tm.model)
     x = Dict(jump_name_key(JuMP.name(v)) => JuMP.value(v) for v in JuMP.all_variables(tm.model))
@@ -210,9 +212,9 @@ function main(args)
     i = findfirst(==("--variant"), args)
     i === nothing || (variant = args[i+1]; deleteat!(args, i:i+1))
     refdir, roots, models = parse_probe_args(args)
-    for model in models
+    for (k, model) in enumerate(models)
         res = try
-            probe(refdir, model; roots, variant)
+            probe(refdir, model; roots, variant, pool_last=k == length(models))
         catch e
             (; model, status="error", detail=sprint(showerror, e))
         end

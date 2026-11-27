@@ -114,7 +114,7 @@ refused!(checks, run, layer, unit, detail) =
     push!(checks, Dict{String,Any}("run" => run, "layer" => layer, "unit" => unit, "status" => "refused",
                                    "n_compared" => 0, "n_excluded" => 0, "n_mismatch" => 0, "detail" => detail))
 
-function layer23_checks!(checks, runrec, run, presolve, matrix, dictmap, points, switches, reduce)
+function layer23_checks!(checks, runrec, run, presolve, matrix, dictmap, points, switches, reduce; pool_last::Bool=false)
     tm = TimesModel(presolve; reduce, switches)
     # a model with switches or families TIMES.jl does not generate yet (m11_probe.jl's work list)
     u = untranslated_families(tm)
@@ -213,6 +213,8 @@ function layer23_checks!(checks, runrec, run, presolve, matrix, dictmap, points,
     # interior point (then crossover) for large models, as m11_probe.jl; HiGHS's default below
     length(ref.rows) > 100_000 && JuMP.set_attribute(tm.model, "solver", "ipm")
     ts = @elapsed JuMP.optimize!(tm.model)
+    # the run pool (reference/python/pool_run.py): after the last solve of the process the run keeps 1 thread
+    pool_last && TIMES.pool_phase("reporting")
     ok = JuMP.termination_status(tm.model) == JuMP.OPTIMAL
     obj = ok ? JuMP.objective_value(tm.model) : NaN
     x = ok ? Dict(jump_name_key(JuMP.name(v)) => JuMP.value(v) for v in JuMP.all_variables(tm.model)) : Dict{String,Float64}()
@@ -248,7 +250,7 @@ end
 function report_fixtures!(out)
     fixtures = TOML.parsefile(joinpath(REPO, "test", "fixtures", "public_fixtures.toml"))["fixture"]
     fxdir = joinpath(REPO, "test", "fixtures")
-    for fx in fixtures
+    for (k, fx) in enumerate(fixtures)
         m = SUITE[fx["model"]]
         run = fx["prefix"]
         sw = Dict{String,String}(k => string(v) for (k, v) in get(fx, "switches", Dict()))
@@ -257,14 +259,14 @@ function report_fixtures!(out)
         p(part) = joinpath(fxdir, run * "_" * part)
         isdir(p("presolve")) && isdir(p("matrix")) &&
             layer23_checks!(out["checks"], runrec, run, p("presolve"), joinpath(p("matrix"), "matrix"), joinpath(p("matrix"), "dictmap"),
-                            points_from_solution(p("solution.json")), sw, get(fx, "reduce", false))
+                            points_from_solution(p("solution.json")), sw, get(fx, "reduce", false); pool_last=k == length(fixtures))
         isdir(p("ppm")) && isdir(p("coef")) && layer1_checks!(out["checks"], run, p("ppm"), p("coef"), sw)
         push!(out["runs"], runrec)
     end
 end
 
 function report_reference!(out, refdir, models, roots)
-    for model in models, variant in ("reduce_off",)
+    for (k, model) in enumerate(models), variant in ("reduce_off",)
         dir = joinpath(refdir, model, variant)
         isfile(joinpath(dir, "manifest.json")) || (println("   ", model, ": no reduce_off reference; skipped"); continue)
         man = JSON.parsefile(joinpath(dir, "manifest.json"))
@@ -283,7 +285,8 @@ function report_reference!(out, refdir, models, roots)
             if isdir(joinpath(dir, "presolve")) && isdir(joinpath(dir, "matrix")) && isdir(joinpath(dir, "matrix_dictmap"))
                 try
                     layer23_checks!(out["checks"], runrec, run, joinpath(dir, "presolve"), joinpath(dir, "matrix"),
-                                    joinpath(dir, "matrix_dictmap"), points_from_manifest(dir, man), sw, false)
+                                    joinpath(dir, "matrix_dictmap"), points_from_manifest(dir, man), sw, false;
+                                    pool_last=k == length(models))
                 catch e
                     push!(out["checks"], Dict{String,Any}("run" => run, "layer" => 2, "unit" => "matrix", "status" => "fail",
                           "n_compared" => 0, "n_excluded" => 0, "n_mismatch" => 0, "detail" => ["error: " * first(sprint(showerror, e), 600)]))
