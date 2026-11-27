@@ -327,8 +327,15 @@ end
 The set `name` from the dump (cached). An alias (`ALIAS(PASTYEAR,PYR)`) is its target as it is now:
 the set TIMES.jl holds for the target once it has computed it, not the target's records in the dump,
 and it is never cached under its own name, so that it follows the target as GAMS's alias does.
+
+The cache is keyed by upper-case names only (`gput!` and this function write no other), so a hit
+under the name as given is the same entry as under its upper case: it is tried first, which saves
+building the upper case for the names the generators pass, already upper-case, on paths that run
+once per row or per term (Phase 2, change 4). `gparam`, `gset_opt` and `gparam_opt` do the same.
 """
 function gset(d::DumpData, name::AbstractString)::GamsSet
+    s = get(d.sets, name, nothing)
+    s === nothing || return s
     s = get(d.sets, uppercase(name), nothing)
     s === nothing || return s
     info = get(d.dump.symbols, uppercase(name), nothing)
@@ -338,9 +345,12 @@ function gset(d::DumpData, name::AbstractString)::GamsSet
     return get!(() -> GamsSet(Reference.read_symbol(d.dump, name)), d.sets, uppercase(name))
 end
 
-"The parameter `name` from the dump (cached)."
-gparam(d::DumpData, name::AbstractString)::GamsParam =
-    get!(() -> GamsParam(Reference.read_symbol(d.dump, name)), d.params, uppercase(name))
+"The parameter `name` from the dump (cached; looked up under the name as given first, see `gset`)."
+function gparam(d::DumpData, name::AbstractString)::GamsParam
+    p = get(d.params, name, nothing)
+    p === nothing || return p
+    return get!(() -> GamsParam(Reference.read_symbol(d.dump, name)), d.params, uppercase(name))
+end
 
 """
     gset_opt(data, name, N) -> GamsSet{N}
@@ -354,6 +364,8 @@ even when the dump does not declare it (curex.gms declares CURMAP only when
 it is included; a crafted state can switch it on).
 """
 function gset_opt(d::DumpData, name::AbstractString, N::Int)
+    s = get(d.sets, name, nothing)                         # held under the name as given (see `gset`)
+    s === nothing || return s::GamsSet
     (haskey(d.sets, uppercase(name)) || Reference.has_symbol(d.dump, name)) && return gset(d, name)
     return GamsSet{N}(uppercase(name), NTuple{N,String}[], Set{NTuple{N,String}}())
 end
@@ -367,6 +379,8 @@ declared it, otherwise an empty one, which reads as zero everywhere. A
 parameter TIMES.jl has computed (`gput!`) is returned as for `gset_opt`.
 """
 function gparam_opt(d::DumpData, name::AbstractString, N::Int)
+    p = get(d.params, name, nothing)                       # held under the name as given (see `gset`)
+    p === nothing || return p::GamsParam
     (haskey(d.params, uppercase(name)) || Reference.has_symbol(d.dump, name)) && return gparam(d, name)
     return GamsParam{N}(uppercase(name), NTuple{N,String}[], Dict{NTuple{N,String},Float64}())
 end
