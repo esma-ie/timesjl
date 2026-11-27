@@ -47,7 +47,9 @@ function cal_nored!(expr::JuMP.AffExpr, tm::TimesModel, coef::GNum,
     iszero(coef) && return expr
     vnt = mode == "T" ? t : v
 
-    rpc_emis = gset(tm, "RPC_EMIS")
+    # RPC_EMIS(R,P,C) has three indices (the assertion gives the membership test its type: `gset`
+    # returns an abstract `GamsSet`, and this function runs once per flow term; Phase 2, change 3)
+    rpc_emis = gset(tm, "RPC_EMIS")::GamsSet{3}
     if !((r, p, c) in rpc_emis)
         return addterm!(expr, coef, tm, "VAR_FLO", r, vnt, t, p, c, ts; at)
     end
@@ -126,8 +128,12 @@ function cal_red!(expr::JuMP.AffExpr, tm::TimesModel, coef::GNum,
                   mode::AbstractString="", at::Union{Nothing,AbstractString}=nothing)
     mode in ("", "T", "V") || throw(ArgumentError("cal_red mode (%7) must be '', T or V, got $mode"))
     iszero(coef) && return expr
-    vnt = mode == "T" ? t : v
-    x = get!(tm.cache, "CAL_RED") do
+    return cal_red!(expr, tm, cal_red_context(tm), coef, r, v, t, p, c, ts, mode, at)
+end
+
+"The sets, parameters and incidence maps `cal_red!` reads, built once per model (untyped out of `tm.cache`)."
+function cal_red_context(tm::TimesModel)
+    get!(tm.cache, "CAL_RED") do
         pg = uppercase(strip(gswitch(tm, "PGPRIM", "'ACT'"), ['\'', '"']))      # initmty.mod L138
         cgk = gset(tm, "COM_GRP").keys
         i = findfirst(k -> uppercase(k[1]) == pg, cgk)
@@ -143,6 +149,15 @@ function cal_red!(expr::JuMP.AffExpr, tm::TimesModel, coef::GNum,
            prc_actflo = gparam(tm, "PRC_ACTFLO"), act_flo = gparam(tm, "ACT_FLO"),
            rtp_ffcx = gparam(tm, "RTP_FFCX"), rtp_ffcs = gparam_opt(tm.data, "RTP_FFCS", 5), prc_vint = gset(tm, "PRC_VINT"))
     end
+end
+
+# `cal_red!` with the context `x` as a typed argument (a function barrier, as for `combal_context`:
+# Julia compiles this method for the context's concrete type; Phase 2, change 3), after the outer
+# method's checks. GAMS: cal_red.red L15-56, v4.9.7.
+function cal_red!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, coef::GNum,
+                  r::String, v::String, t::String, p::String, c::String, ts::String,
+                  mode::AbstractString, at::Union{Nothing,AbstractString})
+    vnt = mode == "T" ? t : v
     shp(cg, cc) = (mode == "T" ? GNum(1.0) :
                    1 + (mode == "V" ? gv(x.rtp_ffcx, (r, v, t, p, cg, cc)) : gif(gv(x.rtp_ffcx, (r, v, t, p, cg, cc)), (r, p) in x.prc_vint))) *
                   (1 + gv(x.rtp_ffcs, (r, vnt, p, cg, cc)))
