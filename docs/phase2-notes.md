@@ -219,9 +219,19 @@ pool with the other model's run beside it; GAMS as in the table above):
 | Together | 141 / 34.4, about 4.1 times | 34 / 14.2, about 2.4 times |
 | Whole builds | 144 to 152 s, 4.2 to 4.4 times | about 39 s, 2.7 to 2.8 times |
 
-Both are inside the 5x target on this path, which starts from GAMS's input
-dump and is not `run_model`'s. Still to measure: the other open models
-(p2-q2: the target holds for every one), and the path from DD files.
+The other open models of the core tier, the same measure (OTUS9r two
+repeats, the others three; `reduce_off`):
+
+| | Rows | TIMES.jl, three stages | GAMS | Ratio | Generation alone |
+| --- | --- | --- | --- | --- | --- |
+| OTUS9r-reference | 2,174,010 | 253 s (whole builds 257 and 269 s) | 59.8 s | about 4.2 | 3.1 |
+| OTNYC-s1_nyc_ref | 504,698 | about 39 s | 10.9 s | about 3.5 | 2.8 |
+| TIMES_Demo-demo12 | 8,695 | 0.4 s | 0.17 s | about 2.4 (GAMS on a 16 ms clock) | 1.2 |
+
+All five are inside the 5x target on this path, which starts from GAMS's
+input dump and is not `run_model`'s: OTCGEN and OTUS9r with little margin.
+Still to measure: the path from DD files, the REDUCE-on variants and the
+milestone-tier scenarios.
 On OTCGEN preprocessing (5.7 times) and the coefficients (7.3 times) are
 now the stages furthest from GAMS; neither has had a speed change of its
 own (P2-2).
