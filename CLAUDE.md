@@ -151,8 +151,12 @@ Any mismatch blocks the merge. Justified differences go in
   load) and the RAM of its last peak is free; there is no limit on the number
   of runs. Timing runs follow the same rule. `make_reference.py` and the cuOpt
   nightly task enforce it (`reference/python/runlimits.py`); the Julia scripts
-  set HiGHS `threads` from `TIMESJL_THREADS` (default 12) and are seen only
-  through the measured load until they join the pool. Any other script
+  join it when started through `reference/python/pool_run.py`, which
+  reserves the class, passes it as `TIMESJL_THREADS` and keeps 1 thread once
+  the script's last solve is over (a HiGHS run holds its class until then;
+  James, 27 Nov 2026, #207 d9); started without it, they set HiGHS `threads`
+  from `TIMESJL_THREADS` (default 12) and are seen only through the measured
+  load. Any other script
   started on that machine keeps to the same rule. Compare timings only
   between runs made under the same rule and class.
 
