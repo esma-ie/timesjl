@@ -86,10 +86,10 @@ function eq_ptrans!(tm::TimesModel, d::NamedTuple)
     for (r, v, t, p) in rtp_vintyr
         ((v,) in modlyear && (t,) in tx) || continue
         (r, p) in rp_std || continue
-        for (_, _, cg1, cg2) in get(ffunc_of_rp, (r, p), NTuple{4,String}[])
-            ptran = get(ptran_of, (r, v, p, cg1, cg2), NTuple{7,String}[])
+        for (_, _, cg1, cg2) in get(ffunc_of_rp, (r, p), NO4)
+            ptran = get(ptran_of, (r, v, p, cg1, cg2), NO7)
             isempty(ptran) && continue
-            for (_, _, s) in get(s1_of_rp, (r, p), NTuple{3,String}[])
+            for (_, _, s) in get(s1_of_rp, (r, p), NO3)
                 off(r, t, s) && continue
                 # SUM((RPC(R,P,C),RS_TREE(R,S,TS))$COEF_PTRAN(R,V,P,COM_GRP,C,CG,TS),1) > 0
                 any(k -> (r, p, k[5]) in rpc && (r, s, k[7]) in rs_tree, ptran) || continue
@@ -98,8 +98,8 @@ function eq_ptrans!(tm::TimesModel, d::NamedTuple)
                 for sow in sw_rows(tm, t)   # %SWT% (L19)
                     set_sow!(tm, sow)
                     lhs = JuMP.AffExpr(0.0)
-                    for (_, _, c) in get(gmap_of_rcg, (r, cg2), NTuple{3,String}[])
-                        for (_, _, ts) in get(tree_of_rs, (r, s), NTuple{3,String}[])
+                    for (_, _, c) in get(gmap_of_rcg, (r, cg2), NO3)
+                        for (_, _, ts) in get(tree_of_rs, (r, s), NO3)
                             (r, t, p, c, ts) in rtpcs_varf || continue
                             k = gv(rs_fr, (r, s, ts)) * (1 + gv(rtcs_fr, (r, t, c, s, ts)))
                             cal_nored!(lhs, tm, k, r, v, t, p, c, ts)
@@ -113,7 +113,7 @@ function eq_ptrans!(tm::TimesModel, d::NamedTuple)
                     actf = 1 + gif(af - gif(1, haskey(act_flo, (r, v, p, cg2, s))), (r, p, cg1) in prc_cg)
                     outer = shp1 * actf
                     rhs = JuMP.AffExpr(0.0)
-                    for (_, _, _, c, ts) in get(varf_of_rtp, (r, t, p), NTuple{5,String}[])
+                    for (_, _, _, c, ts) in get(varf_of_rtp, (r, t, p), NO5)
                         (r, s, ts) in rs_tree || continue
                         haskey(coef_ptran, (r, v, p, cg1, c, cg2, ts)) || continue
                         k = gv(coef_ptran, (r, v, p, cg1, c, cg2, ts)) * gv(rs_fr, (r, s, ts)) *

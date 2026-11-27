@@ -68,7 +68,7 @@ function eq_actflo!(tm::TimesModel, d::NamedTuple)
     for (r, v, t, p) in rtp_vintyr
         ((v,) in vx && (t,) in tx) || continue
         (r, p) in prc_act || continue
-        for (_, _, s) in get(ts_of_rp, (r, p), NTuple{3,String}[])
+        for (_, _, s) in get(ts_of_rp, (r, p), NO3)
             tm.reduce && (r, t, p, s) in rtps_off && continue
 
             for sow in sw_rows(tm, t)   # %SWT% (L15)
@@ -79,14 +79,14 @@ function eq_actflo!(tm::TimesModel, d::NamedTuple)
                 end
 
                 rhs = JuMP.AffExpr(0.0)
-                for (_, _, c) in get(pg_of_rp, (r, p), NTuple{3,String}[])
+                for (_, _, c) in get(pg_of_rp, (r, p), NO3)
                     (r, t, p, c, s) in rtpcs_varf || continue
                     coef = 1.0 / nonzero(prc_actflo, (r, v, p, c))
                     if (r, p) in rp_flo
                         addterm!(rhs, GNum(coef), tm, "VAR_FLO", r, v, t, p, c, s)           # L26
                     end
                     if (r, p) in rp_ire
-                        for (_, _, _, ie) in get(ire_of_rpc, (r, p, c), NTuple{4,String}[])
+                        for (_, _, _, ie) in get(ire_of_rpc, (r, p, c), NO4)
                             (r, p, ie) in rp_aire || continue
                             addterm!(rhs, GNum(coef), tm, "VAR_IRE", r, v, t, p, c, s, ie)   # L28
                         end

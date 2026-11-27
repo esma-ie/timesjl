@@ -192,7 +192,7 @@ function eq_peak!(tm::TimesModel, d::NamedTuple)
                 # Capacity contribution (L22-25).
                 for (_, p, _) in get(pkc_of_rc, (r, c), no3)
                     base = gv(g_yrfr, (r, s)) * gv(prc_capact, (r, p))
-                    for v in get(v_of_rtp, (r, t, p), String[])
+                    for v in get(v_of_rtp, (r, t, p), NO_LABELS)
                         k = out * (base * (gv(coef_vnt, (r, t, p, v)) * gv(prc_actflo, (r, v, p, c)) *
                                            gv(ncap_pkcnt, (r, v, p, s))))
                         (v,) in milestonyr && addterm!(lhs, k, tm, "VAR_NCAP", r, v, p; at=v)   # %VARV%_NCAP(R,V,P %SWS%) (L24)
@@ -248,7 +248,7 @@ function eq_peak!(tm::TimesModel, d::NamedTuple)
                 end
                 # Elastic demand (L85): SUM(RCJ(R,C,J,BDNEQ(BD))$COM_ELAST(R,T,C,S,BD),-BDSIG(BD)*VAR_ELAST(R,T,C,S,J,BD))
                 if ted
-                    for (_, _, j, b) in get(rcj_of, (r, c), NTuple{4,String}[])
+                    for (_, _, j, b) in get(rcj_of, (r, c), NO4)
                         (b in bdneq && !iszero(gv(com_elast, (r, t, c, s, b)))) || continue
                         addterm!(rhs, flx * GNum(-bdsig(b)), tm, "VAR_ELAST", r, t, c, s, j, b)
                     end

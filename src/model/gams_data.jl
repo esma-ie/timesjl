@@ -304,6 +304,20 @@ end
 
 const NO_MEMBERS = Tuple{}[]
 
+# Shared empty lists: the default of `get(index, key, default)` where a row or term loop asks an
+# incidence map (`indexby`) for the members under a key. A literal `NTuple{N,String}[]` there makes a
+# new empty vector on every call, whether the key is found or not (Phase 2, change 5). They are only
+# iterated, never changed.
+const NO1 = NTuple{1,String}[]
+const NO2 = NTuple{2,String}[]
+const NO3 = NTuple{3,String}[]
+const NO4 = NTuple{4,String}[]
+const NO5 = NTuple{5,String}[]
+const NO6 = NTuple{6,String}[]
+const NO7 = NTuple{7,String}[]
+const NO8 = NTuple{8,String}[]
+const NO_LABELS = String[]
+
 """
     DumpData
 

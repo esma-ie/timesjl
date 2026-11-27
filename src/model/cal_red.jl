@@ -64,8 +64,8 @@ function cal_nored!(expr::JuMP.AffExpr, tm::TimesModel, coef::GNum,
     rtp_ffcx = gparam(tm, "RTP_FFCX")
     rtp_ffcs = gparam_opt(tm.data, "RTP_FFCS", 5)
     prc_vint = gset(tm, "PRC_VINT")
-    for (_, _, _, cg3, com2) in get(fs_emit_by_rpc, (r, p, c), NTuple{5,String}[])
-        for (_, _, all_ts) in get(rs_fr_by_rs, (r, ts), NTuple{3,String}[])
+    for (_, _, _, cg3, com2) in get(fs_emit_by_rpc, (r, p, c), NO5)
+        for (_, _, all_ts) in get(rs_fr_by_rs, (r, ts), NO3)
             # $(RS_FR(R,%3,ALL_TS)*RTPCS_VARF(R,%5,%4,COM2,ALL_TS)): RS_FR present, VARF member.
             (r, t, p, com2, all_ts) in rtpcs_varf || continue
             shp3 = GNum(1.0)
@@ -163,7 +163,7 @@ function cal_red!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, coef::GNum,
                   (1 + gv(x.rtp_ffcs, (r, vnt, p, cg, cc)))
     # SUM((RPC_ACT(R,P,%2),PRC_TS2(R,P,S2))$RS_FR(R,tsx,S2), VAR_ACT(S2) * af * RS_FR(R,tsx,S2)*(1+RTCS_FR(R,T,%2,tsx,S2)))
     function ffunc!(w::GNum, af::GNum, tsx::String)
-        for com in get(x.act_of, (r, p), String[]), (_, _, s2) in get(x.ts2_of, (r, p), NTuple{3,String}[])
+        for com in get(x.act_of, (r, p), NO_LABELS), (_, _, s2) in get(x.ts2_of, (r, p), NO3)
             haskey(x.rs_fr.values, (r, tsx, s2)) || continue
             k = w * (af * gv(x.rs_fr, (r, tsx, s2)) * (1 + gv(x.rtcs_fr, (r, t, com, tsx, s2))))
             addterm!(expr, k, tm, "VAR_ACT", r, vnt, t, p, s2; at)
@@ -175,8 +175,8 @@ function cal_red!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, coef::GNum,
             addterm!(expr, coef, tm, "VAR_FLO", r, vnt, t, p, c, ts; at)
         else
             # Emission flow = source flow (itself perhaps substituted) * emission factor (L29-42).
-            for (_, _, _, cg1, com2) in get(x.fs_emit_of, (r, p, c), NTuple{5,String}[])
-                for (_, _, all_ts) in get(x.rs_fr_of, (r, ts), NTuple{3,String}[])
+            for (_, _, _, cg1, com2) in get(x.fs_emit_of, (r, p, c), NO5)
+                for (_, _, all_ts) in get(x.rs_fr_of, (r, ts), NO3)
                     (r, t, p, com2, all_ts) in x.rtpcs_varf || continue
                     w = coef * (gv(x.coef_ptran, (r, vnt, p, cg1, com2, c, all_ts)) * shp(cg1, c) *
                                 gv(x.rs_fr, (r, ts, all_ts)) * (1 + gv(x.rtcs_fr, (r, t, com2, ts, all_ts))))

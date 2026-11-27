@@ -287,7 +287,7 @@ function eq_capact!(tm::TimesModel, d::NamedTuple, eqtype::AbstractString, bd::A
     for (r, v, t, p) in rtp_vintyr
         # The domain RTP_VINTYR(R,V,T,P) is controlled by V (MODLYEAR) and T (MILESTONYR).
         ((v,) in modlyear && (t,) in tx) || continue
-        for (_, _, _, s, _) in get(s_of_rtpbd, (r, t, p, bd), NTuple{5,String}[])
+        for (_, _, _, s, _) in get(s_of_rtpbd, (r, t, p, bd), NO5)
             (r, p, s, bd) in rps_caflac && continue
             stg = (r, p) in rp_stg
 
@@ -296,14 +296,14 @@ function eq_capact!(tm::TimesModel, d::NamedTuple, eqtype::AbstractString, bd::A
                 lhs = JuMP.AffExpr(0.0)
                 if !stg
                     # L25: activity in the timeslices at or below S.
-                    for (_, _, ts) in get(ts_of_rp, (r, p), NTuple{3,String}[])
+                    for (_, _, ts) in get(ts_of_rp, (r, p), NO3)
                         (r, s, ts) in ts_map || continue
                         addterm!(lhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, ts)
                     end
                 else
                     # L28: storage level times the storage cycles of TS within S.
                     cyc = gexp(gv(prc_sc, (r, p)))
-                    for (_, _, ts) in get(ts_of_rp, (r, p), NTuple{3,String}[])
+                    for (_, _, ts) in get(ts_of_rp, (r, p), NO3)
                         haskey(rs_fr, (r, ts, s)) || continue
                         k = gv(rs_fr, (r, ts, s)) * cyc / gv(rs_stgprd, (r, ts))
                         addterm!(lhs, k, tm, "VAR_ACT", r, v, t, p, ts)
@@ -316,7 +316,7 @@ function eq_capact!(tm::TimesModel, d::NamedTuple, eqtype::AbstractString, bd::A
                 yrfr = gpower(gv(g_yrfr, (r, s)), stg ? 0 : 1)
                 rhs = JuMP.AffExpr(0.0)
                 if !((r, p) in prc_vint)
-                    for k in get(k_of_rtp, (r, t, p), String[])
+                    for k in get(k_of_rtp, (r, t, p), NO_LABELS)
                         c = gv(coef_cpt, (r, k, t, p)) * gv(coef_af, (r, k, t, p, s, bd)) * capact * yrfr
                         add_capacity!(rhs, r, k, t, p, c)
                     end
