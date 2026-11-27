@@ -20,8 +20,9 @@
 # How the samples are counted. A sample is one stack. "self" counts it for the innermost Julia frame
 # (time inside C code, such as the garbage collector or memory allocation, goes to the Julia function
 # that called it); "total" counts it once for every function (or line) on the stack. The shares
-# (garbage collection, names, string labels, ...) are of all samples, by what is on the stack; a
-# sample can be in several (garbage collection inside a name being built counts in both).
+# (memory, names, string labels, ...) are of all samples, by what is on the stack; a sample can be in
+# several (an allocation inside a name being built counts in both). The memory share is the allocator
+# and the collector together; the seconds of collection alone are in the build's totals (@timed).
 
 include(joinpath(@__DIR__, "p2_timing.jl"))       # generate_by_statement!, p2_model, p2_fixture_model, lp_record, lp_fingerprint
 import Profile, Printf
@@ -66,7 +67,8 @@ p2_func(f) = string(f.func)
 
 "What a sample is spent on, by the frames on its stack (it can be several)."
 const P2_SHARES = [
-    ("garbage collection", f -> f.from_c && occursin(r"gc_collect|gc_mark|gc_sweep|jl_gc_|gc_alloc"i, p2_func(f))),
+    # the collector and the allocator together (the time in collection alone is the build's "garbage collection" seconds)
+    ("memory: allocation and garbage collection", f -> f.from_c && occursin(r"gc_collect|gc_mark|gc_sweep|jl_gc_|gc_alloc"i, p2_func(f))),
     ("compilation (not warm)", f -> occursin(r"typeinf|jl_compile|jl_type_infer|emit_function|_jl_compile|codegen"i, p2_func(f))),
     ("dynamic dispatch (jl_apply_generic)", f -> f.from_c && occursin("apply_generic", p2_func(f))),
     ("row and column names (colname, set_name, name strings)", f -> p2_func(f) in ("colname", "set_name") ||
