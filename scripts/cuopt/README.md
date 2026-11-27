@@ -170,8 +170,8 @@ powershell -ExecutionPolicy Bypass -File scripts\cuopt\wsl2\setup_wsl2.ps1 -Regi
    in `~/git/TIMESjl`, a small LP on the GPU (objective 205) and demo12.
 3. With `-RegisterNightly`, `register_nightly.ps1` registers the Windows
    scheduled task "TIMESjl cuOpt nightly (WSL2)", every night at 01:17
-   (`-NightlyAt`). It runs `nightly_task.py`, which takes one of the
-   workstation's four run slots (`reference/python/runlimits.py`, as
+   (`-NightlyAt`). It runs `nightly_task.py`, which reserves 12 threads in the
+   workstation's run pool (`reference/python/runlimits.py`, as
    `make_reference.py` does) and runs `nightly_local.sh` in WSL. The task wakes
    the computer, runs while James is logged on, and catches up after a
    missed night. `-Until <date>` sets the last night it may start. James
@@ -194,8 +194,8 @@ Notes for the workstation:
 - **Keep data on the Linux side.** `/mnt/c` is slow; the nightly copies
   reference runs with `rsync` before solving them.
 - **Run limits.** A cuOpt run uses at most 12 CPU threads. The scheduled
-  nightly holds a Windows run slot; a run started by hand in WSL does not, so
-  count it yourself.
+  nightly reserves 12 threads in the Windows run pool; a run started by hand
+  in WSL does not, so the pool sees it only through the measured load.
 - **Timings from WSL are indicative.** Compare them only with each other.
 - **The Quadro RTX 4000 has 8 GB.** PDLP needs little memory; barrier's
   factorisation is the part that may not fit on the largest models.

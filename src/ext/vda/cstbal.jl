@@ -156,6 +156,12 @@ The GEN sums count a term once for each CG of GR_ALGMAP(R,CG,COM) and each NRG_G
 the GAMS sums are written. The `\$OBJ_COMBAL(R,T,...)` conditions read period T, the weights the
 periods TT. Returns the number of rows.
 
+The SOW tags (sow_tags.jl): the row is `EQ_OBJBAL(RDCUR(R,CUR)%SWX%)` (L403),
+with no %EQ% and no %SWTX%: the name stays, the last index is `swx`, one row
+per SOW. The left-hand side is `%VAR%_OBJ(R,'OBJBAL',CUR %SOW%)` (L405); under
+STAGES, L407-408 set %SOW% to `,WW` and sum the right-hand side over
+SW_TSW(SOW,T,WW) (%SWSW%), so its terms are read `at = t`.
+
 GAMS: powerflo.vda L398-434, equ_ext.vda L100, mod_ext.vda L42-43, v4.9.7.
 """
 function eq_objbal!(tm::TimesModel)
@@ -189,54 +195,57 @@ function eq_objbal!(tm::TimesModel)
     one = GNum(1.0)
     n = 0
     for (r, cur) in gset(tm, "RDCUR").keys
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        addterm!(lhs, one, tm, "VAR_OBJ", r, "OBJBAL", cur)                                  # L405
-        for (_, t, c, s) in get(comprd_of_r, (r,), no4)                                       # L410
-            addterm!(rhs, wsum(r, t, c, s, "PRD", cur), tm, "VAR_COMPRD", r, t, c, s)
-        end
-        if grid
-            for (_, t, c) in get(grid_of_r, (r,), NTuple{3,String}[]), (_, _, _, s) in get(varc_of, (r, t, c), no4)
-                if has(r, t, c, s, "GEN", cur)                                                 # L411-416
-                    w = wsum(r, t, c, s, "GEN", cur)
-                    for (rr, cg, com) in x.algmap                                              # SUM(GR_ALGMAP(R,CG,COM)$GR_ALLMAP(R,C,COM), ...)
-                        (rr == r && (r, c, com) in x.allmap) || continue
-                        addterm!(rhs, w, tm, "VAR_GRIDIO", r, t, com, c, s, "OUT")
-                        (r, com, com) in x.algmap && addterm!(rhs, w, tm, "VAR_GRIDIO", r, t, com, c, s, "IN")
-                    end
-                    for (_, p, com, item) in get(x.prcmap_of_r, (r,), no4)
-                        (r, p) in rp_std || continue
-                        k0 = gv(x.genmap, (r, p, item)) * gv(x.genfr, (r, t, c, item))
-                        for (rr, ng, cc) in x.endc
-                            (rr == r && cc == com) || continue                                # GR_ENDC(R,NRG_GRID,COM)
-                            for (_, v, _, _) in get(vint_of, (r, t, p), no4), (_, _, _, _, ts) in get(varf_of, (r, t, p, com), NTuple{5,String}[])
-                                haskey(rs_fr, (r, s, ts)) || continue
-                                cal_nored!(rhs, tm, k0 * gv(rs_fr, (r, s, ts)) * w, r, v, t, p, com, ts)
+        for sow in sow_rows(tm)   # EQ_OBJBAL(RDCUR(R,CUR)%SWX%): every SOW (powerflo.vda L403)
+            set_sow!(tm, sow)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            addterm!(lhs, one, tm, "VAR_OBJ", r, "OBJBAL", cur)                                  # L405
+            for (_, t, c, s) in get(comprd_of_r, (r,), no4)                                       # L410
+                addterm!(rhs, wsum(r, t, c, s, "PRD", cur), tm, "VAR_COMPRD", r, t, c, s; at=t)
+            end
+            if grid
+                for (_, t, c) in get(grid_of_r, (r,), NTuple{3,String}[]), (_, _, _, s) in get(varc_of, (r, t, c), no4)
+                    if has(r, t, c, s, "GEN", cur)                                                 # L411-416
+                        w = wsum(r, t, c, s, "GEN", cur)
+                        for (rr, cg, com) in x.algmap                                              # SUM(GR_ALGMAP(R,CG,COM)$GR_ALLMAP(R,C,COM), ...)
+                            (rr == r && (r, c, com) in x.allmap) || continue
+                            addterm!(rhs, w, tm, "VAR_GRIDIO", r, t, com, c, s, "OUT"; at=t)
+                            (r, com, com) in x.algmap && addterm!(rhs, w, tm, "VAR_GRIDIO", r, t, com, c, s, "IN"; at=t)
+                        end
+                        for (_, p, com, item) in get(x.prcmap_of_r, (r,), no4)
+                            (r, p) in rp_std || continue
+                            k0 = gv(x.genmap, (r, p, item)) * gv(x.genfr, (r, t, c, item))
+                            for (rr, ng, cc) in x.endc
+                                (rr == r && cc == com) || continue                                # GR_ENDC(R,NRG_GRID,COM)
+                                for (_, v, _, _) in get(vint_of, (r, t, p), no4), (_, _, _, _, ts) in get(varf_of, (r, t, p, com), NTuple{5,String}[])
+                                    haskey(rs_fr, (r, s, ts)) || continue
+                                    cal_nored!(rhs, tm, k0 * gv(rs_fr, (r, s, ts)) * w, r, v, t, p, com, ts; at=t)
+                                end
                             end
                         end
                     end
-                end
-                if has(r, t, c, s, "NTX", cur)                                                 # L419-421
-                    w = wsum(r, t, c, s, "NTX", cur)
-                    for (_, _, com) in get(x.dem_by_12, (r, c), NTuple{3,String}[])
-                        (r, "NRG", com) in x.algmap && addterm!(rhs, w, tm, "VAR_GRIDIO", r, t, com, c, s, "IN")
-                        addterm!(rhs, -w, tm, "VAR_GRIDIO", r, t, com, c, s, "OUT")
+                    if has(r, t, c, s, "NTX", cur)                                                 # L419-421
+                        w = wsum(r, t, c, s, "NTX", cur)
+                        for (_, _, com) in get(x.dem_by_12, (r, c), NTuple{3,String}[])
+                            (r, "NRG", com) in x.algmap && addterm!(rhs, w, tm, "VAR_GRIDIO", r, t, com, c, s, "IN"; at=t)
+                            addterm!(rhs, -w, tm, "VAR_GRIDIO", r, t, com, c, s, "OUT"; at=t)
+                        end
+                    end
+                    if has(r, t, c, s, "NPG", cur)                                                 # L424-425
+                        addterm!(rhs, wsum(r, t, c, s, "NPG", cur; f=v -> gmax(GZERO, v)), tm, "VAR_GRIDIO", r, t, c, c, s, "OUT"; at=t)
                     end
                 end
-                if has(r, t, c, s, "NPG", cur)                                                 # L424-425
-                    addterm!(rhs, wsum(r, t, c, s, "NPG", cur; f=v -> gmax(GZERO, v)), tm, "VAR_GRIDIO", r, t, c, c, s, "OUT")
+            end
+            for (_, t, p, c, s) in get(varf_of_r, (r,), NTuple{5,String}[])                       # L428-431
+                for (_, _, _, ie) in get(ire_of, (r, p, c), no4)
+                    has(r, t, c, s, ie, cur) || continue
+                    w = wsum(r, t, c, s, ie, cur)
+                    for (_, v, _, _) in get(vint_of, (r, t, p), no4)
+                        gr_trade!(rhs, tm, w, r, v, t, p, c, s, ie; at=t)
+                    end
                 end
             end
+            gconstraint!(tm, "EQ_OBJBAL", (r, cur, swx(tm)), "E", lhs, rhs) === nothing || (n += 1)
         end
-        for (_, t, p, c, s) in get(varf_of_r, (r,), NTuple{5,String}[])                       # L428-431
-            for (_, _, _, ie) in get(ire_of, (r, p, c), no4)
-                has(r, t, c, s, ie, cur) || continue
-                w = wsum(r, t, c, s, ie, cur)
-                for (_, v, _, _) in get(vint_of, (r, t, p), no4)
-                    gr_trade!(rhs, tm, w, r, v, t, p, c, s, ie)
-                end
-            end
-        end
-        gconstraint!(tm, "EQ_OBJBAL", (r, cur, "1"), "E", lhs, rhs) === nothing || (n += 1)
     end
     return n
 end

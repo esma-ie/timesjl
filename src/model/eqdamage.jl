@@ -291,11 +291,14 @@ end
 
 "bnd_dam!(bt, tm): the VAR_DAM upper bounds of eqdamage.mod L138-142 (`dam_ub`), for the columns the equations created."
 function bnd_dam!(bt, tm)
-    (damage_on(tm) && haskey(tm.vars.families, "VAR_DAM")) || return bt
+    # %VAR%_DAM.UP(RTC(R,T,C),BD,J %SOW%)$(..$RTDAM(RTC%SWX%)) (eqdamage.mod L141-146): VAS_DAM(..,SOW) in a
+    # stochastic run, the bound of (R,T,C,BD,J) for each SOW (the RTDAM test per SOW is change 74)
+    var = vartag(tm, "VAR_DAM")
+    (damage_on(tm) && haskey(tm.vars.families, var)) || return bt
     ub = dam_ub(tm)
-    recs = get!(() -> Dict{Tuple,Tuple{Float64,Float64}}(), bt.recs, "VAR_DAM")
-    for k in tm.vars.families["VAR_DAM"].keys
-        recs[k] = (0.0, get(ub, k, Inf))
+    recs = get!(() -> Dict{Tuple,Tuple{Float64,Float64}}(), bt.recs, var)
+    for k in tm.vars.families[var].keys
+        recs[k] = (0.0, get(ub, tm.tags.stochastic ? k[1:5] : k, Inf))
     end
     return bt
 end
@@ -325,6 +328,16 @@ EQ_DAMAGE and EQ_OBJDAM (eqmain.mod L262; mod_equa.mod L210 with %DAMAGE% not NO
 `VAR_DAM.UP` in EQ_OBJDAM is the bound's value, a constant (`dam_ub`; INF where no bound is set, which
 GAMS would refuse, so it raises). ORD is the position in J. Returns the number of rows.
 
+The SOW tags (sow_tags.jl): the rows are `%EQ%_DAMAGE(RTC(%R_T%,C) %SOW%)`
+where RTDAM(RTC%SWX%) holds (L79; RTDAM is set at L69 for `%SWX%` with
+`%SWTX%YES+WWDAM(C)`) and `%EQ%_OBJDAM(RDCUR(R,CUR)%SOW%)` (L93), one per SOW.
+EQ_DAMAGE reads `%VAR%_DAM`, `%VAR%_COMNET` and `%VAR%_COMPRD(... %SOW%)`
+(L81-86). In EQ_OBJDAM the damage variables are `%VAR%_DAM(... %SWD%)`:
+nothing in a deterministic run, and under STAGES `,WW` inside the sum of L95
+over SW_TSW(SOW,T,WW) (`at = t` here); the other branch of that sum (WWDAM),
+S_DAM_COST (L107) and VAR_DAM.UP per SOW are change 74. The line numbers of
+this note are those of eqdamage.mod at d9a6a25.
+
 GAMS: eqdamage.mod L67-94, v4.9.7.
 """
 function eq_damage!(tm::TimesModel)
@@ -346,57 +359,64 @@ function eq_damage!(tm::TimesModel)
     # EQ_DAMAGE
     for (r, t, c) in rtc.keys
         (t,) in tx || continue
-        ((r, t, c, "1") in rtdam && any(k -> k[1] == r && haskey(cost.values, (r, t, c, k[2])), rdcur.keys)) || continue
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        for bd in ("LO", "UP", "FX"), (_, _, jj, _) in get(num_of, (r, c, bd), NTuple{4,String}[])
-            for j in jl
-                ordj[j] <= ordj[jj] <= 100 || continue                   # JSUBJ(JJ,J)
-                addterm!(lhs, GNum(1.0), tm, "VAR_DAM", r, t, c, bd, j)
+        any(k -> k[1] == r && haskey(cost.values, (r, t, c, k[2])), rdcur.keys) || continue
+        for sow in sow_rows(tm)   # %SOW% (L79)
+            set_sow!(tm, sow)
+            (r, t, c, swx(tm)) in rtdam || continue                          # RTDAM(RTC%SWX%) (L79)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            for bd in ("LO", "UP", "FX"), (_, _, jj, _) in get(num_of, (r, c, bd), NTuple{4,String}[])
+                for j in jl
+                    ordj[j] <= ordj[jj] <= 100 || continue                   # JSUBJ(JJ,J)
+                    addterm!(lhs, GNum(1.0), tm, "VAR_DAM", r, t, c, bd, j)
+                end
             end
-        end
-        if !iszero(gv(step, (r, c, "FX"))) && (r, c) in rc
-            en = haskey(elast.values, (r, c, "N"))
-            for (_, _, s) in get(comts_of, (r, c), NTuple{3,String}[])
-                addterm!(rhs, gv(coef, (r, t, c, s)), tm, en ? "VAR_COMPRD" : "VAR_COMNET", r, t, c, s)
+            if !iszero(gv(step, (r, c, "FX"))) && (r, c) in rc
+                en = haskey(elast.values, (r, c, "N"))
+                for (_, _, s) in get(comts_of, (r, c), NTuple{3,String}[])
+                    addterm!(rhs, gv(coef, (r, t, c, s)), tm, en ? "VAR_COMPRD" : "VAR_COMNET", r, t, c, s)
+                end
             end
+            gconstraint!(tm, eqtag(tm, "EQ_DAMAGE"), sowkey(tm, (r, t, c)), "E", lhs, rhs) === nothing || (n += 1)
         end
-        gconstraint!(tm, "EQ_DAMAGE", (r, t, c), "E", lhs, rhs) === nothing || (n += 1)
     end
     # EQ_OBJDAM
     for (r, cur) in rdcur.keys
-        lhs = JuMP.AffExpr(0.0)
-        for (rr, t, c) in rtc.keys
-            rr == r || continue
-            (!iszero(gv(step, (r, c, "FX"))) && haskey(cost.values, (r, t, c, cur))) || continue
-            w = gv(obj_pvt, (r, t, cur)) * gv(cost, (r, t, c, cur))
-            en = gv(elast, (r, c, "N"))
-            q = gv(tqty, (r, t, c))
-            if !iszero(q)
-                el = gv(elast, (r, c, "LO"))
-                for (_, _, jj, _) in get(num_of, (r, c, "LO"), NTuple{4,String}[]), j in jl
-                    ordj[j] <= ordj[jj] <= 100 || continue
-                    base = q - gv(size, (r, t, c, "FX")) / 2 - gv(size, (r, t, c, "LO")) * (ordj[jj] - ordj[j] + 0.5)
-                    k = gpow(base, el) / gpow(q, el) + en
-                    addterm!(lhs, k * w, tm, "VAR_DAM", r, t, c, "LO", j)
-                    if !iszero(en)
-                        u = get(ub, (r, t, c, "LO", j), Inf)
-                        isfinite(u) || throw(DomainError((r, t, c, "LO", j), "eqdamage.mod L82: VAR_DAM.UP is INF in EQ_OBJDAM"))
-                        addconst!(lhs, en * GNum(u) * k * w)
+        for sow in sow_rows(tm)   # %SOW% (L93)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            for (rr, t, c) in rtc.keys
+                rr == r || continue
+                (!iszero(gv(step, (r, c, "FX"))) && haskey(cost.values, (r, t, c, cur))) || continue
+                w = gv(obj_pvt, (r, t, cur)) * gv(cost, (r, t, c, cur))
+                en = gv(elast, (r, c, "N"))
+                q = gv(tqty, (r, t, c))
+                if !iszero(q)
+                    el = gv(elast, (r, c, "LO"))
+                    for (_, _, jj, _) in get(num_of, (r, c, "LO"), NTuple{4,String}[]), j in jl
+                        ordj[j] <= ordj[jj] <= 100 || continue
+                        base = q - gv(size, (r, t, c, "FX")) / 2 - gv(size, (r, t, c, "LO")) * (ordj[jj] - ordj[j] + 0.5)
+                        k = gpow(base, el) / gpow(q, el) + en
+                        addterm!(lhs, k * w, tm, "VAR_DAM", r, t, c, "LO", j; at=t)
+                        if !iszero(en)
+                            u = get(ub, (r, t, c, "LO", j), Inf)
+                            isfinite(u) || throw(DomainError((r, t, c, "LO", j), "eqdamage.mod L82: VAR_DAM.UP is INF in EQ_OBJDAM"))
+                            addconst!(lhs, en * GNum(u) * k * w)
+                        end
+                    end
+                end
+                addterm!(lhs, (1 + en) * w, tm, "VAR_DAM", r, t, c, "FX", "1"; at=t)
+                if !iszero(q)
+                    eu = gv(elast, (r, c, "UP"))
+                    for (_, _, jj, _) in get(num_of, (r, c, "UP"), NTuple{4,String}[]), j in jl
+                        ordj[j] <= ordj[jj] <= 100 || continue
+                        base = q + gv(size, (r, t, c, "FX")) / 2 + gv(size, (r, t, c, "UP")) * (ordj[j] - 0.5)
+                        addterm!(lhs, (gpow(base, eu) / gpow(q, eu) + en) * w, tm, "VAR_DAM", r, t, c, "UP", j; at=t)
                     end
                 end
             end
-            addterm!(lhs, (1 + en) * w, tm, "VAR_DAM", r, t, c, "FX", "1")
-            if !iszero(q)
-                eu = gv(elast, (r, c, "UP"))
-                for (_, _, jj, _) in get(num_of, (r, c, "UP"), NTuple{4,String}[]), j in jl
-                    ordj[j] <= ordj[jj] <= 100 || continue
-                    base = q + gv(size, (r, t, c, "FX")) / 2 + gv(size, (r, t, c, "UP")) * (ordj[j] - 0.5)
-                    addterm!(lhs, (gpow(base, eu) / gpow(q, eu) + en) * w, tm, "VAR_DAM", r, t, c, "UP", j)
-                end
-            end
+            rhs = obj_component_rhs(tm, objective_context(tm), r, cur, "OBJDAM")
+            gconstraint!(tm, eqtag(tm, "EQ_OBJDAM"), sowkey(tm, (r, cur)), "E", lhs, rhs) === nothing || (n += 1)
         end
-        rhs = obj_component_rhs(tm, objective_context(tm), r, cur, "OBJDAM")
-        gconstraint!(tm, "EQ_OBJDAM", (r, cur), "E", lhs, rhs) === nothing || (n += 1)
     end
     return n
 end

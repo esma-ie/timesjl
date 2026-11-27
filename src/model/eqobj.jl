@@ -155,7 +155,7 @@ end
 
 "`(VAR_NCAP(R,V,P)\$MILESTONYR(V) + NCAP_PASTI(R,V,P)\$PASTYEAR(V))` times `k`, into `expr`."
 function add_ncap_or_pasti!(expr, tm, x, k::GNum, r, v, p; pasti::Bool=true)
-    (v,) in x.t && addterm!(expr, k, tm, "VAR_NCAP", r, v, p)
+    (v,) in x.t && addterm!(expr, k, tm, "VAR_NCAP", r, v, p; at=v)
     pasti && (v,) in x.pyr && addconst!(expr, k * gv(x.ncap_pasti, (r, v, p)))
     return expr
 end
@@ -168,6 +168,13 @@ Generate EQ_OBJ and its four components; returns the number of rows.
     EQ_OBJ .. -objZ + SUM(RDCUR(R,CUR),
                 SUM((ITEM,OBV)\$SUM_OBJ(ITEM,OBV), VAR_OBJ(R,OBV,CUR)*SUM_OBJ(ITEM,OBV))) =E= 0;
 
+The SOW tags (sow_tags.jl): each component row is `%EQ%_OBJx(RDCUR(R,CUR)
+%SOW%)`, one per SOW (`sow_rows`, `sowkey`), and reads `%VAR%_OBJ(R,OBV,CUR
+%SOW%)`. EQ_OBJ itself is the deterministic line of eqobj.mod L75 (`\$IFI NOT
+%STAGES%==YES`), with the untagged objZ; under STAGES that line is
+`%EQ%_ROBJ(REG(R)%SOW%)` and L103-123 add EQ_EXPOBJ, EQ_UPDEV, `%EQ%_SOBJ` and
+the stochastic EQ_OBJ: change 74.
+
 GAMS: eqobj.mod L26-28 and L75-98; eqobjinv.mod L280-321; eqobjfix.mod
 L182-225; eqobjvar.mod L14-113; eqobsalv.mod L92-140, v4.9.7.
 """
@@ -178,7 +185,7 @@ function eq_obj!(tm::TimesModel)
     so = sum_obj(tm)
     x = objective_context(tm)
     lhs = JuMP.AffExpr(0.0)
-    addterm!(lhs, GNum(-1.0), tm, "OBJZ")
+    addterm!(lhs, GNum(-1.0), tm, "OBJZ"; tagged=false)   # objZ, no tag (L75)
     bd = [k[1] for k in gset(tm, "BD").keys]
     for (r, cur) in x.rdcur
         for ((_, obv), w) in sort!(collect(so))
@@ -220,6 +227,10 @@ end
           (VAR_NCAP(R,V,P)\$MILESTONYR(V) + OBJ_PASTI(R,V,P,CUR)\$PASTYEAR(V)) / OBJ_DIVIII(R,V,P))
       =E= SUM(OBV,SUM_OBJ('OBJINV',OBV)*VAR_OBJ(R,OBV,CUR));
 
+The SOW tags (sow_tags.jl): the row is `%EQ%_OBJINV(RDCUR(R,CUR) %SOW%)`
+(L280); the investments are `%VART%_NCAP(R,T,P %SWS%)` (L289) and
+`%VARV%_NCAP(R,V,P %SWS%)` (L316), `at` the period of the investment.
+
 GAMS: eqobjinv.mod L280-321, v4.9.7 (ETL L292 and STAGES L296-299 refused).
 """
 function eq_objinv!(tm::TimesModel)
@@ -227,40 +238,43 @@ function eq_objinv!(tm::TimesModel)
     capjd = !isempty(objective_switches(tm).ctst)
     n = 0
     for (r, cur) in x.rdcur
-        lhs = JuMP.AffExpr(0.0)
-        # %CAPJD% SUM(INVSPRED(K_EOH,JOT,<third>,K), OBJ_DISC(R,K,CUR)*(ICOST+ITAX-ISUB)),
-        # <third> being Y in the first sum and LL (no filter) in the PASTI sum.
-        function spread(k_eoh, jot, p, third)
-            s = GZERO
-            for (_, _, yy, k) in get(x.invspred_of, (k_eoh, jot), NO4)
-                (k,) in x.k && (third === nothing || (yy,) in third) || continue
-                s = s + gv(x.obj_disc, (r, k, cur)) *
-                        (obmac(x.ob_icost, r, k, p, cur) + obmac(x.ob_itax, r, k, p, cur) - obmac(x.ob_isub, r, k, p, cur))
+        for sow in sow_rows(tm)   # %SOW% (eqobjinv.mod L280)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            # %CAPJD% SUM(INVSPRED(K_EOH,JOT,<third>,K), OBJ_DISC(R,K,CUR)*(ICOST+ITAX-ISUB)),
+            # <third> being Y in the first sum and LL (no filter) in the PASTI sum.
+            function spread(k_eoh, jot, p, third)
+                s = GZERO
+                for (_, _, yy, k) in get(x.invspred_of, (k_eoh, jot), NO4)
+                    (k,) in x.k && (third === nothing || (yy,) in third) || continue
+                    s = s + gv(x.obj_disc, (r, k, cur)) *
+                            (obmac(x.ob_icost, r, k, p, cur) + obmac(x.ob_itax, r, k, p, cur) - obmac(x.ob_isub, r, k, p, cur))
+                end
+                return capjd ? gv(x.obj_jd, (r, cur, k_eoh, jot)) * s : s
             end
-            return capjd ? gv(x.obj_jd, (r, cur, k_eoh, jot)) * s : s
-        end
-        for (_, v, p, _, k_eoh, jot) in get(x.sumii_of_r, (r,), NO6)
-            (k_eoh,) in x.k_eoh || continue
-            if (v,) in x.t && (r, v, p, cur) in x.obj_icur
-                c = spread(k_eoh, jot, p, x.y) * gv(x.cor_salvi, (r, v, p, cur)) / gv(x.obj_divi, (r, v, p))
-                addterm!(lhs, c, tm, "VAR_NCAP", r, v, p)
+            for (_, v, p, _, k_eoh, jot) in get(x.sumii_of_r, (r,), NO6)
+                (k_eoh,) in x.k_eoh || continue
+                if (v,) in x.t && (r, v, p, cur) in x.obj_icur
+                    c = spread(k_eoh, jot, p, x.y) * gv(x.cor_salvi, (r, v, p, cur)) / gv(x.obj_divi, (r, v, p))
+                    addterm!(lhs, c, tm, "VAR_NCAP", r, v, p; at=v)
+                end
+                if (v,) in x.v && (v,) in x.pyr && haskey(x.obj_pasti, (r, v, p, cur))     # PASTI charge
+                    addconst!(lhs, spread(k_eoh, jot, p, nothing) * gv(x.obj_pasti, (r, v, p, cur)) *
+                                   gv(x.cor_salvi, (r, v, p, cur)) / gv(x.obj_divi, (r, v, p)))
+                end
             end
-            if (v,) in x.v && (v,) in x.pyr && haskey(x.obj_pasti, (r, v, p, cur))     # PASTI charge
-                addconst!(lhs, spread(k_eoh, jot, p, nothing) * gv(x.obj_pasti, (r, v, p, cur)) *
-                               gv(x.cor_salvi, (r, v, p, cur)) / gv(x.obj_divi, (r, v, p)))
+            addconst!(lhs, gv(x.obj_iad, (r, cur)))
+            for (_, v, p, _, k, y) in get(x.sumiii_of_r, (r,), NO6)                     # decommissioning
+                ((v,) in x.v && (k,) in x.k && (y,) in x.y) || continue
+                iszero(obmac(x.ob_dcc, r, v, p, cur)) && continue                         # $OBJ_DCOST(R,V,P,CUR)
+                c = gv(x.obj_disc, (r, y, cur)) * gv(x.cor_salvd, (r, v, p, cur)) * obmac(x.ob_dcc, r, k, p, cur)
+                divi = gv(x.obj_diviii, (r, v, p))
+                divi.v == 0 && throw(DomainError(divi, "OBJ_DIVIII$((r, v, p)) is zero (GAMS: division by zero)"))
+                (v,) in x.t && addterm!(lhs, c / divi, tm, "VAR_NCAP", r, v, p; at=v)
+                (v,) in x.pyr && addconst!(lhs, c * gv(x.obj_pasti, (r, v, p, cur)) / divi)
             end
+            gconstraint!(tm, eqtag(tm, "EQ_OBJINV"), sowkey(tm, (r, cur)), "E", lhs, obj_component_rhs(tm, x, r, cur, "OBJINV")) === nothing || (n += 1)
         end
-        addconst!(lhs, gv(x.obj_iad, (r, cur)))
-        for (_, v, p, _, k, y) in get(x.sumiii_of_r, (r,), NO6)                     # decommissioning
-            ((v,) in x.v && (k,) in x.k && (y,) in x.y) || continue
-            iszero(obmac(x.ob_dcc, r, v, p, cur)) && continue                         # $OBJ_DCOST(R,V,P,CUR)
-            c = gv(x.obj_disc, (r, y, cur)) * gv(x.cor_salvd, (r, v, p, cur)) * obmac(x.ob_dcc, r, k, p, cur)
-            divi = gv(x.obj_diviii, (r, v, p))
-            divi.v == 0 && throw(DomainError(divi, "OBJ_DIVIII$((r, v, p)) is zero (GAMS: division by zero)"))
-            (v,) in x.t && addterm!(lhs, c / divi, tm, "VAR_NCAP", r, v, p)
-            (v,) in x.pyr && addconst!(lhs, c * gv(x.obj_pasti, (r, v, p, cur)) / divi)
-        end
-        gconstraint!(tm, "EQ_OBJINV", (r, cur), "E", lhs, obj_component_rhs(tm, x, r, cur, "OBJINV")) === nothing || (n += 1)
     end
     return n
 end
@@ -285,7 +299,10 @@ end
       =E= SUM(OBV,SUM_OBJ('OBJFIX',OBV)*VAR_OBJ(R,OBV,CUR));
 
 `Y_EOH(LL+(ORD(AGE)-1))` is the year ORD(AGE)-1 places after LL in ALLYEAR,
-taken only if it is in Y_EOH (G8). GAMS: eqobjfix.mod L182-225, v4.9.7 (the
+taken only if it is in Y_EOH (G8). The SOW tags (sow_tags.jl): the row is
+`%EQ%_OBJFIX(RDCUR(R,CUR) %SOW%)` (L182) and the capacity
+`%VARV%_NCAP(R,V,P %SWS%)` (L192, L211, L220; `at = v`).
+GAMS: eqobjfix.mod L182-225, v4.9.7 (the
 VALIDATE lines L205-207 are refused; the VNRET hook L214 is `objfix_ret!`,
 M1.3 change 20b-4; the shaped
 branch for RTP_ISHPR is translated but no test model exercises it yet).
@@ -304,42 +321,45 @@ function eq_objfix!(tm::TimesModel)
     end
     n = 0
     for (r, cur) in x.rdcur
-        lhs = JuMP.AffExpr(0.0)
-        for (k_eoh, _, v, p, jot, life) in get(x.sumiv_of_r, (r,), NO6)
-            ((k_eoh,) in x.k_eoh && (v,) in x.v) || continue
-            c = GZERO
-            for (_, _, ll, k) in get(x.invspred_of, (k_eoh, jot), NO4)
-                (k,) in x.k || continue
-                w = wd(r, cur, k_eoh, jot, k)
-                if !((r, v, p) in x.rtp_ishpr)
-                    c = c + gv(x.obj_life, (ll, r, jot, life, cur)) * w *
-                            (obmac(x.ob_fom, r, k, p, cur) + obmac(x.ob_ftx, r, k, p, cur) - obmac(x.ob_fsb, r, k, p, cur))
-                    continue
-                end
-                for (_, age) in get(x.opyear_of_life, (life,), NTuple{2,String}[])
-                    y = lead(ll, x.age_ord[age] - 1)
-                    (y === nothing || !((y,) in x.y_eoh)) && continue
-                    cpx = GZERO
-                    for (t, _) in get(x.periodyr_of_y, (y,), NTuple{2,String}[])
-                        (t,) in x.t && (cpx = cpx + gv(x.rtp_cpx, (r, v, p, t)))
+        for sow in sow_rows(tm)   # %SOW% (eqobjfix.mod L182)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            for (k_eoh, _, v, p, jot, life) in get(x.sumiv_of_r, (r,), NO6)
+                ((k_eoh,) in x.k_eoh && (v,) in x.v) || continue
+                c = GZERO
+                for (_, _, ll, k) in get(x.invspred_of, (k_eoh, jot), NO4)
+                    (k,) in x.k || continue
+                    w = wd(r, cur, k_eoh, jot, k)
+                    if !((r, v, p) in x.rtp_ishpr)
+                        c = c + gv(x.obj_life, (ll, r, jot, life, cur)) * w *
+                                (obmac(x.ob_fom, r, k, p, cur) + obmac(x.ob_ftx, r, k, p, cur) - obmac(x.ob_fsb, r, k, p, cur))
+                        continue
                     end
-                    c = c + gv(x.obj_disc, (r, y, cur)) * (1 + gif(cpx, haskey(x.ncap_cpx, (r, v, p)))) * w *
-                            (obmac(x.ob_fom, r, k, p, cur) * shaped(r, v, p, "1", age, y) +
-                             obmac(x.ob_ftx, r, k, p, cur) * shaped(r, v, p, "2", age, y) -
-                             obmac(x.ob_fsb, r, k, p, cur) * shaped(r, v, p, "3", age, y))
+                    for (_, age) in get(x.opyear_of_life, (life,), NTuple{2,String}[])
+                        y = lead(ll, x.age_ord[age] - 1)
+                        (y === nothing || !((y,) in x.y_eoh)) && continue
+                        cpx = GZERO
+                        for (t, _) in get(x.periodyr_of_y, (y,), NTuple{2,String}[])
+                            (t,) in x.t && (cpx = cpx + gv(x.rtp_cpx, (r, v, p, t)))
+                        end
+                        c = c + gv(x.obj_disc, (r, y, cur)) * (1 + gif(cpx, haskey(x.ncap_cpx, (r, v, p)))) * w *
+                                (obmac(x.ob_fom, r, k, p, cur) * shaped(r, v, p, "1", age, y) +
+                                 obmac(x.ob_ftx, r, k, p, cur) * shaped(r, v, p, "2", age, y) -
+                                 obmac(x.ob_fsb, r, k, p, cur) * shaped(r, v, p, "3", age, y))
+                    end
                 end
+                # GAMS divides even when the sum is zero, so a missing OBJ_DIVIV is
+                # an error either way (docs/discrepancies.md G9).
+                add_ncap_or_pasti!(lhs, tm, x, c / gv(x.obj_diviv, (r, v, p)), r, v, p)
             end
-            # GAMS divides even when the sum is zero, so a missing OBJ_DIVIV is
-            # an error either way (docs/discrepancies.md G9).
-            add_ncap_or_pasti!(lhs, tm, x, c / gv(x.obj_diviv, (r, v, p)), r, v, p)
+            for (_, v, p, k, y) in get(x.sumivs_of_r, (r,), NO5)        # decommissioning surveillance
+                ((v,) in x.v && (k,) in x.k && (y,) in x.y) || continue
+                c = gv(x.obj_disc, (r, y, cur)) * obmac(x.ob_dlc, r, k, p, cur)
+                add_ncap_or_pasti!(lhs, tm, x, c, r, v, p; pasti=(r, v, p) in x.obj_2a)
+            end
+            objfix_ret!(lhs, tm, x, r, cur, wd, shaped)                 # L214: prepret.dsc OBJFIX (prepret.jl)
+            gconstraint!(tm, eqtag(tm, "EQ_OBJFIX"), sowkey(tm, (r, cur)), "E", lhs, obj_component_rhs(tm, x, r, cur, "OBJFIX")) === nothing || (n += 1)
         end
-        for (_, v, p, k, y) in get(x.sumivs_of_r, (r,), NO5)        # decommissioning surveillance
-            ((v,) in x.v && (k,) in x.k && (y,) in x.y) || continue
-            c = gv(x.obj_disc, (r, y, cur)) * obmac(x.ob_dlc, r, k, p, cur)
-            add_ncap_or_pasti!(lhs, tm, x, c, r, v, p; pasti=(r, v, p) in x.obj_2a)
-        end
-        objfix_ret!(lhs, tm, x, r, cur, wd, shaped)                 # L214: prepret.dsc OBJFIX (prepret.jl)
-        gconstraint!(tm, "EQ_OBJFIX", (r, cur), "E", lhs, obj_component_rhs(tm, x, r, cur, "OBJFIX")) === nothing || (n += 1)
     end
     return n
 end
@@ -421,6 +441,14 @@ TT (an alias of T), also before the blend's first year under specification
 %MX% is `*(1+RTP_FFCS(R,V,P,C,C))` when RTP_FFCS is DEFINED (L83), ''
 otherwise (setglobs.gms L356). COSTYPE is an alias of UC_COST
 (initsys.mod L158), IO of IN_OUT (initsys.mod L67).
+The SOW tags (sow_tags.jl): the row is `%EQ%_OBJVAR(RDCUR(R,CUR) %SOW%)`
+(L22). Under STAGES, L24-25 and L92 wrap the activity, commodity, trade, flow
+and storage costs in `SUM(SW_TSW(SOW,T,WW), ...)` with %SOW% set to `,WW`, so
+each of those terms is read `at = t`; the capacity-related flows are
+`%VARV%_NCAP(R,V,P %SWS%)` and `%VARM%_SCAP(R,V,T,P %SWS%)` (cal_caps.mod L21,
+L26) and the blending `%VART%_BLND(R,T,BLE,OPR %SWS%)` (L106). S_COM_TAX (L48)
+is change 74.
+
 GAMS: eqobjvar.mod L14-113, v4.9.7.
 """
 function eq_objvar!(tm::TimesModel)
@@ -483,164 +511,167 @@ function eq_objvar!(tm::TimesModel)
     vintages(r, t, p) = (k[2] for k in get(vint_of_rtp, (r, t, p), NO4) if (k[2],) in x.v)
     function ire_or_act!(expr, k, r, v, t, p, c, s, ie)
         if !((r, p, c) in rpc_aire)
-            addterm!(expr, k, tm, "VAR_IRE", r, v, t, p, c, s, ie)
+            addterm!(expr, k, tm, "VAR_IRE", r, v, t, p, c, s, ie; at=t)
         else
-            addterm!(expr, k * gv(prc_actflo, (r, v, p, c)), tm, "VAR_ACT", r, v, t, p, s)
+            addterm!(expr, k * gv(prc_actflo, (r, v, p, c)), tm, "VAR_ACT", r, v, t, p, s; at=t)
         end
     end
 
     n = 0
     for (r, cur) in x.rdcur
-        lhs = JuMP.AffExpr(0.0)
-        # Activity costs (L30-34).
-        for (rr, t, p) in rtp_vara
-            (rr == r && (t,) in x.t && haskey(ob_act, (r, p, cur, t))) || continue
-            w = weighted(r, t, cur, y -> obmac(ob_act, r, y, p, cur))
-            for v in vintages(r, t, p), (_, _, s) in get(ts_of_rp, (r, p), NTuple{3,String}[])
-                addterm!(lhs, w * gpower(gv(rs_stgav, (r, s)), (r, p) in rp_stg ? 1 : 0), tm, "VAR_ACT", r, v, t, p, s)
-            end
-        end
-        # Dispatching costs (L36-39): start-ups (L37), start-ups by type (L38) and load changes (L39).
-        for (rr, p) in ups_rp
-            (rr == r && (r, p, "ACT", cur) in rpc_cur) || continue
-            for (_, v, t, _) in get(vint_of_rp, (r, p), NO4)             # RTP_VINTYR(R,V,T,P)
-                pvt = gv(obj_pvt, (r, t, cur))
-                for (_, _, tsl, l) in get(ups_of_rp, (r, p), NO4)
-                    l == "UP" || continue
-                    k = gv(act_cstup, (r, v, p, tsl, cur)) * pvt
-                    for (_, _, s) in get(group_of, (r, tsl), NTuple{3,String}[])
-                        addterm!(lhs, k * gv(rs_stgprd, (r, s)), tm, "VAR_UPS", r, v, t, p, s, "UP")
-                    end
+        for sow in sow_rows(tm)   # %SOW% (eqobjvar.mod L22)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            # Activity costs (L30-34).
+            for (rr, t, p) in rtp_vara
+                (rr == r && (t,) in x.t && haskey(ob_act, (r, p, cur, t))) || continue
+                w = weighted(r, t, cur, y -> obmac(ob_act, r, y, p, cur))
+                for v in vintages(r, t, p), (_, _, s) in get(ts_of_rp, (r, p), NTuple{3,String}[])
+                    addterm!(lhs, w * gpower(gv(rs_stgav, (r, s)), (r, p) in rp_stg ? 1 : 0), tm, "VAR_ACT", r, v, t, p, s; at=t)
                 end
-                for (_, _, upt, bd) in get(upt_of_rp, (r, p), NO4)
-                    bd == "UP" || continue
-                    k = gv(act_cstsd, (r, v, p, upt, "FX", cur)) * pvt
-                    for (_, _, tsl) in get(dpl_of_rp, (r, p), NTuple{3,String}[]),
-                        (_, _, s) in get(group_of, (r, tsl), NTuple{3,String}[])
+            end
+            # Dispatching costs (L36-39): start-ups (L37), start-ups by type (L38) and load changes (L39).
+            for (rr, p) in ups_rp
+                (rr == r && (r, p, "ACT", cur) in rpc_cur) || continue
+                for (_, v, t, _) in get(vint_of_rp, (r, p), NO4)             # RTP_VINTYR(R,V,T,P)
+                    pvt = gv(obj_pvt, (r, t, cur))
+                    for (_, _, tsl, l) in get(ups_of_rp, (r, p), NO4)
+                        l == "UP" || continue
+                        k = gv(act_cstup, (r, v, p, tsl, cur)) * pvt
+                        for (_, _, s) in get(group_of, (r, tsl), NTuple{3,String}[])
+                            addterm!(lhs, k * gv(rs_stgprd, (r, s)), tm, "VAR_UPS", r, v, t, p, s, "UP"; at=t)
+                        end
+                    end
+                    for (_, _, upt, bd) in get(upt_of_rp, (r, p), NO4)
+                        bd == "UP" || continue
+                        k = gv(act_cstsd, (r, v, p, upt, "FX", cur)) * pvt
+                        for (_, _, tsl) in get(dpl_of_rp, (r, p), NTuple{3,String}[]),
+                            (_, _, s) in get(group_of, (r, tsl), NTuple{3,String}[])
 
-                        addterm!(lhs, k * gv(rs_stgprd, (r, s)), tm, "VAR_UPT", r, v, t, p, s, upt)
+                            addterm!(lhs, k * gv(rs_stgprd, (r, s)), tm, "VAR_UPT", r, v, t, p, s, upt; at=t)
+                        end
+                    end
+                    for (_, _, bd) in get(upr_of_rp, (r, p), NTuple{3,String}[])
+                        bd in ("LO", "UP") || continue                          # BDNEQ(BD)
+                        k = gv(act_cstrmp, (r, v, p, bd, cur)) * pvt
+                        for (_, _, s) in get(ts_of_rp, (r, p), NTuple{3,String}[])
+                            addterm!(lhs, k * gv(rs_stgprd, (r, s)), tm, "VAR_UDP", r, v, t, p, s, bd; at=t)
+                        end
                     end
                 end
-                for (_, _, bd) in get(upr_of_rp, (r, p), NTuple{3,String}[])
-                    bd in ("LO", "UP") || continue                          # BDNEQ(BD)
-                    k = gv(act_cstrmp, (r, v, p, bd, cur)) * pvt
-                    for (_, _, s) in get(ts_of_rp, (r, p), NTuple{3,String}[])
-                        addterm!(lhs, k * gv(rs_stgprd, (r, s)), tm, "VAR_UDP", r, v, t, p, s, bd)
-                    end
+            end
+            # Commodity costs on net and production (L44-47).
+            for (set, par, var) in ((rhs_combal, obj_comnt, "VAR_COMNET"), (rhs_comprd, obj_compd, "VAR_COMPRD"))
+                for (rr, t, c, s) in set
+                    (rr == r && (t,) in x.t && (c,) in x.com) || continue
+                    w = weighted(r, t, cur, y -> (a = GZERO; for ct in costype; a = a + gv(par, (r, y, c, s, ct, cur)); end; a))
+                    addterm!(lhs, w, tm, var, r, t, c, s; at=t)
                 end
             end
-        end
-        # Commodity costs on net and production (L44-47).
-        for (set, par, var) in ((rhs_combal, obj_comnt, "VAR_COMNET"), (rhs_comprd, obj_compd, "VAR_COMPRD"))
-            for (rr, t, c, s) in set
-                (rr == r && (t,) in x.t && (c,) in x.com) || continue
-                w = weighted(r, t, cur, y -> (a = GZERO; for ct in costype; a = a + gv(par, (r, y, c, s, ct, cur)); end; a))
-                addterm!(lhs, w, tm, var, r, t, c, s)
-            end
-        end
-        for (rr, t, p, c, s) in rtpcs_varf
-            (rr == r && (t,) in x.t) || continue
-            # Prices of imports/exports from/to external regions (L54-59).
-            for (_, _, _, ie, io) in get(ireio_of_rpc, (r, p, c), NO5)
-                io == "OUT" || continue
-                w = weighted(r, t, cur, y -> gv(obj_ipric, (r, y, p, c, s, ie, cur)))
-                for v in vintages(r, t, p)
-                    ire_or_act!(lhs, w, r, v, t, p, c, s, ie)
-                end
-            end
-            # Flow costs (L66-71) and those of trade processes (L74-87).
-            (r, p, c, cur) in vflo || continue
-            w = GZERO
-            for (_, ts) in get(ts_ann_of_s, (s,), NTuple{2,String}[])
-                w = w + weighted(r, t, cur, y -> obmac(ob_fcos, r, y, p, c, ts, cur) + obmac(ob_fdel, r, y, p, c, ts, cur) +
-                                                 obmac(ob_ftax, r, y, p, c, ts, cur))
-            end
-            if (r, p) in rp_flo
-                for v in vintages(r, t, p)
-                    cal_nored!(lhs, tm, w, r, v, t, p, c, s)
-                end
-            end
-            if (r, p) in rp_ire
-                for v in vintages(r, t, p)
-                    for (_, _, _, ie) in get(ire_of_rpc, (r, p, c), NO4)
+            for (rr, t, p, c, s) in rtpcs_varf
+                (rr == r && (t,) in x.t) || continue
+                # Prices of imports/exports from/to external regions (L54-59).
+                for (_, _, _, ie, io) in get(ireio_of_rpc, (r, p, c), NO5)
+                    io == "OUT" || continue
+                    w = weighted(r, t, cur, y -> gv(obj_ipric, (r, y, p, c, s, ie, cur)))
+                    for v in vintages(r, t, p)
                         ire_or_act!(lhs, w, r, v, t, p, c, s, ie)
                     end
-                    for (_, _, com, ie) in get(ire_of_rp, (r, p), NO4), io in io_set
-                        fs = (r, t, p, com, s, ie, c, io)
-                        haskey(ire_flosum, fs) || continue
-                        k = w * (gv(ire_flosum, fs) * (1 + gv(rtp_ffcs, (r, v, p, c, c))))
-                        ire_or_act!(lhs, k, r, v, t, p, com, s, ie)
+                end
+                # Flow costs (L66-71) and those of trade processes (L74-87).
+                (r, p, c, cur) in vflo || continue
+                w = GZERO
+                for (_, ts) in get(ts_ann_of_s, (s,), NTuple{2,String}[])
+                    w = w + weighted(r, t, cur, y -> obmac(ob_fcos, r, y, p, c, ts, cur) + obmac(ob_fdel, r, y, p, c, ts, cur) +
+                                                     obmac(ob_ftax, r, y, p, c, ts, cur))
+                end
+                if (r, p) in rp_flo
+                    for v in vintages(r, t, p)
+                        cal_nored!(lhs, tm, w, r, v, t, p, c, s; at=t)
+                    end
+                end
+                if (r, p) in rp_ire
+                    for v in vintages(r, t, p)
+                        for (_, _, _, ie) in get(ire_of_rpc, (r, p, c), NO4)
+                            ire_or_act!(lhs, w, r, v, t, p, c, s, ie)
+                        end
+                        for (_, _, com, ie) in get(ire_of_rp, (r, p), NO4), io in io_set
+                            fs = (r, t, p, com, s, ie, c, io)
+                            haskey(ire_flosum, fs) || continue
+                            k = w * (gv(ire_flosum, fs) * (1 + gv(rtp_ffcs, (r, v, p, c, c))))
+                            ire_or_act!(lhs, k, r, v, t, p, com, s, ie)
+                        end
                     end
                 end
             end
-        end
-        # Storage flow costs (L89-91): FLO_COST on the input, FLO_DELIV on the output * STG_EFF.
-        for (rv, p, c, cv, _) in vflo_cost
-            (rv == r && cv == cur) || continue
-            for (_, v, t, _) in get(vint_of_rp, (r, p), NO4)
-                ((v,) in x.v && (t,) in x.t) || continue
-                for (_, _, _, s) in get(stg_var_of_rpc, (r, p, c), NO4)
-                    ksin, ksout = GZERO, GZERO
-                    eff = gv(stg_eff, (r, v, p))
-                    for (_, ts) in get(ts_ann_of_s, (s,), NTuple{2,String}[])
-                        ksin = ksin + weighted(r, t, cur, y -> obmac(ob_fcos, r, y, p, c, ts, cur))
-                        ksout = ksout + weighted(r, t, cur, y -> eff * obmac(ob_fdel, r, y, p, c, ts, cur))
+            # Storage flow costs (L89-91): FLO_COST on the input, FLO_DELIV on the output * STG_EFF.
+            for (rv, p, c, cv, _) in vflo_cost
+                (rv == r && cv == cur) || continue
+                for (_, v, t, _) in get(vint_of_rp, (r, p), NO4)
+                    ((v,) in x.v && (t,) in x.t) || continue
+                    for (_, _, _, s) in get(stg_var_of_rpc, (r, p, c), NO4)
+                        ksin, ksout = GZERO, GZERO
+                        eff = gv(stg_eff, (r, v, p))
+                        for (_, ts) in get(ts_ann_of_s, (s,), NTuple{2,String}[])
+                            ksin = ksin + weighted(r, t, cur, y -> obmac(ob_fcos, r, y, p, c, ts, cur))
+                            ksout = ksout + weighted(r, t, cur, y -> eff * obmac(ob_fdel, r, y, p, c, ts, cur))
+                        end
+                        addterm!(lhs, ksin, tm, "VAR_SIN", r, v, t, p, c, s; at=t)
+                        addterm!(lhs, ksout, tm, "VAR_SOUT", r, v, t, p, c, s; at=t)
                     end
-                    addterm!(lhs, ksin, tm, "VAR_SIN", r, v, t, p, c, s)
-                    addterm!(lhs, ksout, tm, "VAR_SOUT", r, v, t, p, c, s)
                 end
             end
-        end
-        # Costs of the flows tied to investment and decommissioning (L97-100, cal_caps.mod L18-21, M1.3
-        # change 53), with %1 = T, %3 = TS and S = ANNUAL:
-        #   SUM((VNT(V,T),RPC_CAPFLO(R,V,P,C)), ((COEF_ICOM(R,V,T,P,C)+COEF_OCOM(R,V,T,P,C)) * G_YRFR(R,S) *
-        #     (VAR_NCAP(R,V,P)$MILESTONYR(V) + NCAP_PASTI(R,V,P)) *
-        #     SUM(RPCS_VAR(R,P,C,TS), RS_FR(R,TS,S) * SUM(TS_ANN(TS,SL),SUM(%TPULSE%*(OBJ_FCOST+OBJ_FDELV+OBJ_FTAX)(R,Y_EOH,P,C,SL,CUR)))))
-        #   $(COEF_ICOM(R,V,T,P,C)+COEF_OCOM(R,V,T,P,C))
-        # NCAP_PASTI is not conditioned on PASTYEAR here, unlike cal_cap.mod. Then the flows over the
-        # lifetime (cal_caps.mod L22-26, M1.3 change 54), in the same sum:
-        #   SUM((RTP_CPTYR(R,V,T,P),IO)$NCAP_COM(R,V,P,C,IO), COEF_CPT(R,V,T,P) * NCAP_COM(R,V,P,C,IO) * G_YRFR(R,S) *
-        #     (VAR_NCAP(R,V,P)$T(V) + NCAP_PASTI(R,V,P) - SUM(VNTRT(V,MODLYEAR(T)),VAR_SCAP(R,V,T,P))$PRC_RCAP(R,P)) *
-        #     SUM(RPCS_VAR(R,P,C,TS), RS_FR(R,TS,S) * [the costs]) * (1+COEF_CIO(R,V,T,P,C,IO)))
-        for (rr, v, p, c) in capflo
-            rr == r || continue
-            for (_, t) in get(vnt_of_v, (v,), NTuple{2,String}[])
-                k0 = gv(coef_icom, (r, v, t, p, c)) + gv(coef_ocom, (r, v, t, p, c))
-                coms = (r, v, t, p) in cptyr_obj ? [io for io in ("IN", "OUT") if haskey(ncom_obj.values, (r, v, p, c, io))] : String[]
-                (iszero(k0) && isempty(coms)) && continue
-                cost = GZERO
-                for (_, _, _, ts) in get(stg_var_of_rpc, (r, p, c), NO4)
-                    w = GZERO
-                    for (_, sl) in get(ts_ann_of_s, (ts,), NTuple{2,String}[])
-                        w = w + weighted(r, t, cur, y -> obmac(ob_fcos, r, y, p, c, sl, cur) + obmac(ob_fdel, r, y, p, c, sl, cur) +
-                                                         obmac(ob_ftax, r, y, p, c, sl, cur))
+            # Costs of the flows tied to investment and decommissioning (L97-100, cal_caps.mod L18-21, M1.3
+            # change 53), with %1 = T, %3 = TS and S = ANNUAL:
+            #   SUM((VNT(V,T),RPC_CAPFLO(R,V,P,C)), ((COEF_ICOM(R,V,T,P,C)+COEF_OCOM(R,V,T,P,C)) * G_YRFR(R,S) *
+            #     (VAR_NCAP(R,V,P)$MILESTONYR(V) + NCAP_PASTI(R,V,P)) *
+            #     SUM(RPCS_VAR(R,P,C,TS), RS_FR(R,TS,S) * SUM(TS_ANN(TS,SL),SUM(%TPULSE%*(OBJ_FCOST+OBJ_FDELV+OBJ_FTAX)(R,Y_EOH,P,C,SL,CUR)))))
+            #   $(COEF_ICOM(R,V,T,P,C)+COEF_OCOM(R,V,T,P,C))
+            # NCAP_PASTI is not conditioned on PASTYEAR here, unlike cal_cap.mod. Then the flows over the
+            # lifetime (cal_caps.mod L22-26, M1.3 change 54), in the same sum:
+            #   SUM((RTP_CPTYR(R,V,T,P),IO)$NCAP_COM(R,V,P,C,IO), COEF_CPT(R,V,T,P) * NCAP_COM(R,V,P,C,IO) * G_YRFR(R,S) *
+            #     (VAR_NCAP(R,V,P)$T(V) + NCAP_PASTI(R,V,P) - SUM(VNTRT(V,MODLYEAR(T)),VAR_SCAP(R,V,T,P))$PRC_RCAP(R,P)) *
+            #     SUM(RPCS_VAR(R,P,C,TS), RS_FR(R,TS,S) * [the costs]) * (1+COEF_CIO(R,V,T,P,C,IO)))
+            for (rr, v, p, c) in capflo
+                rr == r || continue
+                for (_, t) in get(vnt_of_v, (v,), NTuple{2,String}[])
+                    k0 = gv(coef_icom, (r, v, t, p, c)) + gv(coef_ocom, (r, v, t, p, c))
+                    coms = (r, v, t, p) in cptyr_obj ? [io for io in ("IN", "OUT") if haskey(ncom_obj.values, (r, v, p, c, io))] : String[]
+                    (iszero(k0) && isempty(coms)) && continue
+                    cost = GZERO
+                    for (_, _, _, ts) in get(stg_var_of_rpc, (r, p, c), NO4)
+                        w = GZERO
+                        for (_, sl) in get(ts_ann_of_s, (ts,), NTuple{2,String}[])
+                            w = w + weighted(r, t, cur, y -> obmac(ob_fcos, r, y, p, c, sl, cur) + obmac(ob_fdel, r, y, p, c, sl, cur) +
+                                                             obmac(ob_ftax, r, y, p, c, sl, cur))
+                        end
+                        cost = cost + gv(rs_fr_obj, (r, ts, "ANNUAL")) * w
                     end
-                    cost = cost + gv(rs_fr_obj, (r, ts, "ANNUAL")) * w
-                end
-                yrfr = gv(g_yrfr_obj, (r, "ANNUAL"))
-                if !iszero(k0)
-                    k = k0 * yrfr * cost
-                    (v,) in milestonyr_obj && addterm!(lhs, k, tm, "VAR_NCAP", r, v, p)
-                    addconst!(lhs, k * gv(ncap_pasti_obj, (r, v, p)))
-                end
-                for io in coms
-                    k = gv(coef_cpt_obj, (r, v, t, p)) * gv(ncom_obj, (r, v, p, c, io)) * yrfr * cost *
-                        (1 + gv(coef_cio_obj, (r, v, t, p, c, io)))
-                    (v,) in milestonyr_obj && addterm!(lhs, k, tm, "VAR_NCAP", r, v, p)
-                    addconst!(lhs, k * gv(ncap_pasti_obj, (r, v, p)))
-                    ((r, p) in prc_rcap_obj && (v, t) in vntrt_obj && (t,) in x.v) &&
-                        addterm!(lhs, -k, tm, "VAR_SCAP", r, v, t, p)
+                    yrfr = gv(g_yrfr_obj, (r, "ANNUAL"))
+                    if !iszero(k0)
+                        k = k0 * yrfr * cost
+                        (v,) in milestonyr_obj && addterm!(lhs, k, tm, "VAR_NCAP", r, v, p; at=v)
+                        addconst!(lhs, k * gv(ncap_pasti_obj, (r, v, p)))
+                    end
+                    for io in coms
+                        k = gv(coef_cpt_obj, (r, v, t, p)) * gv(ncom_obj, (r, v, p, c, io)) * yrfr * cost *
+                            (1 + gv(coef_cio_obj, (r, v, t, p, c, io)))
+                        (v,) in milestonyr_obj && addterm!(lhs, k, tm, "VAR_NCAP", r, v, p; at=v)
+                        addconst!(lhs, k * gv(ncap_pasti_obj, (r, v, p)))
+                        ((r, p) in prc_rcap_obj && (v, t) in vntrt_obj && (t,) in x.v) &&
+                            addterm!(lhs, -k, tm, "VAR_SCAP", r, v, t, p; at=t)
+                    end
                 end
             end
-        end
-        # Commodity blending costs (L105-107).
-        for (_, b, o) in get(ble_opr_of_r, (r,), NTuple{3,String}[])
-            ((b,) in ble && (o,) in opr) || continue
-            for (t,) in x.t
-                addterm!(lhs, weighted(r, t, cur, y -> gv(obj_blndv, (r, y, b, o, cur))), tm, "VAR_BLND", r, t, b, o)
+            # Commodity blending costs (L105-107).
+            for (_, b, o) in get(ble_opr_of_r, (r,), NTuple{3,String}[])
+                ((b,) in ble && (o,) in opr) || continue
+                for (t,) in x.t
+                    addterm!(lhs, weighted(r, t, cur, y -> gv(obj_blndv, (r, y, b, o, cur))), tm, "VAR_BLND", r, t, b, o; at=t)
+                end
             end
+            gconstraint!(tm, eqtag(tm, "EQ_OBJVAR"), sowkey(tm, (r, cur)), "E", lhs, obj_component_rhs(tm, x, r, cur, "OBJVAR")) === nothing || (n += 1)
         end
-        gconstraint!(tm, "EQ_OBJVAR", (r, cur), "E", lhs, obj_component_rhs(tm, x, r, cur, "OBJVAR")) === nothing || (n += 1)
     end
     return n
 end
@@ -660,6 +691,11 @@ end
           (VAR_NCAP(R,V,P)\$MILESTONYR(V) + NCAP_PASTI(R,V,P)\$PASTYEAR(V)) * NCAP_OCOM(R,V,P,COM) / OBJ_DIVIII(R,V,P))
       =E= VAR_OBJ(R,'OBJSAL',CUR);
 
+The SOW tags (sow_tags.jl): the row is `%EQ%_OBJSALV(RDCUR(R,CUR) %SOW%)`
+(L92); the investments are `%VART%_NCAP(R,T,P %SWS%)` (L99, L112) and
+`%VARV%_NCAP(R,V,P %SWS%)` (L124, L134), `at` the period of the investment;
+the right-hand side is `%VAR%_OBJ(R,'OBJSAL',CUR %SOW%)` (L140).
+
 GAMS: eqobsalv.mod L92-140, v4.9.7 (ETL L102-103 is refused; the VNRET hook
 L105 is `objsalv_ret!`, M1.3 change 20b-4).
 """
@@ -667,35 +703,38 @@ function eq_objsalv!(tm::TimesModel)
     x = objective_context(tm)
     n = 0
     for (r, cur) in x.rdcur
-        lhs = JuMP.AffExpr(0.0)
-        dceoh = gv(x.obj_dceoh, (r, cur))
-        for (_, v, p) in get(x.sums_of_r, (r,), NTuple{3,String}[])
-            k = gv(x.objscc, (r, v, p, cur))
-            (v,) in x.t && addterm!(lhs, k * dceoh, tm, "VAR_NCAP", r, v, p)
-            (v,) in x.v && (v,) in x.pyr && addconst!(lhs, k * gv(x.ncap_pasti, (r, v, p)) * dceoh)
-        end
-        objsalv_ret!(lhs, tm, x, r, cur, dceoh)                     # L105: prepret.dsc OBSALV (prepret.jl)
-        for (_, v, p) in get(x.sums3_of_r, (r,), NTuple{3,String}[])
-            k = gv(x.salv_dec, (r, v, p, cur))
-            (v,) in x.t && addterm!(lhs, k * dceoh, tm, "VAR_NCAP", r, v, p)
-            (v,) in x.pyr && addconst!(lhs, gv(x.ncap_pasti, (r, v, p)) * k * dceoh)
-        end
-        for (_, v, p, k, y) in get(x.sumivs_of_r, (r,), NO5)
-            ((v,) in x.v && (k,) in x.k && (y,) in x.y && haskey(x.salv_inv, (r, v, p, k))) || continue
-            c = gv(x.obj_disc, (r, y, cur)) * obmac(x.ob_dlc, r, k, p, cur) * gv(x.salv_inv, (r, v, p, k))
-            add_ncap_or_pasti!(lhs, tm, x, c, r, v, p)
-        end
-        for (_, v, p, ll, k, y) in get(x.sumiii_of_r, (r,), NO6)                    # late revenues
-            ((v,) in x.v && (k,) in x.k && (y,) in x.y && !((y,) in x.y_eoh)) || continue
-            for (_, _, _, com) in get(x.ncap_ocom_of_rvp, (r, v, p), NO4)
-                (com,) in x.com || continue
-                c = (1 - gv(x.salv_inv, (r, v, p, ll))) * gv(x.ncap_valu, (r, k, p, com, cur)) * gv(x.obj_disc, (r, y, cur))
-                add_ncap_or_pasti!(lhs, tm, x, c * gv(x.ncap_ocom, (r, v, p, com)) / gv(x.obj_diviii, (r, v, p)), r, v, p)
+        for sow in sow_rows(tm)   # %SOW% (eqobsalv.mod L92)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            dceoh = gv(x.obj_dceoh, (r, cur))
+            for (_, v, p) in get(x.sums_of_r, (r,), NTuple{3,String}[])
+                k = gv(x.objscc, (r, v, p, cur))
+                (v,) in x.t && addterm!(lhs, k * dceoh, tm, "VAR_NCAP", r, v, p; at=v)
+                (v,) in x.v && (v,) in x.pyr && addconst!(lhs, k * gv(x.ncap_pasti, (r, v, p)) * dceoh)
             end
+            objsalv_ret!(lhs, tm, x, r, cur, dceoh)                     # L105: prepret.dsc OBSALV (prepret.jl)
+            for (_, v, p) in get(x.sums3_of_r, (r,), NTuple{3,String}[])
+                k = gv(x.salv_dec, (r, v, p, cur))
+                (v,) in x.t && addterm!(lhs, k * dceoh, tm, "VAR_NCAP", r, v, p; at=v)
+                (v,) in x.pyr && addconst!(lhs, gv(x.ncap_pasti, (r, v, p)) * k * dceoh)
+            end
+            for (_, v, p, k, y) in get(x.sumivs_of_r, (r,), NO5)
+                ((v,) in x.v && (k,) in x.k && (y,) in x.y && haskey(x.salv_inv, (r, v, p, k))) || continue
+                c = gv(x.obj_disc, (r, y, cur)) * obmac(x.ob_dlc, r, k, p, cur) * gv(x.salv_inv, (r, v, p, k))
+                add_ncap_or_pasti!(lhs, tm, x, c, r, v, p)
+            end
+            for (_, v, p, ll, k, y) in get(x.sumiii_of_r, (r,), NO6)                    # late revenues
+                ((v,) in x.v && (k,) in x.k && (y,) in x.y && !((y,) in x.y_eoh)) || continue
+                for (_, _, _, com) in get(x.ncap_ocom_of_rvp, (r, v, p), NO4)
+                    (com,) in x.com || continue
+                    c = (1 - gv(x.salv_inv, (r, v, p, ll))) * gv(x.ncap_valu, (r, k, p, com, cur)) * gv(x.obj_disc, (r, y, cur))
+                    add_ncap_or_pasti!(lhs, tm, x, c * gv(x.ncap_ocom, (r, v, p, com)) / gv(x.obj_diviii, (r, v, p)), r, v, p)
+                end
+            end
+            rhs = JuMP.AffExpr(0.0)
+            addterm!(rhs, GNum(1.0), tm, "VAR_OBJ", r, "OBJSAL", cur)
+            gconstraint!(tm, eqtag(tm, "EQ_OBJSALV"), sowkey(tm, (r, cur)), "E", lhs, rhs) === nothing || (n += 1)
         end
-        rhs = JuMP.AffExpr(0.0)
-        addterm!(rhs, GNum(1.0), tm, "VAR_OBJ", r, "OBJSAL", cur)
-        gconstraint!(tm, "EQ_OBJSALV", (r, cur), "E", lhs, rhs) === nothing || (n += 1)
     end
     return n
 end

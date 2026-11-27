@@ -135,15 +135,21 @@ Any mismatch blocks the merge. Justified differences go in
   On James's workstation `timesjl-reference` and `timesjl-sources\TIMES_model`
   hold v4.9.7; v4.9.8 references go to their own folder, made with
   `timesjl-sources\TIMES_model-v4.9.8` (make_reference.py refuses to mix them).
-- Local run limits on James's Windows workstation (James, 29 Oct 2026), for
-  load management and comparable, fair resources across tests: every TIMES
-  run (GAMS or TIMES.jl, any solver) uses at most 12 threads, and at most 4
-  CPU-heavy runs run at the same time. `make_reference.py` enforces both
-  (`--threads 12`: GAMS `threads=` and the `threads` line of solver option
-  files; `--max-parallel 4`: shared slot files, `reference/python/runlimits.py`);
-  the Julia scripts set HiGHS `threads` from `TIMESJL_THREADS` (default 12).
-  Any other script started on that machine keeps to the same limits. Compare
-  timings only between runs made under them.
+- Local run limits on James's Windows workstation: a run pool (James, 26 Nov
+  2026; it replaced "12 threads per run, at most 4 runs at a time" of 29 Oct
+  2026), for load management and comparable, fair resources across tests.
+  Each model has a thread class (`threads` in `reference/suite.toml`): 6 for
+  the small models, 12 for the large. A run reserves its class from its start
+  until its barrier ends, then fewer (4 during crossover, then 1); a run with
+  several solves keeps its class to the end; nothing is re-acquired. A run
+  starts only when its threads are free (of 48, 2 kept free, also by measured
+  load) and the RAM of its last peak is free; there is no limit on the number
+  of runs. Timing runs follow the same rule. `make_reference.py` and the cuOpt
+  nightly task enforce it (`reference/python/runlimits.py`); the Julia scripts
+  set HiGHS `threads` from `TIMESJL_THREADS` (default 12) and are seen only
+  through the measured load until they join the pool. Any other script
+  started on that machine keeps to the same rule. Compare timings only
+  between runs made under the same rule and class.
 
 ## Test-model licences
 - Translate, test, debug, profile and improve TIMES.jl only on models with a

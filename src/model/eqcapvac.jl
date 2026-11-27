@@ -69,6 +69,12 @@ One include of eqcapvac.mod: `eqtype` is %1 (E, L or G), `bd` is %2 (FX, UP or L
   commodity with no NCAP_AFCS of its own is divided by its type's value, or by 1, as in
   EQ(l)_CAFLAC (eqcaflac.jl).
 
+The SOW tags (sow_tags.jl): the row is `EQ%1_CAPVAC(... %SWX%)\$(%SWTX% ...)`
+(L14), with no %EQ%: the name stays and the last index is '1', or the SOW of
+SW_T(T,SOW) in a stochastic run. The activity and flow terms are
+`%VAR%_X(... %SOW%)` (L17, L21-22) and the capacity `%VARM%_NCAP(R,K,P%SWS%)`
+with MODLYEAR(K) (L27, `at = k`).
+
 GAMS: eqcapvac.mod L14-28, v4.9.7.
 """
 function eq_capvac!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, afsv::GamsSet{5})
@@ -98,50 +104,53 @@ function eq_capvac!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, 
         # The domain RTP_VINTYR(R,V,T,P) is controlled by V (MODLYEAR) and T (MILESTONYR).
         ((v,) in modlyear && (t,) in tx) || continue
         for (_, _, _, s, _) in get(s_of_rtpbd, (r, t, p, bd), no5)
-            lhs = JuMP.AffExpr(0.0)
-            if !((r, p, s, bd) in rps_caflac)
-                # L17: activity in the timeslices at or below S.
-                for (_, _, ts) in get(ts_of_rp, (r, p), no3)
-                    (r, s, ts) in ts_map || continue
-                    addterm!(lhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, ts)
-                end
-            else
-                # L19-22: the flows of the primary group, each divided by its commodity availability.
-                std = (r, p) in rp_std
-                for (_, _, c) in get(pg_of_rp, (r, p), no3)
-                    afcs_c = (r, v, p, c, s)
-                    for (_, cg, _) in get(tmap_of_rc, (r, c), no3)
-                        (cg,) in com_type || continue               # COM_TMAP(R,COM_TYPE(CG),C)
-                        afcs_cg = (r, v, p, cg, s)
-                        divisor = haskey(ncap_afcs, afcs_c) ? gv(ncap_afcs, afcs_c) :
-                                  (haskey(ncap_afcs, afcs_cg) ? gv(ncap_afcs, afcs_cg) : GNum(1.0))
-                        w = (GNum(1.0) / gv(prc_actflo, (r, v, p, c))) / divisor
-                        for (_, _, _, ts) in get(ts_of_rpc, (r, p, c), no4)
-                            (r, s, ts) in ts_map || continue
-                            std && addterm!(lhs, w, tm, "VAR_FLO", r, v, t, p, c, ts)
-                            for (_, _, _, ie) in get(ire_of_rpc, (r, p, c), no4)
-                                addterm!(lhs, w, tm, "VAR_IRE", r, v, t, p, c, ts, ie)
+            for sow in sw_rows(tm, t)   # %SWTX% (L14): SW_T(T,SOW)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                if !((r, p, s, bd) in rps_caflac)
+                    # L17: activity in the timeslices at or below S.
+                    for (_, _, ts) in get(ts_of_rp, (r, p), no3)
+                        (r, s, ts) in ts_map || continue
+                        addterm!(lhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, ts)
+                    end
+                else
+                    # L19-22: the flows of the primary group, each divided by its commodity availability.
+                    std = (r, p) in rp_std
+                    for (_, _, c) in get(pg_of_rp, (r, p), no3)
+                        afcs_c = (r, v, p, c, s)
+                        for (_, cg, _) in get(tmap_of_rc, (r, c), no3)
+                            (cg,) in com_type || continue               # COM_TMAP(R,COM_TYPE(CG),C)
+                            afcs_cg = (r, v, p, cg, s)
+                            divisor = haskey(ncap_afcs, afcs_c) ? gv(ncap_afcs, afcs_c) :
+                                      (haskey(ncap_afcs, afcs_cg) ? gv(ncap_afcs, afcs_cg) : GNum(1.0))
+                            w = (GNum(1.0) / gv(prc_actflo, (r, v, p, c))) / divisor
+                            for (_, _, _, ts) in get(ts_of_rpc, (r, p, c), no4)
+                                (r, s, ts) in ts_map || continue
+                                std && addterm!(lhs, w, tm, "VAR_FLO", r, v, t, p, c, ts)
+                                for (_, _, _, ie) in get(ire_of_rpc, (r, p, c), no4)
+                                    addterm!(lhs, w, tm, "VAR_IRE", r, v, t, p, c, ts, ie)
+                                end
                             end
                         end
                     end
                 end
-            end
 
-            # L27: the capacity of the true vintages K that the simulated vintage V carries.
-            capact, yrfr = gv(prc_capact, (r, p)), gv(g_yrfr, (r, s))
-            rhs = JuMP.AffExpr(0.0)
-            pasti = GZERO
-            for kk in get(k_of_rtpv, (r, t, p, v), no5)
-                k = kk[2]
-                (k,) in modlyear || continue
-                if (k,) in milestonyr
-                    c = gv(coef_csv, kk) * gv(coef_af, (r, k, t, p, s, bd))
-                    addterm!(rhs, c * capact * yrfr, tm, "VAR_NCAP", r, k, p)
+                # L27: the capacity of the true vintages K that the simulated vintage V carries.
+                capact, yrfr = gv(prc_capact, (r, p)), gv(g_yrfr, (r, s))
+                rhs = JuMP.AffExpr(0.0)
+                pasti = GZERO
+                for kk in get(k_of_rtpv, (r, t, p, v), no5)
+                    k = kk[2]
+                    (k,) in modlyear || continue
+                    if (k,) in milestonyr
+                        c = gv(coef_csv, kk) * gv(coef_af, (r, k, t, p, s, bd))
+                        addterm!(rhs, c * capact * yrfr, tm, "VAR_NCAP", r, k, p; at=k)   # %VARM%_NCAP(R,K,P%SWS%), MODLYEAR(K) (L27)
+                    end
+                    pasti = pasti + gv(ncap_pasti, (r, k, p))
                 end
-                pasti = pasti + gv(ncap_pasti, (r, k, p))
+                addconst!(rhs, pasti * capact * yrfr)
+                gconstraint!(tm, name, (r, v, t, p, s, swx(tm)), eqtype, lhs, rhs) === nothing || (n += 1)   # EQ%1_CAPVAC(... %SWX%): no %EQ% (L14)
             end
-            addconst!(rhs, pasti * capact * yrfr)
-            gconstraint!(tm, name, (r, v, t, p, s, "1"), eqtype, lhs, rhs) === nothing || (n += 1)   # %SWX%
         end
     end
     return n

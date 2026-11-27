@@ -360,6 +360,12 @@ How they are read:
 
 Returns the number of rows.
 
+The SOW tags (sow_tags.jl): the rows are written without %EQ%, `eq_sdlogic(...
+%SWX%)\$(%SWTX% ...)` and the like (L67, L74, L81, L94, L101, L107, L118): the
+names stay and the last index is `swx`. The macros of L54-58 and L61 read
+`%var%_x(... %SOW%)`; %CAPON% reads `%VARV%_NCAP(R,V,P%SWS%)` (L63, `at = v`)
+with %RCAPSUB%.
+
 GAMS: eqlducs.vda L53-124, v4.9.7.
 """
 function eq_lducs!(tm::TimesModel)
@@ -408,7 +414,7 @@ function eq_lducs!(tm::TimesModel)
     function capon!(e, c::GNum, r, v, t, p)
         if (r, p) in prc_vint
             k = c * gv(coef_cpt, (r, v, t, p))
-            (v,) in T && addterm!(e, k, tm, "VAR_NCAP", r, v, p)
+            (v,) in T && addterm!(e, k, tm, "VAR_NCAP", r, v, p; at=v)   # %CAPON%: %VARV%_NCAP(R,V,P%SWS%) (L63)
             addconst!(e, k * gv(pasti, (r, v, p)))
             rcapsub!(e, k, tm, r, v, t, p)                                  # %RCAPSUB%
         end
@@ -453,19 +459,22 @@ function eq_lducs!(tm::TimesModel)
     # eq_sdlogic, L67-70
     rows7 = NTuple{7,String}[(k..., l) for k in lvl_rows for l in ("N", "FX")]                 # LNX(L)
     for (r, v, t, p, tsl, s, l) in gams_sort!(rows7, d)
-        lhs = JuMP.AffExpr(0.0)
-        if l == "N"                                                        # $IPS(L)
-            udp!(lhs, one, r, v, t, p, stg_prev(x, r, s), "N")
-            udp!(lhs, -one, r, v, t, p, s, "N")
-            ups!(lhs, -one, r, v, t, p, s, "LO")                           # -SUM(BD, VAR_UPS(..,BD)*BDSIG(BD))
-            ups!(lhs, one, r, v, t, p, s, "UP")
-        else                                                               # $BD(L)
-            ups!(lhs, one, r, v, t, p, s, "UP")
-            for (_, _, u, bd) in get(upt_of_rp, (r, p), no4)
-                bd == "UP" && upt!(lhs, -one, r, v, t, p, s, u)
+        for sow in sw_rows(tm, t)   # %SWTX% (L67): SW_T(T,SOW)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            if l == "N"                                                        # $IPS(L)
+                udp!(lhs, one, r, v, t, p, stg_prev(x, r, s), "N")
+                udp!(lhs, -one, r, v, t, p, s, "N")
+                ups!(lhs, -one, r, v, t, p, s, "LO")                           # -SUM(BD, VAR_UPS(..,BD)*BDSIG(BD))
+                ups!(lhs, one, r, v, t, p, s, "UP")
+            else                                                               # $BD(L)
+                ups!(lhs, one, r, v, t, p, s, "UP")
+                for (_, _, u, bd) in get(upt_of_rp, (r, p), no4)
+                    bd == "UP" && upt!(lhs, -one, r, v, t, p, s, u)
+                end
             end
+            gconstraint!(tm, "eq_sdlogic", (r, v, t, p, tsl, s, l, swx(tm)), "E", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
         end
-        gconstraint!(tm, "eq_sdlogic", (r, v, t, p, tsl, s, l, "1"), "E", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
     end
 
     # eq_sudupt, L74-77
@@ -474,44 +483,50 @@ function eq_lducs!(tm::TimesModel)
         iszero(gv(dp_non, (r, v, p, u, tsl, "UP"))) || push!(rows7, (r, v, t, p, tsl, s, u))
     end
     for (r, v, t, p, tsl, s, u) in gams_sort!(rows7, d)
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        upt!(lhs, one, r, v, t, p, s, u)
-        lo, up = gv(dp_non, (r, v, p, u, tsl, "LO")).v, gv(dp_non, (r, v, p, u, tsl, "UP")).v
-        for (_, _, sl, c1, c2) in cycle(r, s)
-            sl == s && continue                                            # $(ORD(S)<>ORD(SL))
-            m = rem(hr(r, s) - hr(r, sl) - lo + (yf(r, sl) / 4 + yf(r, s)) / sp(r, s) + c2, c1)
-            m < up * (1 + _SD_TOL) + yf(r, s) / sp(r, s) / 2 && ups!(rhs, one, r, v, t, p, sl, "LO")
+        for sow in sw_rows(tm, t)   # %SWTX% (L74)
+            set_sow!(tm, sow)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            upt!(lhs, one, r, v, t, p, s, u)
+            lo, up = gv(dp_non, (r, v, p, u, tsl, "LO")).v, gv(dp_non, (r, v, p, u, tsl, "UP")).v
+            for (_, _, sl, c1, c2) in cycle(r, s)
+                sl == s && continue                                            # $(ORD(S)<>ORD(SL))
+                m = rem(hr(r, s) - hr(r, sl) - lo + (yf(r, sl) / 4 + yf(r, s)) / sp(r, s) + c2, c1)
+                m < up * (1 + _SD_TOL) + yf(r, s) / sp(r, s) / 2 && ups!(rhs, one, r, v, t, p, sl, "LO")
+            end
+            gconstraint!(tm, "eq_sudupt", (r, v, t, p, tsl, s, u, swx(tm)), "L", lhs, rhs) === nothing || (n += 1)
         end
-        gconstraint!(tm, "eq_sudupt", (r, v, t, p, tsl, s, u, "1"), "L", lhs, rhs) === nothing || (n += 1)
     end
 
     # eq_sdslant, L81-90
     for (r, v, t, p, tsl, s) in gams_sort!(copy(lvl_rows), d)
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        udp!(lhs, one, r, v, t, p, s, "N")
-        if (r, p, s) in prc_ts
-            for (_, ts, _) in get(parent_of, (r, s), no3)
-                ups!(rhs, one, r, v, t, p, ts, "FX")
-                capups!(rhs, -one, r, v, t, p, s)
-            end
-        end
-        capups!(rhs, one, r, v, t, p, s)
-        ups!(rhs, -one, r, v, t, p, s, "N")
-        for (_, _, u, bd) in get(upt_of_rp, (r, p), no4)
-            h = sd(r, v, p, u, bd) / 8760
-            lim = h * (1 + _SD_TOL)
-            for (j, s2, sl, c1, c2) in cycle(r, s)
-                if bd in ("UP", "FX") && gv(modus, (r, sl, j, s2, s)).v < lim              # $BDUPX(BD)
-                    k = sl == s ? 0.0 : max(0.0, 1 - rem(hr(r, sl) - hr(r, s) + sudhfr(r, sl, s) + c2, c1) / h)
-                    upt!(rhs, -k, r, v, t, p, sl, u)
-                end
-                if bd in ("LO", "FX") && gv(modus, (r, s, j, s2, sl)).v < lim              # $BDLOX(BD)
-                    k = sl == s ? 1.0 : max(0.0, 1 - rem(hr(r, s) - hr(r, sl) + sudhfr(r, sl, s) + c2, c1) / h)
-                    ups!(rhs, -k, r, v, t, p, sl, bd)
+        for sow in sw_rows(tm, t)   # %SWTX% (L81)
+            set_sow!(tm, sow)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            udp!(lhs, one, r, v, t, p, s, "N")
+            if (r, p, s) in prc_ts
+                for (_, ts, _) in get(parent_of, (r, s), no3)
+                    ups!(rhs, one, r, v, t, p, ts, "FX")
+                    capups!(rhs, -one, r, v, t, p, s)
                 end
             end
+            capups!(rhs, one, r, v, t, p, s)
+            ups!(rhs, -one, r, v, t, p, s, "N")
+            for (_, _, u, bd) in get(upt_of_rp, (r, p), no4)
+                h = sd(r, v, p, u, bd) / 8760
+                lim = h * (1 + _SD_TOL)
+                for (j, s2, sl, c1, c2) in cycle(r, s)
+                    if bd in ("UP", "FX") && gv(modus, (r, sl, j, s2, s)).v < lim              # $BDUPX(BD)
+                        k = sl == s ? 0.0 : max(0.0, 1 - rem(hr(r, sl) - hr(r, s) + sudhfr(r, sl, s) + c2, c1) / h)
+                        upt!(rhs, -k, r, v, t, p, sl, u)
+                    end
+                    if bd in ("LO", "FX") && gv(modus, (r, s, j, s2, sl)).v < lim              # $BDLOX(BD)
+                        k = sl == s ? 1.0 : max(0.0, 1 - rem(hr(r, s) - hr(r, sl) + sudhfr(r, sl, s) + c2, c1) / h)
+                        ups!(rhs, -k, r, v, t, p, sl, bd)
+                    end
+                end
+            end
+            gconstraint!(tm, "eq_sdslant", (r, v, t, p, tsl, s, swx(tm)), "E", lhs, rhs) === nothing || (n += 1)
         end
-        gconstraint!(tm, "eq_sdslant", (r, v, t, p, tsl, s, "1"), "E", lhs, rhs) === nothing || (n += 1)
     end
 
     # the rows by timeslice of the process: (r,v,t,p,s) with PRC_TS(r,p,s) and RP_DP(r,p)
@@ -523,33 +538,39 @@ function eq_lducs!(tm::TimesModel)
 
     # eq_sdminon, L94-97
     for (r, v, t, p, s) in ts_rows
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        udp!(lhs, one, r, v, t, p, s, "N")
-        for (_, ts, _) in get(parent_of, (r, s), no3)
-            udp!(lhs, one, r, v, t, p, ts, "FX")
-        end
-        udp!(rhs, one, r, v, t, p, s, "FX")
-        ups!(rhs, one, r, v, t, p, s, "UP")
-        half = yf(r, s) / sp(r, s) / 2
-        starts = [u for (_, _, u, bd) in get(upt_of_rp, (r, p), no4) if bd == "UP"]
-        if minimum(u -> sd(r, v, p, u, "UP") / 8760, starts; init=Inf) < half             # SMIN of nothing is +INF
-            for u in starts
-                half <= sd(r, v, p, u, "UP") / 8760 && upt!(rhs, one, r, v, t, p, s, u)
+        for sow in sw_rows(tm, t)   # %SWTX% (L94)
+            set_sow!(tm, sow)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            udp!(lhs, one, r, v, t, p, s, "N")
+            for (_, ts, _) in get(parent_of, (r, s), no3)
+                udp!(lhs, one, r, v, t, p, ts, "FX")
             end
-            ups!(rhs, -one, r, v, t, p, s, "UP")
+            udp!(rhs, one, r, v, t, p, s, "FX")
+            ups!(rhs, one, r, v, t, p, s, "UP")
+            half = yf(r, s) / sp(r, s) / 2
+            starts = [u for (_, _, u, bd) in get(upt_of_rp, (r, p), no4) if bd == "UP"]
+            if minimum(u -> sd(r, v, p, u, "UP") / 8760, starts; init=Inf) < half             # SMIN of nothing is +INF
+                for u in starts
+                    half <= sd(r, v, p, u, "UP") / 8760 && upt!(rhs, one, r, v, t, p, s, u)
+                end
+                ups!(rhs, -one, r, v, t, p, s, "UP")
+            end
+            gconstraint!(tm, "eq_sdminon", (r, v, t, p, s, swx(tm)), "G", lhs, rhs) === nothing || (n += 1)
         end
-        gconstraint!(tm, "eq_sdminon", (r, v, t, p, s, "1"), "G", lhs, rhs) === nothing || (n += 1)
     end
 
     # eq_sudload, L101-103
     for (r, v, t, p, s) in ts_rows
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        addterm!(lhs, one / gv(yrfr, (r, s)) / gv(capact, (r, p)), tm, "VAR_ACT", r, v, t, p, s)
-        ml = gv(minld, (r, v, p))
-        capon!(rhs, ml, r, v, t, p)
-        upscaps!(rhs, ml, r, v, t, p, s)
-        udp!(rhs, gv(coef_af, (r, v, t, p, s, "UP")) - ml, r, v, t, p, s, "FX")
-        gconstraint!(tm, "eq_sudload", (r, v, t, p, s, "1"), "E", lhs, rhs) === nothing || (n += 1)
+        for sow in sw_rows(tm, t)   # %SWTX% (L101)
+            set_sow!(tm, sow)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            addterm!(lhs, one / gv(yrfr, (r, s)) / gv(capact, (r, p)), tm, "VAR_ACT", r, v, t, p, s)
+            ml = gv(minld, (r, v, p))
+            capon!(rhs, ml, r, v, t, p)
+            upscaps!(rhs, ml, r, v, t, p, s)
+            udp!(rhs, gv(coef_af, (r, v, t, p, s, "UP")) - ml, r, v, t, p, s, "FX")
+            gconstraint!(tm, "eq_sudload", (r, v, t, p, s, swx(tm)), "E", lhs, rhs) === nothing || (n += 1)
+        end
     end
 
     # the rows at the level of the process: (r,v,t,p,tsl,s) with PRC_TSL(r,p,tsl), TS_GROUP(r,tsl,s) and RP_DP(r,p)
@@ -566,41 +587,47 @@ function eq_lducs!(tm::TimesModel)
         iszero(gv(act_time, (r, v, p, bd))) || push!(rows7, (r, v, t, p, tsl, s, bd))
     end
     for (r, v, t, p, tsl, s, bd) in gams_sort!(rows7, d)
-        lhs = JuMP.AffExpr(0.0)
-        at, hotlo = gv(act_time, (r, v, p, bd)).v, sd(r, v, p, "HOT", "LO")
-        if bd in ("LO", "FX")                                              # SUM(BDLOX(BD), ...): the minimum off-line time
-            ups!(lhs, one, r, v, t, p, s, "N")
-            for (_, _, sl, c1, c2) in cycle(r, s)
-                rem(hr(r, s) - hr(r, sl) - hotlo / 8760 + yf(r, s) / sp(r, s) / 2 + c2, c1) < at / 8760 &&
-                    ups!(lhs, -one, r, v, t, p, sl, bd)
+        for sow in sw_rows(tm, t)   # %SWTX% (L107)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            at, hotlo = gv(act_time, (r, v, p, bd)).v, sd(r, v, p, "HOT", "LO")
+            if bd in ("LO", "FX")                                              # SUM(BDLOX(BD), ...): the minimum off-line time
+                ups!(lhs, one, r, v, t, p, s, "N")
+                for (_, _, sl, c1, c2) in cycle(r, s)
+                    rem(hr(r, s) - hr(r, sl) - hotlo / 8760 + yf(r, s) / sp(r, s) / 2 + c2, c1) < at / 8760 &&
+                        ups!(lhs, -one, r, v, t, p, sl, bd)
+                end
             end
-        end
-        if bd in ("UP", "FX")                                              # SUM(BDUPX(BD), ...): the minimum on-line time
-            udp!(lhs, one, r, v, t, p, s, "N")
-            for (_, _, sl, c1, _) in cycle(r, s), (_, _, u, b) in get(upt_of_rp, (r, p), no4)
-                b == bd || continue
-                rem(hr(r, s) - hr(r, sl) + c1, c1) < (at - hotlo - sd(r, v, p, u, bd)) / 8760 + yf(r, sl) / sp(r, s) / 2 &&
-                    upt!(lhs, -one, r, v, t, p, sl, u)
+            if bd in ("UP", "FX")                                              # SUM(BDUPX(BD), ...): the minimum on-line time
+                udp!(lhs, one, r, v, t, p, s, "N")
+                for (_, _, sl, c1, _) in cycle(r, s), (_, _, u, b) in get(upt_of_rp, (r, p), no4)
+                    b == bd || continue
+                    rem(hr(r, s) - hr(r, sl) + c1, c1) < (at - hotlo - sd(r, v, p, u, bd)) / 8760 + yf(r, sl) / sp(r, s) / 2 &&
+                        upt!(lhs, -one, r, v, t, p, sl, u)
+                end
             end
+            gconstraint!(tm, "eq_sudtime", (r, v, t, p, tsl, s, bd, swx(tm)), "G", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
         end
-        gconstraint!(tm, "eq_sudtime", (r, v, t, p, tsl, s, bd, "1"), "G", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
     end
 
     # eq_sudpll, L118-124
     for (r, v, t, p, tsl, s) in gams_sort!(filter!(k -> (k[1], k[2], k[4]) in dp_losd, own_rows), d)
-        lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-        ups!(lhs, one, r, v, t, p, s, "FX")
-        scale = gv(capact, (r, p)) * gv(yrfr, (r, s)) * gv(minld, (r, v, p))
-        for (_, _, u, bd) in get(upt_of_rp, (r, p), no4)
-            h, sig, ps = sd(r, v, p, u, bd) / 8760, _ups_bdsig(bd), gv(dp_psud, (r, v, p, u, bd)).v
-            for (_, _, sl, c1, c2) in cycle(r, s)
-                rem((hr(r, s) - hr(r, sl)) * sig + yf(r, sl) / sp(r, s) / 2 + c2, c1) < h * (1 + _SD_TOL) || continue
-                w = 1 + min(1.0, rem((hr(r, s) - hr(r, sl)) * sig + sudhfr(r, sl, s) + c2, c1) / h) * (ps - 1)
-                bd in ("UP", "FX") && upt!(rhs, w * scale, r, v, t, p, sl, u)                  # $BDUPX(BD)
-                bd in ("LO", "FX") && ups!(rhs, w * scale, r, v, t, p, sl, bd)                 # $BDLOX(BD)
+        for sow in sw_rows(tm, t)   # %SWTX% (L118)
+            set_sow!(tm, sow)
+            lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+            ups!(lhs, one, r, v, t, p, s, "FX")
+            scale = gv(capact, (r, p)) * gv(yrfr, (r, s)) * gv(minld, (r, v, p))
+            for (_, _, u, bd) in get(upt_of_rp, (r, p), no4)
+                h, sig, ps = sd(r, v, p, u, bd) / 8760, _ups_bdsig(bd), gv(dp_psud, (r, v, p, u, bd)).v
+                for (_, _, sl, c1, c2) in cycle(r, s)
+                    rem((hr(r, s) - hr(r, sl)) * sig + yf(r, sl) / sp(r, s) / 2 + c2, c1) < h * (1 + _SD_TOL) || continue
+                    w = 1 + min(1.0, rem((hr(r, s) - hr(r, sl)) * sig + sudhfr(r, sl, s) + c2, c1) / h) * (ps - 1)
+                    bd in ("UP", "FX") && upt!(rhs, w * scale, r, v, t, p, sl, u)                  # $BDUPX(BD)
+                    bd in ("LO", "FX") && ups!(rhs, w * scale, r, v, t, p, sl, bd)                 # $BDLOX(BD)
+                end
             end
+            gconstraint!(tm, "eq_sudpll", (r, v, t, p, tsl, s, swx(tm)), "G", lhs, rhs) === nothing || (n += 1)
         end
-        gconstraint!(tm, "eq_sudpll", (r, v, t, p, tsl, s, "1"), "G", lhs, rhs) === nothing || (n += 1)
     end
     return n
 end

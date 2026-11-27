@@ -119,6 +119,9 @@ VAR_UDP at TS for each RP_STL entry of type BD whose level holds TS (a timeslice
 only, so one term at most). GAMS counts the macro as DEFINED, so mod_vars.mod L96's empty parameter
 is never declared (G2). RP_STL has entries other than 'N' only under %STSFLX% (coef_ext.vda L32).
 
+The SOW tags (sow_tags.jl): the macro reads `%var%_udp(... %sow%)`, the row's
+own SOW (`addterm!`).
+
 GAMS: coef_ext.vda L31, v4.9.7.
 """
 function var_sts!(expr::JuMP.AffExpr, coef::GNum, tm, r, v, t, p, ts, bd)
@@ -153,6 +156,9 @@ end
 
 The EQ_STGTSS rows (formula in the file header).
 
+The SOW tags (sow_tags.jl): the row is `%EQ%_STGTSS(... %SWT%)` (L13); every
+term is `%VAR%_X(... %SOW%)` (L16-43).
+
 GAMS: eqstgtss.mod L13-48, v4.9.7.
 """
 function eq_stgtss_rows!(tm::TimesModel)
@@ -168,51 +174,54 @@ function eq_stgtss_rows!(tm::TimesModel)
         sts = (r, p) in x.rp_sts
         for (_, _, s) in get(x.stg_of_rp, (r, p), NTuple{3,String}[])
             off(r, t, s) && continue     # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
-            lhs = JuMP.AffExpr(0.0)
-            addterm!(lhs, one, tm, "VAR_ACT", r, v, t, p, s)                                 # L16
-            rhs = JuMP.AffExpr(0.0)
-            sl = stg_prev(x, r, s)                                                           # ALL_TS(S--RS_STG(R,S))
-            if (r, p, sl) in x.rps_stg                                                       # L20
-                addterm!(rhs, one, tm, "VAR_ACT", r, v, t, p, sl)                            # L22
-                if nst                                                                       # L25-30
-                    for (_, _, c) in get(x.stgc_of_rp, (r, p), NTuple{3,String}[])
-                        tin, tout = (r, p, c, "IN") in x.top, (r, p, c, "OUT") in x.top
-                        stgn_out = (r, p, c, "OUT") in x.rpc_stgn
-                        for (_, ts, _) in get(x.above_of, (r, sl), NTuple{3,String}[])      # TS_MAP(R,TS,ALL_TS)
-                            (r, p, c, ts) in x.rpcs_var || continue
-                            nstts = (r, p, ts) in x.prc_nstts
-                            sin, sout = tin && nstts, tout && (nstts == stgn_out)          # L27-28 (EQV)
-                            (sin || sout) || continue
-                            w = gv(x.rs_fr, (r, sl, ts)) * (one + gv(x.rtcs_fr, (r, t, c, sl, ts))) /
-                                gv(x.prc_actflo, (r, v, p, c))                                # L29
-                            sin && addterm!(rhs, w, tm, "VAR_SIN", r, v, t, p, c, ts)
-                            sout && addterm!(rhs, -w, tm, "VAR_SOUT", r, v, t, p, c, ts)
+            for sow in sw_rows(tm, t)   # %SWT% (L13)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                addterm!(lhs, one, tm, "VAR_ACT", r, v, t, p, s)                                 # L16
+                rhs = JuMP.AffExpr(0.0)
+                sl = stg_prev(x, r, s)                                                           # ALL_TS(S--RS_STG(R,S))
+                if (r, p, sl) in x.rps_stg                                                       # L20
+                    addterm!(rhs, one, tm, "VAR_ACT", r, v, t, p, sl)                            # L22
+                    if nst                                                                       # L25-30
+                        for (_, _, c) in get(x.stgc_of_rp, (r, p), NTuple{3,String}[])
+                            tin, tout = (r, p, c, "IN") in x.top, (r, p, c, "OUT") in x.top
+                            stgn_out = (r, p, c, "OUT") in x.rpc_stgn
+                            for (_, ts, _) in get(x.above_of, (r, sl), NTuple{3,String}[])      # TS_MAP(R,TS,ALL_TS)
+                                (r, p, c, ts) in x.rpcs_var || continue
+                                nstts = (r, p, ts) in x.prc_nstts
+                                sin, sout = tin && nstts, tout && (nstts == stgn_out)          # L27-28 (EQV)
+                                (sin || sout) || continue
+                                w = gv(x.rs_fr, (r, sl, ts)) * (one + gv(x.rtcs_fr, (r, t, c, sl, ts))) /
+                                    gv(x.prc_actflo, (r, v, p, c))                                # L29
+                                sin && addterm!(rhs, w, tm, "VAR_SIN", r, v, t, p, c, ts)
+                                sout && addterm!(rhs, -w, tm, "VAR_SOUT", r, v, t, p, c, ts)
+                            end
                         end
                     end
-                end
-                stgtss = get(x.stgtss_of_rp, (r, p), NTuple{3,String}[])
-                for (_, _, c) in stgtss                                                      # L33
-                    (r, p, c, "IN") in x.top &&
-                        addterm!(rhs, one / gv(x.prc_actflo, (r, v, p, c)), tm, "VAR_SIN", r, v, t, p, c, sl)
-                end
-                for (_, _, c) in stgtss                                                      # L34
-                    (r, p, c, "OUT") in x.top &&
-                        addterm!(rhs, -(one / gv(x.prc_actflo, (r, v, p, c))), tm, "VAR_SOUT", r, v, t, p, c, sl)
-                end
-                if sts                                                                       # L37
-                    for (_, ts, _) in get(x.parents_of, (r, s), NTuple{3,String}[])
-                        (r, p, ts) in x.prc_ts || continue
-                        addterm!(rhs, -gv(x.rs_fr, (r, sl, ts)), tm, "VAR_SOUT", r, v, t, p, "ACT", ts)
+                    stgtss = get(x.stgtss_of_rp, (r, p), NTuple{3,String}[])
+                    for (_, _, c) in stgtss                                                      # L33
+                        (r, p, c, "IN") in x.top &&
+                            addterm!(rhs, one / gv(x.prc_actflo, (r, v, p, c)), tm, "VAR_SIN", r, v, t, p, c, sl)
+                    end
+                    for (_, _, c) in stgtss                                                      # L34
+                        (r, p, c, "OUT") in x.top &&
+                            addterm!(rhs, -(one / gv(x.prc_actflo, (r, v, p, c))), tm, "VAR_SOUT", r, v, t, p, c, sl)
+                    end
+                    if sts                                                                       # L37
+                        for (_, ts, _) in get(x.parents_of, (r, s), NTuple{3,String}[])
+                            (r, p, ts) in x.prc_ts || continue
+                            addterm!(rhs, -gv(x.rs_fr, (r, sl, ts)), tm, "VAR_SOUT", r, v, t, p, "ACT", ts)
+                        end
+                    end
+                    if haskey(x.stg_loss, (r, v, p, sl))                                         # L40-45
+                        l = gv(x.stg_loss, (r, v, p, sl))
+                        addterm!(rhs, -stg_loss_prev(l), tm, "VAR_ACT", r, v, t, p, sl)
+                        addterm!(rhs, -stg_loss_cur(l), tm, "VAR_ACT", r, v, t, p, s)
                     end
                 end
-                if haskey(x.stg_loss, (r, v, p, sl))                                         # L40-45
-                    l = gv(x.stg_loss, (r, v, p, sl))
-                    addterm!(rhs, -stg_loss_prev(l), tm, "VAR_ACT", r, v, t, p, sl)
-                    addterm!(rhs, -stg_loss_cur(l), tm, "VAR_ACT", r, v, t, p, s)
-                end
+                addconst!(rhs, gv(x.stg_chrg, (r, t, p, sl)))                                    # L48
+                gconstraint!(tm, eqtag(tm, "EQ_STGTSS"), swt(tm, (r, v, t, p, s), t), "E", lhs, rhs) === nothing || (n += 1)
             end
-            addconst!(rhs, gv(x.stg_chrg, (r, t, p, sl)))                                    # L48
-            gconstraint!(tm, "EQ_STGTSS", (r, v, t, p, s), "E", lhs, rhs) === nothing || (n += 1)
         end
     end
     return n
@@ -260,6 +269,10 @@ GAMS reference: GAMS cannot reach it either.
 
 The 1/PRC_ACTFLO factor binds to the VAR_SIN term only (GAMS precedence).
 
+The SOW tags (sow_tags.jl): the row is `%EQ%_STSBAL(... %SWT%)` (L53); every
+term is `%VAR%_X(... %SOW%)` (L56-83), VAR_STS being the macro `%var%_udp(...
+%sow%)` (coef_ext.vda L31).
+
 GAMS: eqstgtss.mod L53-83, v4.9.7.
 """
 function eq_stsbal!(tm::TimesModel)
@@ -281,56 +294,59 @@ function eq_stsbal!(tm::TimesModel)
             (r, p, s) in x.prc_ts || continue
             off(r, t, s) && continue     # RTS(S) (M1.3 change 67)
             up = (r, p, tsl, "UP") in rp_stl                                                 # $RP_STL(R,P,TSL,'UP')
-            lhs = JuMP.AffExpr(0.0)
-            if (r, "ANNUAL", s) in x.rs_below                                                # L56
-                addterm!(lhs, one, tm, "VAR_ACT", r, v, t, p, s)
-                if up
-                    addterm!(lhs, one, tm, "VAR_SIN", r, v, t, p, "ACT", s)
-                    var_sts!(lhs, one, tm, r, v, t, p, s, "N")
-                end
-            end
-            rhs = JuMP.AffExpr(0.0)
-            sl = stg_prev(x, r, s)
-            if (r, "ANNUAL", sl) in x.rs_below                                               # L60-76
-                (l,) in ips && addterm!(rhs, one, tm, "VAR_ACT", r, v, t, p, sl)            # L62
-                (l,) in bd && addterm!(rhs, one, tm, "VAR_UDP", r, v, t, p, sl, "LO")       # L62
-                if up                                                                        # L63
-                    addterm!(rhs, one, tm, "VAR_SIN", r, v, t, p, "ACT", sl)
-                    var_sts!(rhs, one, tm, r, v, t, p, sl, l)
-                end
-                if (l,) in ips
-                    addterm!(rhs, one, tm, "VAR_SOUT", r, v, t, p, "ACT", sl)                # L66
-                    for (_, ts, _) in get(x.parents_of, (r, s), NTuple{3,String}[])          # L67
-                        (r, p, ts) in x.prc_ts || continue
-                        addterm!(rhs, -gv(x.rs_fr, (r, sl, ts)), tm, "VAR_SOUT", r, v, t, p, "ACT", ts)
-                    end
-                    if haskey(x.stg_loss, (r, v, p, sl))                                     # L70-75
-                        lv = gv(x.stg_loss, (r, v, p, sl))
-                        if haskey(x.rs_stg, (r, s))
-                            addterm!(rhs, -stg_loss_prev(lv), tm, "VAR_ACT", r, v, t, p, sl)
-                            addterm!(rhs, -stg_loss_cur(lv), tm, "VAR_ACT", r, v, t, p, s)
-                        end
-                        if up && sl != s                                                     # (SIN(S)-SIN(SL))$RP_STL(..,'UP')
-                            addterm!(rhs, -stg_loss_cur(lv), tm, "VAR_SIN", r, v, t, p, "ACT", s)
-                            addterm!(rhs, stg_loss_cur(lv), tm, "VAR_SIN", r, v, t, p, "ACT", sl)
-                        end
+            for sow in sw_rows(tm, t)   # %SWT% (L53)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                if (r, "ANNUAL", s) in x.rs_below                                                # L56
+                    addterm!(lhs, one, tm, "VAR_ACT", r, v, t, p, s)
+                    if up
+                        addterm!(lhs, one, tm, "VAR_SIN", r, v, t, p, "ACT", s)
+                        var_sts!(lhs, one, tm, r, v, t, p, s, "N")
                     end
                 end
-            end
-            if s == "ANNUAL"                                                                 # L78-83
-                for (_, _, c) in get(x.stgips_of_rp, (r, p), NTuple{3,String}[])            # L80-81
-                    for io in ("IN", "OUT")
-                        (r, p, c, io) in top || continue
-                        if (io,) in ips
-                            addterm!(rhs, one / gv(actflo, (r, v, p, c)), tm, "VAR_SIN", r, v, t, p, c, s)
-                        else
-                            addterm!(rhs, -one, tm, "VAR_SOUT", r, v, t, p, c, s)
+                rhs = JuMP.AffExpr(0.0)
+                sl = stg_prev(x, r, s)
+                if (r, "ANNUAL", sl) in x.rs_below                                               # L60-76
+                    (l,) in ips && addterm!(rhs, one, tm, "VAR_ACT", r, v, t, p, sl)            # L62
+                    (l,) in bd && addterm!(rhs, one, tm, "VAR_UDP", r, v, t, p, sl, "LO")       # L62
+                    if up                                                                        # L63
+                        addterm!(rhs, one, tm, "VAR_SIN", r, v, t, p, "ACT", sl)
+                        var_sts!(rhs, one, tm, r, v, t, p, sl, l)
+                    end
+                    if (l,) in ips
+                        addterm!(rhs, one, tm, "VAR_SOUT", r, v, t, p, "ACT", sl)                # L66
+                        for (_, ts, _) in get(x.parents_of, (r, s), NTuple{3,String}[])          # L67
+                            (r, p, ts) in x.prc_ts || continue
+                            addterm!(rhs, -gv(x.rs_fr, (r, sl, ts)), tm, "VAR_SOUT", r, v, t, p, "ACT", ts)
+                        end
+                        if haskey(x.stg_loss, (r, v, p, sl))                                     # L70-75
+                            lv = gv(x.stg_loss, (r, v, p, sl))
+                            if haskey(x.rs_stg, (r, s))
+                                addterm!(rhs, -stg_loss_prev(lv), tm, "VAR_ACT", r, v, t, p, sl)
+                                addterm!(rhs, -stg_loss_cur(lv), tm, "VAR_ACT", r, v, t, p, s)
+                            end
+                            if up && sl != s                                                     # (SIN(S)-SIN(SL))$RP_STL(..,'UP')
+                                addterm!(rhs, -stg_loss_cur(lv), tm, "VAR_SIN", r, v, t, p, "ACT", s)
+                                addterm!(rhs, stg_loss_cur(lv), tm, "VAR_SIN", r, v, t, p, "ACT", sl)
+                            end
                         end
                     end
                 end
-                addterm!(rhs, -one, tm, "VAR_SOUT", r, v, t, p, "ACT", s)
+                if s == "ANNUAL"                                                                 # L78-83
+                    for (_, _, c) in get(x.stgips_of_rp, (r, p), NTuple{3,String}[])            # L80-81
+                        for io in ("IN", "OUT")
+                            (r, p, c, io) in top || continue
+                            if (io,) in ips
+                                addterm!(rhs, one / gv(actflo, (r, v, p, c)), tm, "VAR_SIN", r, v, t, p, c, s)
+                            else
+                                addterm!(rhs, -one, tm, "VAR_SOUT", r, v, t, p, c, s)
+                            end
+                        end
+                    end
+                    addterm!(rhs, -one, tm, "VAR_SOUT", r, v, t, p, "ACT", s)
+                end
+                gconstraint!(tm, eqtag(tm, "EQ_STSBAL"), swt(tm, (r, v, t, p, tsl, s, l), t), "E", lhs, rhs) === nothing || (n += 1)
             end
-            gconstraint!(tm, "EQ_STSBAL", (r, v, t, p, tsl, s, l), "E", lhs, rhs) === nothing || (n += 1)
         end
     end
     return n
@@ -351,6 +367,10 @@ own level (STOAL(R,S) = PRC_SGL(R,P)); %SWX% is ,'1' and %SWTX% empty outside st
 
 `STOAL(R,S)=PRC_SGL(R,P)` compares numbers, so a missing value is 0 on either side. VAR_STS is the
 VAR_UDP of coef_ext.vda L31's macro (`var_sts!`). Returns the number of rows.
+
+The SOW tags (sow_tags.jl): the row is `EQ_STSLEV(... %SWX%)\$(%SWTX% ...)`
+(L88), with no %EQ%: the name stays and the last index is `swx`; every term is
+`%VAR%_X(... %SOW%)` (L91, L93).
 
 GAMS: eqstgtss.mod L86-93, v4.9.7.
 """
@@ -377,20 +397,23 @@ function eq_stslev!(tm::TimesModel)
         for tsl in tsls, (_, _, s) in get(group_of, (r, tsl), NTuple{3,String}[])
             gv(stoal, (r, s)).v == sgl || continue
             off(r, t, s) && continue     # RTS(S) (M1.3 change 67)
-            lhs = JuMP.AffExpr(0.0)
-            for (_, ts, _) in get(tsmap_to, (r, s), NTuple{3,String}[])
-                haskey(stoa.values, (ts,)) || continue                                   # $STOA(TS)
-                k = one / gv(rs_stgprd, (r, ts))
-                addterm!(lhs, k, tm, "VAR_SIN", r, v, t, p, "ACT", ts)
-                addterm!(lhs, k, tm, "VAR_UDP", r, v, t, p, ts, "LO")
-                var_sts!(lhs, k, tm, r, v, t, p, ts, "N")
+            for sow in sw_rows(tm, t)   # %SWTX% (L88): SW_T(T,SOW)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                for (_, ts, _) in get(tsmap_to, (r, s), NTuple{3,String}[])
+                    haskey(stoa.values, (ts,)) || continue                                   # $STOA(TS)
+                    k = one / gv(rs_stgprd, (r, ts))
+                    addterm!(lhs, k, tm, "VAR_SIN", r, v, t, p, "ACT", ts)
+                    addterm!(lhs, k, tm, "VAR_UDP", r, v, t, p, ts, "LO")
+                    var_sts!(lhs, k, tm, r, v, t, p, ts, "N")
+                end
+                rhs = JuMP.AffExpr(0.0)
+                for (_, _, ts) in get(below1_of, (r, s), NTuple{3,String}[])
+                    haskey(x.rs_fr, (r, ts, s)) || continue                                  # $RS_FR(R,TS,S)
+                    addterm!(rhs, one / gv(rs_stgprd, (r, ts)) * gv(x.rs_fr, (r, ts, s)), tm, "VAR_ACT", r, v, t, p, ts)
+                end
+                gconstraint!(tm, "EQ_STSLEV", (r, v, t, p, tsl, s, swx(tm)), "L", lhs, rhs) === nothing || (n += 1)
             end
-            rhs = JuMP.AffExpr(0.0)
-            for (_, _, ts) in get(below1_of, (r, s), NTuple{3,String}[])
-                haskey(x.rs_fr, (r, ts, s)) || continue                                  # $RS_FR(R,TS,S)
-                addterm!(rhs, one / gv(rs_stgprd, (r, ts)) * gv(x.rs_fr, (r, ts, s)), tm, "VAR_ACT", r, v, t, p, ts)
-            end
-            gconstraint!(tm, "EQ_STSLEV", (r, v, t, p, tsl, s, "1"), "L", lhs, rhs) === nothing || (n += 1)
         end
     end
     return n

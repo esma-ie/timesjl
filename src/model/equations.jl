@@ -61,16 +61,33 @@ function addeq!(eqs::EquationStore, name::AbstractString, key::NTuple{N,String},
 end
 
 """
-    addterm!(expr, coef::GNum, tm, name, key...) -> expr
+    addterm!(expr, coef::GNum, tm, name, key...; at=nothing, tagged=true) -> expr
 
 Add `coef * name(key)` to `expr` the way GAMS generates a linear term: an
 exact-zero coefficient adds nothing and creates no column; a nonzero or EPS
 coefficient adds the term (value 0.0 for EPS), creating the column on first
 reference (docs/discrepancies.md G5).
+
+The SOW tags (sow_tags.jl): a term is `%VAR%_X(key %SOW%)` by default, or,
+with `at` the period T, V, MODLYEAR or TT, `%VART%`/`%VARV%`/`%VARM%`/`%VARTT%_X(key %SWS%)`;
+`tagged=false` is a literal `VAR_X(key)`. In a deterministic run all of them
+are `VAR_X(key)`. In a stochastic run (change 74) the tagged forms read
+VAS_X(key,SOW), or the sum of VAS_X(key,W) over SW_TSW(SOW,at,W).
+
+GAMS: setglobs.gms L348; stages.stc L12-13, v4.9.7.
 """
-function addterm!(expr::JuMP.AffExpr, coef::GNum, tm, name::AbstractString, key::AbstractString...)
+function addterm!(expr::JuMP.AffExpr, coef::GNum, tm, name::AbstractString, key::AbstractString...;
+                  at::Union{Nothing,AbstractString}=nothing, tagged::Bool=true)
     iszero(coef) && return expr
     coef.eps && push!(_eps_exprs(tm), expr)
+    if tagged && tm.tags.stochastic
+        startswith(name, "VAR_") || throw(ArgumentError("%VAR% tags a name that starts with VAR_, got $name"))
+        vas = "VAS_" * name[5:end]
+        for w in sw_cols(tm, at)
+            JuMP.add_to_expression!(expr, coef.v, getvar!(tm, vas, key..., w))
+        end
+        return expr
+    end
     JuMP.add_to_expression!(expr, coef.v, getvar!(tm, name, key...))
     return expr
 end
@@ -177,12 +194,13 @@ struct TimesModel
     reduce::Bool
     switches::Dict{String,String}
     cache::Dict{String,Any}
+    tags::SowTags          # the SOW tags (sow_tags.jl; M1.3 change 73)
 end
 
 function TimesModel(data::DumpData; reduce::Bool=false, switches=Dict{String,String}())
     model = JuMP.Model()
     sw = Dict{String,String}(uppercase(String(k)) => String(v) for (k, v) in switches)
-    tm = TimesModel(model, VariableStore(model), EquationStore(), data, reduce, sw, Dict{String,Any}())
+    tm = TimesModel(model, VariableStore(model), EquationStore(), data, reduce, sw, Dict{String,Any}(), sow_tags(data, sw))
     return data_switches!(tm)
 end
 

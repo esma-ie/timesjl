@@ -201,6 +201,9 @@ right-hand side's VAR_ACT has no RTP_VARA condition. The exchange branch
 region of the process (REG is not the row's R), so an import share can be
 taken against the imports of all regions through the process.
 
+The SOW tags (sow_tags.jl): the row is `%EQ%%1_ASHAR(... %SWT%)` (L38); every
+term is `%VAR%_X(... %SOW%)` (L51-76, and %cal_red%).
+
 GAMS: eqashar.vda L38-78 with equ_ext.vda L94-96, v4.9.7.
 """
 function eq_ashar!(tm::TimesModel)
@@ -252,100 +255,103 @@ function eq_ashar!(tm::TimesModel)
         gams_sort!(rows, d)
         for (r, v, t, p, cg, cg2, s) in rows
             rpcg = gv(rpcg_ashar, (r, p, cg, cg2, s))
-            lhs = JuMP.AffExpr(0.0)
-            if (r, p) in rp_flo
-                for (_, _, sl) in get(s2_of_rp, (r, p), no3)
-                    (r, s, sl) in ts_map || continue
-                    share = GZERO
-                    for (_, ts) in get(tsann_of_s, (sl,), Tuple{String,String}[])
-                        share += gv(flo_ashar, (r, v, p, cg, cg2, ts, bd))
-                    end
-                    # Reference-group flows.
-                    for (_, _, _, com, ts) in get(varf_of_rtp, (r, t, p), no5)
-                        ((r, sl, ts) in rs_tree && (r, cg2, com) in com_gmap) || continue
-                        same_side = any(k -> (r, p, com, k[4]) in top, get(io_of_rpc, (r, p, cg), no4))
-                        f = gmax(rpcg, gif(gif(1, same_side), (cg2,) in com_type))
-                        k = share * f * gv(rs_fr, (r, sl, ts)) * (1 + gv(rtcs_fr, (r, t, com, sl, ts)))
-                        cal_nored!(lhs, tm, k, r, v, t, p, com, ts)
-                    end
-                    # Activity as the reference (ACTCG(CG2)).
-                    cg2 == "ACT" || continue
-                    (r, t, p) in rtp_vara || continue
-                    for (_, _, ts) in get(ts_of_rp, (r, p), no3)
-                        haskey(rs_fr, (r, sl, ts)) || continue
-                        if !((r, p) in rp_pgflo)
-                            # EXP((-ABS(STG_LOSS(R,V,P,TS))/2)$RP_STG(R,P))
-                            loss = (r, p) in rp_stg ? GNum(exp(-abs(gv(stg_loss, (r, v, p, ts)).v) / 2)) : GNum(1.0)
-                            addterm!(lhs, share * gv(rs_fr, (r, sl, ts)) * loss, tm, "VAR_ACT", r, v, t, p, ts)
-                        elseif (r, p) in rp_std
-                            for (_, _, com) in get(pg_of_rp, (r, p), no3)
-                                w = share * gv(rs_fr, (r, sl, ts)) * (1 + gv(rtcs_fr, (r, t, com, sl, ts)))
-                                if (r, p) in rp_pgact
-                                    addterm!(lhs, w, tm, "VAR_ACT", r, v, t, p, ts)
-                                else
-                                    addterm!(lhs, w / gv(prc_actflo, (r, v, p, com)), tm, "VAR_FLO", r, v, t, p, com, ts)
+            for sow in sw_rows(tm, t)   # %SWT% (eqashar.vda L38)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                if (r, p) in rp_flo
+                    for (_, _, sl) in get(s2_of_rp, (r, p), no3)
+                        (r, s, sl) in ts_map || continue
+                        share = GZERO
+                        for (_, ts) in get(tsann_of_s, (sl,), Tuple{String,String}[])
+                            share += gv(flo_ashar, (r, v, p, cg, cg2, ts, bd))
+                        end
+                        # Reference-group flows.
+                        for (_, _, _, com, ts) in get(varf_of_rtp, (r, t, p), no5)
+                            ((r, sl, ts) in rs_tree && (r, cg2, com) in com_gmap) || continue
+                            same_side = any(k -> (r, p, com, k[4]) in top, get(io_of_rpc, (r, p, cg), no4))
+                            f = gmax(rpcg, gif(gif(1, same_side), (cg2,) in com_type))
+                            k = share * f * gv(rs_fr, (r, sl, ts)) * (1 + gv(rtcs_fr, (r, t, com, sl, ts)))
+                            cal_nored!(lhs, tm, k, r, v, t, p, com, ts)
+                        end
+                        # Activity as the reference (ACTCG(CG2)).
+                        cg2 == "ACT" || continue
+                        (r, t, p) in rtp_vara || continue
+                        for (_, _, ts) in get(ts_of_rp, (r, p), no3)
+                            haskey(rs_fr, (r, sl, ts)) || continue
+                            if !((r, p) in rp_pgflo)
+                                # EXP((-ABS(STG_LOSS(R,V,P,TS))/2)$RP_STG(R,P))
+                                loss = (r, p) in rp_stg ? GNum(exp(-abs(gv(stg_loss, (r, v, p, ts)).v) / 2)) : GNum(1.0)
+                                addterm!(lhs, share * gv(rs_fr, (r, sl, ts)) * loss, tm, "VAR_ACT", r, v, t, p, ts)
+                            elseif (r, p) in rp_std
+                                for (_, _, com) in get(pg_of_rp, (r, p), no3)
+                                    w = share * gv(rs_fr, (r, sl, ts)) * (1 + gv(rtcs_fr, (r, t, com, sl, ts)))
+                                    if (r, p) in rp_pgact
+                                        addterm!(lhs, w, tm, "VAR_ACT", r, v, t, p, ts)
+                                    else
+                                        addterm!(lhs, w / gv(prc_actflo, (r, v, p, com)), tm, "VAR_FLO", r, v, t, p, com, ts)
+                                    end
                                 end
                             end
                         end
                     end
                 end
-            end
-            # L56-65: the ANNUAL share of an exchange process
-            if (r, p) in rp_ire && (s,) in annual
-                share = gv(flo_ashar, (r, v, p, cg, cg2, s, bd))
-                isimpexp = (cg2,) in impexp
-                for (_, _, com, ie) in get(ire_of_rp, (r, p), no4)
-                    ((r, cg, com) in com_gmap && (!isimpexp || ie == cg2)) || continue
-                    for (reg, _, _, c, ts) in get(varf_of_tp, (t, p), no5)
-                        (((reg, cg2, c) in com_gmap || isimpexp) && (reg, p, c, ie) in rpc_ire) || continue
-                        if (reg, p, c) in rpc_aire
-                            addterm!(lhs, share * gv(prc_actflo, (reg, v, p, c)), tm, "VAR_ACT", reg, v, t, p, ts)
+                # L56-65: the ANNUAL share of an exchange process
+                if (r, p) in rp_ire && (s,) in annual
+                    share = gv(flo_ashar, (r, v, p, cg, cg2, s, bd))
+                    isimpexp = (cg2,) in impexp
+                    for (_, _, com, ie) in get(ire_of_rp, (r, p), no4)
+                        ((r, cg, com) in com_gmap && (!isimpexp || ie == cg2)) || continue
+                        for (reg, _, _, c, ts) in get(varf_of_tp, (t, p), no5)
+                            (((reg, cg2, c) in com_gmap || isimpexp) && (reg, p, c, ie) in rpc_ire) || continue
+                            if (reg, p, c) in rpc_aire
+                                addterm!(lhs, share * gv(prc_actflo, (reg, v, p, c)), tm, "VAR_ACT", reg, v, t, p, ts)
+                            else
+                                addterm!(lhs, share, tm, "VAR_IRE", reg, v, t, p, c, ts, ie)
+                            end
+                        end
+                        if cg2 == "ACT"
+                            for (_, _, ts) in get(ts_of_rp, (r, p), no3)
+                                addterm!(lhs, share, tm, "VAR_ACT", r, v, t, p, ts)
+                            end
+                        end
+                        for (_, _, _, c, ts) in get(varf_of_rtp, (r, t, p), no5)
+                            c == com || continue
+                            if (r, p, com) in rpc_aire
+                                addterm!(lhs, -gv(prc_actflo, (r, v, p, com)), tm, "VAR_ACT", r, v, t, p, ts)
+                            else
+                                addterm!(lhs, GNum(-1.0), tm, "VAR_IRE", r, v, t, p, com, ts, ie)
+                            end
+                        end
+                    end
+                end
+                rhs = JuMP.AffExpr(0.0)
+                if (r, p) in rp_flo
+                    for (_, _, _, com, ts) in get(varf_of_rtp, (r, t, p), no5)
+                        ((r, cg, com) in com_gmap && (r, s, ts) in ts_map) || continue
+                        cal_nored!(rhs, tm, GNum(1.0), r, v, t, p, com, ts)
+                    end
+                end
+                if cg == "ACT"
+                    for (_, _, ts) in get(ts_of_rp, (r, p), no3)
+                        (r, s, ts) in ts_map || continue
+                        if !((r, p) in no_act)
+                            addterm!(rhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, ts)
                         else
-                            addterm!(lhs, share, tm, "VAR_IRE", reg, v, t, p, c, ts, ie)
-                        end
-                    end
-                    if cg2 == "ACT"
-                        for (_, _, ts) in get(ts_of_rp, (r, p), no3)
-                            addterm!(lhs, share, tm, "VAR_ACT", r, v, t, p, ts)
-                        end
-                    end
-                    for (_, _, _, c, ts) in get(varf_of_rtp, (r, t, p), no5)
-                        c == com || continue
-                        if (r, p, com) in rpc_aire
-                            addterm!(lhs, -gv(prc_actflo, (r, v, p, com)), tm, "VAR_ACT", r, v, t, p, ts)
-                        else
-                            addterm!(lhs, GNum(-1.0), tm, "VAR_IRE", r, v, t, p, com, ts, ie)
+                            for (_, _, c) in get(pg_of_rp, (r, p), no3)
+                                addterm!(rhs, GNum(1.0) / gv(prc_actflo, (r, v, p, c)), tm, "VAR_FLO", r, v, t, p, c, ts)
+                            end
                         end
                     end
                 end
-            end
-            rhs = JuMP.AffExpr(0.0)
-            if (r, p) in rp_flo
-                for (_, _, _, com, ts) in get(varf_of_rtp, (r, t, p), no5)
-                    ((r, cg, com) in com_gmap && (r, s, ts) in ts_map) || continue
-                    cal_nored!(rhs, tm, GNum(1.0), r, v, t, p, com, ts)
-                end
-            end
-            if cg == "ACT"
-                for (_, _, ts) in get(ts_of_rp, (r, p), no3)
-                    (r, s, ts) in ts_map || continue
-                    if !((r, p) in no_act)
-                        addterm!(rhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, ts)
-                    else
-                        for (_, _, c) in get(pg_of_rp, (r, p), no3)
-                            addterm!(rhs, GNum(1.0) / gv(prc_actflo, (r, v, p, c)), tm, "VAR_FLO", r, v, t, p, c, ts)
-                        end
+                # L75-76: the output of a storage process against its activity
+                if cg2 == "ACT" && (r, p, cg) in rpc_stg && (r, p, cg, "OUT") in top
+                    for (_, _, _, ts) in get(rpcs_of_rpc, (r, p, cg), no4)
+                        w = gv(rs_fr, (r, s, ts)) * (1 + gv(rtcs_fr, (r, t, cg, s, ts)))
+                        addterm!(rhs, w / gv(prc_actflo, (r, v, p, cg)), tm, "VAR_SOUT", r, v, t, p, cg, ts)
                     end
                 end
+                gconstraint!(tm, eqtag(tm, name), swt(tm, (r, v, t, p, cg, cg2, s), t), eqtype, lhs, rhs) === nothing || (n += 1)
             end
-            # L75-76: the output of a storage process against its activity
-            if cg2 == "ACT" && (r, p, cg) in rpc_stg && (r, p, cg, "OUT") in top
-                for (_, _, _, ts) in get(rpcs_of_rpc, (r, p, cg), no4)
-                    w = gv(rs_fr, (r, s, ts)) * (1 + gv(rtcs_fr, (r, t, cg, s, ts)))
-                    addterm!(rhs, w / gv(prc_actflo, (r, v, p, cg)), tm, "VAR_SOUT", r, v, t, p, cg, ts)
-                end
-            end
-            gconstraint!(tm, name, (r, v, t, p, cg, cg2, s), eqtype, lhs, rhs) === nothing || (n += 1)
         end
     end
     return n

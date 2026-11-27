@@ -30,20 +30,26 @@ The RTP_FFCS factor exists only when RTP_FFCS is DEFINED (L18).
 %8/%9 (a SUM over vintages wrapped around the whole term, used only by
 cal_fflo.mod) are not supported here.
 
+The SOW tags (sow_tags.jl): each variable is `%VAR%_FLO%6(... %SOW%)`
+(cal_nored.red L23, L27; cal_red.red L29-56), the row's own SOW. `at` is for
+the callers whose file sets %SOW% again around the include: eqcumflo.mod L16
+and L26 sum the term over SW_TSW(SOW,T,WW) with %SOW% as `,WW`, which is what
+`at = t` reads (`addterm!`).
+
 GAMS: cal_nored.red L15-30, v4.9.7 (macro defaults from setglobs.gms
 L348-353: %VAR% -> VAR, %SOW% -> '', %SHFF% -> 1+RTP_FFC).
 """
 function cal_nored!(expr::JuMP.AffExpr, tm::TimesModel, coef::GNum,
                     r::String, v::String, t::String, p::String, c::String, ts::String;
-                    mode::AbstractString="")
-    tm.reduce && return cal_red!(expr, tm, coef, r, v, t, p, c, ts; mode)    # %cal_red% is cal_red.red (pp_reduce.red L58-59)
+                    mode::AbstractString="", at::Union{Nothing,AbstractString}=nothing)
+    tm.reduce && return cal_red!(expr, tm, coef, r, v, t, p, c, ts; mode, at)    # %cal_red% is cal_red.red (pp_reduce.red L58-59)
     mode in ("", "T", "V") || throw(ArgumentError("cal_nored mode (%7) must be '', T or V, got $mode"))
     iszero(coef) && return expr
     vnt = mode == "T" ? t : v
 
     rpc_emis = gset(tm, "RPC_EMIS")
     if !((r, p, c) in rpc_emis)
-        return addterm!(expr, coef, tm, "VAR_FLO", r, vnt, t, p, c, ts)
+        return addterm!(expr, coef, tm, "VAR_FLO", r, vnt, t, p, c, ts; at)
     end
 
     # Emission flow = flow variable * emission factor (cal_nored.red L26-28).
@@ -68,7 +74,7 @@ function cal_nored!(expr::JuMP.AffExpr, tm::TimesModel, coef::GNum,
             shp3 = shp3 * (1 + gv(rtp_ffcs, (r, vnt, p, cg3, c)))
             k = coef * (gv(coef_ptran, (r, vnt, p, cg3, com2, c, all_ts)) * shp3 *
                         gv(rs_fr, (r, ts, all_ts)) * (1 + gv(rtcs_fr, (r, t, com2, ts, all_ts))))
-            addterm!(expr, k, tm, "VAR_FLO", r, vnt, t, p, com2, all_ts)
+            addterm!(expr, k, tm, "VAR_FLO", r, vnt, t, p, com2, all_ts; at)
         end
     end
     return expr
@@ -108,12 +114,16 @@ SUM over RPC_ACT(R,%4,%2) skips its ACTCG members (pp_reduce.red L87; G27).
 alike, so the caller sums over the vintages and passes the multiplier in
 `coef`.
 
+`at` is passed to `addterm!` for every variable (see `cal_nored!`):
+`%VAR%_FLO%6(... %SOW%)` and `%VAR%_ACT%6(... %SOW%)`, cal_red.red L29, L36,
+L39, L43, L52 and L56.
+
 GAMS: cal_red.red L15-56, v4.9.7 (macro defaults from setglobs.gms
 L348-353: %VAR% -> VAR, %SOW% -> '', %SHFF% -> 1+RTP_FFC).
 """
 function cal_red!(expr::JuMP.AffExpr, tm::TimesModel, coef::GNum,
                   r::String, v::String, t::String, p::String, c::String, ts::String;
-                  mode::AbstractString="")
+                  mode::AbstractString="", at::Union{Nothing,AbstractString}=nothing)
     mode in ("", "T", "V") || throw(ArgumentError("cal_red mode (%7) must be '', T or V, got $mode"))
     iszero(coef) && return expr
     vnt = mode == "T" ? t : v
@@ -141,13 +151,13 @@ function cal_red!(expr::JuMP.AffExpr, tm::TimesModel, coef::GNum,
         for com in get(x.act_of, (r, p), String[]), (_, _, s2) in get(x.ts2_of, (r, p), NTuple{3,String}[])
             haskey(x.rs_fr.values, (r, tsx, s2)) || continue
             k = w * (af * gv(x.rs_fr, (r, tsx, s2)) * (1 + gv(x.rtcs_fr, (r, t, com, tsx, s2))))
-            addterm!(expr, k, tm, "VAR_ACT", r, vnt, t, p, s2)
+            addterm!(expr, k, tm, "VAR_ACT", r, vnt, t, p, s2; at)
         end
     end
     act, ffn = (r, p, c) in x.rpc_act, (r, p, c) in x.rpc_ffunc
     if !(act || ffn)
         if !((r, p, c) in x.rpc_emis)
-            addterm!(expr, coef, tm, "VAR_FLO", r, vnt, t, p, c, ts)
+            addterm!(expr, coef, tm, "VAR_FLO", r, vnt, t, p, c, ts; at)
         else
             # Emission flow = source flow (itself perhaps substituted) * emission factor (L29-42).
             for (_, _, _, cg1, com2) in get(x.fs_emit_of, (r, p, c), NTuple{5,String}[])
@@ -156,15 +166,15 @@ function cal_red!(expr::JuMP.AffExpr, tm::TimesModel, coef::GNum,
                     w = coef * (gv(x.coef_ptran, (r, vnt, p, cg1, com2, c, all_ts)) * shp(cg1, c) *
                                 gv(x.rs_fr, (r, ts, all_ts)) * (1 + gv(x.rtcs_fr, (r, t, com2, ts, all_ts))))
                     a2, f2 = (r, p, com2) in x.rpc_act, (r, p, com2) in x.rpc_ffunc
-                    (a2 || f2) || addterm!(expr, w, tm, "VAR_FLO", r, vnt, t, p, com2, all_ts)
-                    a2 && addterm!(expr, w * gv(x.prc_actflo, (r, vnt, p, com2)), tm, "VAR_ACT", r, vnt, t, p, all_ts)
+                    (a2 || f2) || addterm!(expr, w, tm, "VAR_FLO", r, vnt, t, p, com2, all_ts; at)
+                    a2 && addterm!(expr, w * gv(x.prc_actflo, (r, vnt, p, com2)), tm, "VAR_ACT", r, vnt, t, p, all_ts; at)
                     f2 && ffunc!(w, gv(x.act_flo, (r, vnt, p, com2, all_ts)) * shp(x.pgl, com2), all_ts)
                 end
             end
         end
     end
     # Flow variable equals activity variable (L46-47), or a function of it (L49-54).
-    act && addterm!(expr, coef * gv(x.prc_actflo, (r, vnt, p, c)), tm, "VAR_ACT", r, vnt, t, p, ts)
+    act && addterm!(expr, coef * gv(x.prc_actflo, (r, vnt, p, c)), tm, "VAR_ACT", r, vnt, t, p, ts; at)
     ffn && ffunc!(coef, gv(x.act_flo, (r, vnt, p, c, ts)) * shp(x.pgl, c), ts)
     return expr
 end

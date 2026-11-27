@@ -68,10 +68,11 @@ REPO = HERE.parent.parent
 sys.path.insert(0, str(HERE))
 
 from runfile import build_dd_run, patch_run  # noqa: E402
-from runlimits import RunSlot, default_max_parallel, default_slot_dir, default_threads, limit_threads  # noqa: E402
+from runlimits import (DEFAULT_RAM_GB, GamsWatch, PoolRun, default_max_parallel, default_pool,  # noqa: E402
+                       default_slot_dir, limit_threads, model_threads, runfile_solves_once, threads_override)
 from gdx2arrow import convert_gdx, gams_system_directory  # noqa: E402
 
-HARNESS_VERSION = "0.3.8"  # 0.3.8 (26 Nov 2026): TIMES v4.9.8; a --only pass refuses a reference made with another TIMES commit; 0.3.7 (20 Nov 2026): $ONIMPLICITASSIGN in the pre-solve run of a SENSIS run (runfile.py); 0.3.6 (19 Nov 2026): work_files, files copied into the work folder (the base prices of elastic demand); 0.3.5 (15 Nov 2026): parse_solves reads MODEL STATISTICS with "N projected"; 0.3.4 (14 Nov 2026): steps/<k>/ of stepped runs (www_in.cgi, www_out.cgi); 0.3.3 (14 Nov 2026): equ/, the checkpoint of stepped runs (equ_ext.tjlref); 0.3.2 (9 Nov 2026): raw/tjl_presolve_qa_check.log; 0.3.1 (5 Nov 2026): --only convert; 0.3.0 (31 Oct 2026): M1.3 checkpoints, --only presolve; 0.2.4 (29 Oct 2026): run limits (threads, parallel runs); 0.2.3: model overrides; 0.2.2: raw/tjl_<run>.run; 0.2.1: extra_dd_dirs; 0.2.0: pre-solve run
+HARNESS_VERSION = "0.3.9"  # 0.3.9 (26 Nov 2026): the run pool (runlimits.py: thread classes, phases, peak RAM); 0.3.8 (26 Nov 2026): TIMES v4.9.8; a --only pass refuses a reference made with another TIMES commit; 0.3.7 (20 Nov 2026): $ONIMPLICITASSIGN in the pre-solve run of a SENSIS run (runfile.py); 0.3.6 (19 Nov 2026): work_files, files copied into the work folder (the base prices of elastic demand); 0.3.5 (15 Nov 2026): parse_solves reads MODEL STATISTICS with "N projected"; 0.3.4 (14 Nov 2026): steps/<k>/ of stepped runs (www_in.cgi, www_out.cgi); 0.3.3 (14 Nov 2026): equ/, the checkpoint of stepped runs (equ_ext.tjlref); 0.3.2 (9 Nov 2026): raw/tjl_presolve_qa_check.log; 0.3.1 (5 Nov 2026): --only convert; 0.3.0 (31 Oct 2026): M1.3 checkpoints, --only presolve; 0.2.4 (29 Oct 2026): run limits (threads, parallel runs); 0.2.3: model overrides; 0.2.2: raw/tjl_<run>.run; 0.2.1: extra_dd_dirs; 0.2.0: pre-solve run
 EXPECTED_TIMES_VERSION = "4.9.8"  # v4.9.7 @ d9a6a25 until 26 Nov 2026 (CLAUDE.md, Baseline)
 EXPECTED_TIMES_COMMIT = "7064680"
 VARIANTS = {"reduce_off": {"REDUCE": "NO"}, "as_run": {}}
@@ -229,14 +230,31 @@ def run_gams(gams: str, workdir: Path, runfile: str, idirs: list[str], solver: s
     if limits.get("threads", 0) > 0:
         cmd.append(f"threads={limits['threads']}")
     cmd += extra
-    # one machine-wide run slot per GAMS run (runlimits.py); the wait is not part of wall_s
-    with RunSlot(f"{workdir.name} {runfile}", limits.get("max_parallel", 0), limits.get("slot_dir")) as slot:
+    # The machine-wide run pool (runlimits.py, James, 26 Nov 2026): a run that solves reserves its
+    # model's thread class, any other (pre-solve, CONVERT) 1 thread, and the RAM of its last peak.
+    # GamsWatch lowers the hold after barrier and records this run's peak RAM. The wait to start is
+    # not part of wall_s.
+    solves = solver.upper() != "CONVERT" and tag != "presolve"
+    hold = limits.get("threads", 0) if solves and limits.get("threads", 0) > 0 else 1
+    ram_need = (limits.get("peaks") or {}).get(tag) or DEFAULT_RAM_GB
+    single = runfile_solves_once((workdir / runfile).read_text(errors="replace"))
+    with PoolRun(f"{workdir.parent.parent.name}/{workdir.parent.name} {tag}", hold, ram_need,
+                 pool=limits.get("pool"), max_parallel=limits.get("max_parallel", 0),
+                 slot_dir=limits.get("slot_dir")) as run:
+        out_f, err_f = workdir / f"tjl_{tag}.stdout", workdir / f"tjl_{tag}.stderr"
         t0 = time.perf_counter()
-        proc = subprocess.run(cmd, cwd=workdir, capture_output=True, text=True)
+        with open(out_f, "w") as so, open(err_f, "w") as se:
+            proc = subprocess.Popen(cmd, cwd=workdir, stdout=so, stderr=se, text=True)
+            watch = GamsWatch(run, workdir / f"tjl_{tag}.log", proc.pid, single_solve=single and solves)
+            while proc.poll() is None:
+                watch.poll()
+                time.sleep(watch.poll_s)
         wall = time.perf_counter() - t0
+    tail = lambda f: f.read_text(errors="replace")[-2000:] if f.exists() else ""  # noqa: E731
     return {"command": cmd, "returncode": proc.returncode, "wall_s": round(wall, 3),
-            "slot_wait_s": round(slot.waited_s, 1),
-            "stdout_tail": proc.stdout[-2000:], "stderr_tail": proc.stderr[-2000:]}
+            "slot_wait_s": round(run.waited_s, 1), "pool_threads": hold, "pool_phases": watch.phases,
+            "peak_ram_gb": round(watch.peak_ram_gb, 2),
+            "stdout_tail": tail(out_f), "stderr_tail": tail(err_f)}
 
 
 def prepare_workdir(work: Path, model: dict, overrides: dict, solver_opts: dict,
@@ -310,6 +328,14 @@ def make_one(args, suite, model_name: str, variant: str, source_info: dict):
     only = parse_only(getattr(args, "only", None))     # empty: the full reference
     old_manifest = None
     check_same_times(out, source_info, f"{model_name}/{variant}")
+    # The run pool (runlimits.py): this model's thread class (suite `threads`, 6 or 12; TIMESJL_THREADS or
+    # --threads sets one count for every model) and the peak RAM of each of its runs last time, plus 10%.
+    limits = dict(args.limits)
+    limits["threads"] = args.limits["threads"] or model_threads(model)
+    prior = json.loads((out / "manifest.json").read_text()) if (out / "manifest.json").exists() else {}
+    limits["peaks"] = {t: round(1.1 * r["peak_ram_gb"], 1) for t, r in prior.get("runs", {}).items()
+                       if r.get("peak_ram_gb")}
+    args = argparse.Namespace(**{**vars(args), "limits": limits})
     if only and (out / "manifest.json").exists():
         old_manifest = json.loads((out / "manifest.json").read_text())
     elif out.exists():
@@ -335,7 +361,8 @@ def make_one(args, suite, model_name: str, variant: str, source_info: dict):
         "host": {"platform": platform.platform(), "machine": platform.machine(), "cpus": os.cpu_count()},
         "times": source_info, "suite_entry": model, "runs": {}, "dumps": {},
         "inputs": {str(p): sha256(p) for p in inputs if p.exists()},
-        "limits": {"threads": args.limits["threads"], "max_parallel": args.limits["max_parallel"]},
+        "limits": {"threads": args.limits["threads"], "pool": args.limits["pool"],
+                   "max_parallel": args.limits["max_parallel"]},
     }
 
     if old_manifest is not None:
@@ -564,21 +591,24 @@ def main(argv=None):
                    help="presolve: only the pre-solve run (M1.3 checkpoints, pre-solve dump; ppm/coef where "
                         "missing); convert: only the CONVERT run (matrix, dictionary, MPS); presolve,convert: "
                         "both. Added to an existing reference; no solve")
-    # Local run limits (James, 29 Oct 2026; runlimits.py). 0 disables a limit.
-    p.add_argument("--threads", type=int, default=default_threads(),
-                   help="solver threads per run: GAMS threads= and the threads line of solver option files "
-                        "(default 12, or TIMESJL_THREADS)")
+    # Local run limits: the machine-wide run pool (James, 26 Nov 2026; runlimits.py).
+    p.add_argument("--threads", type=int, default=threads_override(),
+                   help="solver threads per run, for every model: GAMS threads= and the threads line of solver "
+                        "option files (default: each model's class, suite `threads`, 6 or 12; or TIMESJL_THREADS)")
+    p.add_argument("--pool", type=int, default=default_pool(),
+                   help="threads of the machine-wide run pool, 2 of them kept free (default 48, or TIMESJL_POOL; "
+                        "0 disables the pool)")
     p.add_argument("--max-parallel", type=int, default=default_max_parallel(),
-                   help="GAMS runs at a time on this machine, across harness processes (default 4, or "
+                   help="an optional limit on the number of GAMS runs at a time (default 0: none; or "
                         "TIMESJL_MAX_PARALLEL)")
     p.add_argument("--slot-dir", type=Path, default=default_slot_dir(),
-                   help="directory of the shared run-slot files (default <temp>/timesjl-run-slots, or "
+                   help="directory of the run pool's ledger files (default <temp>/timesjl-run-slots, or "
                         "TIMESJL_SLOT_DIR)")
     a = p.parse_args(argv)
     parse_only(a.only)
     a.solvers = [s.strip().upper() for s in a.solvers.split(",") if s.strip()]
     a.work = a.work or (a.out / "_work")
-    a.limits = {"threads": a.threads, "max_parallel": a.max_parallel, "slot_dir": a.slot_dir}
+    a.limits = {"threads": a.threads, "pool": a.pool, "max_parallel": a.max_parallel, "slot_dir": a.slot_dir}
     a.sysdir = gams_system_directory(a.gams)
     if a.sysdir is None:
         raise SystemExit(f"GAMS executable '{a.gams}' not found; pass --gams <path to gams>")

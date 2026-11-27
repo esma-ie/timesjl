@@ -59,6 +59,10 @@ end
 Generate every EQ_CUMNET and EQ_CUMPRD row (eqmain.mod L89-90). Returns the
 number of rows.
 
+The SOW tags (sow_tags.jl): the row is `%EQ%_CUM%2(... %SOW%)` (L15), one per
+SOW; the flows are `%VARTT%_COM%2(R,T,C,S %SWS%)` with TT(T) (L24, `at = t`)
+and the right-hand side `%VAR%_CUMCOM(... %SOW%)` (L31).
+
 GAMS: eqcumcom.mod L15-32, v4.9.7. The %OBJ% LIN weights are checked on the
 crafted case demo12_cumlin (layer 2; test/unit/test_cum_lin.jl).
 """
@@ -73,18 +77,21 @@ function eq_cumcom!(tm::TimesModel)
         rtc_kind = gset(tm, "RTC_$(kind)")
         for (r, k, y1, y2, c) in rc_cumcom
             (k == kind && (r, c) in rc) || continue
-            lhs = JuMP.AffExpr(0.0)
-            for (t,) in milestonyr
-                (r, t, c) in rtc_kind || continue
-                w = cum_weight(tm, t, y1, y2)
-                w === nothing && continue
-                for (_, _, _, s) in get(varc_of_rtc, (r, t, c), NTuple{4,String}[])
-                    addterm!(lhs, w / cucscal, tm, "VAR_COM$(kind)", r, t, c, s)
+            for sow in sow_rows(tm)   # %SOW% (L15)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                for (t,) in milestonyr
+                    (r, t, c) in rtc_kind || continue
+                    w = cum_weight(tm, t, y1, y2)
+                    w === nothing && continue
+                    for (_, _, _, s) in get(varc_of_rtc, (r, t, c), NTuple{4,String}[])
+                        addterm!(lhs, w / cucscal, tm, "VAR_COM$(kind)", r, t, c, s; at=t)   # %VARTT%_COM%2(R,T,C,S %SWS%), TT(T) (L24)
+                    end
                 end
+                rhs = JuMP.AffExpr(0.0)
+                addterm!(rhs, GNum(1.0), tm, "VAR_CUMCOM", r, c, kind, y1, y2)
+                gconstraint!(tm, eqtag(tm, "EQ_CUM$(kind)"), sowkey(tm, (r, c, y1, y2)), "E", lhs, rhs) === nothing || (n += 1)
             end
-            rhs = JuMP.AffExpr(0.0)
-            addterm!(rhs, GNum(1.0), tm, "VAR_CUMCOM", r, c, kind, y1, y2)
-            gconstraint!(tm, "EQ_CUM$(kind)", (r, c, y1, y2), "E", lhs, rhs) === nothing || (n += 1)
         end
     end
     return n

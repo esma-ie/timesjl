@@ -872,22 +872,28 @@ end
 powerflo.vda L223: `VAR_COMAUX.FX(R,T,C,S) = EPS` at each grid's reference
 node (`powerflo_reference_nodes`), for the columns the equations created.
 
+The SOW tags (sow_tags.jl): `%VAR%_COMAUX.FX(R,T,C,S%SOW%)` (L224) and
+`%VAR%_IRE.LO(R,T,T,P,C,S,'EXP'%SOW%)` (L247) are assigned for every SOW; here
+on the columns the rows created (`vartag`).
+
 GAMS: powerflo.vda L222-223, v4.9.7.
 """
 function bnd_powerflo!(bt, tm)
-    haskey(tm.vars.families, "VAR_COMAUX") || return bt
+    # %VAR%_COMAUX.FX(R,T,C,S%SOW%) (L224) and %VAR%_IRE.LO(..,'EXP'%SOW%) (L247): every SOW, on the columns made
+    comaux, var_ire = vartag(tm, "VAR_COMAUX"), vartag(tm, "VAR_IRE")
+    haskey(tm.vars.families, comaux) || return bt
     ref = powerflo_reference_nodes(tm)
-    recs = get!(() -> Dict{Tuple,Tuple{Float64,Float64}}(), bt.recs, "VAR_COMAUX")
-    for k in tm.vars.families["VAR_COMAUX"].keys
+    recs = get!(() -> Dict{Tuple,Tuple{Float64,Float64}}(), bt.recs, comaux)
+    for k in tm.vars.families[comaux].keys
         (k[1], k[3]) in ref && (recs[k] = (0.0, 0.0))
     end
     # L247: %VAR%_IRE.LO(R,T,T,P,C(ACTCG),S,'EXP')$(PRC_TS(R,P,S)$RVP(R,T,P)) = -INF, the virtual flow of the
     #   candidate lines (`ptdf_candidates!`), on the columns the PTDF rows made
     candid = gset_opt(tm.data, "GR_CANDID", 3).members
-    (isempty(candid) || !haskey(tm.vars.families, "VAR_IRE")) && return bt
+    (isempty(candid) || !haskey(tm.vars.families, var_ire)) && return bt
     prc_ts = gset(tm, "PRC_TS").members
-    ire = get!(() -> Dict{Tuple,Tuple{Float64,Float64}}(), bt.recs, "VAR_IRE")
-    for k in tm.vars.families["VAR_IRE"].keys
+    ire = get!(() -> Dict{Tuple,Tuple{Float64,Float64}}(), bt.recs, var_ire)
+    for k in tm.vars.families[var_ire].keys
         (k[5] == "ACT" && k[7] == "EXP" && k[2] == k[3] && (k[1], k[3], k[4]) in candid && (k[1], k[4], k[6]) in prc_ts) || continue
         ire[k] = (-Inf, last(get(ire, k, (0.0, Inf))))
     end
@@ -904,6 +910,9 @@ the flow over the lines GR_TOP(R,C,REG,COM,P) with a reactance, as REG's
 imports less its exports of COM, equals the admittance times the
 difference of the phase angles VAR_COMAUX of the two nodes. Returns the
 number of rows.
+
+The SOW tags (sow_tags.jl): the row is `%EQ%_GR_POWFLO(... %SWT%)` (L254); the
+terms are `%VAR%_IRE(... %SOW%)` and `%VAR%_COMAUX(... %SOW%)` (L257, L259).
 
 GAMS: powerflo.vda L250-258, v4.9.7.
 """
@@ -928,18 +937,21 @@ function eq_gr_powflo!(tm)
         ((r, t, c) in rc_grid && (t,) in tx) || continue             # RC_GRID(%R_T%,C): SUBT in a stepped run (maindrv.mod L38-40)
         for (_, _, _, s) in get(varc_of, (r, t, c), no4)
             off(r, t, s) && continue                                 # RTS(S), L254 (M1.3 change 67)
-            lhs = JuMP.AffExpr(0.0)
-            for (_, _, _, _, p) in get(top_of, (r, c, reg, com), no5)
-                iszero(gv(react, (r, t, p))) && continue                 # $PRC_REACT(R,T,P)
-                (reg, t, p, com, s) in varf || continue                  # $RTPCS_VARF(REG,T,P,COM,S)
-                for (_, v, _, _) in get(vint_of, (reg, t, p), no4), (_, _, _, ie) in get(ire_of, (reg, p, com), no4)
-                    addterm!(lhs, GNum(ie == "EXP" ? -1.0 : 1.0), tm, "VAR_IRE", reg, v, t, p, com, s, ie)   # (1-2*XPT(IE))
+            for sow in sw_rows(tm, t)   # %SWT% (L254)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                for (_, _, _, _, p) in get(top_of, (r, c, reg, com), no5)
+                    iszero(gv(react, (r, t, p))) && continue                 # $PRC_REACT(R,T,P)
+                    (reg, t, p, com, s) in varf || continue                  # $RTPCS_VARF(REG,T,P,COM,S)
+                    for (_, v, _, _) in get(vint_of, (reg, t, p), no4), (_, _, _, ie) in get(ire_of, (reg, p, com), no4)
+                        addterm!(lhs, GNum(ie == "EXP" ? -1.0 : 1.0), tm, "VAR_IRE", reg, v, t, p, com, s, ie)   # (1-2*XPT(IE))
+                    end
                 end
+                rhs = JuMP.AffExpr(0.0)
+                addterm!(rhs, GNum(a), tm, "VAR_COMAUX", r, t, c, s)
+                addterm!(rhs, GNum(-a), tm, "VAR_COMAUX", reg, t, com, s)
+                gconstraint!(tm, eqtag(tm, "EQ_GR_POWFLO"), swt(tm, (r, t, c, s, reg, com), t), "E", lhs, rhs) === nothing || (n += 1)
             end
-            rhs = JuMP.AffExpr(0.0)
-            addterm!(rhs, GNum(a), tm, "VAR_COMAUX", r, t, c, s)
-            addterm!(rhs, GNum(-a), tm, "VAR_COMAUX", reg, t, com, s)
-            gconstraint!(tm, "EQ_GR_POWFLO", (r, t, c, s, reg, com), "E", lhs, rhs) === nothing || (n += 1)
         end
     end
     return n
@@ -968,6 +980,10 @@ the PTDF-weighted sum of VAR_COMAUX at the grid nodes:
 
 VAR_IRE is taken at S, as written, for every flow timeslice TS that RS_FR
 links to S. Returns the number of rows.
+
+The SOW tags (sow_tags.jl): the row is `%EQ%_GR_PTDFLO(... %SWT%)` (L264); the
+terms are `%VAR%_IRE(... %SOW%)`, `%VAR%_COMAUX(... %SOW%)` and the macro
+VAR_GRVIRT, `%VAR%_IRE(r,t,t,p,%PGPRIM%,s,ie%sow%)` (L231, L266-271).
 
 GAMS: powerflo.vda L262-274, v4.9.7.
 """
@@ -998,21 +1014,24 @@ function eq_gr_ptdflo!(tm)
         (t,) in tx || continue
         for (c,) in gams_sort!([(c,) for c in get(c_of, (r, p), String[])], d), (_, _, s) in get(s1_of, (r, p), NTuple{3,String}[])
             off(r, t, s) && continue                                 # RTS(S), L264 (M1.3 change 67)
-            lhs = JuMP.AffExpr(0.0)
-            for (_, v, _, _) in get(vint_of, (r, t, p), nok), (_, _, _, _, ts) in get(varf_of, (r, t, p, c), NTuple{5,String}[])
-                fr = gv(rs_fr, (r, s, ts))
-                iszero(fr) && continue
-                for (_, _, _, ie) in get(ire_of, (r, p, c), nok)
-                    addterm!(lhs, fr * GNum(ie == "EXP" ? 1.0 : -1.0), tm, "VAR_IRE", r, v, t, p, c, s, ie)
+            for sow in sw_rows(tm, t)   # %SWT% (L264)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                for (_, v, _, _) in get(vint_of, (r, t, p), nok), (_, _, _, _, ts) in get(varf_of, (r, t, p, c), NTuple{5,String}[])
+                    fr = gv(rs_fr, (r, s, ts))
+                    iszero(fr) && continue
+                    for (_, _, _, ie) in get(ire_of, (r, p, c), nok)
+                        addterm!(lhs, fr * GNum(ie == "EXP" ? 1.0 : -1.0), tm, "VAR_IRE", r, v, t, p, c, s, ie)
+                    end
                 end
+                ((r, t, p) in candid && (r, t, c) in rc_grid) && grvirt!(lhs, GNum(1.0), tm, r, t, p, s)
+                rhs = JuMP.AffExpr(0.0)
+                for k in get(ptdf_of, (r, t, p, c), NTuple{6,String}[])
+                    ((k[5], t, k[6]) in rc_grid && (k[5], k[6], s) in comts) || continue
+                    addterm!(rhs, gv(ptdf, k), tm, "VAR_COMAUX", k[5], t, k[6], s)
+                end
+                gconstraint!(tm, eqtag(tm, "EQ_GR_PTDFLO"), swt(tm, (r, t, p, c, s), t), "E", lhs, rhs) === nothing || (n += 1)
             end
-            ((r, t, p) in candid && (r, t, c) in rc_grid) && grvirt!(lhs, GNum(1.0), tm, r, t, p, s)
-            rhs = JuMP.AffExpr(0.0)
-            for k in get(ptdf_of, (r, t, p, c), NTuple{6,String}[])
-                ((k[5], t, k[6]) in rc_grid && (k[5], k[6], s) in comts) || continue
-                addterm!(rhs, gv(ptdf, k), tm, "VAR_COMAUX", k[5], t, k[6], s)
-            end
-            gconstraint!(tm, "EQ_GR_PTDFLO", (r, t, p, c, s), "E", lhs, rhs) === nothing || (n += 1)
         end
     end
     return n
@@ -1030,6 +1049,9 @@ minus the line's virtual capacity VAR_XCAP:
       SUM(GR_TOP(R,C,RC,P),VAR_GRVIRT(R,T,P,C,S))*BDSIG(BD) =L= VAR_XCAP(R,T,P)*PRC_CAPACT(R,P)*G_YRFR(R,S);
 
 Returns the number of rows.
+
+The SOW tags (sow_tags.jl): the row is `%EQ%_GR_VIRTCAP(... %SWT%)` (L278);
+the terms are VAR_GRVIRT (L231) and `%VAR%_XCAP(R,T,P%SOW%)` (L279).
 
 GAMS: powerflo.vda L276-279, v4.9.7.
 """
@@ -1054,12 +1076,15 @@ function eq_gr_virtcap!(tm)
         for (c,) in gams_sort!([(c,) for c in get(cs_of, (r, p), String[])], d), (_, _, s) in get(s1_of, (r, p), NTuple{3,String}[]),
                 (bd, sig) in (("LO", 1.0), ("UP", -1.0))                     # BDSIG: LO 1, UP -1 (setglobs.gms L248)
             off(r, t, s) && continue                                 # RTS(S), L278 (M1.3 change 67)
-            lhs = JuMP.AffExpr(0.0)
-            m = get(ntop, (r, c, p), 0)
-            m == 0 || grvirt!(lhs, GNum(Float64(m)) * GNum(sig), tm, r, t, p, s)
-            rhs = JuMP.AffExpr(0.0)
-            addterm!(rhs, gv(capact, (r, p)) * gv(yrfr, (r, s)), tm, "VAR_XCAP", r, t, p)
-            gconstraint!(tm, "EQ_GR_VIRTCAP", (r, t, p, c, s, bd), "L", lhs, rhs) === nothing || (n += 1)
+            for sow in sw_rows(tm, t)   # %SWT% (L278)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                m = get(ntop, (r, c, p), 0)
+                m == 0 || grvirt!(lhs, GNum(Float64(m)) * GNum(sig), tm, r, t, p, s)
+                rhs = JuMP.AffExpr(0.0)
+                addterm!(rhs, gv(capact, (r, p)) * gv(yrfr, (r, s)), tm, "VAR_XCAP", r, t, p)
+                gconstraint!(tm, eqtag(tm, "EQ_GR_VIRTCAP"), swt(tm, (r, t, p, c, s, bd), t), "L", lhs, rhs) === nothing || (n += 1)
+            end
         end
     end
     return n
@@ -1077,6 +1102,10 @@ once the line is built to its virtual capacity GR_CAPUP, which it is at most
 
 The constant and the coefficient of VAR_CAP are evaluated in GAMS's order,
 from the innermost bracket out. Returns the number of rows.
+
+The SOW tags (sow_tags.jl): the row is
+`%EQ%_GR_VIRTBND(GR_CANDID(%R_T%,P)%SWT%)` (L283); the terms are
+`%VAR%_XCAP(R,T,P%SOW%)` and `%VAR%_CAP(R,T,P%SOW%)` (L285-287).
 
 GAMS: powerflo.vda L281-287, v4.9.7.
 """
@@ -1101,11 +1130,14 @@ function eq_gr_virtbnd!(tm)
         c0, c1 = 1.0 - c0, -c1
         m = bigm * g
         c0, c1 = m * c0, m * c1
-        lhs = JuMP.AffExpr(0.0)
-        addterm!(lhs, GNum(1.0), tm, "VAR_XCAP", r, t, p)
-        rhs = JuMP.AffExpr(c0)
-        (r, t, p) in rtp && addterm!(rhs, GNum(c1), tm, "VAR_CAP", r, t, p)
-        gconstraint!(tm, "EQ_GR_VIRTBND", (r, t, p), "E", lhs, rhs) === nothing || (n += 1)
+        for sow in sw_rows(tm, t)   # %SWT% (L283)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            addterm!(lhs, GNum(1.0), tm, "VAR_XCAP", r, t, p)
+            rhs = JuMP.AffExpr(c0)
+            (r, t, p) in rtp && addterm!(rhs, GNum(c1), tm, "VAR_CAP", r, t, p)
+            gconstraint!(tm, eqtag(tm, "EQ_GR_VIRTBND"), swt(tm, (r, t, p), t), "E", lhs, rhs) === nothing || (n += 1)
+        end
     end
     return n
 end
@@ -1162,6 +1194,9 @@ file (L461-462), so those calls add nothing. The terms (L366-369):
 
 `mult` is %MX% times the caller's factor on cal_ire's terms. Nothing unless %POWERFLO% is YES.
 
+The SOW tags (sow_tags.jl): the terms are `%VAR%_GRIDIO(... %SOW%)` (L367,
+L369), the SOW of the row that includes them.
+
 GAMS: powerflo.vda L11, L221, L363-370, L461-462; cal_ire.mod L30, v4.9.7.
 """
 function ireaux!(expr::JuMP.AffExpr, tm, mult::GNum, r::String, t::String, c::String, s::String)
@@ -1187,12 +1222,18 @@ end
 
 `VAR_IRE(R,V,T,P,C,TS,IE)\$(NOT RPC_AIRE(R,P,C)) + (VAR_ACT(R,V,T,P,TS)*PRC_ACTFLO(R,V,P,C))\$RPC_AIRE(R,P,C)`
 times `k` (powerflo.vda L302-303, L330-331).
+
+The SOW tags (sow_tags.jl): both are `%VAR%_X(... %SOW%)`. `at` is for
+EQ_OBJBAL (L430), where L407-408 set %SOW% to `,WW` inside a sum over
+SW_TSW(SOW,T,WW) (`at = t`, `eq_objbal!`).
+
+GAMS: powerflo.vda L302-303, L330-331, L430, v4.9.7.
 """
-function gr_trade!(expr, tm, k::GNum, r, v, t, p, c, ts, ie)
+function gr_trade!(expr, tm, k::GNum, r, v, t, p, c, ts, ie; at::Union{Nothing,AbstractString}=nothing)
     if (r, p, c) in gset(tm, "RPC_AIRE")
-        addterm!(expr, k * gv(gparam(tm, "PRC_ACTFLO"), (r, v, p, c)), tm, "VAR_ACT", r, v, t, p, ts)
+        addterm!(expr, k * gv(gparam(tm, "PRC_ACTFLO"), (r, v, p, c)), tm, "VAR_ACT", r, v, t, p, ts; at)
     else
-        addterm!(expr, k, tm, "VAR_IRE", r, v, t, p, c, ts, ie)
+        addterm!(expr, k, tm, "VAR_IRE", r, v, t, p, c, ts, ie; at)
     end
     return expr
 end
@@ -1223,6 +1264,9 @@ standard processes; the storage terms have no RS_FR condition (a zero weight mak
 G5). %cal_red% is cal_nored.red, or cal_red.red under REDUCE (`cal_nored!`). Returns the number
 of rows.
 
+The SOW tags (sow_tags.jl): the row is `%EQ%_GR_GENALL(... %SWT%)` (L291);
+every term is `%VAR%_X(... %SOW%)` (L302-313, and %cal_red%).
+
 GAMS: powerflo.vda L290-313, v4.9.7.
 """
 function eq_gr_genall!(tm)
@@ -1244,52 +1288,55 @@ function eq_gr_genall!(tm)
     for (r, t, c) in x.gnall, (_, _, _, s) in get(varc_of, (r, t, c), no4), cg in get(x.cg_of_r, r, String[])
         (t,) in tx || continue                                       # GR_GNALL(%R_T%,C): SUBT in a stepped run (maindrv.mod L38-40)
         off(r, t, s) && continue                                     # RTS(S), L291 (M1.3 change 67)
-        lhs = JuMP.AffExpr(0.0)
-        for (_, p, com, item) in get(x.prcmap_of_r, (r,), no4)
-            (r, cg, com) in x.algmap || continue                     # GR_ALGMAP(R,CG,COM), all three parts
-            k0 = gv(x.genmap, (r, p, item)) * gv(x.genfr, (r, t, c, item))
-            vints = get(vint_of, (r, t, p), no4)
-            # Normal processes (L293-297)
-            if (r, p) in rp_std && (r, c, com) in x.allmap
-                for (_, v, _, _) in vints, (_, _, _, _, ts) in get(varf_of, (r, t, p, com), no5)
-                    haskey(rs_fr, (r, s, ts)) || continue
-                    cal_nored!(lhs, tm, k0 * (gv(rs_fr, (r, s, ts)) * (1 + gv(rtcs_fr, (r, t, com, s, ts)))), r, v, t, p, com, ts)
+        for sow in sw_rows(tm, t)   # %SWT% (L291)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            for (_, p, com, item) in get(x.prcmap_of_r, (r,), no4)
+                (r, cg, com) in x.algmap || continue                     # GR_ALGMAP(R,CG,COM), all three parts
+                k0 = gv(x.genmap, (r, p, item)) * gv(x.genfr, (r, t, c, item))
+                vints = get(vint_of, (r, t, p), no4)
+                # Normal processes (L293-297)
+                if (r, p) in rp_std && (r, c, com) in x.allmap
+                    for (_, v, _, _) in vints, (_, _, _, _, ts) in get(varf_of, (r, t, p, com), no5)
+                        haskey(rs_fr, (r, s, ts)) || continue
+                        cal_nored!(lhs, tm, k0 * (gv(rs_fr, (r, s, ts)) * (1 + gv(rtcs_fr, (r, t, com, s, ts)))), r, v, t, p, com, ts)
+                    end
+                end
+                # Imports (L298-303)
+                if (r, p) in rp_ire && (r, p, com, "IMP") in rpc_ire
+                    for (_, v, _, _) in vints, (_, _, _, _, ts) in get(varf_of, (r, t, p, com), no5)
+                        haskey(rs_fr, (r, s, ts)) || continue
+                        f = (1 + gv(ire_flosum, (r, t, p, com, ts, "IMP", com, "OUT"))) * gv(rs_fr, (r, s, ts))
+                        gr_trade!(lhs, tm, k0 * f, r, v, t, p, com, ts, "IMP")
+                    end
+                end
+                # Net storage output (L304-306)
+                if (r, p, com) in rpc_stg
+                    sin = (r, p, com, "IN") in top
+                    for (_, v, _, _) in vints, (_, _, _, ts) in get(rpcs_var_of, (r, p, com), no4)
+                        w = k0 * gv(rs_fr, (r, s, ts))
+                        addterm!(lhs, w, tm, "VAR_SOUT", r, v, t, p, com, ts)
+                        sin && addterm!(lhs, -w, tm, "VAR_SIN", r, v, t, p, com, ts)
+                    end
                 end
             end
-            # Imports (L298-303)
-            if (r, p) in rp_ire && (r, p, com, "IMP") in rpc_ire
-                for (_, v, _, _) in vints, (_, _, _, _, ts) in get(varf_of, (r, t, p, com), no5)
-                    haskey(rs_fr, (r, s, ts)) || continue
-                    f = (1 + gv(ire_flosum, (r, t, p, com, ts, "IMP", com, "OUT"))) * gv(rs_fr, (r, s, ts))
-                    gr_trade!(lhs, tm, k0 * f, r, v, t, p, com, ts, "IMP")
+            # Net balance (L308-310)
+            if (r, cg, c) in x.allmap
+                addterm!(lhs, GNum(1.0), tm, "VAR_GRIDIO", r, t, c, c, s, "OUT")
+                addterm!(lhs, GNum(-1.0), tm, "VAR_GRIDIO", r, t, c, c, s, "IN")
+                for (_, _, com) in get(x.dem_by_12, (r, c), no3)
+                    addterm!(lhs, GNum(-1.0), tm, "VAR_GRIDIO", r, t, com, c, s, "OUT")
+                    (r, "NRG", com) in x.algmap && addterm!(lhs, GNum(1.0), tm, "VAR_GRIDIO", r, t, com, c, s, "IN")
                 end
             end
-            # Net storage output (L304-306)
-            if (r, p, com) in rpc_stg
-                sin = (r, p, com, "IN") in top
-                for (_, v, _, _) in vints, (_, _, _, ts) in get(rpcs_var_of, (r, p, com), no4)
-                    w = k0 * gv(rs_fr, (r, s, ts))
-                    addterm!(lhs, w, tm, "VAR_SOUT", r, v, t, p, com, ts)
-                    sin && addterm!(lhs, -w, tm, "VAR_SIN", r, v, t, p, com, ts)
-                end
+            rhs = JuMP.AffExpr(0.0)                                      # L313
+            for (_, _, com) in get(x.alg_by_12, (r, cg), no3)
+                ((r, c, com) in x.allmap && (r, t, com) in rtc) || continue
+                addterm!(rhs, GNum(1.0), tm, "VAR_GRIDIO", r, t, com, c, s, "OUT")
+                (r, com, com) in x.algmap && addterm!(rhs, GNum(1.0), tm, "VAR_GRIDIO", r, t, com, c, s, "IN")
             end
+            gconstraint!(tm, eqtag(tm, "EQ_GR_GENALL"), swt(tm, (r, t, c, s, cg), t), "E", lhs, rhs) === nothing || (n += 1)
         end
-        # Net balance (L308-310)
-        if (r, cg, c) in x.allmap
-            addterm!(lhs, GNum(1.0), tm, "VAR_GRIDIO", r, t, c, c, s, "OUT")
-            addterm!(lhs, GNum(-1.0), tm, "VAR_GRIDIO", r, t, c, c, s, "IN")
-            for (_, _, com) in get(x.dem_by_12, (r, c), no3)
-                addterm!(lhs, GNum(-1.0), tm, "VAR_GRIDIO", r, t, com, c, s, "OUT")
-                (r, "NRG", com) in x.algmap && addterm!(lhs, GNum(1.0), tm, "VAR_GRIDIO", r, t, com, c, s, "IN")
-            end
-        end
-        rhs = JuMP.AffExpr(0.0)                                      # L313
-        for (_, _, com) in get(x.alg_by_12, (r, cg), no3)
-            ((r, c, com) in x.allmap && (r, t, com) in rtc) || continue
-            addterm!(rhs, GNum(1.0), tm, "VAR_GRIDIO", r, t, com, c, s, "OUT")
-            (r, com, com) in x.algmap && addterm!(rhs, GNum(1.0), tm, "VAR_GRIDIO", r, t, com, c, s, "IN")
-        end
-        gconstraint!(tm, "EQ_GR_GENALL", (r, t, c, s, cg), "E", lhs, rhs) === nothing || (n += 1)
     end
     return n
 end
@@ -1327,6 +1374,9 @@ grid NRG_GRID the node belongs to (GR_GMAPC):
 less tightly than `*` (GAMS operator precedence: `**`, `* /`, `+ -`, relations, NOT, AND, OR).
 Returns the number of rows.
 
+The SOW tags (sow_tags.jl): the row is `%EQ%_GR_DEMALL(... %SWT%)` (L316);
+every term is `%VAR%_X(... %SOW%)` (L330-338, and %cal_red%).
+
 GAMS: powerflo.vda L314-340, v4.9.7.
 """
 function eq_gr_demall!(tm)
@@ -1352,60 +1402,63 @@ function eq_gr_demall!(tm)
         ado = (r, t, c) in x.ado
         for (_, g, _) in get(x.gmapc_by_13, (r, c), no3)             # GR_GMAPC(R,NRG_GRID,C)
             endc_nrg = (r, g, "NRG") in x.endc
-            lhs = JuMP.AffExpr(0.0)
-            if ado
-                # Net injection (L318-324)
-                for (_, _, com) in get(x.endc_by_12, (r, g), no3), (_, p, _, _) in get(top_of, (r, com, "OUT"), no4)
-                    (r, p) in rp_std || continue
-                    genp = (r, p) in x.genp
-                    (genp && (r, c, com) in x.demmap) && continue    # $(NOT GR_GENP(R,P)*GR_DEMMAP(R,C,COM))
-                    fac = GZERO
-                    for (_, _, _, item) in get(prcmap_of, (r, p, com), no4)
-                        fac = fac + gv(x.genmap, (r, p, item)) * gv(x.genfr, (r, t, c, item))
+            for sow in sw_rows(tm, t)   # %SWT% (L316)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                if ado
+                    # Net injection (L318-324)
+                    for (_, _, com) in get(x.endc_by_12, (r, g), no3), (_, p, _, _) in get(top_of, (r, com, "OUT"), no4)
+                        (r, p) in rp_std || continue
+                        genp = (r, p) in x.genp
+                        (genp && (r, c, com) in x.demmap) && continue    # $(NOT GR_GENP(R,P)*GR_DEMMAP(R,C,COM))
+                        fac = GZERO
+                        for (_, _, _, item) in get(prcmap_of, (r, p, com), no4)
+                            fac = fac + gv(x.genmap, (r, p, item)) * gv(x.genfr, (r, t, c, item))
+                        end
+                        fac = fac - gv(x.endfr, (r, t, c, com)) * (1 + gv(x.endfr, (r, t, com, com))) - gif(demfr, genp && endc_nrg)
+                        for (_, v, _, _) in get(vint_of, (r, t, p), no4), (_, _, _, _, ts) in get(varf_of, (r, t, p, com), no5)
+                            haskey(rs_fr, (r, s, ts)) || continue
+                            cal_nored!(lhs, tm, gv(rs_fr, (r, s, ts)) * (1 + gv(rtcs_fr, (r, t, com, s, ts))) * fac, r, v, t, p, com, ts)
+                        end
                     end
-                    fac = fac - gv(x.endfr, (r, t, c, com)) * (1 + gv(x.endfr, (r, t, com, com))) - gif(demfr, genp && endc_nrg)
-                    for (_, v, _, _) in get(vint_of, (r, t, p), no4), (_, _, _, _, ts) in get(varf_of, (r, t, p, com), no5)
-                        haskey(rs_fr, (r, s, ts)) || continue
-                        cal_nored!(lhs, tm, gv(rs_fr, (r, s, ts)) * (1 + gv(rtcs_fr, (r, t, com, s, ts))) * fac, r, v, t, p, com, ts)
+                    # Exports (L325-331)
+                    for (_, p, com, item) in get(x.prcmap_of_r, (r,), no4)
+                        ((r, p) in rp_ire && (r, p, com, "EXP") in rpc_ire && (r, "NRG", com) in x.algmap &&
+                         (r, c, com) in x.allmap) || continue
+                        fac = gv(x.genmap, (r, p, item)) *
+                              (gv(x.endfr, (r, t, c, com)) + gif(demfr, endc_nrg) - gv(x.genfr, (r, t, c, item)))
+                        for (_, v, _, _) in get(vint_of, (r, t, p), no4), (_, _, _, _, ts) in get(varf_of, (r, t, p, com), no5)
+                            haskey(rs_fr, (r, s, ts)) || continue
+                            f = (1 + gv(ire_flosum, (r, t, p, com, ts, "EXP", com, "IN"))) * gv(rs_fr, (r, s, ts))
+                            gr_trade!(lhs, tm, fac * f, r, v, t, p, com, ts, "EXP")
+                        end
+                    end
+                    # Net demand shares (L332-335)
+                    for (_, _, com) in get(x.dem_by_12, (r, c), no3)
+                        (r, t, com) in rtc || continue
+                        addterm!(lhs, GNum(1.0), tm, "VAR_GRIDIO", r, t, com, c, s, "IN")
+                        e = gv(x.endfr, (r, t, c, com))
+                        for (_, com2, _) in get(x.dem_by_13, (r, com), no3)
+                            (r, t, com2) in rtc && addterm!(lhs, -e, tm, "VAR_GRIDIO", r, t, com, com2, s, "IN")
+                        end
+                    end
+                    if endc_nrg
+                        for (_, _, com) in get(x.gmapc_by_12, (r, g), no3)
+                            (r, t, com) in x.ado || addterm!(lhs, -demfr, tm, "VAR_GRIDIO", r, t, "ACT", com, s, "IN")
+                        end
+                    end
+                else
+                    # Aggregate for withdrawals (L336-338)
+                    addterm!(lhs, GNum(1.0), tm, "VAR_GRIDIO", r, t, "ACT", c, s, "IN")
+                    for (_, _, com) in get(x.dem_by_12, (r, c), no3)
+                        (r, t, com) in rtc || continue
+                        for (_, _, com2) in get(x.gmapc_by_12, (r, g), no3)
+                            (r, t, com2) in rtc && addterm!(lhs, GNum(-1.0), tm, "VAR_GRIDIO", r, t, com, com2, s, "IN")
+                        end
                     end
                 end
-                # Exports (L325-331)
-                for (_, p, com, item) in get(x.prcmap_of_r, (r,), no4)
-                    ((r, p) in rp_ire && (r, p, com, "EXP") in rpc_ire && (r, "NRG", com) in x.algmap &&
-                     (r, c, com) in x.allmap) || continue
-                    fac = gv(x.genmap, (r, p, item)) *
-                          (gv(x.endfr, (r, t, c, com)) + gif(demfr, endc_nrg) - gv(x.genfr, (r, t, c, item)))
-                    for (_, v, _, _) in get(vint_of, (r, t, p), no4), (_, _, _, _, ts) in get(varf_of, (r, t, p, com), no5)
-                        haskey(rs_fr, (r, s, ts)) || continue
-                        f = (1 + gv(ire_flosum, (r, t, p, com, ts, "EXP", com, "IN"))) * gv(rs_fr, (r, s, ts))
-                        gr_trade!(lhs, tm, fac * f, r, v, t, p, com, ts, "EXP")
-                    end
-                end
-                # Net demand shares (L332-335)
-                for (_, _, com) in get(x.dem_by_12, (r, c), no3)
-                    (r, t, com) in rtc || continue
-                    addterm!(lhs, GNum(1.0), tm, "VAR_GRIDIO", r, t, com, c, s, "IN")
-                    e = gv(x.endfr, (r, t, c, com))
-                    for (_, com2, _) in get(x.dem_by_13, (r, com), no3)
-                        (r, t, com2) in rtc && addterm!(lhs, -e, tm, "VAR_GRIDIO", r, t, com, com2, s, "IN")
-                    end
-                end
-                if endc_nrg
-                    for (_, _, com) in get(x.gmapc_by_12, (r, g), no3)
-                        (r, t, com) in x.ado || addterm!(lhs, -demfr, tm, "VAR_GRIDIO", r, t, "ACT", com, s, "IN")
-                    end
-                end
-            else
-                # Aggregate for withdrawals (L336-338)
-                addterm!(lhs, GNum(1.0), tm, "VAR_GRIDIO", r, t, "ACT", c, s, "IN")
-                for (_, _, com) in get(x.dem_by_12, (r, c), no3)
-                    (r, t, com) in rtc || continue
-                    for (_, _, com2) in get(x.gmapc_by_12, (r, g), no3)
-                        (r, t, com2) in rtc && addterm!(lhs, GNum(-1.0), tm, "VAR_GRIDIO", r, t, com, com2, s, "IN")
-                    end
-                end
+                gconstraint!(tm, eqtag(tm, "EQ_GR_DEMALL"), swt(tm, (r, t, c, s, g), t), "E", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
             end
-            gconstraint!(tm, "EQ_GR_DEMALL", (r, t, c, s, g), "E", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
         end
     end
     return n
@@ -1438,6 +1491,10 @@ an alias of MILESTONYR (initmty.mod L94); a past investment (PASTYEAR) is a cons
 them. In a stepped run %R_T% is `R,SUBT(T)` (`eq_periods`). The grid note's formulation (TIMES-Grid-Features
 §2.4) has only the line's capacity in R: docs/discrepancies.md D44. Returns the number of rows.
 
+The SOW tags (sow_tags.jl): the row is `%EQ%_GR_XBND(... %SWT%)` (L343); the
+grid flows are `%VAR%_GRIDIO(... %SOW%)` (L346) and the capacity
+`%VARV%_NCAP(R,V,P %SWS%)` (L351-358, `at = v`).
+
 GAMS: powerflo.vda L341-359, v4.9.7.
 """
 function eq_gr_xbnd!(tm)
@@ -1463,7 +1520,7 @@ function eq_gr_xbnd!(tm)
     function capacity!(rhs, q, t, p, k)
         for (_, _, _, v) in get(vnt_of, (q, t, p), no4)
             c = gv(coef_vnt, (q, t, p, v)) * gv(capact, (q, p)) * k
-            (v,) in milestonyr && addterm!(rhs, c, tm, "VAR_NCAP", q, v, p)
+            (v,) in milestonyr && addterm!(rhs, c, tm, "VAR_NCAP", q, v, p; at=v)   # %VARV%_NCAP(R,V,P %SWS%) (L351-358)
             (v,) in pastyear && addconst!(rhs, c * gv(pasti, (q, v, p)))
         end
         return rhs
@@ -1488,25 +1545,28 @@ function eq_gr_xbnd!(tm)
                 off(r, t, s) && continue                             # RTS(S), L343 (M1.3 change 67)
                 sgn = (ie,) in xpt ? GNum(-1.0) : GNum(1.0)            # PROD(XPT(IE),-1)
                 k = gv(xbnd, (r, t)) * gv(yrfr, (r, s))
-                lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
-                for c in nodes, (_, _, com) in get(x.dem_by_12, (r, c), no3)
-                    (r, t, com) in rtc || continue
-                    (r, "NRG", com) in x.algmap && addterm!(lhs, sgn, tm, "VAR_GRIDIO", r, t, com, c, s, "IN")
-                    addterm!(lhs, -sgn, tm, "VAR_GRIDIO", r, t, com, c, s, "OUT")
-                end
-                for c in nodes
-                    if (ie,) in xpt                                   # TOP_IRE(R,C,ALL_R,COM,P), exports
-                        for (_, _, allr, _, p) in get(exp_of, (r, c), no5)
-                            allr == r || line!(rhs, r, allr, t, p, k)
+                for sow in sw_rows(tm, t)   # %SWT% (L343)
+                    set_sow!(tm, sow)
+                    lhs, rhs = JuMP.AffExpr(0.0), JuMP.AffExpr(0.0)
+                    for c in nodes, (_, _, com) in get(x.dem_by_12, (r, c), no3)
+                        (r, t, com) in rtc || continue
+                        (r, "NRG", com) in x.algmap && addterm!(lhs, sgn, tm, "VAR_GRIDIO", r, t, com, c, s, "IN")
+                        addterm!(lhs, -sgn, tm, "VAR_GRIDIO", r, t, com, c, s, "OUT")
+                    end
+                    for c in nodes
+                        if (ie,) in xpt                                   # TOP_IRE(R,C,ALL_R,COM,P), exports
+                            for (_, _, allr, _, p) in get(exp_of, (r, c), no5)
+                                allr == r || line!(rhs, r, allr, t, p, k)
+                            end
+                        end
+                        if (ie,) in imp                                   # TOP_IRE(ALL_R,COM,R,C,P), imports
+                            for (allr, _, _, _, p) in get(imp_of, (r, c), no5)
+                                allr == r || line!(rhs, r, allr, t, p, k)
+                            end
                         end
                     end
-                    if (ie,) in imp                                   # TOP_IRE(ALL_R,COM,R,C,P), imports
-                        for (allr, _, _, _, p) in get(imp_of, (r, c), no5)
-                            allr == r || line!(rhs, r, allr, t, p, k)
-                        end
-                    end
+                    gconstraint!(tm, eqtag(tm, "EQ_GR_XBND"), swt(tm, (r, t, j, ie, s), t), "L", lhs, rhs) === nothing || (n += 1)
                 end
-                gconstraint!(tm, "EQ_GR_XBND", (r, t, j, ie, s), "L", lhs, rhs) === nothing || (n += 1)
             end
         end
     end

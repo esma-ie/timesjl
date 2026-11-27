@@ -29,6 +29,10 @@ Generate every EQE_CPT, EQL_CPT and EQG_CPT row. Returns the number of rows.
     EQL_CPT(RTP(R,T,P))\$((NOT RTP_VARP(R,T,P))\$CAP_BND(R,T,P,'LO')) .. CAP_BND(R,T,P,'LO') =L= [same sum];
     EQG_CPT(RTP(R,T,P))\$((NOT RTP_VARP(R,T,P))\$CAP_BND(R,T,P,'UP')) .. CAP_BND(R,T,P,'UP') =G= [same sum];
 
+The SOW tags (sow_tags.jl): the row is `%EQ%%2_CPT(RTP(R,T,P) %SWT%)` (L18);
+VAR_CAP is `%VAR%_CAP(R,T,P %SOW%)` (eqmain.mod L77) and the new capacity
+`%VARV%_NCAP(R,V,P %SWS%)` (L26, `at = v`), with %RCAPSUB%.
+
 GAMS: eqcpt.mod L18-27 with eqmain.mod L77-79, v4.9.7.
 """
 function eq_cpt!(tm::TimesModel)
@@ -49,7 +53,7 @@ function eq_cpt!(tm::TimesModel)
     function capacity!(expr, r, t, p)
         for v in get(v_of_rtp, (r, t, p), String[])
             c = gv(coef_cpt, (r, v, t, p))
-            (v,) in milestonyr && addterm!(expr, c, tm, "VAR_NCAP", r, v, p)
+            (v,) in milestonyr && addterm!(expr, c, tm, "VAR_NCAP", r, v, p; at=v)   # %VARV%_NCAP(R,V,P %SWS%) (L26)
             (v,) in pastyear && addconst!(expr, c * gv(ncap_pasti, (r, v, p)))
             rcapsub!(expr, c, tm, r, v, t, p)                       # %RCAPSUB% (prepret.jl)
         end
@@ -61,17 +65,20 @@ function eq_cpt!(tm::TimesModel)
         name = "EQ$(eqtype)_CPT"
         for (r, t, p) in gset(tm, "RTP")
             ((r,) in reg && (t,) in milestonyr) || continue
-            varp = (r, t, p) in rtp_varp
-            lhs = JuMP.AffExpr(0.0)
-            if which === :varp_or_fx
-                (varp || haskey(cap_bnd, (r, t, p, "FX"))) || continue
-                addterm!(lhs, GNum(1.0), tm, "VAR_CAP", r, t, p)
-            else
-                (!varp && haskey(cap_bnd, (r, t, p, which))) || continue
-                addconst!(lhs, gv(cap_bnd, (r, t, p, which)))
+            for sow in sw_rows(tm, t)   # %SWT% (L18)
+                set_sow!(tm, sow)
+                varp = (r, t, p) in rtp_varp
+                lhs = JuMP.AffExpr(0.0)
+                if which === :varp_or_fx
+                    (varp || haskey(cap_bnd, (r, t, p, "FX"))) || continue
+                    addterm!(lhs, GNum(1.0), tm, "VAR_CAP", r, t, p)
+                else
+                    (!varp && haskey(cap_bnd, (r, t, p, which))) || continue
+                    addconst!(lhs, gv(cap_bnd, (r, t, p, which)))
+                end
+                rhs = capacity!(JuMP.AffExpr(0.0), r, t, p)
+                gconstraint!(tm, eqtag(tm, name), swt(tm, (r, t, p), t), eqtype, lhs, rhs) === nothing || (n += 1)
             end
-            rhs = capacity!(JuMP.AffExpr(0.0), r, t, p)
-            gconstraint!(tm, name, (r, t, p), eqtype, lhs, rhs) === nothing || (n += 1)
         end
     end
     return n

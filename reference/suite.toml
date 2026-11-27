@@ -97,6 +97,13 @@
 # JRC-EU-TIMES-cli_ll is deferred, until later Phase 1 milestones (James, 31 Oct
 # 2026): neither ran for the M1.2 gate.
 #
+# Threads (James, 26 Nov 2026; reference/python/runlimits.py): each run reserves its model's
+# thread class in the workstation's run pool, `threads = 6` for the small models, 12 (the default,
+# no line) for the large ones. Small: at most 1.5 M rows with REDUCE off (demo12, TIMES-NZ, OTCGEN,
+# OTNYC; and every crafted case, reference/crafted.toml); OTUS9r (2.2-2.5 M), JRC-EU-TIMES, TIM
+# and OTAI are large. A model keeps its class, so that its timings compare from night to night;
+# TIMESJL_THREADS (or make_reference.py --threads) sets one count for every model instead.
+#
 # Milestone at which each model joins the parity suite:
 #   M1.1  TIMES_Demo-demo12; TIM (research exception, local only)
 #   M1.2  TIMES-NZ 3.0.8, OTUS9r (DD exports of 28 Oct 2026), JRC-EU-TIMES cli_ll;
@@ -125,6 +132,7 @@
 # SOLVEDA) with milestone years trimmed to fit the GAMS community licence.
 [[model]]
 name = "TIMES_Demo-demo12"
+threads = 6
 tier = "core"
 source_repo = "etsap-TIMES/TIMES_Demo"
 licence_url = "https://github.com/etsap-TIMES/TIMES_Demo/blob/master/NOTICE-CC-BY-4.0.txt"
@@ -142,6 +150,7 @@ idirs = ["{times_demo}/model"]
 # Replaces the olejandro fork's kea/tui v2.1.3 entries of 27 Oct.
 [[model]]
 name = "TIMES-NZ-steady-v308"
+threads = 6
 tier = "core"
 source_repo = "esma-ie/TIMES-NZ-Model-Files (fork of EECA-NZ/TIMES-NZ-Model-Files @ 8165e1d)"
 licence_url = "https://github.com/EECA-NZ/TIMES-NZ-Model-Files/blob/main/LICENSE"
@@ -155,6 +164,7 @@ solver_opt_dir = "{times_nz_dd}/dd/steady-v308"
 
 [[model]]
 name = "TIMES-NZ-shift-v308"
+threads = 6
 tier = "milestone"
 source_repo = "esma-ie/TIMES-NZ-Model-Files (fork of EECA-NZ/TIMES-NZ-Model-Files @ 8165e1d)"
 licence_url = "https://github.com/EECA-NZ/TIMES-NZ-Model-Files/blob/main/LICENSE"
@@ -179,6 +189,7 @@ solver_opt_dir = "{times_nz_dd}/dd/shift-v308"
 # milestone tier later.
 [[model]]
 name = "OTCGEN-gc_ref"
+threads = 6
 tier = "core"
 source_repo = "esma-ie/OTCGEN"
 licence_url = "https://github.com/esma-ie/OTCGEN/blob/main/LICENSE"
@@ -204,6 +215,7 @@ solvers = ["CPLEX", "HIGHS"]
 # (S2-S5, IRA, LSR, CLCPA, NZ50) were exported and checked too.
 [[model]]
 name = "OTNYC-s1_nyc_ref"
+threads = 6
 tier = "core"
 source_repo = "esma-ie/OTNYC"
 licence_url = "https://github.com/esma-ie/OTNYC/blob/main/LICENSE"

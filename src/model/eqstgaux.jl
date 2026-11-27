@@ -55,6 +55,9 @@
 Generate every EQ_STGAUX row (eqmain.mod L170) from `tm.data`. Returns the
 number of rows generated.
 
+The SOW tags (sow_tags.jl): the row is `%EQ%_STGAUX(... %SWT%)` (L14); every
+term is `%VAR%_X(... %SOW%)` (L17, L24, L27, L36, L39).
+
 GAMS: eqstgaux.mod L14-42; eqstgaux.lin L25-31 under OBJ LIN; v4.9.7.
 """
 function eq_stgaux!(tm::TimesModel)
@@ -86,51 +89,54 @@ function eq_stgaux!(tm::TimesModel)
         for (_, _, c, s) in get(aux_of_rp, (r, p), NTuple{4,String}[])
             ((r, p, c) in x.rpc_stg_set || (r, p, c) in rpc_emis) && continue
             off(r, t, s) && continue
-            lhs = JuMP.AffExpr(0.0)
-            addterm!(lhs, one, tm, "VAR_FLO", r, v, t, p, c, s)                              # L17
-            rhs = JuMP.AffExpr(0.0)
-            # Storage level, L22-24, less the IPS flows L25-30, scaled by L32 for STK.
-            af = gv(x.prc_actflo, (r, v, p, c))
-            if !iszero(af)
-                base = one - gv(x.stg_loss, (r, v, p, "ANNUAL"))
-                f = !stk ? one : lin ? one + (gpow(base, -half) - one) :                 # .lin L31
-                    ips_mid_factor(ipx, x, r, v, t, p)                                      # L32
-                for (_, _, ts) in get(ts_of_rp, (r, p), NTuple{3,String}[])
-                    (r, ts, s) in ts_map || continue
-                    addterm!(rhs, af * (one / gv(rs_stgprd, (r, ts)) * gv(g_yrfr, (r, s))) * f, tm, "VAR_ACT", r, v, t, p, ts)
-                end
-                ips = get(x.stgips_of_rp, (r, p), NTuple{3,String}[])
-                if !isempty(ips)
-                    w = lin ? GZERO : ips_late_weight(ipx, x, r, v, t, p)                    # L28-30
-                    for (_, _, com) in ips, io in ("IN", "OUT")
-                        (r, p, com, io) in x.top || continue
-                        k = lin ? af * (half / gv(x.prc_actflo, (r, v, p, com)) * gpow(base, half)) * f :   # .lin L26-29
-                                  af * (w / gv(x.prc_actflo, (r, v, p, com))) * f
-                        io == "IN" ? addterm!(rhs, -k, tm, "VAR_SIN", r, v, t, p, com, "ANNUAL") :
-                                     addterm!(rhs, k, tm, "VAR_SOUT", r, v, t, p, com, "ANNUAL")
+            for sow in sw_rows(tm, t)   # %SWT% (L14)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                addterm!(lhs, one, tm, "VAR_FLO", r, v, t, p, c, s)                              # L17
+                rhs = JuMP.AffExpr(0.0)
+                # Storage level, L22-24, less the IPS flows L25-30, scaled by L32 for STK.
+                af = gv(x.prc_actflo, (r, v, p, c))
+                if !iszero(af)
+                    base = one - gv(x.stg_loss, (r, v, p, "ANNUAL"))
+                    f = !stk ? one : lin ? one + (gpow(base, -half) - one) :                 # .lin L31
+                        ips_mid_factor(ipx, x, r, v, t, p)                                      # L32
+                    for (_, _, ts) in get(ts_of_rp, (r, p), NTuple{3,String}[])
+                        (r, ts, s) in ts_map || continue
+                        addterm!(rhs, af * (one / gv(rs_stgprd, (r, ts)) * gv(g_yrfr, (r, s))) * f, tm, "VAR_ACT", r, v, t, p, ts)
+                    end
+                    ips = get(x.stgips_of_rp, (r, p), NTuple{3,String}[])
+                    if !isempty(ips)
+                        w = lin ? GZERO : ips_late_weight(ipx, x, r, v, t, p)                    # L28-30
+                        for (_, _, com) in ips, io in ("IN", "OUT")
+                            (r, p, com, io) in x.top || continue
+                            k = lin ? af * (half / gv(x.prc_actflo, (r, v, p, com)) * gpow(base, half)) * f :   # .lin L26-29
+                                      af * (w / gv(x.prc_actflo, (r, v, p, com))) * f
+                            io == "IN" ? addterm!(rhs, -k, tm, "VAR_SIN", r, v, t, p, com, "ANNUAL") :
+                                         addterm!(rhs, k, tm, "VAR_SOUT", r, v, t, p, com, "ANNUAL")
+                        end
                     end
                 end
-            end
-            # Charging flows, L35-37.
-            for (_, _, _, cg, com, _, ts) in get(ptran_in, (r, v, p, c), NTuple{7,String}[])
-                ((r, cg, com) in com_gmap && (r, p, com, "IN") in x.top && (r, p, com) in x.rpc_stg_set &&
-                 (r, p, com, ts) in x.rpcs_var) || continue
-                (!nst || (r, p, ts) in x.prc_nstts) || continue
-                k = gv(coef_ptran, (r, v, p, cg, com, c, ts)) * (gv(x.rs_fr, (r, s, ts)) * (one + gv(x.rtcs_fr, (r, t, c, s, ts))))
-                addterm!(rhs, k, tm, "VAR_SIN", r, v, t, p, com, ts)
-            end
-            # Discharging flows, L38-40.
-            for (_, _, _, cg, _, com, _) in get(ptran_out, (r, v, p, c, s), NTuple{7,String}[])
-                ((r, cg, c) in com_gmap && (r, p, com, "OUT") in x.top && (r, p, com) in x.rpc_stg_set) || continue
-                stgn_out = (r, p, com, "OUT") in x.rpc_stgn
-                inv = one / gv(coef_ptran, (r, v, p, cg, c, com, s))
-                for (_, _, _, ts) in get(varts_of, (r, p, com), NTuple{4,String}[])
-                    ((r, p, ts) in x.prc_nstts) == stgn_out || continue
-                    k = inv * (gv(x.rs_fr, (r, s, ts)) * (one + gv(x.rtcs_fr, (r, t, c, s, ts))))
-                    addterm!(rhs, k, tm, "VAR_SOUT", r, v, t, p, com, ts)
+                # Charging flows, L35-37.
+                for (_, _, _, cg, com, _, ts) in get(ptran_in, (r, v, p, c), NTuple{7,String}[])
+                    ((r, cg, com) in com_gmap && (r, p, com, "IN") in x.top && (r, p, com) in x.rpc_stg_set &&
+                     (r, p, com, ts) in x.rpcs_var) || continue
+                    (!nst || (r, p, ts) in x.prc_nstts) || continue
+                    k = gv(coef_ptran, (r, v, p, cg, com, c, ts)) * (gv(x.rs_fr, (r, s, ts)) * (one + gv(x.rtcs_fr, (r, t, c, s, ts))))
+                    addterm!(rhs, k, tm, "VAR_SIN", r, v, t, p, com, ts)
                 end
+                # Discharging flows, L38-40.
+                for (_, _, _, cg, _, com, _) in get(ptran_out, (r, v, p, c, s), NTuple{7,String}[])
+                    ((r, cg, c) in com_gmap && (r, p, com, "OUT") in x.top && (r, p, com) in x.rpc_stg_set) || continue
+                    stgn_out = (r, p, com, "OUT") in x.rpc_stgn
+                    inv = one / gv(coef_ptran, (r, v, p, cg, c, com, s))
+                    for (_, _, _, ts) in get(varts_of, (r, p, com), NTuple{4,String}[])
+                        ((r, p, ts) in x.prc_nstts) == stgn_out || continue
+                        k = inv * (gv(x.rs_fr, (r, s, ts)) * (one + gv(x.rtcs_fr, (r, t, c, s, ts))))
+                        addterm!(rhs, k, tm, "VAR_SOUT", r, v, t, p, com, ts)
+                    end
+                end
+                gconstraint!(tm, eqtag(tm, "EQ_STGAUX"), swt(tm, (r, v, t, p, c, s), t), "E", lhs, rhs) === nothing || (n += 1)
             end
-            gconstraint!(tm, "EQ_STGAUX", (r, v, t, p, c, s), "E", lhs, rhs) === nothing || (n += 1)
         end
     end
     return n

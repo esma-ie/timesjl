@@ -173,6 +173,11 @@ end
 The VAR_RCAP and VAR_SCAP bounds of early retirement (nothing unless it is
 on), into the bound table before bndmain.mod's.
 
+The SOW tags (sow_tags.jl): every statement is `%VAR%_RCAP.x(.. %SOW%)` or
+`%VAR%_SCAP.x(.. %SOW%)` (L72-82), assigned for every SOW (`setbound!` with
+`sw = :sow`); L77 takes the minimum of the two upper bounds SOW by SOW
+(`sw_bnd`).
+
 GAMS: prepret.dsc L66-80, v4.9.7.
 """
 function ret_bounds!(bt::BoundTable, tm::TimesModel)
@@ -218,20 +223,20 @@ function ret_bounds!(bt::BoundTable, tm::TimesModel)
         z = t_pos[t] > 1                                                # Z = ORD(T)-1
         d = rf(r, v, t, p) - (z ? rf(r, v, tt, p) : GZERO)
         if (r, v, p) in rvp
-            setbound!(bt, tm, "VAR_RCAP", (r, v, t, p), :lo, gv(rcap_bnd, (r, t, p, "LO")) + gmin(GZERO, d))
+            setbound!(bt, tm, "VAR_RCAP", (r, v, t, p), :lo, gv(rcap_bnd, (r, t, p, "LO")) + gmin(GZERO, d); sw=:sow)
         end
         if haskey(rcap_bnd.values, (r, t, p, "UP"))
             cap = (v,) in pastmile ? gv(ncap_pasti, (r, v, p)) : GNum(Inf)  # SMIN(PASTMILE(V),...)
-            setbound!(bt, tm, "VAR_RCAP", (r, v, t, p), :up, gmin(cap, gv(rcap_bnd, (r, t, p, "UP")) + gmax(GZERO, d)))
+            setbound!(bt, tm, "VAR_RCAP", (r, v, t, p), :up, gmin(cap, gv(rcap_bnd, (r, t, p, "UP")) + gmax(GZERO, d)); sw=:sow)
         end
     end
     # L73-74: the VAR_SCAP bounds.
     for (r, v, t, p) in vnret
-        (r, v, p) in rvp && setbound!(bt, tm, "VAR_SCAP", (r, v, t, p), :lo, gmax(gv(rcap_bnd, (r, t, p, "LO")), rf(r, v, t, p)))
+        (r, v, p) in rvp && setbound!(bt, tm, "VAR_SCAP", (r, v, t, p), :lo, gmax(gv(rcap_bnd, (r, t, p, "LO")), rf(r, v, t, p)); sw=:sow)
     end
     for (r, v, t, p) in rtp_cptyr
         ((v,) in pastmile && (r, v, p) in rvp) || continue
-        setbound!(bt, tm, "VAR_SCAP", (r, v, t, p), :up, gmax(rf(r, v, t, p), gv(ncap_pasti, (r, v, p))))
+        setbound!(bt, tm, "VAR_SCAP", (r, v, t, p), :up, gmax(rf(r, v, t, p), gv(ncap_pasti, (r, v, p))); sw=:sow)
     end
     # L75: in the first period of VNRET, SCAP.UP = MIN(RCAP.UP, SCAP.UP).
     done = Set{NTuple{3,String}}()
@@ -241,9 +246,12 @@ function ret_bounds!(bt::BoundTable, tm::TimesModel)
         # MIN of the two upper bounds as GAMS takes it: an EPS bound stays EPS (MIN(EPS,x) = EPS for x > 0),
         # which matters under HOLDFIXED, where (EPS,EPS) is fixed and (EPS,0) is not (dynslite.vda L111;
         # found on demo12_tsoff_afc, M1.3 change 67)
-        upg(name) = GNum(bounds(bt, tm, name, (r, v, t, p))[2],
-                         get(get(bt.eps, name, Dict{Tuple,Tuple{Bool,Bool}}()), (r, v, t, p), (false, false))[2])
-        setbound!(bt, tm, "VAR_SCAP", (r, v, t, p), :up, gmin(upg("VAR_RCAP"), upg("VAR_SCAP")))
+        upg(name, key) = GNum(bounds(bt, tm, name, key)[2],
+                              get(get(bt.eps, name, Dict{Tuple,Tuple{Bool,Bool}}()), key, (false, false))[2])
+        # %VAR%_SCAP.UP(R,V,T,P%SOW%)=MIN(%VAR%_RCAP.UP(..%SOW%),%VAR%_SCAP.UP(..%SOW%)): each SOW with its own bounds
+        for ((rcap, kr), (scap, ks)) in zip(sw_bnd(tm, "VAR_RCAP", (r, v, t, p), :sow), sw_bnd(tm, "VAR_SCAP", (r, v, t, p), :sow))
+            setbound!(bt, tm, scap, ks, :up, gmin(upg(rcap, kr), upg(scap, ks)))
+        end
     end
     # L76: VAR_SCAP fixed to RTFORC where the PASTSUM test holds.
     for (r, v, t, p) in rtp_cptyr
@@ -251,7 +259,7 @@ function ret_bounds!(bt::BoundTable, tm::TimesModel)
         ps === nothing && continue
         m = gv(pM, (t,)).v
         (m < abs(ps.v) || (m - gv(lead, (t,)).v) / ps.v >= 1) || continue
-        setbound!(bt, tm, "VAR_SCAP", (r, v, t, p), :fx, rf(r, v, t, p))
+        setbound!(bt, tm, "VAR_SCAP", (r, v, t, p), :fx, rf(r, v, t, p); sw=:sow)
     end
     # L78: PRC_YMAX (EPS when every refit option has |PRC_REFIT| >= 3).
     refit_of = indexby(prc_refit, (1, 2))
@@ -274,7 +282,7 @@ function ret_bounds!(bt::BoundTable, tm::TimesModel)
                 (r, y, p) in rtp && (x = x + (rf(r, y, t, p) - rf(r, y, tt, p)))
             end
         end
-        setbound!(bt, tm, "VAR_RCAP", (r, t, t, p), :up, gmax(GZERO, x))
+        setbound!(bt, tm, "VAR_RCAP", (r, t, t, p), :up, gmax(GZERO, x); sw=:sow)
     end
     return bt
 end
@@ -319,6 +327,9 @@ The early-retirement terms of EQ_OBJFIX for region `r` and currency `cur`
 (nothing unless early retirement is on). `x` is `objective_context(tm)`;
 `wd` and `shaped` are eq_objfix!'s %CAPWD% and RTP_SHAPE factors.
 
+The SOW tags (sow_tags.jl): the retired capacity is `%VART%_SCAP(R,V,T,P
+%SWS%)` (L145, L155; `at = t`).
+
 GAMS: prepret.dsc L134-156, v4.9.7.
 """
 function objfix_ret!(lhs::JuMP.AffExpr, tm::TimesModel, x, r, cur, wd, shaped)
@@ -346,7 +357,7 @@ function objfix_ret!(lhs::JuMP.AffExpr, tm::TimesModel, x, r, cur, wd, shaped)
                              obmac(x.ob_fsb, r, k, p, cur) * shaped(r, v, p, "3", age, y))
                 end
             end
-            addterm!(lhs, c / gv(x.obj_diviv, (r, v, p)), tm, "VAR_SCAP", r, v, t, p)
+            addterm!(lhs, c / gv(x.obj_diviv, (r, v, p)), tm, "VAR_SCAP", r, v, t, p; at=t)   # %VART%_SCAP(R,V,T,P %SWS%) (L145)
         end
     end
     # L149-156: residual vintages without RVPRL.
@@ -370,7 +381,7 @@ function objfix_ret!(lhs::JuMP.AffExpr, tm::TimesModel, x, r, cur, wd, shaped)
                      obmac(x.ob_ftx, r, v, p, cur) * multi(v, p, "2", y) -
                      obmac(x.ob_fsb, r, v, p, cur) * multi(v, p, "3", y))
         end
-        addterm!(lhs, c, tm, "VAR_SCAP", r, v, t, p)
+        addterm!(lhs, c, tm, "VAR_SCAP", r, v, t, p; at=t)   # %VART%_SCAP(R,V,T,P %SWS%) (L155)
     end
     return lhs
 end
@@ -380,6 +391,9 @@ end
 
 The early-retirement term of EQ_OBJSALV for region `r` and currency `cur`
 (nothing unless early retirement is on).
+
+The SOW tags (sow_tags.jl): `%VAR%_SCAP(R,V,'0',P%SOW%)` is the SOW of the row
+and the investment `%VARV%_NCAP(R,V,P%SWS%)` (L162, `at = v`).
 
 GAMS: prepret.dsc L158-162, v4.9.7.
 """
@@ -391,7 +405,7 @@ function objsalv_ret!(lhs::JuMP.AffExpr, tm::TimesModel, x, r, cur, dceoh::GNum)
         (haskey(ncap_fdr.values, (r, v, p)) && haskey(rvprl.values, (r, "0", p))) && continue
         k = gv(x.objscc, (r, v, p, cur)) * dceoh
         addterm!(lhs, k, tm, "VAR_SCAP", r, v, "0", p)
-        (v,) in x.t && addterm!(lhs, -k, tm, "VAR_NCAP", r, v, p)
+        (v,) in x.t && addterm!(lhs, -k, tm, "VAR_NCAP", r, v, p; at=v)   # %VARV%_NCAP(R,V,P%SWS%) (L162)
         addconst!(lhs, -(k * gv(x.ncap_pasti, (r, v, p))))
     end
     return lhs
@@ -434,7 +448,7 @@ GAMS: prepret.dsc L87 (and L88, %RCAPSBM%, with MODLYEAR controlled), v4.9.7.
 """
 function rcapsub!(expr::JuMP.AffExpr, c::GNum, tm::TimesModel, r, v, t, p)
     x = rcap_ctx(tm)
-    x.on && (r, p) in x.prc_rcap && (v, t) in x.vntrt && addterm!(expr, -c, tm, "VAR_SCAP", r, v, t, p)
+    x.on && (r, p) in x.prc_rcap && (v, t) in x.vntrt && addterm!(expr, -c, tm, "VAR_SCAP", r, v, t, p; at=t)   # %VART%
     return expr
 end
 
@@ -502,6 +516,19 @@ from `tm.data`: nothing unless early retirement is on (RP_RTF declared, the
 test `untranslated_families` uses for `\$IF DEFINED VNRET`). Returns the
 number of rows generated.
 
+The SOW tags (sow_tags.jl): `%EQ%_CUMRET(R,VNTRT(V,K(T-..)),P%SWT%)` (L98) is
+made for the SOWs of period T, the period of the retirement, and reads
+`%VAR%_SCAP` and `%VAR%_RCAP(R,V,T,P%SOW%)` with `%VARM%_SCAP(R,V,Y,P%SWS%)`
+of the period before (L100-101, `at = y`). `%EQ%L_SCAP(RTP(R,V,P),IPS%SOW%)`
+(L105) has one row per SOW, with `%VARTT%_ACT(R,V,TT,P,S%SWS%)`,
+`%VART%_SCAP(R,V,T,P%SWS%)`, `%VARV%_NCAP(R,V,P%SWS%)` (`at` their period) and
+`%VAR%_SCAP(R,V,'0',P%SOW%)` (L107-110).
+`%EQ%L_REFIT(RTP_TT(R,TT,T,PRC),LNX(L)%SWT%)` (L113) reads
+`%VARV%_NCAP(R,V,P%SWS%)` with V(TT), %RCAPSUB%,
+`%VARTT%_RCAP(R,V,TT,PRC%SWS%)` and `%VAR%_RCAP(.. %SOW%)` (L114-117).
+`%EQ%_DSCRET` (L92, block retirements) is refused: there
+`%VAR%_DRCAP(R,V,T,P%SOW%,J)` carries the SOW before its last index.
+
 GAMS: prepret.dsc L89-117, v4.9.7.
 """
 function eq_ret!(tm::TimesModel)
@@ -525,15 +552,18 @@ function eq_ret!(tm::TimesModel)
         ((r, p) in prc_rcap && (t,) in t_set && (v,) in modlyear) || continue   # V: without the pending periods in a step (solve.stp L115)
         k = haskey(rp_rtf.values, (r, p)) ? t : get(t_prev, t, nothing)  # K(T-(1-1$RP_RTF))
         (k !== nothing && (v, k) in vntrt) || continue
-        lhs = JuMP.AffExpr(0.0)
-        if (r, v, k, p) in rtp_cptyr
-            addterm!(lhs, one, tm, "VAR_SCAP", r, v, t, p)
-            addterm!(lhs, -one, tm, "VAR_RCAP", r, v, t, p)
+        for sow in sw_rows(tm, t)   # %SWT% (L98): SW_T(T,SOW), T the period of K(T-..)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            if (r, v, k, p) in rtp_cptyr
+                addterm!(lhs, one, tm, "VAR_SCAP", r, v, t, p)
+                addterm!(lhs, -one, tm, "VAR_RCAP", r, v, t, p)
+            end
+            y = get(t_prev, t, nothing)                                     # Y(T-1)
+            y !== nothing && (y,) in modlyear && (r, v, y, p) in rtp_cptyr && (v, y) in vntrt &&
+                addterm!(lhs, -one, tm, "VAR_SCAP", r, v, y, p; at=y)   # %VARM%_SCAP(R,V,Y,P%SWS%), MODLYEAR(Y(T-1)) (L101)
+            gconstraint!(tm, eqtag(tm, "EQ_CUMRET"), swt(tm, (r, v, k, p), t), "E", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
         end
-        y = get(t_prev, t, nothing)                                     # Y(T-1)
-        y !== nothing && (y,) in modlyear && (r, v, y, p) in rtp_cptyr && (v, y) in vntrt &&
-            addterm!(lhs, -one, tm, "VAR_SCAP", r, v, y, p)
-        gconstraint!(tm, "EQ_CUMRET", (r, v, k, p), "E", lhs, JuMP.AffExpr(0.0)) === nothing || (n += 1)
     end
 
     # EQL_SCAP (L105-111): per RTP, the IN row (IO) then the N row (LIM), IPS = {IN, N}
@@ -546,30 +576,36 @@ function eq_ret!(tm::TimesModel)
     for (r, v, p) in gset(tm, "RTP")
         ((r, p) in prc_rcap && (v,) in modlyear) || continue            # RTP(R,V(LL),P): V as solve.stp L115 leaves it
         if haskey(ncap_olife.values, (r, v, p))                          # NCAP_OLIFE(RTP)$IO(IPS): the IN row
-            lhs = JuMP.AffExpr(0.0)
-            div = gv(prc_capact, (r, p)) * gv(ncap_olife, (r, v, p))
-            for (_, _, tt, _) in get(cpt_of_rvp, (r, v, p), NTuple{4,String}[]), (_, _, s) in get(ts_of_rp, (r, p), NTuple{3,String}[])
-                addterm!(lhs, gv(fpd, (tt,)) / div, tm, "VAR_ACT", r, v, tt, p, s)   # VAR_ACT*FPD(TT)/PRC_CAPACT/NCAP_OLIFE
+            for sow in sow_rows(tm)   # %SOW% (L105)
+                set_sow!(tm, sow)
+                lhs = JuMP.AffExpr(0.0)
+                div = gv(prc_capact, (r, p)) * gv(ncap_olife, (r, v, p))
+                for (_, _, tt, _) in get(cpt_of_rvp, (r, v, p), NTuple{4,String}[]), (_, _, s) in get(ts_of_rp, (r, p), NTuple{3,String}[])
+                    addterm!(lhs, gv(fpd, (tt,)) / div, tm, "VAR_ACT", r, v, tt, p, s; at=tt)   # %VARTT%_ACT(R,V,TT,P,S%SWS%)*FPD(TT)/PRC_CAPACT/NCAP_OLIFE (L107)
+                end
+                rhs = JuMP.AffExpr(0.0)
+                (v,) in t_set && addterm!(rhs, one, tm, "VAR_NCAP", r, v, p; at=v)   # %VARV%_NCAP(R,V,P%SWS%) (L110)
+                addconst!(rhs, gv(ncap_pasti, (r, v, p)))
+                haskey(rvprl.values, (r, v, p)) && addterm!(rhs, -one, tm, "VAR_SCAP", r, v, "0", p)
+                gconstraint!(tm, eqtag(tm, "EQL_SCAP"), sowkey(tm, (r, v, p, "IN")), "L", lhs, rhs) === nothing || (n += 1)
             end
-            rhs = JuMP.AffExpr(0.0)
-            (v,) in t_set && addterm!(rhs, one, tm, "VAR_NCAP", r, v, p)
-            addconst!(rhs, gv(ncap_pasti, (r, v, p)))
-            haskey(rvprl.values, (r, v, p)) && addterm!(rhs, -one, tm, "VAR_SCAP", r, v, "0", p)
-            gconstraint!(tm, "EQL_SCAP", (r, v, p, "IN"), "L", lhs, rhs) === nothing || (n += 1)
         end
         haskey(rvprl.values, (r, v, p)) || continue                      # $RVPRL(RTP)$L(IPS): the N row
         ((r, v, p) in obj_sums || (!((r, p) in prc_vint) && (v,) in t_set)) || continue
-        lhs = JuMP.AffExpr(0.0)
-        i = ord[v] + glead(gv(rvprl, (r, v, p)).v)                     # T(LL+RVPRL(RTP))
-        if 1 <= i <= length(allyear)
-            tl = allyear[i]
-            (tl,) in t_set && (v, tl) in vntrt && addterm!(lhs, one, tm, "VAR_SCAP", r, v, tl, p)
+        for sow in sow_rows(tm)   # %SOW% (L105)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            i = ord[v] + glead(gv(rvprl, (r, v, p)).v)                     # T(LL+RVPRL(RTP))
+            if 1 <= i <= length(allyear)
+                tl = allyear[i]
+                (tl,) in t_set && (v, tl) in vntrt && addterm!(lhs, one, tm, "VAR_SCAP", r, v, tl, p; at=tl)   # %VART%_SCAP(R,V,T,P%SWS%) (L108)
+            end
+            rhs = JuMP.AffExpr(0.0)
+            (v,) in t_set && addterm!(rhs, one, tm, "VAR_NCAP", r, v, p; at=v)   # %VARV%_NCAP(R,V,P%SWS%) (L110)
+            addconst!(rhs, gv(ncap_pasti, (r, v, p)))
+            addterm!(rhs, -one, tm, "VAR_SCAP", r, v, "0", p)
+            gconstraint!(tm, eqtag(tm, "EQL_SCAP"), sowkey(tm, (r, v, p, "N")), "L", lhs, rhs) === nothing || (n += 1)
         end
-        rhs = JuMP.AffExpr(0.0)
-        (v,) in t_set && addterm!(rhs, one, tm, "VAR_NCAP", r, v, p)
-        addconst!(rhs, gv(ncap_pasti, (r, v, p)))
-        addterm!(rhs, -one, tm, "VAR_SCAP", r, v, "0", p)
-        gconstraint!(tm, "EQL_SCAP", (r, v, p, "N"), "L", lhs, rhs) === nothing || (n += 1)
     end
 
     # EQL_REFIT (L113-117)
@@ -586,31 +622,34 @@ function eq_ret!(tm::TimesModel)
         bdl = l == "FX"                                                 # BD(L)
         vtt = (t, tt) in vnt                                            # VNT(T,TT)
         (bdl || (vtt && rtf.v == 3)) || continue
-        lhs = JuMP.AffExpr(0.0)
-        for (_, _, p) in get(refit_of, (r, prc), NTuple{3,String}[])
-            (tt,) in modlyear || break                                  # SUM((V(TT),P)...): V as solve.stp L115 leaves it
-            (vtt || gv(prc_refit, (r, prc, p)).v < 0) || continue
-            c = gv(coef_cpt, (r, tt, t, p))
-            addterm!(lhs, c, tm, "VAR_NCAP", r, tt, p)
-            (r, p) in prc_rcap && (tt, t) in vntrt && addterm!(lhs, -c, tm, "VAR_SCAP", r, tt, t, p)   # %RCAPSUB%
-        end
-        ((vtt && bdl) ? rtf.v : 0.0) < 3 && addterm!(lhs, one, tm, "VAR_RCAP", r, t, tt, prc)
-        rhs = JuMP.AffExpr(0.0)
-        k = get(t_prev, tt, nothing)                                    # K(TT-1)
-        odd = rtf.v != 0 && rem(rtf.v, 2) != 0                          # MOD(RP_RTF,2) (G43)
-        for v in get(vret_of, (r, tt, prc), String[])
-            (v,) in modlyear || continue                                # SUM(VNRET(V,TT,PRC),...): V as solve.stp L115 leaves it
-            c = gv(coef_cpt, (r, v, t, prc))
-            addterm!(rhs, c, tm, "VAR_RCAP", r, v, tt, prc)
-            if k !== nothing && (k,) in modlyear && (v, k) in vnt
-                m = gmin(odd ? GNum(Inf) : GZERO, gv(rtforc, (r, v, tt, prc)) - gv(rtforc, (r, v, k, prc)))
-                addconst!(rhs, -(c * m))
+        for sow in sw_rows(tm, t)   # %SWT% (L113)
+            set_sow!(tm, sow)
+            lhs = JuMP.AffExpr(0.0)
+            for (_, _, p) in get(refit_of, (r, prc), NTuple{3,String}[])
+                (tt,) in modlyear || break                                  # SUM((V(TT),P)...): V as solve.stp L115 leaves it
+                (vtt || gv(prc_refit, (r, prc, p)).v < 0) || continue
+                c = gv(coef_cpt, (r, tt, t, p))
+                addterm!(lhs, c, tm, "VAR_NCAP", r, tt, p; at=tt)   # %VARV%_NCAP(R,V,P%SWS%), V(TT) (L114)
+                (r, p) in prc_rcap && (tt, t) in vntrt && addterm!(lhs, -c, tm, "VAR_SCAP", r, tt, t, p; at=t)   # %RCAPSUB%: %VART%_SCAP(R,V,T,P%SWS%)
             end
+            ((vtt && bdl) ? rtf.v : 0.0) < 3 && addterm!(lhs, one, tm, "VAR_RCAP", r, t, tt, prc)
+            rhs = JuMP.AffExpr(0.0)
+            k = get(t_prev, tt, nothing)                                    # K(TT-1)
+            odd = rtf.v != 0 && rem(rtf.v, 2) != 0                          # MOD(RP_RTF,2) (G43)
+            for v in get(vret_of, (r, tt, prc), String[])
+                (v,) in modlyear || continue                                # SUM(VNRET(V,TT,PRC),...): V as solve.stp L115 leaves it
+                c = gv(coef_cpt, (r, v, t, prc))
+                addterm!(rhs, c, tm, "VAR_RCAP", r, v, tt, prc; at=tt)   # %VARTT%_RCAP(R,V,TT,PRC%SWS%) (L116)
+                if k !== nothing && (k,) in modlyear && (v, k) in vnt
+                    m = gmin(odd ? GNum(Inf) : GZERO, gv(rtforc, (r, v, tt, prc)) - gv(rtforc, (r, v, k, prc)))
+                    addconst!(rhs, -(c * m))
+                end
+            end
+            if (bdl ? rtf.v : 0.0) > 0 && k !== nothing && (r, k, t, prc) in rtp_tt
+                addterm!(rhs, one, tm, "VAR_RCAP", r, t, k, prc)
+            end
+            gconstraint!(tm, eqtag(tm, "EQL_REFIT"), swt(tm, (r, tt, t, prc, l), t), "E", lhs, rhs) === nothing || (n += 1)
         end
-        if (bdl ? rtf.v : 0.0) > 0 && k !== nothing && (r, k, t, prc) in rtp_tt
-            addterm!(rhs, one, tm, "VAR_RCAP", r, t, k, prc)
-        end
-        gconstraint!(tm, "EQL_REFIT", (r, tt, t, prc, l), "E", lhs, rhs) === nothing || (n += 1)
     end
     return n
 end
