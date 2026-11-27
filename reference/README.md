@@ -182,14 +182,53 @@ per run and at most 4 runs at a time" (29 Oct 2026):
   free (its last `peak_ram_gb` plus 10%, or 16 GB the first time). There is no
   limit on the number of runs. The ledger is one JSON file per run in
   `<temp>/timesjl-run-slots`, changed under a lock file; the wait to start is
-  `slot_wait_s`, not part of `wall_s`. Runs that do not use the ledger (Veda,
-  TIMES.jl's Julia scripts for now) are seen only through the measured load and RAM.
+  `slot_wait_s`, not part of `wall_s`. Runs that do not use the ledger (Veda, a
+  Julia script started without the launcher below) are seen only through the
+  measured load and RAM.
 
 Change it with `--threads` (one count for every model), `--pool` (0 turns the
 pool off), `--max-parallel` (an optional run limit) and `--slot-dir` (or
 `TIMESJL_THREADS`, `TIMESJL_POOL`, `TIMESJL_MAX_PARALLEL`, `TIMESJL_SLOT_DIR`;
 `run_references.ps1 -Threads -MaxParallel`). GAMS's own default is one solver
 thread, so models without a `threads` option solve with their class.
+
+### TIMES.jl's Julia scripts: the launcher
+
+A Julia script joins the pool when it is started through
+`reference/python/pool_run.py`. Put the launcher, the model's class and `--`
+in front of the usual command (PowerShell, from the repository folder):
+
+```
+$py = "C:\git\esma\.timesjl-venv\Scripts\python.exe"
+& $py reference\python\pool_run.py --threads 6 --label "demo12 from DD" -- julia --project=test scripts\run_dd.jl ..\timesjl-sources\TIMES_Demo\model\demo12.run --solve
+& $py reference\python\pool_run.py --model OTUS9r-reference -- julia --project=test scripts\m13_gate.jl ..\timesjl-reference OTUS9r-reference --solve
+```
+
+- `--threads 6` (small model) or `--threads 12` (large) is the class; or
+  `--model <name>` takes it from `suite.toml` or `crafted.toml`. `--label` is
+  the run's name in the ledger. `--ram-gb N` is the RAM the run needs (16 by
+  default); `--timeout-hours H` gives up (exit code 3) if the pool has no room
+  in that time, otherwise the launcher waits.
+- The launcher waits until the class fits, reserves it, and only then starts
+  the command, so the reservation covers model generation. The command gets
+  `TIMESJL_THREADS` set to the class, which the scripts give to HiGHS.
+- The command's output appears as usual, and its exit code is the launcher's.
+  The launcher's own lines start `[pool_run]` and go to the error output: what
+  it reserved, and at the end the exit code, the phases and the peak RAM
+  (`--quiet` leaves them out, `--record <file>.json` saves them).
+- The reservation drops to 1 thread when the script prints
+  `[timesjl-pool] phase=reporting`, which TIMES.jl does once the last solve of
+  the process is over (`TIMES.pool_phase`, `src/pool.jl`): `run_dd.jl`,
+  `m11_large.jl solve`, and `m11_probe.jl`, `m13_gate.jl --solve` and
+  `parity_report.jl` after their last model. A stepped run in `m13_gate.jl`, or
+  a run that fails before its last solve, prints nothing and keeps its class to
+  its end. The launcher also knows `phase=after-barrier` (4 threads), but
+  TIMES.jl does not print it: HiGHS, as the scripts call it, does not say when
+  its interior point method ends, so a HiGHS run keeps its class until the
+  solve returns.
+- The marker lines are printed only under the launcher (it sets
+  `TIMESJL_POOL_MARKERS`); a script started as before prints what it printed
+  before. Ctrl-C stops the command and frees the reservation.
 
 ## Running it
 

@@ -102,6 +102,7 @@ function stage_solve(model, work)
         st == HiGHS.kHighsStatusError && error("Highs_passLp failed")
         A = nothing; GC.gc(true)
         t = @elapsed HiGHS.Highs_run(h)
+        TIMES.pool_phase("reporting")     # the run pool (reference/python/pool_run.py): the one solve of this process is over
         ms = HiGHS.Highs_getModelStatus(h)
         ok = ms == HiGHS.kHighsModelStatusOptimal
         obj = ok ? HiGHS.Highs_getObjectiveValue(h) : NaN
