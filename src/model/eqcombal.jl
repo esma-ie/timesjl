@@ -46,6 +46,12 @@ end
 
 The sets, parameters and incidence maps the commodity balance and its
 cal_fflo/cal_ire terms read, built once per model.
+
+`tm.cache` is a `Dict{String,Any}`, so the type of the context is not known where it is fetched.
+Each function that reads it therefore fetches it in an outer method and does its work in an inner
+method that takes the context as an argument (a function barrier): Julia compiles the inner method
+for the context's concrete type, and every `x.field` in it is a typed field access (Phase 2,
+change 1; the terms, their arithmetic and their order are those of the outer method's docstring).
 """
 function combal_context(tm::TimesModel)
     get!(tm.cache, "combal") do
@@ -126,9 +132,13 @@ Under %REDUCE% YES the flows go through cal_red.red instead (L35-50,
 
 GAMS: cal_fflo.mod L15-50, v4.9.7.
 """
-function cal_fflo!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, io::String,
-                   r::String, t::String, c::String, s::String; pk=nothing, pcond=nothing)
-    x = combal_context(tm)
+cal_fflo!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, io::String,
+          r::String, t::String, c::String, s::String; pk=nothing, pcond=nothing) =
+    cal_fflo!(expr, tm, combal_context(tm), mult, io, r, t, c, s, pk, pcond)
+
+# `cal_fflo!` with the context `x` as a typed argument (see `combal_context`). GAMS: cal_fflo.mod L15-50, v4.9.7.
+function cal_fflo!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, mult::GNum, io::String,
+                   r::String, t::String, c::String, s::String, pk::PK, pcond::PC) where {PK,PC}
     tm.reduce && return cal_fflo_red!(expr, tm, x, mult, io, r, t, c, s; pk, pcond)
     for (_, p, _, _) in get(x.top_of_rcio, (r, c, io), NTuple{4,String}[])
         (r, p) in x.rp_flo || continue
@@ -228,9 +238,13 @@ otherwise empty. The caller's arguments:
 
 GAMS: cal_ire.mod L16-41, v4.9.7.
 """
-function cal_ire!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, ie::String, io::String,
-                  r::String, t::String, c::String, s::String; pk=nothing, pfilter=nothing)
-    x = combal_context(tm)
+cal_ire!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, ie::String, io::String,
+         r::String, t::String, c::String, s::String; pk=nothing, pfilter=nothing) =
+    cal_ire!(expr, tm, combal_context(tm), mult, ie, io, r, t, c, s, pk, pfilter)
+
+# `cal_ire!` with the context `x` as a typed argument (see `combal_context`). GAMS: cal_ire.mod L16-41, v4.9.7.
+function cal_ire!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, mult::GNum, ie::String, io::String,
+                  r::String, t::String, c::String, s::String, pk::PK, pfilter::PF) where {PK,PF}
     # Actual exchange (L24-28).
     if !((ie, io) in (("EXP", "OUT"), ("IMP", "IN")))
         for (_, p, _, _) in get(x.ire_of_rcie, (r, c, ie), NTuple{4,String}[])
@@ -298,9 +312,13 @@ direction's flow is netted (%4) and the process's own direction is left out.
 
 GAMS: cal_stgn.mod L17-22, v4.9.7.
 """
-function cal_stgn!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, io::String,
-                   r::String, t::String, c::String, s::String; cond, f3, f4, f6)
-    x = combal_context(tm)
+cal_stgn!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, io::String,
+          r::String, t::String, c::String, s::String; cond, f3, f4, f6) =
+    cal_stgn!(expr, tm, combal_context(tm), mult, io, r, t, c, s, cond, f3, f4, f6)
+
+# `cal_stgn!` with the context `x` as a typed argument (see `combal_context`). GAMS: cal_stgn.mod L17-22, v4.9.7.
+function cal_stgn!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, mult::GNum, io::String,
+                   r::String, t::String, c::String, s::String, cond::C, f3::F3, f4::F4, f6::F6) where {C,F3,F4,F6}
     io2 = io == "OUT" ? "IN" : "OUT"
     for (_, p, _) in get(x.stg_of_rc, (r, c), NTuple{3,String}[])
         (r, p, c, io) in x.top || continue                       # TOP(RPC_STG(R,P,C),'%1')
@@ -330,9 +348,12 @@ Commodity aggregation on the production side (eqcombal.mod L45-47):
         SUM(RTCS_VARC(R,T,COM,TS)\$RS_TREE(R,S,TS), RS_FR(R,S,TS)*(1+RTCS_FR(R,T,COM,S,TS)) *
             (VAR_COMNET(R,T,COM,TS)\$RC_AGP(R,COM,'LO') + VAR_COMPRD(R,T,COM,TS)\$RC_AGP(R,COM,'FX'))))
 """
-function combal_aggregation!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum,
+combal_aggregation!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, r::String, t::String, c::String, s::String) =
+    combal_aggregation!(expr, tm, combal_context(tm), mult, r, t, c, s)
+
+# `combal_aggregation!` with the context `x` as a typed argument (see `combal_context`). GAMS: eqcombal.mod L45-47, v4.9.7.
+function combal_aggregation!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, mult::GNum,
                              r::String, t::String, c::String, s::String)
-    x = combal_context(tm)
     for (_, _, com, _) in get(x.agg_of_rtc, (r, t, c), NTuple{4,String}[])
         a = gv(x.com_agg, (r, t, com, c))
         for (_, _, _, ts) in get(x.varc_of_rtc, (r, t, com), NTuple{4,String}[])
@@ -361,9 +382,12 @@ BLE control the sums, so only members of those sets count.
 
 GAMS: eqcombal.mod L30-35, v4.9.7.
 """
-function combal_blend_out!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum,
+combal_blend_out!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, r::String, t::String, c::String, s::String) =
+    combal_blend_out!(expr, tm, combal_context(tm), mult, r, t, c, s)
+
+# `combal_blend_out!` with the context `x` as a typed argument (see `combal_context`). GAMS: eqcombal.mod L30-35, v4.9.7.
+function combal_blend_out!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, mult::GNum,
                            r::String, t::String, c::String, s::String)
-    x = combal_context(tm)
     for (_, _, o) in get(x.ble_opr_of_rb, (r, c), NTuple{3,String}[])                    # L30-32
         (o,) in x.opr || continue
         k = gv(x.rs_fr, (r, s, "ANNUAL")) * (1 + gv(x.rtcs_fr, (r, t, c, s, "ANNUAL"))) * gv(x.ble_bal, (r, t, c, o))
@@ -391,9 +415,12 @@ blend).
 
 GAMS: eqcombal.mod L75-80, v4.9.7.
 """
-function combal_blend_in!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum,
+combal_blend_in!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, r::String, t::String, c::String, s::String) =
+    combal_blend_in!(expr, tm, combal_context(tm), mult, r, t, c, s)
+
+# `combal_blend_in!` with the context `x` as a typed argument (see `combal_context`). GAMS: eqcombal.mod L75-80, v4.9.7.
+function combal_blend_in!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, mult::GNum,
                           r::String, t::String, c::String, s::String)
-    x = combal_context(tm)
     isempty(x.ble_tp) && return expr
     fr = gv(x.rs_fr, (r, s, "ANNUAL")) * (1 + gv(x.rtcs_fr, (r, t, c, s, "ANNUAL")))
     for (_, _, b) in get(x.ble_tp_of_rt, (r, t), NTuple{3,String}[])                     # L76-77
@@ -448,10 +475,14 @@ One include of eqcombal.mod: %2 = `eqtype`, %3 = `lim`, %4 = `kind`
 
 GAMS: eqcombal.mod L19-113, v4.9.7.
 """
-function eq_combal!(tm::TimesModel, eqtype::String, lim::String, kind::String)
+eq_combal!(tm::TimesModel, eqtype::String, lim::String, kind::String) =
+    eq_combal!(tm, combal_context(tm), eqtype, lim, kind)
+
+# One include of eqcombal.mod with the context `x` as a typed argument (see `combal_context`): the
+# closures given to `cal_stgn!` read `x.stg_eff`. GAMS: eqcombal.mod L19-113, v4.9.7.
+function eq_combal!(tm::TimesModel, x::NamedTuple, eqtype::String, lim::String, kind::String)
     kind in ("BAL", "PRD") || throw(ArgumentError("kind (%4) must be BAL or PRD, got $kind"))
     name = "EQ$(eqtype)_COM$(kind)"
-    x = combal_context(tm)
     rcs = gset(tm, "RCS_COM$(kind)")
     tx = eq_periods(tm)   # %R_T%, %TX%: SUBT in a stepped run (maindrv.mod L38-40)
     rhs_comprd = gset(tm, "RHS_COMPRD")
