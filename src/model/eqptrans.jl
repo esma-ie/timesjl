@@ -68,6 +68,20 @@ function eq_ptrans!(tm::TimesModel)
     varf_of_rtp = indexby(rtpcs_varf, (1, 2, 3))        # (r,t,p) -> (r,t,p,c,ts)
     ptran_of = indexby(coef_ptran, (1, 2, 3, 4, 6))     # (r,v,p,cg1,cg2) -> keys
 
+    return eq_ptrans!(tm,
+        (; rtp_vintyr, modlyear, tx, rp_std, rpc, rs_tree, rtpcs_varf, prc_vint, prc_cg, coef_ptran, rs_fr, rtcs_fr, rtp_ffcx, rtp_ffcs,
+           act_flo, ffunc_of_rp, s1_of_rp, tree_of_rs, gmap_of_rcg, varf_of_rtp, ptran_of, off))
+end
+
+# `eq_ptrans!` with the sets, parameters and incidence maps of the outer method, `d`, as a typed
+# argument: `gset` and `gparam` give an abstract `GamsSet` or `GamsParam`, so the outer method does
+# not know their types, and every membership test and lookup in the row loop was a dynamic call. Julia
+# compiles this method for the concrete types (a function barrier; Phase 2, change 3). The rows, the
+# terms, their arithmetic and their order are unchanged. GAMS: eqptrans.mod L14-39, v4.9.7.
+function eq_ptrans!(tm::TimesModel, d::NamedTuple)
+    (; rtp_vintyr, modlyear, tx, rp_std, rpc, rs_tree, rtpcs_varf, prc_vint, prc_cg, coef_ptran, rs_fr, rtcs_fr, rtp_ffcx, rtp_ffcs,
+       act_flo, ffunc_of_rp, s1_of_rp, tree_of_rs, gmap_of_rcg, varf_of_rtp, ptran_of, off) = d
+
     n = 0
     for (r, v, t, p) in rtp_vintyr
         ((v,) in modlyear && (t,) in tx) || continue
