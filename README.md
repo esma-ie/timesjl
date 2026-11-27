@@ -256,7 +256,10 @@ generated LP identical (the same rows, columns and order). The target is
 model generation within five times GAMS's time on every open model, aimed
 for 2 Dec 2026 ([`docs/phase2-notes.md`](docs/phase2-notes.md)). It started
 on 27 Nov with the measuring tools: an exact identity check of the LP, a
-timing script and a profile.
+timing script and a profile. The first profile, on the two largest open
+models of the first round (OTCGEN and TIMES-NZ), found one function of the
+commodity balance taking most of the generation time; the first speed
+changes, under way, address it.
 
 **Baseline move.** The TIMES source moved from v4.9.7 to v4.9.8 on 26 Nov.
 The source download is re-pinned; the v4.9.8 changes to five GAMS files
