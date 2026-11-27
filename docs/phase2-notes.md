@@ -172,6 +172,27 @@ the term path (`getvar!`, `addterm!`), about 30% of the samples; reading
 the dump inside generation, 14 to 17%; garbage collection, about a third of
 the time.
 
+### The three stages together, after changes 1 and 2 (27 Nov 2026)
+
+The measure of #208 d1 to d3: preprocessing, coefficients and generation,
+one thread, from GAMS's input dump with the data in memory
+(`p2_timing.jl --from input`), warmed on the model itself, the lower of two
+repeats for each stage, through the run pool with other runs on the
+machine. Provisional. GAMS's preprocessing and coefficient times are from
+the profile of its pre-solve run, the harness's dumps left out.
+
+| Seconds, TIMES.jl / GAMS | OTCGEN-gc_ref | TIMES-NZ-steady-v308 |
+| --- | --- | --- |
+| Preprocessing | 67.0 / 9.0 | 7.2 / 1.4 |
+| Coefficients | 46.2 / 5.2 | 6.3 / 1.3 |
+| Generation | 118.9 / 20.2 | 57.6 / 11.4 |
+| Together | 232 / 34.4, about 6.7 times | 71 / 14.2, about 5.1 times |
+
+On OTCGEN preprocessing (7.4 times) and the coefficients (8.9 times) are
+further from the target than generation (5.9 times): P2-2 is now part of
+the route. This path is not `run_model`'s (it starts from GAMS's input
+dump, not from DD files).
+
 ## Multi-threaded equation generation (P2-3, 31 Oct 2026)
 
 What can run in parallel:
