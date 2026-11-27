@@ -80,13 +80,27 @@ function eq_stgaux!(tm::TimesModel)
            periodyr_of_t = indexby(gset(tm, "PERIODYR"), (1,)), y_eoh = gset(tm, "Y_EOH"))
     vx, tx = gset(tm, "MODLYEAR"), eq_periods(tm)                 # %R_V_T%: V, and SUBT in a stepped run (maindrv.mod L38-40)
     off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
+    rtp_vintyr = gset(tm, "RTP_VINTYR")
+    return eq_stgaux!(tm, x,
+        (; one, half, lin, rpc_emis, com_gmap, g_yrfr, rs_stgprd, coef_ptran, aux_of_rp, ts_of_rp, ts_map, ptran_in, ptran_out,
+           varts_of, ipx, vx, tx, off, rtp_vintyr))
+end
+
+# `eq_stgaux!` with the storage context `x` (`stg_context`, untyped out of `tm.cache`) and the sets,
+# parameters and incidence maps of the outer method, `d`, as typed arguments: `gset` and `gparam` give
+# an abstract `GamsSet` or `GamsParam`, so the outer method does not know their types. Julia compiles
+# this method for the concrete types (a function barrier; Phase 2, change 3). The rows, the terms,
+# their arithmetic and their order are unchanged. GAMS: eqstgaux.mod L14-42; eqstgaux.lin L25-31, v4.9.7.
+function eq_stgaux!(tm::TimesModel, x::NamedTuple, d::NamedTuple)
+    (; one, half, lin, rpc_emis, com_gmap, g_yrfr, rs_stgprd, coef_ptran, aux_of_rp, ts_of_rp, ts_map, ptran_in, ptran_out,
+       varts_of, ipx, vx, tx, off, rtp_vintyr) = d
     n = 0
-    for (r, v, t, p) in gset(tm, "RTP_VINTYR")
+    for (r, v, t, p) in rtp_vintyr
         ((v,) in vx && (t,) in tx) || continue
         (r, p) in x.rp_stg || continue
         stk = (r, "STK", p) in x.prc_map
         nst = (r, "NST", p) in x.prc_map
-        for (_, _, c, s) in get(aux_of_rp, (r, p), NTuple{4,String}[])
+        for (_, _, c, s) in get(aux_of_rp, (r, p), NO4)
             ((r, p, c) in x.rpc_stg_set || (r, p, c) in rpc_emis) && continue
             off(r, t, s) && continue
             for sow in sw_rows(tm, t)   # %SWT% (L14)
@@ -100,11 +114,11 @@ function eq_stgaux!(tm::TimesModel)
                     base = one - gv(x.stg_loss, (r, v, p, "ANNUAL"))
                     f = !stk ? one : lin ? one + (gpow(base, -half) - one) :                 # .lin L31
                         ips_mid_factor(ipx, x, r, v, t, p)                                      # L32
-                    for (_, _, ts) in get(ts_of_rp, (r, p), NTuple{3,String}[])
+                    for (_, _, ts) in get(ts_of_rp, (r, p), NO3)
                         (r, ts, s) in ts_map || continue
                         addterm!(rhs, af * (one / gv(rs_stgprd, (r, ts)) * gv(g_yrfr, (r, s))) * f, tm, "VAR_ACT", r, v, t, p, ts)
                     end
-                    ips = get(x.stgips_of_rp, (r, p), NTuple{3,String}[])
+                    ips = get(x.stgips_of_rp, (r, p), NO3)
                     if !isempty(ips)
                         w = lin ? GZERO : ips_late_weight(ipx, x, r, v, t, p)                    # L28-30
                         for (_, _, com) in ips, io in ("IN", "OUT")
@@ -117,7 +131,7 @@ function eq_stgaux!(tm::TimesModel)
                     end
                 end
                 # Charging flows, L35-37.
-                for (_, _, _, cg, com, _, ts) in get(ptran_in, (r, v, p, c), NTuple{7,String}[])
+                for (_, _, _, cg, com, _, ts) in get(ptran_in, (r, v, p, c), NO7)
                     ((r, cg, com) in com_gmap && (r, p, com, "IN") in x.top && (r, p, com) in x.rpc_stg_set &&
                      (r, p, com, ts) in x.rpcs_var) || continue
                     (!nst || (r, p, ts) in x.prc_nstts) || continue
@@ -125,11 +139,11 @@ function eq_stgaux!(tm::TimesModel)
                     addterm!(rhs, k, tm, "VAR_SIN", r, v, t, p, com, ts)
                 end
                 # Discharging flows, L38-40.
-                for (_, _, _, cg, _, com, _) in get(ptran_out, (r, v, p, c, s), NTuple{7,String}[])
+                for (_, _, _, cg, _, com, _) in get(ptran_out, (r, v, p, c, s), NO7)
                     ((r, cg, c) in com_gmap && (r, p, com, "OUT") in x.top && (r, p, com) in x.rpc_stg_set) || continue
                     stgn_out = (r, p, com, "OUT") in x.rpc_stgn
                     inv = one / gv(coef_ptran, (r, v, p, cg, c, com, s))
-                    for (_, _, _, ts) in get(varts_of, (r, p, com), NTuple{4,String}[])
+                    for (_, _, _, ts) in get(varts_of, (r, p, com), NO4)
                         ((r, p, ts) in x.prc_nstts) == stgn_out || continue
                         k = inv * (gv(x.rs_fr, (r, s, ts)) * (one + gv(x.rtcs_fr, (r, t, c, s, ts))))
                         addterm!(rhs, k, tm, "VAR_SOUT", r, v, t, p, com, ts)
@@ -160,7 +174,7 @@ function ips_late_weight(ipx, x, r, v, t, p)
     sh = ips_shift(ipx, t)
     base = one - gv(x.stg_loss, (r, v, p, "ANNUAL"))
     w = GZERO
-    for (_, y) in get(ipx.periodyr_of_t, (t,), NTuple{2,String}[])
+    for (_, y) in get(ipx.periodyr_of_t, (t,), NO2)
         (y,) in ipx.y_eoh || continue
         yv = gv(ipx.yearval, (y,))
         yv.v >= m.v || continue

@@ -112,11 +112,17 @@ end
 obmac(p::GamsParam{4}, r, y, pr, m) = gv(p, (r, pr, m, y))
 obmac(p::GamsParam{6}, r, y, pr, c, s, m) = gv(p, (r, pr, c, s, m, y))
 
-const NO4 = NTuple{4,String}[]
-const NO5 = NTuple{5,String}[]
-const NO6 = NTuple{6,String}[]
+# NO4, NO5, NO6 (the shared empty lists) are in gams_data.jl.
 
-"Data of the objective definitions, read once per model."
+"""
+Data of the objective definitions, read once per model.
+
+`tm.cache` is a `Dict{String,Any}`, so the type of the context is not known where it is fetched.
+`eq_objinv!`, `eq_objfix!`, `eq_objvar!` and `eq_objsalv!` therefore fetch it in an outer method and
+do their work in an inner method that takes it as an argument (a function barrier, as for
+`combal_context`): Julia compiles the inner method for the context's concrete type (Phase 2, change 3;
+the terms, their arithmetic and their order are unchanged).
+"""
 function objective_context(tm::TimesModel)
     get!(tm.cache, "objective") do
         gp(n) = gparam(tm, n)
@@ -233,8 +239,10 @@ The SOW tags (sow_tags.jl): the row is `%EQ%_OBJINV(RDCUR(R,CUR) %SOW%)`
 
 GAMS: eqobjinv.mod L280-321, v4.9.7 (ETL L292 and STAGES L296-299 refused).
 """
-function eq_objinv!(tm::TimesModel)
-    x = objective_context(tm)
+eq_objinv!(tm::TimesModel) = eq_objinv!(tm, objective_context(tm))
+
+# `eq_objinv!` with the context `x` as a typed argument (see `objective_context`). GAMS: eqobjinv.mod L280-321, v4.9.7.
+function eq_objinv!(tm::TimesModel, x::NamedTuple)
     capjd = !isempty(objective_switches(tm).ctst)
     n = 0
     for (r, cur) in x.rdcur
@@ -307,8 +315,10 @@ VALIDATE lines L205-207 are refused; the VNRET hook L214 is `objfix_ret!`,
 M1.3 change 20b-4; the shaped
 branch for RTP_ISHPR is translated but no test model exercises it yet).
 """
-function eq_objfix!(tm::TimesModel)
-    x = objective_context(tm)
+eq_objfix!(tm::TimesModel) = eq_objfix!(tm, objective_context(tm))
+
+# `eq_objfix!` with the context `x` as a typed argument (see `objective_context`). GAMS: eqobjfix.mod L182-225, v4.9.7.
+function eq_objfix!(tm::TimesModel, x::NamedTuple)
     capwd = !isempty(objective_switches(tm).ctst)
     wd(r, cur, k_eoh, jot, k) = capwd ? gv(x.obj_wd, (r, cur, k_eoh, jot, k)) : GNum(1.0)
     lead(ll, n) = (i = x.allyear_ord[ll] + n; 1 <= i <= length(x.allyear) ? x.allyear[i] : nothing)
@@ -335,11 +345,11 @@ function eq_objfix!(tm::TimesModel)
                                 (obmac(x.ob_fom, r, k, p, cur) + obmac(x.ob_ftx, r, k, p, cur) - obmac(x.ob_fsb, r, k, p, cur))
                         continue
                     end
-                    for (_, age) in get(x.opyear_of_life, (life,), NTuple{2,String}[])
+                    for (_, age) in get(x.opyear_of_life, (life,), NO2)
                         y = lead(ll, x.age_ord[age] - 1)
                         (y === nothing || !((y,) in x.y_eoh)) && continue
                         cpx = GZERO
-                        for (t, _) in get(x.periodyr_of_y, (y,), NTuple{2,String}[])
+                        for (t, _) in get(x.periodyr_of_y, (y,), NO2)
                             (t,) in x.t && (cpx = cpx + gv(x.rtp_cpx, (r, v, p, t)))
                         end
                         c = c + gv(x.obj_disc, (r, y, cur)) * (1 + gif(cpx, haskey(x.ncap_cpx, (r, v, p)))) * w *
@@ -388,12 +398,12 @@ function tpulse(tm::TimesModel, r::String, t::String, cur::String)
         elseif sw.objvar_obj == "LIN"     # TPULSEYR(T,Y_EOH),TPULSE(T,Y_EOH)*OBJ_DISC(R,Y_EOH,CUR)
             tp = gparam(tm, "TPULSE")
             by = get!(() -> indexby(gset(tm, "TPULSEYR"), (1,)), tm.cache, "TPULSEYR/t")
-            for (_, y) in get(by, (t,), NTuple{2,String}[])
+            for (_, y) in get(by, (t,), NO2)
                 (y,) in x.y_eoh && push!(out, (y, gv(tp, (t, y)) * gv(x.obj_disc, (r, y, cur))))
             end
         else                              # PERIODYR(T,Y_EOH),[OBJ_ALTV(R,T)*]OBJ_DISC(R,Y_EOH,CUR)
             by = get!(() -> indexby(gset(tm, "PERIODYR"), (1,)), tm.cache, "PERIODYR/t")
-            for (_, y) in get(by, (t,), NTuple{2,String}[])
+            for (_, y) in get(by, (t,), NO2)
                 (y,) in x.y_eoh || continue
                 d = gv(x.obj_disc, (r, y, cur))
                 push!(out, (y, sw.objvar_obj == "ALT" ? gv(gparam(tm, "OBJ_ALTV"), (r, t)) * d : d))
@@ -506,6 +516,26 @@ function eq_objvar!(tm::TimesModel)
     cptyr_obj, prc_rcap_obj = gset(tm, "RTP_CPTYR"), gset_opt(tm.data, "PRC_RCAP", 2)
     vntrt_obj = gset_opt(tm.data, "VNTRT", 2)
     ble, opr = gset_opt(tm.data, "BLE", 1), gset_opt(tm.data, "OPR", 1)
+    return eq_objvar!(tm, x,
+        (; rtp_vara, vint_of_rtp, ts_of_rp, rp_stg, rs_stgav, ob_act, rhs_combal, rhs_comprd, obj_comnt, obj_compd, costype,
+           rtpcs_varf, ireio_of_rpc, obj_ipric, rpc_aire, prc_actflo, vflo, rp_flo, rp_ire, ts_ann_of_s, ob_fcos, ob_fdel, ob_ftax,
+           ire_of_rpc, ire_of_rp, ire_flosum, rtp_ffcs, io_set, stg_var_of_rpc, stg_eff, vflo_cost, vint_of_rp,
+           rpc_cur, ups_of_rp, upr_of_rp, upt_of_rp, dpl_of_rp, ups_rp, group_of, act_cstup, act_cstrmp, act_cstsd, obj_pvt, rs_stgprd,
+           ble_opr_of_r, obj_blndv, capflo, vnt_of_v, coef_icom, coef_ocom, rs_fr_obj, g_yrfr_obj, ncap_pasti_obj, milestonyr_obj,
+           ncom_obj, coef_cio_obj, coef_cpt_obj, cptyr_obj, prc_rcap_obj, vntrt_obj, ble, opr))
+end
+
+# `eq_objvar!` with the context `x` (see `objective_context`) and the sets, parameters and incidence
+# maps of the outer method, `d`, as typed arguments: `gset` and `gparam` give an abstract `GamsSet` or
+# `GamsParam`, so the outer method does not know their types (a function barrier; Phase 2, change 3).
+# GAMS: eqobjvar.mod L14-113, v4.9.7.
+function eq_objvar!(tm::TimesModel, x::NamedTuple, d::NamedTuple)
+    (; rtp_vara, vint_of_rtp, ts_of_rp, rp_stg, rs_stgav, ob_act, rhs_combal, rhs_comprd, obj_comnt, obj_compd, costype,
+       rtpcs_varf, ireio_of_rpc, obj_ipric, rpc_aire, prc_actflo, vflo, rp_flo, rp_ire, ts_ann_of_s, ob_fcos, ob_fdel, ob_ftax,
+       ire_of_rpc, ire_of_rp, ire_flosum, rtp_ffcs, io_set, stg_var_of_rpc, stg_eff, vflo_cost, vint_of_rp,
+       rpc_cur, ups_of_rp, upr_of_rp, upt_of_rp, dpl_of_rp, ups_rp, group_of, act_cstup, act_cstrmp, act_cstsd, obj_pvt, rs_stgprd,
+       ble_opr_of_r, obj_blndv, capflo, vnt_of_v, coef_icom, coef_ocom, rs_fr_obj, g_yrfr_obj, ncap_pasti_obj, milestonyr_obj,
+       ncom_obj, coef_cio_obj, coef_cpt_obj, cptyr_obj, prc_rcap_obj, vntrt_obj, ble, opr) = d
 
     weighted(r, t, cur, f) = (w = GZERO; for (y, wy) in tpulse(tm, r, t, cur); w = w + wy * f(y); end; w)
     vintages(r, t, p) = (k[2] for k in get(vint_of_rtp, (r, t, p), NO4) if (k[2],) in x.v)
@@ -526,7 +556,7 @@ function eq_objvar!(tm::TimesModel)
             for (rr, t, p) in rtp_vara
                 (rr == r && (t,) in x.t && haskey(ob_act, (r, p, cur, t))) || continue
                 w = weighted(r, t, cur, y -> obmac(ob_act, r, y, p, cur))
-                for v in vintages(r, t, p), (_, _, s) in get(ts_of_rp, (r, p), NTuple{3,String}[])
+                for v in vintages(r, t, p), (_, _, s) in get(ts_of_rp, (r, p), NO3)
                     addterm!(lhs, w * gpower(gv(rs_stgav, (r, s)), (r, p) in rp_stg ? 1 : 0), tm, "VAR_ACT", r, v, t, p, s; at=t)
                 end
             end
@@ -538,23 +568,23 @@ function eq_objvar!(tm::TimesModel)
                     for (_, _, tsl, l) in get(ups_of_rp, (r, p), NO4)
                         l == "UP" || continue
                         k = gv(act_cstup, (r, v, p, tsl, cur)) * pvt
-                        for (_, _, s) in get(group_of, (r, tsl), NTuple{3,String}[])
+                        for (_, _, s) in get(group_of, (r, tsl), NO3)
                             addterm!(lhs, k * gv(rs_stgprd, (r, s)), tm, "VAR_UPS", r, v, t, p, s, "UP"; at=t)
                         end
                     end
                     for (_, _, upt, bd) in get(upt_of_rp, (r, p), NO4)
                         bd == "UP" || continue
                         k = gv(act_cstsd, (r, v, p, upt, "FX", cur)) * pvt
-                        for (_, _, tsl) in get(dpl_of_rp, (r, p), NTuple{3,String}[]),
-                            (_, _, s) in get(group_of, (r, tsl), NTuple{3,String}[])
+                        for (_, _, tsl) in get(dpl_of_rp, (r, p), NO3),
+                            (_, _, s) in get(group_of, (r, tsl), NO3)
 
                             addterm!(lhs, k * gv(rs_stgprd, (r, s)), tm, "VAR_UPT", r, v, t, p, s, upt; at=t)
                         end
                     end
-                    for (_, _, bd) in get(upr_of_rp, (r, p), NTuple{3,String}[])
+                    for (_, _, bd) in get(upr_of_rp, (r, p), NO3)
                         bd in ("LO", "UP") || continue                          # BDNEQ(BD)
                         k = gv(act_cstrmp, (r, v, p, bd, cur)) * pvt
-                        for (_, _, s) in get(ts_of_rp, (r, p), NTuple{3,String}[])
+                        for (_, _, s) in get(ts_of_rp, (r, p), NO3)
                             addterm!(lhs, k * gv(rs_stgprd, (r, s)), tm, "VAR_UDP", r, v, t, p, s, bd; at=t)
                         end
                     end
@@ -581,7 +611,7 @@ function eq_objvar!(tm::TimesModel)
                 # Flow costs (L66-71) and those of trade processes (L74-87).
                 (r, p, c, cur) in vflo || continue
                 w = GZERO
-                for (_, ts) in get(ts_ann_of_s, (s,), NTuple{2,String}[])
+                for (_, ts) in get(ts_ann_of_s, (s,), NO2)
                     w = w + weighted(r, t, cur, y -> obmac(ob_fcos, r, y, p, c, ts, cur) + obmac(ob_fdel, r, y, p, c, ts, cur) +
                                                      obmac(ob_ftax, r, y, p, c, ts, cur))
                 end
@@ -612,7 +642,7 @@ function eq_objvar!(tm::TimesModel)
                     for (_, _, _, s) in get(stg_var_of_rpc, (r, p, c), NO4)
                         ksin, ksout = GZERO, GZERO
                         eff = gv(stg_eff, (r, v, p))
-                        for (_, ts) in get(ts_ann_of_s, (s,), NTuple{2,String}[])
+                        for (_, ts) in get(ts_ann_of_s, (s,), NO2)
                             ksin = ksin + weighted(r, t, cur, y -> obmac(ob_fcos, r, y, p, c, ts, cur))
                             ksout = ksout + weighted(r, t, cur, y -> eff * obmac(ob_fdel, r, y, p, c, ts, cur))
                         end
@@ -634,14 +664,14 @@ function eq_objvar!(tm::TimesModel)
             #     SUM(RPCS_VAR(R,P,C,TS), RS_FR(R,TS,S) * [the costs]) * (1+COEF_CIO(R,V,T,P,C,IO)))
             for (rr, v, p, c) in capflo
                 rr == r || continue
-                for (_, t) in get(vnt_of_v, (v,), NTuple{2,String}[])
+                for (_, t) in get(vnt_of_v, (v,), NO2)
                     k0 = gv(coef_icom, (r, v, t, p, c)) + gv(coef_ocom, (r, v, t, p, c))
                     coms = (r, v, t, p) in cptyr_obj ? [io for io in ("IN", "OUT") if haskey(ncom_obj.values, (r, v, p, c, io))] : String[]
                     (iszero(k0) && isempty(coms)) && continue
                     cost = GZERO
                     for (_, _, _, ts) in get(stg_var_of_rpc, (r, p, c), NO4)
                         w = GZERO
-                        for (_, sl) in get(ts_ann_of_s, (ts,), NTuple{2,String}[])
+                        for (_, sl) in get(ts_ann_of_s, (ts,), NO2)
                             w = w + weighted(r, t, cur, y -> obmac(ob_fcos, r, y, p, c, sl, cur) + obmac(ob_fdel, r, y, p, c, sl, cur) +
                                                              obmac(ob_ftax, r, y, p, c, sl, cur))
                         end
@@ -664,7 +694,7 @@ function eq_objvar!(tm::TimesModel)
                 end
             end
             # Commodity blending costs (L105-107).
-            for (_, b, o) in get(ble_opr_of_r, (r,), NTuple{3,String}[])
+            for (_, b, o) in get(ble_opr_of_r, (r,), NO3)
                 ((b,) in ble && (o,) in opr) || continue
                 for (t,) in x.t
                     addterm!(lhs, weighted(r, t, cur, y -> gv(obj_blndv, (r, y, b, o, cur))), tm, "VAR_BLND", r, t, b, o; at=t)
@@ -699,21 +729,23 @@ the right-hand side is `%VAR%_OBJ(R,'OBJSAL',CUR %SOW%)` (L140).
 GAMS: eqobsalv.mod L92-140, v4.9.7 (ETL L102-103 is refused; the VNRET hook
 L105 is `objsalv_ret!`, M1.3 change 20b-4).
 """
-function eq_objsalv!(tm::TimesModel)
-    x = objective_context(tm)
+eq_objsalv!(tm::TimesModel) = eq_objsalv!(tm, objective_context(tm))
+
+# `eq_objsalv!` with the context `x` as a typed argument (see `objective_context`). GAMS: eqobsalv.mod L92-140, v4.9.7.
+function eq_objsalv!(tm::TimesModel, x::NamedTuple)
     n = 0
     for (r, cur) in x.rdcur
         for sow in sow_rows(tm)   # %SOW% (eqobsalv.mod L92)
             set_sow!(tm, sow)
             lhs = JuMP.AffExpr(0.0)
             dceoh = gv(x.obj_dceoh, (r, cur))
-            for (_, v, p) in get(x.sums_of_r, (r,), NTuple{3,String}[])
+            for (_, v, p) in get(x.sums_of_r, (r,), NO3)
                 k = gv(x.objscc, (r, v, p, cur))
                 (v,) in x.t && addterm!(lhs, k * dceoh, tm, "VAR_NCAP", r, v, p; at=v)
                 (v,) in x.v && (v,) in x.pyr && addconst!(lhs, k * gv(x.ncap_pasti, (r, v, p)) * dceoh)
             end
             objsalv_ret!(lhs, tm, x, r, cur, dceoh)                     # L105: prepret.dsc OBSALV (prepret.jl)
-            for (_, v, p) in get(x.sums3_of_r, (r,), NTuple{3,String}[])
+            for (_, v, p) in get(x.sums3_of_r, (r,), NO3)
                 k = gv(x.salv_dec, (r, v, p, cur))
                 (v,) in x.t && addterm!(lhs, k * dceoh, tm, "VAR_NCAP", r, v, p; at=v)
                 (v,) in x.pyr && addconst!(lhs, gv(x.ncap_pasti, (r, v, p)) * k * dceoh)

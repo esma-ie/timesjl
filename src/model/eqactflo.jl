@@ -54,11 +54,21 @@ function eq_actflo!(tm::TimesModel)
     ire_of_rpc = indexby(rpc_ire, (1, 2, 3)) # (r,p,c) -> RPC_IRE members
 
     vx, tx = gset(tm, "MODLYEAR"), eq_periods(tm)                 # %R_V_T%: V, and SUBT in a stepped run (maindrv.mod L38-40)
+    return eq_actflo!(tm,
+        (; rtp_vintyr, prc_act, rtps_off, rtp_vara, rtpcs_varf, rp_flo, rp_ire, rp_aire, prc_actflo, ts_of_rp, pg_of_rp, ire_of_rpc, vx, tx))
+end
+
+# `eq_actflo!` with the sets, parameters and incidence maps of the outer method, `d`, as a typed
+# argument: `gset` and `gparam` give an abstract `GamsSet` or `GamsParam`, so the outer method does
+# not know their types. Julia compiles this method for the concrete types (a function barrier; Phase 2,
+# change 3). The rows, the terms and their order are unchanged. GAMS: eqactflo.mod L15-29, v4.9.7.
+function eq_actflo!(tm::TimesModel, d::NamedTuple)
+    (; rtp_vintyr, prc_act, rtps_off, rtp_vara, rtpcs_varf, rp_flo, rp_ire, rp_aire, prc_actflo, ts_of_rp, pg_of_rp, ire_of_rpc, vx, tx) = d
     n = 0
     for (r, v, t, p) in rtp_vintyr
         ((v,) in vx && (t,) in tx) || continue
         (r, p) in prc_act || continue
-        for (_, _, s) in get(ts_of_rp, (r, p), NTuple{3,String}[])
+        for (_, _, s) in get(ts_of_rp, (r, p), NO3)
             tm.reduce && (r, t, p, s) in rtps_off && continue
 
             for sow in sw_rows(tm, t)   # %SWT% (L15)
@@ -69,14 +79,14 @@ function eq_actflo!(tm::TimesModel)
                 end
 
                 rhs = JuMP.AffExpr(0.0)
-                for (_, _, c) in get(pg_of_rp, (r, p), NTuple{3,String}[])
+                for (_, _, c) in get(pg_of_rp, (r, p), NO3)
                     (r, t, p, c, s) in rtpcs_varf || continue
                     coef = 1.0 / nonzero(prc_actflo, (r, v, p, c))
                     if (r, p) in rp_flo
                         addterm!(rhs, GNum(coef), tm, "VAR_FLO", r, v, t, p, c, s)           # L26
                     end
                     if (r, p) in rp_ire
-                        for (_, _, _, ie) in get(ire_of_rpc, (r, p, c), NTuple{4,String}[])
+                        for (_, _, _, ie) in get(ire_of_rpc, (r, p, c), NO4)
                             (r, p, ie) in rp_aire || continue
                             addterm!(rhs, GNum(coef), tm, "VAR_IRE", r, v, t, p, c, s, ie)   # L28
                         end

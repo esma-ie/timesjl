@@ -134,8 +134,8 @@ function ire_flosum_index(ire_of_r::Dict{NTuple{1,String},Vector{NTuple{4,String
         (fs[1], fs[2]) in seen || (push!(seen, (fs[1], fs[2])); push!(rts, (fs[1], fs[2])))
     end
     for (r, t) in rts
-        for (_, p, com, iex) in get(ire_of_r, (r,), NTuple{4,String}[])
-            for (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, com), NTuple{5,String}[])
+        for (_, p, com, iex) in get(ire_of_r, (r,), NO4)
+            for (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, com), NO5)
                 for fs in get(of_flow, (r, t, p, com, ts, iex), NO_FLOSUM)
                     push!(get!(() -> NTuple{8,String}[], out, (r, t, fs[7], fs[8])), fs)
                 end
@@ -186,18 +186,18 @@ cal_fflo!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, io::String,
 function cal_fflo!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, mult::GNum, io::String,
                    r::String, t::String, c::String, s::String, pk::PK, pcond::PC) where {PK,PC}
     tm.reduce && return cal_fflo_red!(expr, tm, x, mult, io, r, t, c, s; pk, pcond)
-    for (_, p, _, _) in get(x.top_of_rcio, (r, c, io), NTuple{4,String}[])
+    for (_, p, _, _) in get(x.top_of_rcio, (r, c, io), NO4)
         (r, p) in x.rp_flo || continue
         pcond === nothing || pcond(p)::Bool || continue          # %4 (both branches, L25 and L28)
-        vints = get(x.vint_of_rtp, (r, t, p), NTuple{4,String}[])
+        vints = get(x.vint_of_rtp, (r, t, p), NO4)
         if !((r, p, c) in x.rpc_emis)
-            for (_, _, _, v) in vints, (_, _, _, _, ts) in get(x.varf_of_rtpc, (r, t, p, c), NTuple{5,String}[])
+            for (_, _, _, v) in vints, (_, _, _, _, ts) in get(x.varf_of_rtpc, (r, t, p, c), NO5)
                 k = mult * (gv(x.rs_fr, (r, s, ts)) * (1 + gv(x.rtcs_fr, (r, t, c, s, ts))) * _pk(pk, p, v, ts))
                 addterm!(expr, k, tm, "VAR_FLO", r, v, t, p, c, ts)
             end
         else
-            for (_, _, _, cg3, com2) in get(x.fs_emit_of_rpc, (r, p, c), NTuple{5,String}[])
-                for (_, _, _, _, ts) in get(x.varf_of_rtpc, (r, t, p, com2), NTuple{5,String}[])
+            for (_, _, _, cg3, com2) in get(x.fs_emit_of_rpc, (r, p, c), NO5)
+                for (_, _, _, _, ts) in get(x.varf_of_rtpc, (r, t, p, com2), NO5)
                     haskey(x.rs_fr, (r, s, ts)) || continue
                     w = gv(x.rs_fr, (r, s, ts)) * (1 + gv(x.rtcs_fr, (r, t, com2, s, ts)))
                     for (_, _, _, v) in vints
@@ -234,16 +234,16 @@ GAMS: cal_fflo.mod L35-50, cal_red.red L15-56, v4.9.7.
 """
 function cal_fflo_red!(expr::JuMP.AffExpr, tm::TimesModel, x, mult::GNum, io::String,
                        r::String, t::String, c::String, s::String; pk=nothing, pcond=nothing)
-    for (_, p, _, _) in get(x.top_of_rcio, (r, c, io), NTuple{4,String}[])
+    for (_, p, _, _) in get(x.top_of_rcio, (r, c, io), NO4)
         (r, p) in x.rp_flo || continue
         pcond === nothing || pcond(p)::Bool || continue                  # %4
-        for (_, _, _, _, ts) in get(x.varf_of_rtpc, (r, t, p, c), NTuple{5,String}[])
+        for (_, _, _, _, ts) in get(x.varf_of_rtpc, (r, t, p, c), NO5)
             haskey(x.rs_fr, (r, s, ts)) || continue                      # RS_FR(R,S,TS) multiplies: no record, no term
             w = mult * (gv(x.rs_fr, (r, s, ts)) * (1 + gv(x.rtcs_fr, (r, t, c, s, ts))))
             if !((r, p) in x.prc_vint)
                 cal_red!(expr, tm, w * _pk(pk, p, t, ts), r, t, t, p, c, ts; mode="T")
             else
-                for (_, _, _, v) in get(x.vint_of_rtp, (r, t, p), NTuple{4,String}[])
+                for (_, _, _, v) in get(x.vint_of_rtp, (r, t, p), NO4)
                     cal_red!(expr, tm, w * _pk(pk, p, v, ts), r, v, t, p, c, ts; mode="V")
                 end
             end
@@ -293,10 +293,10 @@ function cal_ire!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, mult::GNum,
                   r::String, t::String, c::String, s::String, pk::PK, pfilter::PF) where {PK,PF}
     # Actual exchange (L24-28).
     if !((ie, io) in (("EXP", "OUT"), ("IMP", "IN")))
-        for (_, p, _, _) in get(x.ire_of_rcie, (r, c, ie), NTuple{4,String}[])
+        for (_, p, _, _) in get(x.ire_of_rcie, (r, c, ie), NO4)
             pfilter === nothing || pfilter(p)::Bool || continue       # %6R,P%7
-            vints = get(x.vint_of_rtp, (r, t, p), NTuple{4,String}[])
-            for (_, _, _, v) in vints, (_, _, _, _, ts) in get(x.varf_of_rtpc, (r, t, p, c), NTuple{5,String}[])
+            vints = get(x.vint_of_rtp, (r, t, p), NO4)
+            for (_, _, _, v) in vints, (_, _, _, _, ts) in get(x.varf_of_rtpc, (r, t, p, c), NO5)
                 haskey(x.rs_fr, (r, s, ts)) || continue
                 w = mult * (gv(x.rs_fr, (r, s, ts)) * (1 + gv(x.rtcs_fr, (r, t, c, s, ts))) * _pk(pk, p, v, ts))
                 if !((r, p, c) in x.rpc_aire)
@@ -314,7 +314,7 @@ function cal_ire!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, mult::GNum,
     for fs in get(x.flosum_of_rtcio, (r, t, c, io), NO_FLOSUM)
         (_, _, p, com, ts, iex, _, _) = fs
         pfilter === nothing || pfilter(p)::Bool || continue           # %6R,P%7
-        vints = get(x.vint_of_rtp, (r, t, p), NTuple{4,String}[])
+        vints = get(x.vint_of_rtp, (r, t, p), NO4)
         (haskey(x.ire_flosum, fs) && haskey(x.rs_fr, (r, s, ts))) || continue
         w = gv(x.ire_flosum, fs)
         tail = gv(x.rs_fr, (r, s, ts)) * (1 + gv(x.rtcs_fr, (r, t, com, s, ts)))
@@ -366,19 +366,20 @@ cal_stgn!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, io::String,
 function cal_stgn!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, mult::GNum, io::String,
                    r::String, t::String, c::String, s::String, cond::C, f3::F3, f4::F4, f6::F6) where {C,F3,F4,F6}
     io2 = io == "OUT" ? "IN" : "OUT"
-    for (_, p, _) in get(x.stg_of_rc, (r, c), NTuple{3,String}[])
+    var1, var2 = "VAR_S$(io)", "VAR_S$(io2)"                    # VAR_S%1, VAR_S%2: the names once, not once per term
+    for (_, p, _) in get(x.stg_of_rc, (r, c), NO3)
         (r, p, c, io) in x.top || continue                       # TOP(RPC_STG(R,P,C),'%1')
         (r, p, c, io) in x.rpc_stgn && continue                  # $(NOT RPC_STGN(R,P,C,'%1'))
         stgn2 = (r, p, c, io2) in x.rpc_stgn
-        vints = get(x.vint_of_rtp, (r, t, p), NTuple{4,String}[])
-        for (_, _, _, ts) in get(x.rpcs_var_of_rpc, (r, p, c), NTuple{4,String}[])
+        vints = get(x.vint_of_rtp, (r, t, p), NO4)
+        for (_, _, _, ts) in get(x.rpcs_var_of_rpc, (r, p, c), NO4)
             cond(p, ts)::Bool || continue                        # %5
             fr = gv(x.rs_fr, (r, s, ts))
             iszero(fr) && continue
             for (_, _, _, v) in vints
                 k6 = f6(p, v)::GNum
-                addterm!(expr, mult * (f3(p, v)::GNum * k6 * fr), tm, "VAR_S$(io)", r, v, t, p, c, ts)
-                stgn2 && addterm!(expr, mult * (-(f4(p, v)::GNum) * k6 * fr), tm, "VAR_S$(io2)", r, v, t, p, c, ts)
+                addterm!(expr, mult * (f3(p, v)::GNum * k6 * fr), tm, var1, r, v, t, p, c, ts)
+                stgn2 && addterm!(expr, mult * (-(f4(p, v)::GNum) * k6 * fr), tm, var2, r, v, t, p, c, ts)
             end
         end
     end
@@ -400,9 +401,9 @@ combal_aggregation!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, r::String, t
 # `combal_aggregation!` with the context `x` as a typed argument (see `combal_context`). GAMS: eqcombal.mod L45-47, v4.9.7.
 function combal_aggregation!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, mult::GNum,
                              r::String, t::String, c::String, s::String)
-    for (_, _, com, _) in get(x.agg_of_rtc, (r, t, c), NTuple{4,String}[])
+    for (_, _, com, _) in get(x.agg_of_rtc, (r, t, c), NO4)
         a = gv(x.com_agg, (r, t, com, c))
-        for (_, _, _, ts) in get(x.varc_of_rtc, (r, t, com), NTuple{4,String}[])
+        for (_, _, _, ts) in get(x.varc_of_rtc, (r, t, com), NO4)
             (r, s, ts) in x.rs_tree || continue
             k = mult * (a * (gv(x.rs_fr, (r, s, ts)) * (1 + gv(x.rtcs_fr, (r, t, com, s, ts)))))
             (r, com, "LO") in x.rc_agp && addterm!(expr, k, tm, "VAR_COMNET", r, t, com, ts)
@@ -434,12 +435,12 @@ combal_blend_out!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, r::String, t::
 # `combal_blend_out!` with the context `x` as a typed argument (see `combal_context`). GAMS: eqcombal.mod L30-35, v4.9.7.
 function combal_blend_out!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, mult::GNum,
                            r::String, t::String, c::String, s::String)
-    for (_, _, o) in get(x.ble_opr_of_rb, (r, c), NTuple{3,String}[])                    # L30-32
+    for (_, _, o) in get(x.ble_opr_of_rb, (r, c), NO3)                    # L30-32
         (o,) in x.opr || continue
         k = gv(x.rs_fr, (r, s, "ANNUAL")) * (1 + gv(x.rtcs_fr, (r, t, c, s, "ANNUAL"))) * gv(x.ble_bal, (r, t, c, o))
         addterm!(expr, mult * k, tm, "VAR_BLND", r, t, c, o)
     end
-    for (_, _, b, o) in get(x.ble_env_of_rc, (r, c), NTuple{4,String}[])                 # L34-35
+    for (_, _, b, o) in get(x.ble_env_of_rc, (r, c), NO4)                 # L34-35
         ((b,) in x.ble && (o,) in x.opr) || continue
         k = gv(x.rs_fr, (r, s, "ANNUAL")) * gv(x.env_bl, (r, c, b, o, t))
         addterm!(expr, mult * k, tm, "VAR_BLND", r, t, b, o)
@@ -469,14 +470,14 @@ function combal_blend_in!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, mul
                           r::String, t::String, c::String, s::String)
     isempty(x.ble_tp) && return expr
     fr = gv(x.rs_fr, (r, s, "ANNUAL")) * (1 + gv(x.rtcs_fr, (r, t, c, s, "ANNUAL")))
-    for (_, _, b) in get(x.ble_tp_of_rt, (r, t), NTuple{3,String}[])                     # L76-77
+    for (_, _, b) in get(x.ble_tp_of_rt, (r, t), NO3)                     # L76-77
         ((b,) in x.ble && (r, b, c) in x.ble_opr) || continue
         addterm!(expr, mult * fr, tm, "VAR_BLND", r, t, b, c)
     end
-    for (_, b, _) in get(x.ble_inp_of_rc, (r, c), NTuple{3,String}[])                    # L78-80
+    for (_, b, _) in get(x.ble_inp_of_rc, (r, c), NO3)                    # L78-80
         (r, t, b) in x.ble_tp || continue
         k = fr * gv(x.bl_inp, (r, b, c))
-        for (_, _, o) in get(x.ble_opr_of_rb, (r, b), NTuple{3,String}[])
+        for (_, _, o) in get(x.ble_opr_of_rb, (r, b), NO3)
             ((b,) in x.ble && (o,) in x.opr) || continue
             addterm!(expr, mult * k, tm, "VAR_BLND", r, t, b, o)
         end
@@ -551,6 +552,21 @@ function eq_combal!(tm::TimesModel, x::NamedTuple, eqtype::String, lim::String, 
     dmas_by_agg = indexby(gset(tm, "MI_DMAS"), (1, 2))   # (r,c) -> MI_DMAS(r,c,com)
     varc_of = indexby(gset(tm, "RTCS_VARC"), (1, 2, 3))
 
+    return eq_combal!(tm, x,
+        (; name, rcs, tx, rhs_comprd, rhs_combal, dem, com_proj, com_fr, rd_nlp, rd_agg, rd_shar, dmas_of_rc, nstts, prc_map, one,
+           ted, com_elast, rcj_of, bdneq, pref, agc, dmas_by_agg, varc_of),
+        eqtype, lim, kind)
+end
+
+# One include of eqcombal.mod with the context `x` and the sets, parameters and incidence maps of the
+# method above, `d`, as typed arguments: `gset` and `gparam` give an abstract `GamsSet` or
+# `GamsParam`, so that method does not know their types, nor do the closures it would hand to
+# `cal_stgn!` (a function barrier; Phase 2, change 3). The rows, the terms, their arithmetic and their
+# order are unchanged. GAMS: eqcombal.mod L19-113, v4.9.7.
+function eq_combal!(tm::TimesModel, x::NamedTuple, d::NamedTuple, eqtype::String, lim::String, kind::String)
+    (; name, rcs, tx, rhs_comprd, rhs_combal, dem, com_proj, com_fr, rd_nlp, rd_agg, rd_shar, dmas_of_rc, nstts, prc_map, one,
+       ted, com_elast, rcj_of, bdneq, pref, agc, dmas_by_agg, varc_of) = d
+
     n = 0
     for (r, t, c, s, l) in rcs
         l == lim || continue
@@ -576,7 +592,7 @@ function eq_combal!(tm::TimesModel, x::NamedTuple, eqtype::String, lim::String, 
             end
             # L67: + SUM(RCJ(R,C,J,BDNEQ(BD))$COM_ELAST(R,T,C,S,BD),BDSIG(BD)*VAR_ELAST(R,T,C,S,J,BD)), BAL only
             if ted && kind == "BAL"
-                for (_, _, j, b) in get(rcj_of, (r, c), NTuple{4,String}[])
+                for (_, _, j, b) in get(rcj_of, (r, c), NO4)
                     (b in bdneq && !iszero(gv(com_elast, (r, t, c, s, b)))) || continue
                     addterm!(lhs, GNum(bdsig(b)), tm, "VAR_ELAST", r, t, c, s, j, b)
                 end
@@ -599,9 +615,9 @@ function eq_combal!(tm::TimesModel, x::NamedTuple, eqtype::String, lim::String, 
                 # L101: +(SUM(RCJ(R,COM,J,BD)$MI_DMAS(R,C,COM),(DDF_PREF(R,T,COM)*(MI_AGC(R,T,C,COM,J,BD)-1)+RD_SHAR(R,T,COM,C))*
                 #   BDSIG(BD)*SUM(RTCS_VARC(R,T,COM,TS),VAR_ELAST(R,T,COM,TS,J,BD)))-VAR_COMPRD(R,T,C,S))$(COM_ELAST(R,T,C,S,'N')>0)$RD_AGG(R,C)
                 if ted && gv(com_elast, (r, t, c, s, "N")).v > 0 && (r, c) in rd_agg
-                    for (_, _, com) in get(dmas_by_agg, (r, c), NTuple{3,String}[]), (_, _, j, b) in get(rcj_of, (r, com), NTuple{4,String}[])
+                    for (_, _, com) in get(dmas_by_agg, (r, c), NO3), (_, _, j, b) in get(rcj_of, (r, com), NO4)
                         k = (gv(pref, (r, t, com)) * (gv(agc, (r, t, c, com, j, b)) - one) + gv(rd_shar, (r, t, com, c))) * GNum(bdsig(b))
-                        for (_, _, _, ts) in get(varc_of, (r, t, com), NTuple{4,String}[])
+                        for (_, _, _, ts) in get(varc_of, (r, t, com), NO4)
                             addterm!(rhs, k, tm, "VAR_ELAST", r, t, com, ts, j, b)
                         end
                     end
@@ -614,7 +630,7 @@ function eq_combal!(tm::TimesModel, x::NamedTuple, eqtype::String, lim::String, 
                 if (r, c) in dem                                          # L110
                     fr = gv(com_fr, (r, t, c, s))
                     haskey(rd_nlp, (r, c)) || addconst!(rhs, gv(com_proj, (r, t, c)) * fr)
-                    for (_, com, _) in get(dmas_of_rc, (r, c), NTuple{3,String}[])
+                    for (_, com, _) in get(dmas_of_rc, (r, c), NO3)
                         (r, com) in rd_agg || continue
                         addterm!(rhs, gv(rd_shar, (r, t, com, c)) * fr, tm, "VAR_COMPRD", r, t, com, "ANNUAL")
                     end
@@ -652,8 +668,12 @@ MODLYEAR; PYR the past years.
 
 GAMS: cal_cap.mod L14-27, v4.9.7.
 """
-function cal_cap!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, io::String, r, t, c, s; pf=p -> GNum(1.0))
-    x = get!(tm.cache, "CAL_CAP") do
+cal_cap!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, io::String, r, t, c, s; pf=p -> GNum(1.0)) =
+    cal_cap!(expr, tm, cal_cap_context(tm), mult, io, r, t, c, s, pf)
+
+"The sets and parameters `cal_cap!` reads, built once per model (untyped out of `tm.cache`, see `combal_context`)."
+function cal_cap_context(tm::TimesModel)
+    get!(tm.cache, "CAL_CAP") do
         ncom = gparam(tm, "NCAP_COM")
         allyear = [k[1] for k in gset(tm, "ALLYEAR").keys]
         (capflo_of_rc = indexby(gset(tm, "RPC_CAPFLO"), (1, 4)),           # (r,c) -> RPC_CAPFLO(r,v,p,c)
@@ -665,9 +685,14 @@ function cal_cap!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, io::String, r,
          g_yrfr = gparam(tm, "G_YRFR"), pasti = gparam(tm, "NCAP_PASTI"),
          modlyear = gset(tm, "MODLYEAR"), milestonyr = gset(tm, "MILESTONYR"), pyr = gset(tm, "PYR"))
     end
+end
+
+# `cal_cap!` with the context `x` as a typed argument (a function barrier, see `combal_context`; Phase 2,
+# change 3) and %3, `pf`, as a type parameter. GAMS: cal_cap.mod L14-27, v4.9.7.
+function cal_cap!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, mult::GNum, io::String, r, t, c, s, pf::PF) where {PF}
     yrfr = gv(x.g_yrfr, (r, s))
     # first term: the flows over the lifetime (NCAP_COM)
-    for (_, v, p, _, i) in get(x.ncom_of_rc, (r, c), NTuple{5,String}[])
+    for (_, v, p, _, i) in get(x.ncom_of_rc, (r, c), NO5)
         (i == io && (r, v, t, p) in x.cptyr) || continue
         k = mult * (gv(x.coef_cpt, (r, v, t, p)) * gv(x.ncom, (r, v, p, c, io)) * yrfr * pf(p)) *
             (1 + gv(x.coef_cio, (r, v, t, p, c, io)))
@@ -677,7 +702,7 @@ function cal_cap!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, io::String, r,
     end
     # second term: the flows tied to investment or decommissioning
     coef = io == "IN" ? x.icom : x.ocom
-    for (_, v, p, _) in get(x.capflo_of_rc, (r, c), NTuple{4,String}[])
+    for (_, v, p, _) in get(x.capflo_of_rc, (r, c), NO4)
         (v,) in x.modlyear || continue
         haskey(coef.values, (r, v, t, p, c)) || continue                    # $COEF_%2COM(R,V,T,P,C)
         k = mult * (yrfr * pf(p))

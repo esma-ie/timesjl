@@ -143,9 +143,6 @@ function eq_peak!(tm::TimesModel)
     no3 = NTuple{3,String}[]
     no2 = NTuple{2,String}[]
 
-    # SUM(COM(CG2), x(COM)): x(CG2) when CG2 is a commodity, else 0 (G14).
-    grp(p, k) = (k[3],) in com ? gv(p, k) : GZERO
-
     # The domain, in GAMS order (R, T, CG2, SL).
     rows = NTuple{4,String}[]
     off = rts_off(tm)                                                  # RTS(SL): S+NORTS(R,T,SL), dynamic timeslices
@@ -156,6 +153,27 @@ function eq_peak!(tm::TimesModel)
         push!(rows, (r, t, cg2, sl))
     end
     gams_sort!(rows, tm.data)
+
+    return eq_peak!(tm,
+        (; name, rows, milestonyr, pastyear, com, dem, prc_pkno, rs_fr, com_ie, com_pkrsv, com_pkflx, g_yrfr, prc_capact, coef_vnt,
+           prc_actflo, ncap_pkcnt, ncap_pasti, rpc_pkf, flo_pkcoi, com_proj, com_fr, rd_nlp, rd_shar, stg_eff, ted, com_elast, rcj_of,
+           bdneq, nstts, prc_map, one, ble, opr, ble_tp, ble_opr_of_rb, ble_inp_of_rc, bl_inp, peakda_bl, rtcs_fr, gmap_of_rcg, ts_of_rc,
+           pkc_of_rc, agg_of_r, v_of_rtp, no3, no2))
+end
+
+# `eq_peak!` with the rows and the sets, parameters and incidence maps of the outer method, `d`, as a
+# typed argument: `gset` and `gparam` give an abstract `GamsSet` or `GamsParam`, so the outer method
+# does not know their types, nor do the closures it would hand to cal_ire!, cal_stgn! and cal_fflo!.
+# Julia compiles this method for the concrete types (a function barrier; Phase 2, change 3). The rows,
+# the terms, their arithmetic and their order are unchanged. GAMS: eqpeak.mod L15-87, v4.9.7.
+function eq_peak!(tm::TimesModel, d::NamedTuple)
+    (; name, rows, milestonyr, pastyear, com, dem, prc_pkno, rs_fr, com_ie, com_pkrsv, com_pkflx, g_yrfr, prc_capact, coef_vnt,
+       prc_actflo, ncap_pkcnt, ncap_pasti, rpc_pkf, flo_pkcoi, com_proj, com_fr, rd_nlp, rd_shar, stg_eff, ted, com_elast, rcj_of,
+       bdneq, nstts, prc_map, one, ble, opr, ble_tp, ble_opr_of_rb, ble_inp_of_rc, bl_inp, peakda_bl, rtcs_fr, gmap_of_rcg, ts_of_rc,
+       pkc_of_rc, agg_of_r, v_of_rtp, no3, no2) = d
+
+    # SUM(COM(CG2), x(COM)): x(CG2) when CG2 is a commodity, else 0 (G14).
+    grp(p, k) = (k[3],) in com ? gv(p, k) : GZERO
 
     n = 0
     for (r, t, cg2, sl) in rows
@@ -174,7 +192,7 @@ function eq_peak!(tm::TimesModel)
                 # Capacity contribution (L22-25).
                 for (_, p, _) in get(pkc_of_rc, (r, c), no3)
                     base = gv(g_yrfr, (r, s)) * gv(prc_capact, (r, p))
-                    for v in get(v_of_rtp, (r, t, p), String[])
+                    for v in get(v_of_rtp, (r, t, p), NO_LABELS)
                         k = out * (base * (gv(coef_vnt, (r, t, p, v)) * gv(prc_actflo, (r, v, p, c)) *
                                            gv(ncap_pkcnt, (r, v, p, s))))
                         (v,) in milestonyr && addterm!(lhs, k, tm, "VAR_NCAP", r, v, p; at=v)   # %VARV%_NCAP(R,V,P %SWS%) (L24)
@@ -230,7 +248,7 @@ function eq_peak!(tm::TimesModel)
                 end
                 # Elastic demand (L85): SUM(RCJ(R,C,J,BDNEQ(BD))$COM_ELAST(R,T,C,S,BD),-BDSIG(BD)*VAR_ELAST(R,T,C,S,J,BD))
                 if ted
-                    for (_, _, j, b) in get(rcj_of, (r, c), NTuple{4,String}[])
+                    for (_, _, j, b) in get(rcj_of, (r, c), NO4)
                         (b in bdneq && !iszero(gv(com_elast, (r, t, c, s, b)))) || continue
                         addterm!(rhs, flx * GNum(-bdsig(b)), tm, "VAR_ELAST", r, t, c, s, j, b)
                     end

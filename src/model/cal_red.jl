@@ -47,7 +47,9 @@ function cal_nored!(expr::JuMP.AffExpr, tm::TimesModel, coef::GNum,
     iszero(coef) && return expr
     vnt = mode == "T" ? t : v
 
-    rpc_emis = gset(tm, "RPC_EMIS")
+    # RPC_EMIS(R,P,C) has three indices (the assertion gives the membership test its type: `gset`
+    # returns an abstract `GamsSet`, and this function runs once per flow term; Phase 2, change 3)
+    rpc_emis = gset(tm, "RPC_EMIS")::GamsSet{3}
     if !((r, p, c) in rpc_emis)
         return addterm!(expr, coef, tm, "VAR_FLO", r, vnt, t, p, c, ts; at)
     end
@@ -62,8 +64,8 @@ function cal_nored!(expr::JuMP.AffExpr, tm::TimesModel, coef::GNum,
     rtp_ffcx = gparam(tm, "RTP_FFCX")
     rtp_ffcs = gparam_opt(tm.data, "RTP_FFCS", 5)
     prc_vint = gset(tm, "PRC_VINT")
-    for (_, _, _, cg3, com2) in get(fs_emit_by_rpc, (r, p, c), NTuple{5,String}[])
-        for (_, _, all_ts) in get(rs_fr_by_rs, (r, ts), NTuple{3,String}[])
+    for (_, _, _, cg3, com2) in get(fs_emit_by_rpc, (r, p, c), NO5)
+        for (_, _, all_ts) in get(rs_fr_by_rs, (r, ts), NO3)
             # $(RS_FR(R,%3,ALL_TS)*RTPCS_VARF(R,%5,%4,COM2,ALL_TS)): RS_FR present, VARF member.
             (r, t, p, com2, all_ts) in rtpcs_varf || continue
             shp3 = GNum(1.0)
@@ -126,8 +128,12 @@ function cal_red!(expr::JuMP.AffExpr, tm::TimesModel, coef::GNum,
                   mode::AbstractString="", at::Union{Nothing,AbstractString}=nothing)
     mode in ("", "T", "V") || throw(ArgumentError("cal_red mode (%7) must be '', T or V, got $mode"))
     iszero(coef) && return expr
-    vnt = mode == "T" ? t : v
-    x = get!(tm.cache, "CAL_RED") do
+    return cal_red!(expr, tm, cal_red_context(tm), coef, r, v, t, p, c, ts, mode, at)
+end
+
+"The sets, parameters and incidence maps `cal_red!` reads, built once per model (untyped out of `tm.cache`)."
+function cal_red_context(tm::TimesModel)
+    get!(tm.cache, "CAL_RED") do
         pg = uppercase(strip(gswitch(tm, "PGPRIM", "'ACT'"), ['\'', '"']))      # initmty.mod L138
         cgk = gset(tm, "COM_GRP").keys
         i = findfirst(k -> uppercase(k[1]) == pg, cgk)
@@ -143,12 +149,21 @@ function cal_red!(expr::JuMP.AffExpr, tm::TimesModel, coef::GNum,
            prc_actflo = gparam(tm, "PRC_ACTFLO"), act_flo = gparam(tm, "ACT_FLO"),
            rtp_ffcx = gparam(tm, "RTP_FFCX"), rtp_ffcs = gparam_opt(tm.data, "RTP_FFCS", 5), prc_vint = gset(tm, "PRC_VINT"))
     end
+end
+
+# `cal_red!` with the context `x` as a typed argument (a function barrier, as for `combal_context`:
+# Julia compiles this method for the context's concrete type; Phase 2, change 3), after the outer
+# method's checks. GAMS: cal_red.red L15-56, v4.9.7.
+function cal_red!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, coef::GNum,
+                  r::String, v::String, t::String, p::String, c::String, ts::String,
+                  mode::AbstractString, at::Union{Nothing,AbstractString})
+    vnt = mode == "T" ? t : v
     shp(cg, cc) = (mode == "T" ? GNum(1.0) :
                    1 + (mode == "V" ? gv(x.rtp_ffcx, (r, v, t, p, cg, cc)) : gif(gv(x.rtp_ffcx, (r, v, t, p, cg, cc)), (r, p) in x.prc_vint))) *
                   (1 + gv(x.rtp_ffcs, (r, vnt, p, cg, cc)))
     # SUM((RPC_ACT(R,P,%2),PRC_TS2(R,P,S2))$RS_FR(R,tsx,S2), VAR_ACT(S2) * af * RS_FR(R,tsx,S2)*(1+RTCS_FR(R,T,%2,tsx,S2)))
     function ffunc!(w::GNum, af::GNum, tsx::String)
-        for com in get(x.act_of, (r, p), String[]), (_, _, s2) in get(x.ts2_of, (r, p), NTuple{3,String}[])
+        for com in get(x.act_of, (r, p), NO_LABELS), (_, _, s2) in get(x.ts2_of, (r, p), NO3)
             haskey(x.rs_fr.values, (r, tsx, s2)) || continue
             k = w * (af * gv(x.rs_fr, (r, tsx, s2)) * (1 + gv(x.rtcs_fr, (r, t, com, tsx, s2))))
             addterm!(expr, k, tm, "VAR_ACT", r, vnt, t, p, s2; at)
@@ -160,8 +175,8 @@ function cal_red!(expr::JuMP.AffExpr, tm::TimesModel, coef::GNum,
             addterm!(expr, coef, tm, "VAR_FLO", r, vnt, t, p, c, ts; at)
         else
             # Emission flow = source flow (itself perhaps substituted) * emission factor (L29-42).
-            for (_, _, _, cg1, com2) in get(x.fs_emit_of, (r, p, c), NTuple{5,String}[])
-                for (_, _, all_ts) in get(x.rs_fr_of, (r, ts), NTuple{3,String}[])
+            for (_, _, _, cg1, com2) in get(x.fs_emit_of, (r, p, c), NO5)
+                for (_, _, all_ts) in get(x.rs_fr_of, (r, ts), NO3)
                     (r, t, p, com2, all_ts) in x.rtpcs_varf || continue
                     w = coef * (gv(x.coef_ptran, (r, vnt, p, cg1, com2, c, all_ts)) * shp(cg1, c) *
                                 gv(x.rs_fr, (r, ts, all_ts)) * (1 + gv(x.rtcs_fr, (r, t, com2, ts, all_ts))))

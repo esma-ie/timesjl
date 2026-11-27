@@ -45,18 +45,30 @@ has_eqfamily(eqs::EquationStore, name::AbstractString) = haskey(eqs.families, up
 Register one generated row under its family and index tuple, name it
 GAMS-style, and refuse a duplicate (GAMS defines each equation instance
 once).
+
+Once per row, so (Phase 2, change 4) the family is looked up under the name as given before its
+upper case is built (the generators pass the family's own, upper-case name), and the row is
+registered in a method that takes the family with its type (`families` is a `Dict{String,Any}`).
 """
 function addeq!(eqs::EquationStore, name::AbstractString, key::NTuple{N,String},
                 con::JuMP.ConstraintRef) where {N}
-    u = uppercase(name)
-    f = get!(eqs.families, u) do
-        push!(eqs.order, u)
-        EqFamily(u, N)
-    end::EqFamily{N}
-    haskey(f.refs, key) && throw(ArgumentError("$(u)$(key) generated twice"))
+    f = get(eqs.families, name, nothing)                   # the family's own name: no upper-casing
+    if f === nothing
+        u = uppercase(name)
+        f = get!(eqs.families, u) do
+            push!(eqs.order, u)
+            EqFamily(u, N)
+        end
+    end
+    return addeq!(f::EqFamily{N}, key, con)
+end
+
+# `addeq!` with the family typed; `f.name` is the upper-case name the family is stored under.
+function addeq!(f::EqFamily{N}, key::NTuple{N,String}, con::JuMP.ConstraintRef) where {N}
+    haskey(f.refs, key) && throw(ArgumentError("$(f.name)$(key) generated twice"))
     f.refs[key] = con
     push!(f.keys, key)
-    JuMP.set_name(con, colname(u, key))
+    JuMP.set_name(con, colname(f.name, key))
     return con
 end
 
@@ -74,10 +86,14 @@ with `at` the period T, V, MODLYEAR or TT, `%VART%`/`%VARV%`/`%VARM%`/`%VARTT%_X
 are `VAR_X(key)`. In a stochastic run (change 74) the tagged forms read
 VAS_X(key,SOW), or the sum of VAS_X(key,W) over SW_TSW(SOW,at,W).
 
+`N`, the number of indices, is a parameter of the method so that Julia compiles it for the
+caller's index tuple: a `key...` that is only passed on is not specialized, and every term then went
+through a dynamic call (Phase 2, change 4; see `getvar!`).
+
 GAMS: setglobs.gms L348; stages.stc L12-13, v4.9.7.
 """
-function addterm!(expr::JuMP.AffExpr, coef::GNum, tm, name::AbstractString, key::AbstractString...;
-                  at::Union{Nothing,AbstractString}=nothing, tagged::Bool=true)
+function addterm!(expr::JuMP.AffExpr, coef::GNum, tm, name::AbstractString, key::Vararg{AbstractString,N};
+                  at::Union{Nothing,AbstractString}=nothing, tagged::Bool=true) where {N}
     iszero(coef) && return expr
     coef.eps && push!(_eps_exprs(tm), expr)
     if tagged && tm.tags.stochastic
@@ -95,16 +111,25 @@ end
 "The expressions `addterm!` gave an EPS term, by identity (see `gconstraint!`)."
 _eps_exprs(tm) = get!(() -> Base.IdSet{JuMP.AffExpr}(), tm.cache, "EPS_EXPRS")::Base.IdSet{JuMP.AffExpr}
 
-"Whether every coefficient of `lhs - rhs` is an exact zero (no term, or terms that cancel)."
+"""
+Whether every coefficient of `lhs - rhs` is an exact zero (no term, or terms that cancel).
+
+The coefficient of a variable is `(0.0 + its coefficient in lhs, if it has one) - (its coefficient in
+rhs, if it has one)`. An expression holds each variable once, so the two are read from the
+expressions themselves and the test stops at the first coefficient that is not zero, which in
+nearly every row is the first one looked at; a Dict of all of them was built for every row before
+(Phase 2, change 5). The same arithmetic and the same answer.
+"""
 function _all_cancel(lhs::JuMP.AffExpr, rhs::JuMP.AffExpr)
-    d = Dict{JuMP.VariableRef,Float64}()
-    for (v, c) in lhs.terms
-        d[v] = get(d, v, 0.0) + c
+    lt, rt = lhs.terms, rhs.terms
+    for (v, c) in lt                                  # in lhs: (0.0 + c) - its coefficient in rhs, or (0.0 + c)
+        c2 = get(rt, v, nothing)
+        iszero(c2 === nothing ? 0.0 + c : (0.0 + c) - c2) || return false
     end
-    for (v, c) in rhs.terms
-        d[v] = get(d, v, 0.0) - c
+    for (v, c) in rt                                  # in rhs only: 0.0 - c
+        haskey(lt, v) || iszero(0.0 - c) || return false
     end
-    return all(iszero, values(d))
+    return true
 end
 
 "Add a constant (data) term to `expr`; GAMS moves it to the right-hand side."
@@ -242,6 +267,6 @@ gswitch(tm::TimesModel, name::AbstractString, default::AbstractString) =
 
 TimesModel(dir::AbstractString; kwargs...) = TimesModel(DumpData(dir); kwargs...)
 
-getvar!(tm::TimesModel, name::AbstractString, key::AbstractString...) = getvar!(tm.vars, name, key...)
+getvar!(tm::TimesModel, name::AbstractString, key::Vararg{AbstractString,N}) where {N} = getvar!(tm.vars, name, key...)
 gset(tm::TimesModel, name::AbstractString) = gset(tm.data, name)
 gparam(tm::TimesModel, name::AbstractString) = gparam(tm.data, name)

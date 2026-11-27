@@ -259,6 +259,21 @@ function eq_capact!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, 
         push!(get!(() -> String[], k_of_rtp, (r, t, p)), k)
     end
 
+    return eq_capact!(tm,
+        (; name, rtp_vintyr, rps_caflac, ts_map, rp_stg, prc_vint, milestonyr, modlyear, tx, pastyear, coef_cpt, coef_af, prc_capact,
+           g_yrfr, ncap_pasti, rs_fr, prc_sc, rs_stgprd, stl_bd, s_of_rtpbd, ts_of_rp, k_of_rtp),
+        eqtype, bd)
+end
+
+# One include of eqcapact.mod with the sets, parameters and incidence maps of the outer method, `d`,
+# as a typed argument: `gset` and `gparam` give an abstract `GamsSet` or `GamsParam`, so the outer
+# method does not know their types, and every membership test and lookup in the row loop was a dynamic
+# call. Julia compiles this method for the concrete types (a function barrier; Phase 2, change 3). The
+# rows, the terms, their arithmetic and their order are unchanged. GAMS: eqcapact.mod L22-52, v4.9.7.
+function eq_capact!(tm::TimesModel, d::NamedTuple, eqtype::AbstractString, bd::AbstractString)
+    (; name, rtp_vintyr, rps_caflac, ts_map, rp_stg, prc_vint, milestonyr, modlyear, tx, pastyear, coef_cpt, coef_af, prc_capact,
+       g_yrfr, ncap_pasti, rs_fr, prc_sc, rs_stgprd, stl_bd, s_of_rtpbd, ts_of_rp, k_of_rtp) = d
+
     # One capacity term, coefficient `c`: VAR_NCAP(r,k,p)$T(k) + NCAP_PASTI(r,k,p)$PASTYEAR(k)
     # with %RCAPSBM% (L37) or %RCAPSUB% (L45), k controlled in both (prepret.jl).
     function add_capacity!(rhs, r, k, t, p, c::GNum)
@@ -272,7 +287,7 @@ function eq_capact!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, 
     for (r, v, t, p) in rtp_vintyr
         # The domain RTP_VINTYR(R,V,T,P) is controlled by V (MODLYEAR) and T (MILESTONYR).
         ((v,) in modlyear && (t,) in tx) || continue
-        for (_, _, _, s, _) in get(s_of_rtpbd, (r, t, p, bd), NTuple{5,String}[])
+        for (_, _, _, s, _) in get(s_of_rtpbd, (r, t, p, bd), NO5)
             (r, p, s, bd) in rps_caflac && continue
             stg = (r, p) in rp_stg
 
@@ -281,14 +296,14 @@ function eq_capact!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, 
                 lhs = JuMP.AffExpr(0.0)
                 if !stg
                     # L25: activity in the timeslices at or below S.
-                    for (_, _, ts) in get(ts_of_rp, (r, p), NTuple{3,String}[])
+                    for (_, _, ts) in get(ts_of_rp, (r, p), NO3)
                         (r, s, ts) in ts_map || continue
                         addterm!(lhs, GNum(1.0), tm, "VAR_ACT", r, v, t, p, ts)
                     end
                 else
                     # L28: storage level times the storage cycles of TS within S.
                     cyc = gexp(gv(prc_sc, (r, p)))
-                    for (_, _, ts) in get(ts_of_rp, (r, p), NTuple{3,String}[])
+                    for (_, _, ts) in get(ts_of_rp, (r, p), NO3)
                         haskey(rs_fr, (r, ts, s)) || continue
                         k = gv(rs_fr, (r, ts, s)) * cyc / gv(rs_stgprd, (r, ts))
                         addterm!(lhs, k, tm, "VAR_ACT", r, v, t, p, ts)
@@ -301,7 +316,7 @@ function eq_capact!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, 
                 yrfr = gpower(gv(g_yrfr, (r, s)), stg ? 0 : 1)
                 rhs = JuMP.AffExpr(0.0)
                 if !((r, p) in prc_vint)
-                    for k in get(k_of_rtp, (r, t, p), String[])
+                    for k in get(k_of_rtp, (r, t, p), NO_LABELS)
                         c = gv(coef_cpt, (r, k, t, p)) * gv(coef_af, (r, k, t, p, s, bd)) * capact * yrfr
                         add_capacity!(rhs, r, k, t, p, c)
                     end
