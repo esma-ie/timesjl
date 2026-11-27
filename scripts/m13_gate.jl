@@ -177,7 +177,7 @@ function cplex_optfile(model, sources)
 end
 
 """
-    model_check(tm, dir, model, variant; solve, solver="highs", sources=nothing) -> Bool
+    model_check(tm, dir, model, variant; solve, solver="highs", sources=nothing, pool_last=false) -> Bool
 
 Layer 2: the model generated from TIMES.jl's state against GAMS's CONVERT matrix (1e-9). Layer 3
 with `solve`: HiGHS (TIMESJL_THREADS threads, 24 hours at most, HIGHS_TIME_LIMIT) against
@@ -185,8 +185,12 @@ GAMS/CPLEX's objective (1e-6). With `solver="cplex"` the same LP is solved by CP
 (scripts/gams_cplex.jl), with the model's cplex.opt from `sources` (timesjl-sources), the same
 threads and time limit; "solved in" is then CPLEX's own time (GAMS's etSolver), and the line adds
 the handover through GAMS.jl.
+
+`pool_last`: this is the last solve of the process, so the run pool's launcher is told when it is
+over (`TIMES.pool_phase`; reference/python/pool_run.py). A stepped run (`stepped_check`) tells it
+nothing and keeps its threads to the end.
 """
-function model_check(tm, dir, model, variant; solve=false, solver="highs", sources=nothing)
+function model_check(tm, dir, model, variant; solve=false, solver="highs", sources=nothing, pool_last::Bool=false)
     ok = true
     t = @elapsed generate!(tm)
     mine = canonical_from_jump(tm.model)
@@ -223,6 +227,7 @@ function model_check(tm, dir, model, variant; solve=false, solver="highs", sourc
         ts = @elapsed JuMP.optimize!(tm.model)
         st = JuMP.termination_status(tm.model)
     end
+    pool_last && TIMES.pool_phase("reporting")
     if st != JuMP.OPTIMAL
         println("== ", model, "/", variant, " ", name, " solve: FAIL (", st, " after ", round(ts; digits=1), " s", via, ")")
         return false
@@ -353,13 +358,14 @@ function stepped_check(snap, dir, model, variant)
 end
 
 """
-    gate13(refdir, model; roots, variant, from_dd=nothing, solve=false, solver="highs") -> Bool
+    gate13(refdir, model; roots, variant, from_dd=nothing, solve=false, solver="highs", pool_last=false) -> Bool
 
 The chain input -> init -> prep -> prelv -> ppm -> coef -> presolve on one
 reference run, as far as TIMES.jl translates it; true when every checkpoint
 reached matches GAMS and the chain reaches ppm at least.
 """
-function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off", from_dd=nothing, solve=false, solver="highs")
+function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off", from_dd=nothing, solve=false, solver="highs",
+                pool_last::Bool=false)
     dir = joinpath(refdir, model, variant)
     isfile(joinpath(dir, "manifest.json")) || (println("== ", model, "/", variant, ": no reference"); return false)
     missing_cp = filter(c -> !isdir(joinpath(dir, c)), ["input", "init", "prep", "prelv", "ppm"])
@@ -442,7 +448,7 @@ function gate13(refdir, model; roots=Dict{String,String}(), variant="reduce_off"
         end
         return stepped_check(snap, dir, model, variant) && ok && gate
     end
-    reached == "presolve" && (from_dd !== nothing || solve) && (ok &= model_check(tm, dir, model, variant; solve, solver, sources=from_dd))
+    reached == "presolve" && (from_dd !== nothing || solve) && (ok &= model_check(tm, dir, model, variant; solve, solver, sources=from_dd, pool_last))
     return ok && gate
 end
 
@@ -461,10 +467,15 @@ if abspath(PROGRAM_FILE) == @__FILE__
     from_dd = i === nothing ? nothing : abspath(args[i+1])
     i === nothing || deleteat!(args, i:i+1)
     refdir, roots, models = parse_probe_args(args)
+    # the run pool (reference/python/pool_run.py): the last run of this process that has a reference; after
+    # its solve the run keeps 1 thread. Not known (a model named twice): nothing is told, the class stays.
+    runs = [(m, v) for m in models for v in ("reduce_off", "as_run") if isfile(joinpath(refdir, m, v, "manifest.json"))]
+    last_run = allunique(models) && !isempty(runs) ? last(runs) : nothing
     let t0 = GATE_T0
         for model in models, variant in ("reduce_off", "as_run")
             try
-                Base.invokelatest(gate13, refdir, model; roots, variant, from_dd, solve, solver)
+                Base.invokelatest(gate13, refdir, model; roots, variant, from_dd, solve, solver,
+                                  pool_last=(model, variant) == last_run)
             catch e
                 e isa TIMES.UnportedError || rethrow()
                 println("== ", model, "/", variant, ": not translated: ", sprint(showerror, e))

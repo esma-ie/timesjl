@@ -59,6 +59,18 @@
     -Resume skips references whose CONVERT run is there and made with -GamsMajor.
     With -Checkpoints as well, both runs (--only presolve,convert). No gate, no zips.
 
+.EXAMPLE
+    powershell -ExecutionPolicy Bypass -File scripts\run_references.ps1 -Postsolve -Resume
+    M1.6 (harness 0.3.10): with -Postsolve, -Resume also takes a reference for
+    not done when it lacks postsolve/ (the solution before the reports) or vd/
+    (gdx2veda's files), and reruns it in full: the two come from the solve run
+    that gives final/, so there is no pass that adds them alone. A reference
+    whose manifest says why it has none (postsolve_skipped, vd_skipped: stepped,
+    stochastic) is done. Without -Postsolve, -Resume does not ask for them.
+    Licensed solves. The references of -Out must be of the TIMES version of
+    this script's source (v4.9.8): make_reference.py refuses to rerun into a
+    folder of v4.9.7 references, so give those their own -Out.
+
 .PARAMETER Solvers
     The GAMS solvers of the solve runs, comma-separated, the reference solver
     first (default CPLEX,HIGHS). They are the solvers of every model that has
@@ -115,6 +127,8 @@ param(
     [switch]$Checkpoints,
     # CONVERT only: make_reference.py --only convert (matrix and MPS; no solve, no gate, no zips)
     [switch]$Matrix,
+    # M1.6 (harness 0.3.10): -Resume reruns in full a reference without postsolve/ or vd/
+    [switch]$Postsolve,
     # Local run limits: the run pool (James, 26 Nov 2026; reference/python/runlimits.py).
     # Threads 0: each model's class (6 or 12); MaxParallel 0: no limit on the number of runs.
     [int]$Threads = 0,
@@ -123,7 +137,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
-$ScriptVersion = '0.1.21'  # 0.1.21 (26 Nov 2026): the run pool (per-model thread class, no run limit)
+$ScriptVersion = '0.1.22'  # 0.1.22 (27 Nov 2026): -Postsolve (M1.6: postsolve/ and vd/, harness 0.3.10); 0.1.21 (26 Nov 2026): the run pool (per-model thread class, no run limit)
 if ($Checkpoints -or $Matrix) { $SkipGate = $true; $SkipPack = $true }
 
 $OnWindows = ($PSVersionTable.PSEdition -eq 'Desktop') -or $IsWindows
@@ -485,12 +499,24 @@ function Test-RunGams($m) {
     return ($seen -gt 0)
 }
 
+# M1.6 (harness 0.3.10): postsolve/ and vd/ are not in $RequiredDumps, because a stepped or
+# stochastic run has no postsolve/ and a stochastic run no vd/ (the manifest then says why:
+# postsolve_skipped, vd_skipped), and because asking for them reruns every earlier reference.
+# -Postsolve asks: the dump or its note, and the first solve run's gdx2veda files or their note.
+function Test-Postsolve($m) {
+    if ($null -eq (Get-Prop $m.dumps 'postsolve') -and $null -eq (Get-Prop $m 'postsolve_skipped')) { return $false }
+    $vd = Get-Prop (Get-Prop $m 'vd') 'vd'
+    if ($null -eq $vd) { return ($null -ne (Get-Prop $m 'vd_skipped')) }
+    return ((Get-Prop $vd 'returncode') -eq 0)
+}
+
 # $need: the solvers the model lists for itself in the suite (none for the others); each must have its solve run.
 function Test-RunOK([string]$dir, [string[]]$need = @()) {
     $mf = Join-Path $dir 'manifest.json'
     if (-not (Test-Path $mf)) { return $false }
     $m = Get-Content -Raw $mf | ConvertFrom-Json
     foreach ($d in $RequiredDumps) { if ($null -eq (Get-Prop $m.dumps $d)) { return $false } }
+    if ($Postsolve -and -not (Test-Postsolve $m)) { return $false }
     foreach ($s in $need) { if ($null -eq (Get-Prop $m.runs "solve_$($s.ToLower())")) { return $false } }
     if (-not (Test-RunGams $m)) { return $false }
     foreach ($p in $m.dumps.PSObject.Properties) { if ($null -eq $p.Value) { return $false } }

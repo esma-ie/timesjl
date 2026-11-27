@@ -45,7 +45,8 @@ from pathlib import Path
 
 DEFAULT_THREADS = 12          # the large-model class, and the class of a model with no ``threads``
 SMALL_THREADS = 6             # the small-model class (James, 26 Nov 2026)
-AFTER_BARRIER_THREADS = 4     # kept from barrier's end to the solve's end (CPLEX's concurrent crossover)
+AFTER_BARRIER_THREADS = 2     # kept from barrier's end to the solve's end (crossover); the busy threads were
+                              # measured locally (James, 27 Nov 2026, #207 d6b)
 DEFAULT_POOL = 48             # logical CPUs of James's workstation
 DEFAULT_KEEP_FREE = 2         # CPUs kept free (James, 26 Nov 2026)
 DEFAULT_MAX_PARALLEL = 0      # no limit on the number of runs (James, 26 Nov 2026); > 0 adds one
@@ -314,10 +315,16 @@ class _Lock:
                 time.sleep(0.05)
 
     def __exit__(self, *exc) -> None:
-        try:
-            self.path.unlink()
-        except OSError:
-            pass
+        # On Windows the file cannot be removed while another process has it open (a waiting run reading
+        # the pid): try again for a moment, or the lock would stay for as long as this process lives.
+        for _ in range(200):
+            try:
+                self.path.unlink()
+                return
+            except FileNotFoundError:
+                return
+            except OSError:
+                time.sleep(0.01)
 
 
 def _read_json(path: Path) -> dict | None:

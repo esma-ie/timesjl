@@ -13,7 +13,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-from runlimits import (AFTER_BARRIER_THREADS, GamsWatch, PoolRun, ledger, limit_threads,  # noqa: E402
+from runlimits import (AFTER_BARRIER_THREADS, GamsWatch, PoolRun, _Lock, ledger, limit_threads,  # noqa: E402
                        model_threads, pid_alive, runfile_solves_once)
 
 NL = chr(10)
@@ -113,6 +113,18 @@ class PoolTests(unittest.TestCase):
         (self.dir / "pool.lock").write_text(str(dead_pid()))
         with pool("a", 6, self.dir, timeout_s=2) as a:
             self.assertIsNotNone(a.path)
+
+    def test_lock_is_removed_although_a_reader_has_it_open(self):
+        # Windows: a file open in another program cannot be removed; left behind, the lock of a process
+        # that lives on would stop every other run. (Elsewhere the file is removed at once.)
+        with pool("a", 6, self.dir) as a:
+            reader = []
+            threading.Timer(0.3, lambda: reader.pop().close()).start()
+            with _Lock(self.dir) as lock:
+                reader.append(open(lock.path))
+            self.assertFalse(lock.path.exists())
+            a.set(1, "reporting")                       # the lock is free again
+            self.assertEqual(self.held(), 1)
 
     def test_optional_run_count_limit(self):
         with pool("a", 1, self.dir, max_parallel=1):

@@ -15,11 +15,13 @@ For each model and variant, under `<out>/<model>/<variant>/`:
 | `presolve/` | Every symbol just before the SOLVE statement: a third run with `SOLVE_NOW=NO`, so `solve.mod` L22 skips the solve and `maindrv.mod` L114 the reports. The state equations are generated from, after `eqmain`, `bndmain`, `pp_qack` and `pp_clean` | Input data for M1.1; layer 1 for sets the equation files compute (e.g. `AFS`) |
 | `input/`, `init/`, `prep/`, `prelv/` | M1.3 checkpoints (harness 0.3.0), written by the pre-solve run: every symbol before `$BATINCLUDE maindrv.mod` (the state preprocessing starts from: DD files read, switches set), after the extensions' `init_ext` (`maindrv.mod` L55), at their `prep_ext` (`preppm.mod` L217) and at their `pp_prelv` (`ppmain.mod` L615). With `ppm/` they split preprocessing into four segments (`scripts/m13_inventory.jl`) | Input data and layer 1 for M1.3 (`docs/m13-plan.md`); `input/` is also what the M1.4 DD reader must reproduce |
 | `equ/` | Stepped (myopic) runs only (TIMESTEP or FIXBOH; harness 0.3.3), written by the pre-solve run: every symbol after `eqmain.mod` and the extensions' `equ_ext` (`maindrv.mod` L79-80), before the MODEL statement, `bndmain` and `pp_qack`. In a stepped run `presolve/` is not a pre-solve state: with `SOLVE_NOW=NO` the run still goes through the loop of `solve.stp` (`maindrv.mod` L111-113), every step without a solve, so `presolve/` holds the state after the last step | Layer 1 for the preparation of a stepped run (M1.3 change 30); the state the stepped solve starts from (M1.5) |
+| `postsolve/` | Every symbol just after the SOLVE and before GAMS's report code (harness 0.3.10; `solve.mod` L44): the levels and marginals of every variable and equation as the solver returned them, and every set and parameter as the reports find it. Not for a stepped, stochastic or MACRO run (below) | Layer 4, M1.6: the input of TIMES.jl's report code, whose output is compared with `final/` and the `.vd` file |
 | `final/` | Every symbol at the end of the run (`gdx=`), including levels and marginals | Layers 3–4 |
+| `vd/` | The files `gdx2veda` writes from the end-of-run GDX with `times2veda.vdd` of the TIMES source (harness 0.3.10): `<model>.vd` (the values), `.vde` (descriptions of the elements), `.vds` (set memberships). `vd_<solver>/` for each further solver. Not for a stochastic or MACRO run | Layer 4, M1.6: compared as parsed values at 1e-6 (`python/vdparse.py`) |
 | `matrix/`, `matrix_dictmap/` | CONVERT `DumpGDX` and `DictMap` of the scalar model. A stepped run has none at this level: it has one model per step, under `steps/<k>/` | Layer 2 |
 | `steps/<k>/` | Stepped (myopic) runs only (harness 0.3.4), one folder per step k = 1, 2, ... of the loop of `solve.stp`: `final/` (every symbol just after the SOLVE of step k: the data that step's model was generated from, and its levels and marginals), `matrix/` and `matrix_dictmap/` (CONVERT's export of that step's model) | Layers 1 to 3 of each step of the stepped solve (`docs/m15-plan.md`) |
 | `raw/` | CONVERT dictionary and MPS file (`tjl_model.mps.gz`: CPLEX MPS, gzipped), listings, logs, GAMS profile, each run's patched run file (`tjl_<run>.run`, harness 0.2.2+), the pre-solve run's QA log (`tjl_presolve_qa_check.log`, harness 0.3.2+; `reference/python/keep_qa_log.py` copies it into earlier references from the work folder). A stepped run has them per step: `tjl_model_step<k>.mps.gz`, `tjl_dict_step<k>.txt`, and `tjl_point<k>.gdx`, GAMS's point file (levels and marginals) after the SOLVE of step k | Debugging, timings, switches for `scripts/m11_probe.jl`; the QA log for `scripts/m13_gate.jl` (M1.3 change 25b) |
-| `manifest.json` | TIMES version and commit, GAMS version, solver and options, wall times, model attributes (`resGen`, `resUsd`, `numEqu`, `numVar`, `numNZ`, `objVal`, ...), input checksums. For a stepped run also `steps` (how many) and, for the first solve run and the CONVERT run, each step's rows, columns, nonzeros, statuses and objective | Provenance, benchmarks |
+| `manifest.json` | TIMES version and commit, GAMS version, solver and options, wall times, model attributes (`resGen`, `resUsd`, `numEqu`, `numVar`, `numNZ`, `objVal`, ...), input checksums. For a stepped run also `steps` (how many) and, for the first solve run and the CONVERT run, each step's rows, columns, nonzeros, statuses and objective. From harness 0.3.10: `postsolve_skipped` and `vd_skipped` (the reason a run has no `postsolve/` or `vd/`) and `vd` (the `gdx2veda` call and its files) | Provenance, benchmarks |
 
 Variants: `reduce_off` (forces `$SET REDUCE NO`, used first for matrix
 parity) and `as_run` (the model's own settings).
@@ -60,7 +62,8 @@ for a web front end, which it includes when the run is started with
 `www_out.cgi` after every SOLVE (`solve.mod` L44), which in a stepped run is
 once per step. The harness supplies both files,
 [`gams/www_in.cgi`](gams/www_in.cgi) and [`gams/www_out.cgi`](gams/www_out.cgi).
-Both leave at their first line unless `%STEPPED%` is set, so GAMS itself
+For the steps both leave at once unless `%STEPPED%` is set (`www_out.cgi`
+after its part for `postsolve/`, below), so GAMS itself
 decides whether a run is stepped, and a run that is not stepped is unchanged
 (checked on demo12: every symbol of every dump is the same as before, but
 for the harness's own record of the solve, which holds run times).
@@ -91,6 +94,84 @@ the line with or without it (0.3.4 took such a step for one without
 statistics and ended the reference with `CHECK`). Checked on the crafted
 case demo12_step2 (TIMESTEP 20, G_OVERLAP 15), both variants. A reference
 made with 0.3.4 stays valid.
+
+### The solution before the reports, and the Veda files (M1.6)
+
+Layer 4 checks TIMES.jl's report code on GAMS's own solution: GAMS's levels
+and marginals go into TIMES.jl's reports, and the result is compared with
+GAMS's report parameters (`final/`) and its `.vd` file (James, 27 Nov 2026).
+Harness 0.3.10 adds the two things that needs.
+
+**`postsolve/`.** The first solve run is started with `--TJL_POSTSOLVE=1`
+(with `--GAMS_CGI=WWW`, as before), and [`gams/www_out.cgi`](gams/www_out.cgi),
+which TIMES includes at `solve.mod` L44, writes every symbol to
+`tjl_postsolve.gdx`. In a run with one SOLVE that point is after the SOLVE
+(`solve.mod` L37) and the check of its status (L41), and nothing is executed
+between it and the reports: `maindrv.mod` L114 is a compile-time `$GOTO`,
+and L120 includes `rptmain.mod`, which goes to `solsetv.v3` (L19) and, with
+`VDA YES` as in every run file of the suite, to `rptlite.rpt` (L17, L26).
+So the dump is the state the report code starts from. The reports change
+more than report parameters: on demo12 `final/` differs from `postsolve/` in
+four variables (`VAR_ACT` in the `as_run` variant, `VAR_COMNET`, `VAR_UC`
+and the marginals of `VAR_CAP`) and in sets and parameters the reports clear
+(`AFS`, `RTPC`, `COEF_VNT`, `RTP_VNTBYR`), which is why `final/` cannot
+stand in for it.
+A GDX file holds no model attributes: the model status the reports read
+(`rptmisc.rpt` L168) is `runs.solve_<solver>.solveinfo.modelstat` in the
+manifest.
+
+GAMS decides where that point is not the state the reports read, and then
+writes the reason to `tjl_postsolve_skip.txt` in place of the dump; the
+manifest records it as `postsolve_skipped`, and the reference has no
+`postsolve/`:
+
+| Reason | Run | Why |
+| --- | --- | --- |
+| `stepped` | `%STEPPED%` set (TIMESTEP or FIXBOH) | `solve.stp` changes levels and marginals after its last SOLVE (L299-301, L325-330) and there is no hook between that and the reports. Each step's solution is in `steps/<k>/final/` |
+| `stages` | `%STAGES%` YES (stochastic, SENSIS, SPINES) | `solve.stc` has several SOLVEs, and a SENSIS run reports after each one (L56, L86) |
+| `macro` | `%MACRO%` YES, MSA, CSA or MLF | its own solves and reports (`rptmain.tm`, `rpt_ext.msa`, `rpt_ext.mlf`) |
+| `ecb` | `%ECB%` YES (BENCOST) | `rpt_ext.ecb` L67 solves again after the reports, which would replace the dump |
+
+Only `stepped` and `stages` runs are in the suite; MACRO and BENCOST runs are
+refused by TIMES.jl in Phase 1.
+
+A run with elastic demand (`TIMESED YES`) has one SOLVE from `solve.mod`
+like any other, and `wrtbprice.mod` (`maindrv.mod` L122) comes after the
+reports, so it has its `postsolve/`.
+
+**`vd/`.** No file of the TIMES source and no run file of the suite calls
+`gdx2veda`: it is run after GAMS has ended, on the run's GDX file, with a
+`.vdd` file of the TIMES source (`times2veda.vdd`, "TIMES GDX2VEDA Set
+Directives"). The harness does that after each solve run, in the form of
+`gdx2veda`'s own usage text (`gdx2veda gdx vdd [run]`): `gdx2veda
+tjl_final.gdx <times_source>/times2veda.vdd <model>` (`tjl_final.gdx` is the
+file `final/` is made from), and keeps every file it writes. With GAMS
+54.6.1 those are `.vd`, `.vde` and `.vds`, the three its `--help` names; it
+writes no `.vdt` file. The `.vd` file has fewer records than the "DataRecords"
+`gdx2veda` prints (on demo12 `reduce_off` 9,615 of 10,637), which fits the
+`not-0` line of `times2veda.vdd`, the attributes whose zero values are left
+out; not checked record by record. The manifest's `vd` records the command, the return
+code, the SHA-256 of the `.vdd` file and each file's size and records. A
+stochastic or MACRO run has none (`vd_skipped`): `times2veda.vdd` is the
+deterministic layout (`times2veda_stc.vdd` has a `Sow` dimension), and
+which of them applies to a SENSIS or SPINES run is not in the TIMES source. [`python/vdparse.py`](python/vdparse.py) reads a `.vd` file
+into (attribute, index, value) records for the comparison at 1e-6.
+
+`postsolve/`, `final/` and `vd/` must come from one GAMS process: a second
+solve can end at another optimum of the same LP. So there is no `--only`
+pass for them, and a reference made with an earlier harness gets them by a
+full rerun, with licensed solves (`scripts\run_references.ps1 -Postsolve
+-Resume` reruns the references of its `-Out` folder that lack them; a folder
+of v4.9.7 references is refused, harness 0.3.8, so the v4.9.8 references,
+made with this harness, have both from the start). A missing dump with no
+reason, or a `gdx2veda` that fails, ends the reference with `CHECK`.
+
+Checked with GAMS 54.6.1 and TIMES v4.9.8 on TIMES_Demo demo12, both
+variants (27 Nov 2026): against a reference made with harness 0.3.9 just
+before, every symbol of every other dump is the same, but for the four run
+times in `TJL_SOLVEINFO`; `postsolve/` has the 1,150 symbols of `final/`,
+with the same equations, and its report parameters (`F_IN`, `PAR_CAPL`,
+`CST_INVC`, ...) are empty.
 
 `execute_unload` with no symbol list writes every symbol the compiled program
 declares, so even the input dump holds symbols TIMES declares later in its
@@ -173,7 +254,7 @@ per run and at most 4 runs at a time" (29 Oct 2026):
   the manifest records both (`limits`, `patch.solver_option_changes`).
 - A solve run reserves its class from its start; the pre-solve and CONVERT runs,
   which do not solve, reserve 1. While a run with one SOLVE goes on, the harness
-  reads its GAMS log: at CPLEX's "Barrier time" it keeps 4 threads (crossover),
+  reads its GAMS log: at CPLEX's "Barrier time" it keeps 2 threads (crossover),
   and once GAMS reads the solution back, 1. A stepped run, or a solver log it does
   not recognise, keeps its class to the end. The manifest records `pool_threads`,
   `pool_phases` and the run's `peak_ram_gb`.
@@ -182,14 +263,55 @@ per run and at most 4 runs at a time" (29 Oct 2026):
   free (its last `peak_ram_gb` plus 10%, or 16 GB the first time). There is no
   limit on the number of runs. The ledger is one JSON file per run in
   `<temp>/timesjl-run-slots`, changed under a lock file; the wait to start is
-  `slot_wait_s`, not part of `wall_s`. Runs that do not use the ledger (Veda,
-  TIMES.jl's Julia scripts for now) are seen only through the measured load and RAM.
+  `slot_wait_s`, not part of `wall_s`. Runs that do not use the ledger (Veda, a
+  Julia script started without the launcher below) are seen only through the
+  measured load and RAM.
 
 Change it with `--threads` (one count for every model), `--pool` (0 turns the
 pool off), `--max-parallel` (an optional run limit) and `--slot-dir` (or
 `TIMESJL_THREADS`, `TIMESJL_POOL`, `TIMESJL_MAX_PARALLEL`, `TIMESJL_SLOT_DIR`;
 `run_references.ps1 -Threads -MaxParallel`). GAMS's own default is one solver
 thread, so models without a `threads` option solve with their class.
+
+### TIMES.jl's Julia scripts: the launcher
+
+A Julia script joins the pool when it is started through
+`reference/python/pool_run.py`. Put the launcher, the model's class and `--`
+in front of the usual command (PowerShell, from the repository folder):
+
+```
+$py = "C:\git\esma\.timesjl-venv\Scripts\python.exe"
+& $py reference\python\pool_run.py --threads 6 --label "demo12 from DD" -- julia --project=test scripts\run_dd.jl ..\timesjl-sources\TIMES_Demo\model\demo12.run --solve
+& $py reference\python\pool_run.py --model TIMES_Demo-demo12 -- julia --project=test scripts\m13_gate.jl ..\timesjl-reference --from-dd ..\timesjl-sources --solve TIMES_Demo-demo12
+```
+
+- `--threads 6` (small model) or `--threads 12` (large) is the class; or
+  `--model <name>` takes it from `suite.toml` or `crafted.toml`. `--label` is
+  the run's name in the ledger. `--ram-gb N` is the RAM the run needs (16 by
+  default); `--timeout-hours H` gives up (exit code 3) if the pool has no room
+  in that time, otherwise the launcher waits.
+- The launcher waits until the class fits, reserves it, and only then starts
+  the command, so the reservation covers model generation. The command gets
+  `TIMESJL_THREADS` set to the class, which the scripts give to HiGHS.
+- The command's output appears as usual, and its exit code is the launcher's.
+  The launcher's own lines start `[pool_run]` and go to the error output: what
+  it reserved, and at the end the exit code, the phases and the peak RAM
+  (`--quiet` leaves them out, `--record <file>.json` saves them). In a script
+  that sends the error output to a file (`2>`), use `--quiet`: Windows
+  PowerShell 5.1 shows such lines as errors.
+- The reservation drops to 1 thread when the script prints
+  `[timesjl-pool] phase=reporting`, which TIMES.jl does once the last solve of
+  the process is over (`TIMES.pool_phase`, `src/pool.jl`): `run_dd.jl`,
+  `m11_large.jl solve`, and `m11_probe.jl`, `m13_gate.jl --solve` and
+  `parity_report.jl` after their last model. A stepped run in `m13_gate.jl`, or
+  a run that fails before its last solve, prints nothing and keeps its class to
+  its end. The launcher also knows `phase=after-barrier` (the hold after barrier, as for a GAMS run), but
+  TIMES.jl does not print it: HiGHS, as the scripts call it, does not say when
+  its interior point method ends, so a HiGHS run keeps its class until the
+  solve returns.
+- The marker lines are printed only under the launcher (it sets
+  `TIMESJL_POOL_MARKERS`); a script started as before prints what it printed
+  before. Ctrl-C stops the command and frees the reservation.
 
 ## Running it
 

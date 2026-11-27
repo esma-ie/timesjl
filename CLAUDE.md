@@ -47,6 +47,9 @@ Claude Code in the terminal, VS Code, or the desktop app).
   second Claude tab working in its own git worktree (`../TIMESjl-m14`). It is
   checked against the `input/` dumps, which do not depend on M1.3. Its gate
   still waits for the M1.3 gate.
+  A second exception (James, 27 Nov 2026; m16-q1): M1.6 may start before
+  the M1.5 gate, its harness change first; three M1.5 options read report
+  outputs. The M1.6 gate still waits for the M1.5 gate.
 - Approved plans (James, 3 Nov 2026): the Phase 1 plan is approved, with
   M1.3 in the order of `docs/m13-plan.md`. Work through it without waiting
   for a plan approval per change, and stop only to depart from it. James
@@ -65,7 +68,8 @@ Claude Code in the terminal, VS Code, or the desktop app).
   the discrete unit commitment, ETL, TIMES-Micro, %DAMAGE% NLP, the gas-grid
   pressure points and %SOLMIP%, the PTDF candidate lines) move after M1.7,
   with the ECB, CLI, ABS, MCA and IER extensions. They stay refused with
-  their message.
+  their message. The run options VALIDATE, PREP_ANS and INTEXT_ONLY move
+  with them (James, 27 Nov 2026; m16-q5).
 - Phase 2 lane (James, 26 Nov 2026): Phase 2 speed work runs alongside the
   rest of Phase 1, before M1.7, limited to changes that leave the generated
   LP identical (the exception above: layer 2 at 1e-9, same rows, columns and
@@ -124,8 +128,9 @@ Any mismatch blocks the merge. Justified differences go in
   layer 3 with NVIDIA cuOpt on the GPU, never a merge gate. Nightly on a
   GitHub T4 runner for the public fixtures (GPU-share sweep 25/50/100% with
   MPS), and in WSL2 on James's workstation for local runs (TIM allowed, results
-  stay there). cuOpt's CPU side keeps the 12-thread limit; the GPU is not
-  limited by it. The local WSL2 nightly runs until 8 Dec 2026, then is
+  stay there). A cuOpt run on the GPU has no limit on its CPU threads and reserves 2 in
+  the run pool; a cuOpt run that solves on the CPU keeps the 12-thread limit
+  (James, 27 Nov 2026). The local WSL2 nightly runs until 8 Dec 2026, then is
   stopped and reassessed (James, 11 Nov 2026; `register_nightly.ps1 -Until`).
 - Single model by hand, from the repo root: pass a `--root` for every
   placeholder that model uses (see `reference/suite.toml`), e.g.
@@ -140,14 +145,18 @@ Any mismatch blocks the merge. Justified differences go in
   2026), for load management and comparable, fair resources across tests.
   Each model has a thread class (`threads` in `reference/suite.toml`): 6 for
   the small models, 12 for the large. A run reserves its class from its start
-  until its barrier ends, then fewer (4 during crossover, then 1); a run with
+  until its barrier ends, then fewer (2 during crossover, then 1); a run with
   several solves keeps its class to the end; nothing is re-acquired. A run
   starts only when its threads are free (of 48, 2 kept free, also by measured
   load) and the RAM of its last peak is free; there is no limit on the number
   of runs. Timing runs follow the same rule. `make_reference.py` and the cuOpt
   nightly task enforce it (`reference/python/runlimits.py`); the Julia scripts
-  set HiGHS `threads` from `TIMESJL_THREADS` (default 12) and are seen only
-  through the measured load until they join the pool. Any other script
+  join it when started through `reference/python/pool_run.py`, which
+  reserves the class, passes it as `TIMESJL_THREADS` and keeps 1 thread once
+  the script's last solve is over (a HiGHS run holds its class until then;
+  James, 27 Nov 2026, #207 d9); started without it, they set HiGHS `threads`
+  from `TIMESJL_THREADS` (default 12) and are seen only through the measured
+  load. Any other script
   started on that machine keeps to the same rule. Compare timings only
   between runs made under the same rule and class.
 

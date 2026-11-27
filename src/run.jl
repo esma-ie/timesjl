@@ -89,7 +89,7 @@ end
 """
     run_model(runfile; dd=String[], out=nothing, solve=true, optimizer=HiGHS.Optimizer,
               threads=TIMESJL_THREADS or 12, optfile=nothing, licence_level=0, write_solution=true,
-              verbose=true)
+              verbose=true, pool_markers=false)
 
 Run a TIMES model from its run file and DD files, without GAMS:
 
@@ -122,6 +122,9 @@ A stepped (myopic) run (`TIMESTEP`) has no single model: with `solve=true` it is
   VEDA's `cplex.opt`, is not read: the run says so.
 - `licence_level`: GAMS's `%SYSTEM.LICENSELEVEL%`, 0 as a full licence (`docs/known-differences.md` K3).
 - `verbose`: print one line per stage, starting `==` (as `scripts/run_dd.jl` does).
+- `pool_markers`: tell the workstation's run pool when the solve is over (`pool_phase`), so that the
+  run keeps one thread from there. Only for a process whose last solve this is (`scripts/run_dd.jl`),
+  and only read under the pool's launcher (`reference/python/pool_run.py`); otherwise nothing changes.
 
 A TIMES feature TIMES.jl does not translate yet ends the run with `status = :not_translated` and
 the error, which names the GAMS file it would need.
@@ -145,7 +148,8 @@ r.objective
 """
 function run_model(runfile::AbstractString; dd=String[], out=nothing, solve::Bool=true, optimizer=HiGHS.Optimizer,
                    threads::Integer=parse(Int, get(ENV, "TIMESJL_THREADS", "12")), optfile=nothing,
-                   licence_level::Integer=0, write_solution::Bool=true, verbose::Bool=true)
+                   licence_level::Integer=0, write_solution::Bool=true, verbose::Bool=true,
+                   pool_markers::Bool=false)
     say(x...) = verbose && println(x...)
     highs = optimizer === HiGHS.Optimizer
     label = highs ? "HiGHS" : "the solver"
@@ -249,6 +253,7 @@ function run_model(runfile::AbstractString; dd=String[], out=nothing, solve::Boo
             return result(false, e isa UnportedError ? :not_translated : :failed; tm=tm, err=e)
         end
         reset_highs()
+        pool_markers && pool_phase("reporting")       # the last step is solved
         say("== $name: stepped run solved in ", length(steps), " steps; objective of the last step ", steps[end].objective,
             "; the solution of a stepped run is not written yet (M1.6)")
         return result(true, :solved; tm=tm, obj=steps[end].objective, steps=steps)
@@ -265,6 +270,7 @@ function run_model(runfile::AbstractString; dd=String[], out=nothing, solve::Boo
     reset_highs()
     ts = @elapsed JuMP.optimize!(m)
     reset_highs()
+    pool_markers && pool_phase("reporting")
     st = JuMP.termination_status(m)
     obj = st == JuMP.OPTIMAL ? JuMP.objective_value(m) : nothing
     say("== $name: ", JuMP.solver_name(m), " ", st, " in ", round(ts; digits=1), " s", obj === nothing ? "" : ", objective $obj")

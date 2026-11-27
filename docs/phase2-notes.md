@@ -12,7 +12,7 @@ robustness). Phase 1 changes none of them unless a parity check needs it.
 | P2-3 | Multi-threaded equation generation | 31 Oct 2026, James | A JuMP model is built on one thread, so thread the work around it: index construction and coefficient arithmetic per equation family (or region) on separate tasks, each into its own buffer; then add the rows on one thread, or merge the buffers into one triplet matrix for a single hand-off to the solver. Needs the data fixes first (concrete types, integer labels). Details in "Multi-threaded equation generation (P2-3)" below. |
 | P2-4 | GPU solving (NVIDIA cuOpt) | 9 Nov 2026, James | cuOpt 26.10 through cuOpt.jl: PDLP and barrier on the GPU, with crossover. In Phase 1 an informational lane only (`scripts/cuopt/`): layer 3 with pinned methods on the public fixtures, nightly on a GitHub T4 runner (`.github/workflows/nightly-gpu.yml`) and in WSL2 on James's workstation (Quadro RTX 4000, 8 GB). Questions for Phase 2: on which models and with which method cuOpt reaches 1e-6 parity faster than HiGHS (OTUS9r first: HiGHS does not solve it in reasonable time, docs/m13-plan.md finding 20b-4), and whether barrier's factorisation fits in GPU memory on the largest models. |
 | P2-5 | Schemas for data and equations (Pandera, mathspec): **provisional** | 10 Nov 2026, James | To be confirmed by James before any work starts. Three small pilots, one PR each, none touching generation before M1.7: (a) a schema for every dump symbol, generated from the GAMS declarations `src/dd/compile.jl` parses, checked with Pandera where `gdx2arrow.py` writes the dump; (b) a format 2 dump with integer-coded labels, read without string-tuple keys (serves P2-2 and P2-3); (c) mathspec YAML for `EQ_ACTFLO` and `EQ_COMBAL`, typeset beside Part II and checked against the rows TIMES.jl generates. Details in "Schemas for data and equations (P2-5)" below. |
-| P2-6 | The speed target: model generation within 5x GAMS, warm | 17 Nov 2026, James (moved from M1.7) | Preprocessing to solver hand-off no worse than 5x GAMS on one machine, warm. Where it stood when it moved (the ratios, to GAMS's CPLEX runs, are in `esma-ie/timesjl-unpublished`; #184 d6): preprocessing 13 Nov 2026 (docs/timings.md), model generation on OTCGEN (issue #116); the coefficient stage the furthest off (P2-2). P2-2 and P2-3 are the route to it. James, 26 Nov 2026: Phase 2 is complete when this target is met, aimed for Wednesday 2 Dec 2026, "while aiming for 5x faster than GAMS"; the speed work runs alongside the rest of Phase 1, limited to changes that leave the generated LP identical (CLAUDE.md, "Phase 2 lane"). |
+| P2-6 | The speed target: model generation within 5x GAMS, warm | 17 Nov 2026, James (moved from M1.7) | Preprocessing to solver hand-off no worse than 5x GAMS on one machine, warm. Where it stood when it moved (the ratios, to GAMS's CPLEX runs, are in `esma-ie/timesjl-unpublished`; #184 d6): preprocessing 13 Nov 2026 (docs/timings.md), model generation on OTCGEN (issue #116); the coefficient stage the furthest off (P2-2). P2-2 and P2-3 are the route to it. James, 26 Nov 2026: Phase 2 is complete when this target is met, aimed for Wednesday 2 Dec 2026, "while aiming for 5x faster than GAMS"; the speed work runs alongside the rest of Phase 1, limited to changes that leave the generated LP identical (CLAUDE.md, "Phase 2 lane"). James, 27 Nov 2026 (p2-q1 to p2-q4): the target holds for every open model, TIMES-NZ steady and OTCGEN first; the timed stretch ends at the finished JuMP model; where a model has no GAMS/HiGHS run, GAMS's generation time is taken from its CONVERT run plus its pre-solve run (no solver timed), the method stated; the work starts with change 0, which changes no LP: a bit-for-bit identity check of the LP and of the pre-solve state, a timing script and a warm profile. James, 27 Nov 2026 (#208 d1 to d3): the target covers preprocessing, coefficients and generation together, each stage also reported alone; it is timed on one thread, with the data already in memory (the read time recorded beside it). The first measurement (below, "Change 0") is of the generation step alone and includes the read. |
 | P2-7 | Large high-resolution runs as the test bed for model generation and writing to memory | 26 Nov 2026, James | The OTAI scenarios (local only until the model is published; docs/test-models.md) are larger than the models tested so far. Use them to measure and speed up model generation and the build of the model in memory (P2-2, P2-3; direct mode, "Memory" below). Their figures stay on the local board until publication. |
 
 ## Model generation: where the time goes (21 Oct 2026)
@@ -67,6 +67,80 @@ Smaller, everywhere:
 6. **Lazy dump reads inside generators.** The first generator to use a set
    or parameter reads it from Arrow (`read_symbol`), so read time lands in
    whichever generator comes first (usually eq_combal!). Phase 2 can load once, in columnar form, with integer labels.
+
+## Change 0: the measuring tools and the first profile on open models (27 Nov 2026)
+
+Three scripts, none of which changes the LP (James, 27 Nov 2026, p2-q1):
+
+| Script | What it does |
+| --- | --- |
+| `scripts/p2_identity.jl` | The identity gate of every speed change. It writes a fingerprint of the generated LP (rows, columns, their order, the order of the terms, every coefficient, bound and right-hand side, bit for bit; one hash per equation family) and of the pre-solve state, and `--check` compares a new build with a stored one and names the part that differs. `test/unit/test_p2_identity.jl` proves it on demo12: one coefficient moved to the next Float64, 0.0 against -0.0, one bound, two rows swapped, each gives another fingerprint. |
+| `scripts/p2_timing.jl` | Warm generation time, repeated, on a set number of threads, beside GAMS's generation time: `resGen` of the GAMS/HiGHS run where the reference has one, else of the CONVERT run (p2-q3). It opens the CONVERT, pre-solve and GAMS/HiGHS runs only; no run of CPLEX or another Restricted Solver is read. |
+| `scripts/p2_profile.jl` | A warm CPU profile of one build, `generate!` statement by statement. |
+
+**First measurement: the generation step only, one thread, provisional.**
+The 5x target covers preprocessing, coefficients and generation together,
+on one thread (James, 27 Nov 2026, #208 d1 and d2), so these are not P2-6
+results. Conditions: `reduce_off`,
+from GAMS's pre-solve dump, Julia 1.13.2 on one thread, warmed on demo12 only
+(code only the large model reaches is compiled inside the first repeat), two
+repeats on OTCGEN and one on TIMES-NZ, other Julia processes running on the
+machine, not started through the run pool. TIMES.jl's time includes reading
+the dump from Arrow; GAMS's does not (to be taken out of the timed stretch:
+#208 d3). GAMS 54.6.1, TIMES v4.9.7,
+reference of 30 Oct 2026, `threads=12`.
+
+| | OTCGEN-gc_ref | TIMES-NZ-steady-v308 |
+| --- | --- | --- |
+| Rows / columns | 1,257,132 / 1,507,223 | 1,408,361 / 1,299,224 |
+| TIMES.jl `generate!`, warm | 686 s (the lower of 709 and 686) | 627 s (one build) |
+| GAMS generation (`resGen`) | 20.2 s (CONVERT run) | 11.4 s (GAMS/HiGHS run) |
+| Ratio, generation step only | about 34 | about 55 |
+| Allocated | 338 GiB | 384 GiB |
+| Garbage collection | 207 s | 162 s |
+| `eq_combal!` | 59% | 91% |
+| `eq_peak!` | 25% | 1.5% |
+
+Preprocessing and coefficients were not timed on these two models (the
+script does it with `--from input`).
+
+**Where the time goes.** One function, `cal_ire!` (`src/model/eqcombal.jl`),
+holds 59% of the samples on OTCGEN and 78% on TIMES-NZ. Two causes:
+
+1. **An untyped context.** `combal_context` is fetched from
+   `tm.cache::Dict{String,Any}`, so the compiler does not know its type and
+   every `x.field` in the loops is looked up at run time and allocates:
+   `getproperty` alone is 42 to 45% of the samples and most of the memory.
+2. **A loop that almost always misses.** For every commodity-balance row the
+   auxiliary-flows loop walks every RPC_IRE entry of the region and its
+   timeslices and probes IRE_FLOSUM, which has 1,248 records on OTCGEN and
+   28 on TIMES-NZ. `eq_combal!` calls it twice per row, `eq_peak!` three
+   times.
+
+Smaller shares: Dict and Set lookups on string tuples 10 to 17%, reading the
+dump 2 to 8%, building JuMP expressions 4 to 6%, adding columns 3 to 5%,
+hashing strings 2 to 4%, row and column names under 1%, sorting under 0.1%.
+
+**Order of the changes** (each one commit, gated by `p2_identity.jl --check`
+on demo12, OTCGEN and TIMES-NZ, then timed):
+
+1. Typed contexts (a function barrier): no arithmetic or order can change.
+2. An index of IRE_FLOSUM for the auxiliary-flows loop, its hits replayed in
+   the present order.
+3. The term path (`getvar!` upper-cases the name and builds a key on every
+   call; `addterm!` takes its labels as varargs strings).
+4. Integer labels (P2-5 pilot b), family by family, if still needed.
+
+The profile's own estimate after changes 1 and 2 is about 10 times GAMS on
+both models for the generation step, so integer labels (the largest and
+riskiest change) are probably needed to reach 5, and the date of 2 Dec 2026
+is at risk. Names stay on for now (p2-q6): they cost under 1% today. Integer
+labels are decided when changes 1 and 2 are measured (p2-q7).
+
+Not explained yet: TIMES.jl stores fewer terms than GAMS counts non-zeros on
+OTCGEN (6,732,783 against 9,082,086) and TIMES-NZ (5,026,918 against
+5,066,303); they are equal on demo12, and layer 2 matched on both models on
+23 Nov 2026. The explicit zeros in the CONVERT dump are still to be counted.
 
 ## Multi-threaded equation generation (P2-3, 31 Oct 2026)
 

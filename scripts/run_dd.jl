@@ -36,7 +36,7 @@
 
 using TIMES
 
-function run_dd(args)
+function run_dd(args; pool_markers::Bool=false)
     args = collect(args)
     solve = "--solve" in args
     optfile = "--no-optfile" in args ? false : nothing
@@ -48,9 +48,11 @@ function run_dd(args)
         deleteat!(args, i:i+1)
     end
     length(args) == 1 || error("usage: julia --project=test scripts/run_dd.jl <run file> [--dd <folder> ...] [--solve] [--out <folder>] [--licence-level n] [--optfile <file> | --no-optfile]")
-    return run_model(args[1]; dd=dd, out=out, solve=solve, optfile=optfile, licence_level=level).ok
+    return run_model(args[1]; dd=dd, out=out, solve=solve, optfile=optfile, licence_level=level, pool_markers=pool_markers).ok
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    run_dd(ARGS)
+    # one run, one solve: under the run pool's launcher (reference/python/pool_run.py) the run keeps one
+    # thread once the solve is over (TIMES.pool_phase); without the launcher nothing changes
+    run_dd(ARGS; pool_markers=true)
 end

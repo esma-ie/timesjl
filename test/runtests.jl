@@ -28,6 +28,9 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "run_model: the solver option file (highs.opt), as GAMS reads <solver>.opt" begin
         include("unit/test_solver_options.jl")
     end
+    @testset "The run pool's phase markers (src/pool.jl; reference/python/pool_run.py)" begin
+        include("unit/test_pool.jl")
+    end
     @testset "Reference: layer 1 comparison" begin
         include("unit/test_compare.jl")
     end
@@ -231,5 +234,8 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     end
     @testset "M1.3 (25b): the QA log" begin
         include("unit/test_qalog.jl")
+    end
+    @testset "Phase 2, change 0: the identity gate of the generated LP and its state (scripts/p2_identity.jl)" begin
+        include("unit/test_p2_identity.jl")
     end
 end
