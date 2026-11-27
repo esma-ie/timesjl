@@ -232,4 +232,7 @@ const FIXTURES = joinpath(@__DIR__, "fixtures")
     @testset "M1.3 (25b): the QA log" begin
         include("unit/test_qalog.jl")
     end
+    @testset "Phase 2, change 0: the identity gate of the generated LP and its state (scripts/p2_identity.jl)" begin
+        include("unit/test_p2_identity.jl")
+    end
 end
