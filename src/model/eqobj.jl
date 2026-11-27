@@ -116,7 +116,15 @@ const NO4 = NTuple{4,String}[]
 const NO5 = NTuple{5,String}[]
 const NO6 = NTuple{6,String}[]
 
-"Data of the objective definitions, read once per model."
+"""
+Data of the objective definitions, read once per model.
+
+`tm.cache` is a `Dict{String,Any}`, so the type of the context is not known where it is fetched.
+`eq_objinv!`, `eq_objfix!`, `eq_objvar!` and `eq_objsalv!` therefore fetch it in an outer method and
+do their work in an inner method that takes it as an argument (a function barrier, as for
+`combal_context`): Julia compiles the inner method for the context's concrete type (Phase 2, change 3;
+the terms, their arithmetic and their order are unchanged).
+"""
 function objective_context(tm::TimesModel)
     get!(tm.cache, "objective") do
         gp(n) = gparam(tm, n)
@@ -233,8 +241,10 @@ The SOW tags (sow_tags.jl): the row is `%EQ%_OBJINV(RDCUR(R,CUR) %SOW%)`
 
 GAMS: eqobjinv.mod L280-321, v4.9.7 (ETL L292 and STAGES L296-299 refused).
 """
-function eq_objinv!(tm::TimesModel)
-    x = objective_context(tm)
+eq_objinv!(tm::TimesModel) = eq_objinv!(tm, objective_context(tm))
+
+# `eq_objinv!` with the context `x` as a typed argument (see `objective_context`). GAMS: eqobjinv.mod L280-321, v4.9.7.
+function eq_objinv!(tm::TimesModel, x::NamedTuple)
     capjd = !isempty(objective_switches(tm).ctst)
     n = 0
     for (r, cur) in x.rdcur
@@ -307,8 +317,10 @@ VALIDATE lines L205-207 are refused; the VNRET hook L214 is `objfix_ret!`,
 M1.3 change 20b-4; the shaped
 branch for RTP_ISHPR is translated but no test model exercises it yet).
 """
-function eq_objfix!(tm::TimesModel)
-    x = objective_context(tm)
+eq_objfix!(tm::TimesModel) = eq_objfix!(tm, objective_context(tm))
+
+# `eq_objfix!` with the context `x` as a typed argument (see `objective_context`). GAMS: eqobjfix.mod L182-225, v4.9.7.
+function eq_objfix!(tm::TimesModel, x::NamedTuple)
     capwd = !isempty(objective_switches(tm).ctst)
     wd(r, cur, k_eoh, jot, k) = capwd ? gv(x.obj_wd, (r, cur, k_eoh, jot, k)) : GNum(1.0)
     lead(ll, n) = (i = x.allyear_ord[ll] + n; 1 <= i <= length(x.allyear) ? x.allyear[i] : nothing)
@@ -506,6 +518,26 @@ function eq_objvar!(tm::TimesModel)
     cptyr_obj, prc_rcap_obj = gset(tm, "RTP_CPTYR"), gset_opt(tm.data, "PRC_RCAP", 2)
     vntrt_obj = gset_opt(tm.data, "VNTRT", 2)
     ble, opr = gset_opt(tm.data, "BLE", 1), gset_opt(tm.data, "OPR", 1)
+    return eq_objvar!(tm, x,
+        (; rtp_vara, vint_of_rtp, ts_of_rp, rp_stg, rs_stgav, ob_act, rhs_combal, rhs_comprd, obj_comnt, obj_compd, costype,
+           rtpcs_varf, ireio_of_rpc, obj_ipric, rpc_aire, prc_actflo, vflo, rp_flo, rp_ire, ts_ann_of_s, ob_fcos, ob_fdel, ob_ftax,
+           ire_of_rpc, ire_of_rp, ire_flosum, rtp_ffcs, io_set, stg_var_of_rpc, stg_eff, vflo_cost, vint_of_rp,
+           rpc_cur, ups_of_rp, upr_of_rp, upt_of_rp, dpl_of_rp, ups_rp, group_of, act_cstup, act_cstrmp, act_cstsd, obj_pvt, rs_stgprd,
+           ble_opr_of_r, obj_blndv, capflo, vnt_of_v, coef_icom, coef_ocom, rs_fr_obj, g_yrfr_obj, ncap_pasti_obj, milestonyr_obj,
+           ncom_obj, coef_cio_obj, coef_cpt_obj, cptyr_obj, prc_rcap_obj, vntrt_obj, ble, opr))
+end
+
+# `eq_objvar!` with the context `x` (see `objective_context`) and the sets, parameters and incidence
+# maps of the outer method, `d`, as typed arguments: `gset` and `gparam` give an abstract `GamsSet` or
+# `GamsParam`, so the outer method does not know their types (a function barrier; Phase 2, change 3).
+# GAMS: eqobjvar.mod L14-113, v4.9.7.
+function eq_objvar!(tm::TimesModel, x::NamedTuple, d::NamedTuple)
+    (; rtp_vara, vint_of_rtp, ts_of_rp, rp_stg, rs_stgav, ob_act, rhs_combal, rhs_comprd, obj_comnt, obj_compd, costype,
+       rtpcs_varf, ireio_of_rpc, obj_ipric, rpc_aire, prc_actflo, vflo, rp_flo, rp_ire, ts_ann_of_s, ob_fcos, ob_fdel, ob_ftax,
+       ire_of_rpc, ire_of_rp, ire_flosum, rtp_ffcs, io_set, stg_var_of_rpc, stg_eff, vflo_cost, vint_of_rp,
+       rpc_cur, ups_of_rp, upr_of_rp, upt_of_rp, dpl_of_rp, ups_rp, group_of, act_cstup, act_cstrmp, act_cstsd, obj_pvt, rs_stgprd,
+       ble_opr_of_r, obj_blndv, capflo, vnt_of_v, coef_icom, coef_ocom, rs_fr_obj, g_yrfr_obj, ncap_pasti_obj, milestonyr_obj,
+       ncom_obj, coef_cio_obj, coef_cpt_obj, cptyr_obj, prc_rcap_obj, vntrt_obj, ble, opr) = d
 
     weighted(r, t, cur, f) = (w = GZERO; for (y, wy) in tpulse(tm, r, t, cur); w = w + wy * f(y); end; w)
     vintages(r, t, p) = (k[2] for k in get(vint_of_rtp, (r, t, p), NO4) if (k[2],) in x.v)
@@ -699,8 +731,10 @@ the right-hand side is `%VAR%_OBJ(R,'OBJSAL',CUR %SOW%)` (L140).
 GAMS: eqobsalv.mod L92-140, v4.9.7 (ETL L102-103 is refused; the VNRET hook
 L105 is `objsalv_ret!`, M1.3 change 20b-4).
 """
-function eq_objsalv!(tm::TimesModel)
-    x = objective_context(tm)
+eq_objsalv!(tm::TimesModel) = eq_objsalv!(tm, objective_context(tm))
+
+# `eq_objsalv!` with the context `x` as a typed argument (see `objective_context`). GAMS: eqobsalv.mod L92-140, v4.9.7.
+function eq_objsalv!(tm::TimesModel, x::NamedTuple)
     n = 0
     for (r, cur) in x.rdcur
         for sow in sow_rows(tm)   # %SOW% (eqobsalv.mod L92)
