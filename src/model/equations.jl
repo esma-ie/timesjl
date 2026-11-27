@@ -45,18 +45,30 @@ has_eqfamily(eqs::EquationStore, name::AbstractString) = haskey(eqs.families, up
 Register one generated row under its family and index tuple, name it
 GAMS-style, and refuse a duplicate (GAMS defines each equation instance
 once).
+
+Once per row, so (Phase 2, change 4) the family is looked up under the name as given before its
+upper case is built (the generators pass the family's own, upper-case name), and the row is
+registered in a method that takes the family with its type (`families` is a `Dict{String,Any}`).
 """
 function addeq!(eqs::EquationStore, name::AbstractString, key::NTuple{N,String},
                 con::JuMP.ConstraintRef) where {N}
-    u = uppercase(name)
-    f = get!(eqs.families, u) do
-        push!(eqs.order, u)
-        EqFamily(u, N)
-    end::EqFamily{N}
-    haskey(f.refs, key) && throw(ArgumentError("$(u)$(key) generated twice"))
+    f = get(eqs.families, name, nothing)                   # the family's own name: no upper-casing
+    if f === nothing
+        u = uppercase(name)
+        f = get!(eqs.families, u) do
+            push!(eqs.order, u)
+            EqFamily(u, N)
+        end
+    end
+    return addeq!(f::EqFamily{N}, key, con)
+end
+
+# `addeq!` with the family typed; `f.name` is the upper-case name the family is stored under.
+function addeq!(f::EqFamily{N}, key::NTuple{N,String}, con::JuMP.ConstraintRef) where {N}
+    haskey(f.refs, key) && throw(ArgumentError("$(f.name)$(key) generated twice"))
     f.refs[key] = con
     push!(f.keys, key)
-    JuMP.set_name(con, colname(u, key))
+    JuMP.set_name(con, colname(f.name, key))
     return con
 end
 

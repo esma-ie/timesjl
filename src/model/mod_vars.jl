@@ -147,6 +147,12 @@ has_family(store::VariableStore, name::AbstractString) = haskey(store.families, 
 colname(name::AbstractString, key::Tuple) =
     isempty(key) ? String(name) : string(name, "(", join(key, ","), ")")
 
+# The same name for an index tuple of `String`s, which is what every row and column has: `string` of
+# strings sizes its result once and copies, where `join` writes through an IOBuffer (Phase 2,
+# change 4; one name per row and per column). The labels alternate with the commas.
+colname(name::String, key::NTuple{N,String}) where {N} =
+    N == 0 ? name : string(name, "(", ntuple(i -> isodd(i) ? key[(i+1)>>1] : ",", Val(2N - 1))..., ")")
+
 """
     getvar!(store, name, key...) -> JuMP.VariableRef
 
