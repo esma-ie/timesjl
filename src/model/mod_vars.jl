@@ -155,18 +155,29 @@ equivalent of a GAMS column coming into existence when a generated equation
 first references it. `POSITIVE VARIABLES` get lower bound 0 (GAMS default);
 free variables get no bounds. Later bounds (bnd_* files) are applied on top
 of this, as in GAMS.
+
+This is on the path of every term of every row, so it is written for the compiler (Phase 2,
+change 4): the number of indices `N` is a parameter of the method (Julia does not specialize a
+`key...` that is only passed on, and a family is a `VarFamily{N}` only for the caller's `N`), the
+family is looked up under the name as given before its upper case is built (the generators pass
+the declared, upper-case name), and the lookup of the index tuple is in a method that takes the
+family with its type (`families` is a `Dict{String,Any}`). The columns, their names and their
+order are unchanged.
 """
-function getvar!(store::VariableStore, name::AbstractString, key::AbstractString...)
-    f = varfamily(store, name)
-    N = dimension(f.spec)
-    length(key) == N || throw(ArgumentError(
-        "$(f.spec.name) takes $N indices (GAMS: mod_vars.mod L$(f.spec.line)), got $(length(key))"))
-    k = NTuple{N,String}(String.(key))
-    f2 = f::VarFamily{N}
-    get!(f2.refs, k) do
-        v = JuMP.@variable(store.model, base_name = colname(f2.spec.name, k))
-        f2.spec.positive && JuMP.set_lower_bound(v, 0.0)
-        push!(f2.keys, k)
+function getvar!(store::VariableStore, name::AbstractString, key::Vararg{AbstractString,N}) where {N}
+    f = get(store.families, name, nothing)                 # the declared name: no upper-casing
+    f === nothing && (f = varfamily(store, name))          # any other case; KeyError for an unknown family
+    f isa VarFamily{N} || throw(ArgumentError(
+        "$(f.spec.name) takes $(dimension(f.spec)) indices (GAMS: mod_vars.mod L$(f.spec.line)), got $N"))
+    return getvar!(store.model, f, map(String, key))
+end
+
+# The instance `k` of the family `f`, created on first reference: `getvar!` with the family typed.
+function getvar!(model::JuMP.Model, f::VarFamily{N}, k::NTuple{N,String}) where {N}
+    get!(f.refs, k) do
+        v = JuMP.@variable(model, base_name = colname(f.spec.name, k))
+        f.spec.positive && JuMP.set_lower_bound(v, 0.0)
+        push!(f.keys, k)
         v
     end
 end

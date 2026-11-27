@@ -74,10 +74,14 @@ with `at` the period T, V, MODLYEAR or TT, `%VART%`/`%VARV%`/`%VARM%`/`%VARTT%_X
 are `VAR_X(key)`. In a stochastic run (change 74) the tagged forms read
 VAS_X(key,SOW), or the sum of VAS_X(key,W) over SW_TSW(SOW,at,W).
 
+`N`, the number of indices, is a parameter of the method so that Julia compiles it for the
+caller's index tuple: a `key...` that is only passed on is not specialized, and every term then went
+through a dynamic call (Phase 2, change 4; see `getvar!`).
+
 GAMS: setglobs.gms L348; stages.stc L12-13, v4.9.7.
 """
-function addterm!(expr::JuMP.AffExpr, coef::GNum, tm, name::AbstractString, key::AbstractString...;
-                  at::Union{Nothing,AbstractString}=nothing, tagged::Bool=true)
+function addterm!(expr::JuMP.AffExpr, coef::GNum, tm, name::AbstractString, key::Vararg{AbstractString,N};
+                  at::Union{Nothing,AbstractString}=nothing, tagged::Bool=true) where {N}
     iszero(coef) && return expr
     coef.eps && push!(_eps_exprs(tm), expr)
     if tagged && tm.tags.stochastic
@@ -242,6 +246,6 @@ gswitch(tm::TimesModel, name::AbstractString, default::AbstractString) =
 
 TimesModel(dir::AbstractString; kwargs...) = TimesModel(DumpData(dir); kwargs...)
 
-getvar!(tm::TimesModel, name::AbstractString, key::AbstractString...) = getvar!(tm.vars, name, key...)
+getvar!(tm::TimesModel, name::AbstractString, key::Vararg{AbstractString,N}) where {N} = getvar!(tm.vars, name, key...)
 gset(tm::TimesModel, name::AbstractString) = gset(tm.data, name)
 gparam(tm::TimesModel, name::AbstractString) = gparam(tm.data, name)
