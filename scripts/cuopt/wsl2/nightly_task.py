@@ -5,8 +5,8 @@ Run by the scheduled task that register_nightly.ps1 creates:
     python scripts\\cuopt\\wsl2\\nightly_task.py [--distro Ubuntu-26.04] [--dir ~/git/TIMESjl]
 
 It reserves threads in the workstation's run pool (reference/python/runlimits.py,
-the pool make_reference.py uses): 12 for the whole night, the cap on cuOpt's
-CPU side (CLAUDE.md), and waits until they are free. Holding them, it runs
+the pool make_reference.py uses): 2 for the whole night (James, 27 Nov 2026, #207 d10:
+a cuOpt run on the GPU has no CPU-thread limit and reserves 2), and waits until they are free. Holding them, it runs
 scripts/cuopt/wsl2/nightly_local.sh inside WSL2 and appends
 everything to %LOCALAPPDATA%\\timesjl\\cuopt-nightly.log.
 
@@ -34,8 +34,8 @@ def main(argv=None) -> int:
     ap.add_argument("--dir", default="~/git/TIMESjl", help="the TIMESjl checkout inside WSL (default ~/git/TIMESjl)")
     ap.add_argument("--wsl", default="wsl.exe", help=argparse.SUPPRESS)  # tests pass a stand-in
     ap.add_argument("--log", default=None, help="log file (default %%LOCALAPPDATA%%\\timesjl\\cuopt-nightly.log)")
-    ap.add_argument("--threads", type=int, default=12,
-                    help="threads reserved in the run pool for the night (default 12, cuOpt's CPU-side cap)")
+    ap.add_argument("--threads", type=int, default=2,
+                    help="threads reserved in the run pool for the night (default 2, a cuOpt run on the GPU)")
     ap.add_argument("--ram-gb", type=float, default=16.0, help="RAM reserved for the night (default 16 GB)")
     ap.add_argument("--slot-timeout-hours", type=float, default=6.0,
                     help="give up if the run pool has no room in this time (default 6)")

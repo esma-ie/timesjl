@@ -173,7 +173,7 @@ per run and at most 4 runs at a time" (29 Oct 2026):
   the manifest records both (`limits`, `patch.solver_option_changes`).
 - A solve run reserves its class from its start; the pre-solve and CONVERT runs,
   which do not solve, reserve 1. While a run with one SOLVE goes on, the harness
-  reads its GAMS log: at CPLEX's "Barrier time" it keeps 4 threads (crossover),
+  reads its GAMS log: at CPLEX's "Barrier time" it keeps 2 threads (crossover),
   and once GAMS reads the solution back, 1. A stepped run, or a solver log it does
   not recognise, keeps its class to the end. The manifest records `pool_threads`,
   `pool_phases` and the run's `peak_ram_gb`.

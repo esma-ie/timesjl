@@ -106,9 +106,9 @@ case ":\${LD_LIBRARY_PATH:-}:" in
   *) export LD_LIBRARY_PATH="$LIBDIR\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}" ;;
 esac
 export PATH="\$HOME/.juliaup/bin:\$PATH"
-# Local run limits on James's workstation (CLAUDE.md): at most 12 threads per run
+# Local run limits on James's workstation (CLAUDE.md): a cuOpt solve on the CPU uses at
+# most 12 threads; a solve on the GPU has no CPU-thread limit (#207 d10), so OMP_NUM_THREADS is not set
 export TIMESJL_THREADS="\${TIMESJL_THREADS:-12}"
-export OMP_NUM_THREADS="\${OMP_NUM_THREADS:-12}"
 EOF
 LINE="[ -f \"$ENVFILE\" ] && . \"$ENVFILE\"   # TIMES.jl cuOpt lane"
 grep -qF "$ENVFILE" "$HOME/.bashrc" 2>/dev/null || echo "$LINE" >> "$HOME/.bashrc"
@@ -194,9 +194,9 @@ Done. Results go to $OUTDIR. Next, from $DIR in a new shell:
   rsync -a /mnt/c/git/esma/timesjl-reference/<model>/ ~/timesjl-reference/<model>/
   julia --project=scripts/cuopt scripts/cuopt/cuopt_layer3.jl $OUTDIR/<model>.json --ref ~/timesjl-reference <model>
 
-A cuOpt run uses at most $TIMESJL_THREADS CPU threads (cuOpt's CPU side; the GPU
-is not limited) and counts as one of the four CPU-heavy runs allowed at once on
-the workstation. The scheduled nightly takes a Windows run slot for it; runs
+A cuOpt run on the GPU has no limit on its CPU threads; a cuOpt solve on the CPU
+(dual_simplex) uses at most $TIMESJL_THREADS. The scheduled nightly reserves 2
+threads in the workstation's run pool for it; runs
 started by hand here do not, so keep count. TIM's results stay on this machine
 (CLAUDE.md).
 EOF

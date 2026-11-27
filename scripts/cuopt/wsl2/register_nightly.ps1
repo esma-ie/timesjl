@@ -10,7 +10,7 @@
         powershell -ExecutionPolicy Bypass -File scripts\cuopt\wsl2\register_nightly.ps1 -Unregister
 
     The task "TIMESjl cuOpt nightly (WSL2)" runs every night at -At (local
-    time) as the current user: python nightly_task.py, which reserves 12
+    time) as the current user: python nightly_task.py, which reserves 2
     threads in the workstation's run pool and runs nightly_local.sh in WSL2. It wakes
     the computer if it sleeps, runs when the user is logged on (WSL
     distributions belong to the user), starts as soon as possible after a

@@ -23,9 +23,11 @@
 #   --quiet          no cuOpt log
 #
 # Barrier and PDLP run with crossover, so the point compared is a vertex.
-# CPU threads follow the local run limits (CLAUDE.md): TIMESJL_THREADS, default 12.
-# They bound cuOpt's CPU-side work only (presolve, the host side of barrier's
-# factorisation, crossover); the GPU is never limited by them. A share of the
+# CPU threads (James, 27 Nov 2026, #207 d10): a method that solves on the GPU
+# (barrier, pdlp) has no limit on its CPU side (presolve, the host side of
+# barrier's factorisation, crossover): CUOPT_NUM_CPU_THREADS keeps cuOpt's
+# default. A method that solves on the CPU (dual_simplex) keeps the local run
+# limit (CLAUDE.md): TIMESJL_THREADS, default 12. A share of the
 # GPU is set from outside the process by scripts/cuopt/sweep.sh (NVIDIA MPS),
 # which passes it here in TIMESJL_GPU_SHARE (percent) and TIMESJL_MPS (on/off)
 # for the report.
@@ -53,6 +55,8 @@ Base.@kwdef struct Settings
     quiet::Bool = false
 end
 
+on_gpu(m) = m != "dual_simplex"   # barrier and PDLP solve on the GPU, the dual simplex on the CPU
+
 label(m) = m == "dual_simplex" ? "dual simplex" : m * " + crossover"
 
 """
@@ -62,8 +66,8 @@ including its LP presolve.
 """
 function cuopt_parameters(method, s::Settings)
     p = Dict{String,Any}(cuOpt.CUOPT_METHOD => METHODS[method],
-                         cuOpt.CUOPT_CROSSOVER => method != "dual_simplex",
-                         cuOpt.CUOPT_NUM_CPU_THREADS => s.threads)
+                         cuOpt.CUOPT_CROSSOVER => method != "dual_simplex")
+    on_gpu(method) || (p[cuOpt.CUOPT_NUM_CPU_THREADS] = s.threads)   # #207 d10: the limit is for CPU solves only
     if method == "pdlp"
         for t in (cuOpt.CUOPT_ABSOLUTE_PRIMAL_TOLERANCE, cuOpt.CUOPT_RELATIVE_PRIMAL_TOLERANCE,
                   cuOpt.CUOPT_ABSOLUTE_DUAL_TOLERANCE, cuOpt.CUOPT_RELATIVE_DUAL_TOLERANCE,
@@ -266,7 +270,7 @@ function write_summary(io, out)
     m = out["meta"]
     println(io, "## cuOpt layer 3\n")
     println(io, "cuOpt ", m["cuopt_version"], " on ", m["gpu"], " (GPU share ", m["gpu_share"], "%, MPS ", m["mps"],
-            "; ", m["threads"], " CPU threads); commit `", m["commit"], "`, Julia ", m["julia"], ", ",
+            "; CPU threads: no limit for GPU methods, ", m["threads"], " for a CPU solve); commit `", m["commit"], "`, Julia ", m["julia"], ", ",
             m["date"], " UTC. Methods: ", join(label.(m["methods"]), ", "), "; gating: ",
             isempty(m["gate"]) ? "none" : join(m["gate"], ", "), ". Pass = objective within 1e-6 of GAMS's and ",
             "cuOpt's optimum feasible in GAMS's matrix (1e-6).\n")
