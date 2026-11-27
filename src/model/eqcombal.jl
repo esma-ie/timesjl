@@ -552,6 +552,21 @@ function eq_combal!(tm::TimesModel, x::NamedTuple, eqtype::String, lim::String, 
     dmas_by_agg = indexby(gset(tm, "MI_DMAS"), (1, 2))   # (r,c) -> MI_DMAS(r,c,com)
     varc_of = indexby(gset(tm, "RTCS_VARC"), (1, 2, 3))
 
+    return eq_combal!(tm, x,
+        (; name, rcs, tx, rhs_comprd, rhs_combal, dem, com_proj, com_fr, rd_nlp, rd_agg, rd_shar, dmas_of_rc, nstts, prc_map, one,
+           ted, com_elast, rcj_of, bdneq, pref, agc, dmas_by_agg, varc_of),
+        eqtype, lim, kind)
+end
+
+# One include of eqcombal.mod with the context `x` and the sets, parameters and incidence maps of the
+# method above, `d`, as typed arguments: `gset` and `gparam` give an abstract `GamsSet` or
+# `GamsParam`, so that method does not know their types, nor do the closures it would hand to
+# `cal_stgn!` (a function barrier; Phase 2, change 3). The rows, the terms, their arithmetic and their
+# order are unchanged. GAMS: eqcombal.mod L19-113, v4.9.7.
+function eq_combal!(tm::TimesModel, x::NamedTuple, d::NamedTuple, eqtype::String, lim::String, kind::String)
+    (; name, rcs, tx, rhs_comprd, rhs_combal, dem, com_proj, com_fr, rd_nlp, rd_agg, rd_shar, dmas_of_rc, nstts, prc_map, one,
+       ted, com_elast, rcj_of, bdneq, pref, agc, dmas_by_agg, varc_of) = d
+
     n = 0
     for (r, t, c, s, l) in rcs
         l == lim || continue
