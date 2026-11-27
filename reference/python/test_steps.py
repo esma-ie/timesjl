@@ -109,11 +109,14 @@ class StepTests(unittest.TestCase):
     def test_hooks_act_only_in_stepped_runs(self):
         # TIMES includes the two files when GAMS_CGI is WWW (maindrv.mod L50, solve.mod L44); the
         # first solve run of every model gets the flag, so both must leave a run that is not stepped
-        # (no %STEPPED%) before their first statement.
+        # (no %STEPPED%) before their first statement. In www_out.cgi the steps' part starts at
+        # its label, after the part for postsolve/ (harness 0.3.10, test_postsolve.py).
         self.assertIn("--GAMS_CGI=WWW", STEP_DUMP_FLAGS)
         self.assertIn("--GAMS_CGI=WWW", STEP_LOAD_FLAGS)
         for name in ("www_in.cgi", "www_out.cgi"):
             code = [ln.strip() for ln in (GAMS / name).read_text().splitlines() if ln.strip() and not ln.startswith("*")]
+            if name == "www_out.cgi":
+                code = code[code.index("$LABEL TJL_STEPS_PART") + 1:]
             self.assertEqual(code[:2], ["$IF NOT SET STEPPED $EXIT", "$IF NOT SET TJL_STEPS $EXIT"], name)
 
     def test_steps_of_another_size_than_the_solve_run_need_a_check(self):

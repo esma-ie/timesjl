@@ -21,7 +21,11 @@ for (tag, run) in manifest["runs"]
 end
 
 ok = true
-for sub in ("ppm", "coef", "final", "matrix", "matrix_dictmap")
+subs = ["ppm", "coef", "final", "matrix", "matrix_dictmap"]
+# postsolve/ (harness 0.3.10, M1.6: the solution before the reports) where the reference has it:
+# earlier references, and stepped and stochastic runs, have none
+isdir(joinpath(dir, "postsolve")) && insert!(subs, 3, "postsolve")
+for sub in subs
     p = joinpath(dir, sub)
     if !isdir(p)
         println(rpad(sub, 16), " MISSING")
