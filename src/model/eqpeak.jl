@@ -143,9 +143,6 @@ function eq_peak!(tm::TimesModel)
     no3 = NTuple{3,String}[]
     no2 = NTuple{2,String}[]
 
-    # SUM(COM(CG2), x(COM)): x(CG2) when CG2 is a commodity, else 0 (G14).
-    grp(p, k) = (k[3],) in com ? gv(p, k) : GZERO
-
     # The domain, in GAMS order (R, T, CG2, SL).
     rows = NTuple{4,String}[]
     off = rts_off(tm)                                                  # RTS(SL): S+NORTS(R,T,SL), dynamic timeslices
@@ -156,6 +153,27 @@ function eq_peak!(tm::TimesModel)
         push!(rows, (r, t, cg2, sl))
     end
     gams_sort!(rows, tm.data)
+
+    return eq_peak!(tm,
+        (; name, rows, milestonyr, pastyear, com, dem, prc_pkno, rs_fr, com_ie, com_pkrsv, com_pkflx, g_yrfr, prc_capact, coef_vnt,
+           prc_actflo, ncap_pkcnt, ncap_pasti, rpc_pkf, flo_pkcoi, com_proj, com_fr, rd_nlp, rd_shar, stg_eff, ted, com_elast, rcj_of,
+           bdneq, nstts, prc_map, one, ble, opr, ble_tp, ble_opr_of_rb, ble_inp_of_rc, bl_inp, peakda_bl, rtcs_fr, gmap_of_rcg, ts_of_rc,
+           pkc_of_rc, agg_of_r, v_of_rtp, no3, no2))
+end
+
+# `eq_peak!` with the rows and the sets, parameters and incidence maps of the outer method, `d`, as a
+# typed argument: `gset` and `gparam` give an abstract `GamsSet` or `GamsParam`, so the outer method
+# does not know their types, nor do the closures it would hand to cal_ire!, cal_stgn! and cal_fflo!.
+# Julia compiles this method for the concrete types (a function barrier; Phase 2, change 3). The rows,
+# the terms, their arithmetic and their order are unchanged. GAMS: eqpeak.mod L15-87, v4.9.7.
+function eq_peak!(tm::TimesModel, d::NamedTuple)
+    (; name, rows, milestonyr, pastyear, com, dem, prc_pkno, rs_fr, com_ie, com_pkrsv, com_pkflx, g_yrfr, prc_capact, coef_vnt,
+       prc_actflo, ncap_pkcnt, ncap_pasti, rpc_pkf, flo_pkcoi, com_proj, com_fr, rd_nlp, rd_shar, stg_eff, ted, com_elast, rcj_of,
+       bdneq, nstts, prc_map, one, ble, opr, ble_tp, ble_opr_of_rb, ble_inp_of_rc, bl_inp, peakda_bl, rtcs_fr, gmap_of_rcg, ts_of_rc,
+       pkc_of_rc, agg_of_r, v_of_rtp, no3, no2) = d
+
+    # SUM(COM(CG2), x(COM)): x(CG2) when CG2 is a commodity, else 0 (G14).
+    grp(p, k) = (k[3],) in com ? gv(p, k) : GZERO
 
     n = 0
     for (r, t, cg2, sl) in rows
