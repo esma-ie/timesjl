@@ -141,6 +141,36 @@ OTCGEN (6,732,783 against 9,082,086) and TIMES-NZ (5,026,918 against
 5,066,303); they are equal on demo12, and layer 2 matched on both models on
 23 Nov 2026. The explicit zeros in the CONVERT dump are still to be counted.
 
+## Changes 1 and 2: the commodity balance (27 Nov 2026)
+
+Both in `src/model/eqcombal.jl`, each with the LP bit for bit identical
+(`p2_identity.jl --check`) on OTCGEN, TIMES-NZ steady and demo12_off, and
+on demo12_mrkx and demo12_bndcst (REDUCE on; demo12_off has no IRE_FLOSUM).
+
+1. **Typed context.** Each user of `combal_context` has an outer method
+   that fetches the context and an inner method that takes it as an
+   argument, so the compiler knows its type.
+2. **An index of IRE_FLOSUM.** `cal_ire!` visits only the entries its row
+   can reach. The index is built by walking the original loop once, so the
+   order of the terms is the loop's; it was also compared entry by entry
+   with the old loop.
+
+Generation step only, one thread, warm, the lower of two repeats;
+provisional as above (p2-q5, p2-q8), with other runs on the machine:
+
+| | OTCGEN-gc_ref | TIMES-NZ-steady-v308 |
+| --- | --- | --- |
+| Before | 686 s, about 34 times GAMS | 627 s, about 55 |
+| After change 1 | 216 s, about 10.7 | 102 s, about 8.9 |
+| After change 2 | 193 s, about 9.6 | 80 s, about 7.0 |
+| Allocated, before and after | 338 and 62 GiB | 384 and 28 GiB |
+
+Nearly all of the gain is change 1. What the profile shows next: the same
+untyped access in the objective (`objective_context`) and in `cal_cap!`;
+the term path (`getvar!`, `addterm!`), about 30% of the samples; reading
+the dump inside generation, 14 to 17%; garbage collection, about a third of
+the time.
+
 ## Multi-threaded equation generation (P2-3, 31 Oct 2026)
 
 What can run in parallel:
