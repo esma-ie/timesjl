@@ -94,25 +94,54 @@ seconds, bytes allocated, GC seconds, rows and columns added and equation famili
 """
 generate_by_statement!(tm::TimesModel) = generate_by_statement!(tm, statement_functions())
 
-"One function `(tm, n) -> n` per statement of `generate!`, compiled before anything is timed."
-function statement_functions()
-    fs = Any[]
-    for s in generate_statements()
-        f = Core.eval(TIMES, :((tm, n) -> begin
-            $(Meta.parse(s))
-            n
-        end))
-        Base.invokelatest(precompile, f, (TimesModel, Int))
-        push!(fs, (s, f))
-    end
-    return fs
+"""
+One statement of `generate!`, to run without compiling anything new: `n = f(tm)` or `n += f(tm)`
+(rows added), `f(tm)`, either after `cond(tm) &&`; `other` holds any other statement (the objective
+macro) as a function evaluated in TIMES, compiled when the list is made.
+"""
+struct P2Statement
+    cond::Any          # nothing, or the function of the condition
+    f::Any             # the function called with tm, or nothing
+    counts::Bool       # its value is the number of rows added
+    other::Any         # (tm) -> nothing for a statement of another shape, or nothing
 end
+
+function P2Statement(s::AbstractString)
+    ex = Meta.parse(s)
+    call(e) = e isa Expr && e.head == :call && length(e.args) == 2 && e.args[1] isa Symbol && e.args[2] === :tm &&
+              isdefined(TIMES, e.args[1]) ? getfield(TIMES, e.args[1]) : nothing
+    cond = nothing
+    if ex isa Expr && ex.head == :&& && call(ex.args[1]) !== nothing
+        cond, ex = call(ex.args[1]), ex.args[2]
+    end
+    if ex isa Expr && ex.head in (:(=), :(+=)) && ex.args[1] === :n && call(ex.args[2]) !== nothing
+        return P2Statement(cond, call(ex.args[2]), true, nothing)
+    elseif call(ex) !== nothing
+        return P2Statement(cond, call(ex), false, nothing)
+    end
+    g = Core.eval(TIMES, :(tm -> begin
+        $(Meta.parse(s))
+        nothing
+    end))
+    Base.invokelatest(precompile, g, (TimesModel,))
+    return P2Statement(nothing, nothing, false, g)
+end
+
+function (st::P2Statement)(tm::TimesModel)
+    st.other === nothing || (Base.invokelatest(st.other, tm); return 0)
+    (st.cond === nothing || st.cond(tm)::Bool) || return 0
+    v = st.f(tm)
+    return st.counts ? v::Int : 0
+end
+
+"The statements of `generate!` as (text, `P2Statement`), made before anything is timed."
+statement_functions() = Any[(s, P2Statement(s)) for s in generate_statements()]
 
 function generate_by_statement!(tm::TimesModel, fs)
     out = Any[]
     for (s, f) in fs
         nf, nc = length(tm.eqs.order), JuMP.num_variables(tm.model)
-        r = @timed Base.invokelatest(f, tm, 0)
+        r = @timed f(tm)
         push!(out, Dict{String,Any}("statement" => s, "seconds" => r3(r.time), "bytes" => r.bytes, "gc_seconds" => r3(r.gctime),
                                     "rows" => r.value, "columns" => JuMP.num_variables(tm.model) - nc,
                                     "families" => tm.eqs.order[nf+1:end]))
