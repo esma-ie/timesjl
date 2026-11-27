@@ -193,6 +193,26 @@ On 26 Nov 2026 James answered the question of 14 Nov 2026 on counting the workst
 
 ## Log by pull request
 
+### #208 Daily PR, 28 Nov 2026: the answers of 27 Nov 2026 built, the M1.6 harness, Phase 2 change 0 (open)
+
+| # | Question | Decided | How |
+| --- | --- | --- | --- |
+| 1 | p2-q8: what the 5x target covers: (a) preprocessing, coefficients and generation together; (b) the generation step alone. Recommended (a). No built-in default. | Open (Open decisions). | |
+| 2 | p2-q5: generation timed on one thread or on up to 12. Recommended one thread. No built-in default for a published figure. | Open (Open decisions). | |
+| 3 | p2-q9: time generation with GAMS's dump already in memory. Recommended yes. Not built. | Open (Open decisions). | |
+| 4 | p2-q6: row and column names stay on for now (under 1% of generation in the profile of 27 Nov 2026). Built in. | A merge accepts it. | |
+| 5 | p2-q7: integer labels are decided once the first two speed changes are measured. Built in. | A merge accepts it. | |
+| 6 | m16-q8: compare `.vd`, `.vde` and `.vds`; no `.vdt` is written. Built in. | A merge accepts it. | |
+| 7 | m16-q9: stepped, staged stochastic, MACRO and ECB runs get no dump of the solution before GAMS's report. Built in. | A merge accepts it. | |
+| 8 | m16-q10: the stochastic `.vd` (`times2veda_stc.vdd`) when the stochastic changes are in. Not built. | Open (Open decisions). | |
+| 9 | m16-q11: the v4.9.8 references go to `D:\workspace\timesjl-reference-v498`; the v4.9.7 ones are kept until the v4.9.8 diff is translated. A choice about the workstation. | Open (Open decisions). | |
+| 10 | pool-q1: a TIMES.jl run with HiGHS keeps its thread class until the solve returns. Built in. | A merge accepts it. | |
+| 11 | pool-q2: the workstation's batch scripts start their Julia runs through `pool_run.py`. James's files; not changed. | Open (Open decisions). | |
+| 12 | pool-q3: the launcher remembers each model's peak RAM. Not built. | Open (Open decisions). | |
+| 13 | The colour of GAMS on the dashboard: (a) GAMS's orange `#f4961a`; (b) the brand's Blue `#00a3cb`. Recommended (a). Not built. | Open (Open decisions). | |
+| 14 | The seven reports to ETSAP (#156 d3, #155 d2, #137 d1, #132 d2, #131 d2, #129 d4, #122 d4). Rule-level: each needs an explicit yes. | Open (Open decisions). | |
+| 15 | README: "It is still much slower than GAMS at building a model". Recommended: keep. Built in. | A merge accepts it. | |
+
 ### #207 Daily PR, 27 Nov 2026: M1.3 change 73 (the SOW tags), the run pool, the decision log (merged 27 Nov 2026)
 
 | # | Question | Decided | How |
