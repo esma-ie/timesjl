@@ -111,9 +111,9 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
   update embeds the newest finished pass as `report-suite-<mmdd>-solve` and
   `report-suite-<mmdd>-nosolve`, in place of the blocks of the pass before,
   with `meta.host` set to `"workstation"`; the files themselves are not
-  committed. Now embedded: `report-suite-1122-solve` and
-  `report-suite-1122-nosolve`, the pass of 22 Nov 2026 on main 1a729a0
-  (to #182): 281 checks, all pass. They supersede the reports above for all
+  committed. Now embedded: `report-suite-1127-solve` and
+  `report-suite-1127-nosolve`, the pass of 27 Nov 2026 on main 5e35806
+  (to #207): 281 checks, all pass. They supersede the reports above for all
   seven runs.
 
   `--no-solve` records layer 3 without the HiGHS solve: each GAMS optimum
@@ -241,7 +241,7 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
   in them must have `redistribute = "public"` (the CI fixtures and the open
   reference runs; TIM never goes in). They hold cuOpt's own times and
   objectives, and GAMS's objectives only: no CPLEX time. Now embedded: the
-  night of 26 Nov 2026 (TIMES.jl 3d5a4ae, cuOpt 26.10.0). Their ids do not
+  night of 27 Nov 2026 (TIMES.jl b7ddff3, cuOpt 26.10.0). Their ids do not
   start with `cuopt-`: the local board reads every `cuopt-*` block for its own
   cuOpt slide, which stays beside this one. `CUOPT_NOTES` (the GitHub T4
   nightly) is written by hand from `gh run list --workflow nightly-gpu.yml`;
