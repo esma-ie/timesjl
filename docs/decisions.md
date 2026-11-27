@@ -31,14 +31,13 @@ Ordered by priority (James, 27 Nov 2026): first the questions that hold work bac
 
 | Asked | Where | Question | Recommended | Status |
 | --- | --- | --- | --- | --- |
-| 27 Nov 2026 | chat | p2-q8, the Phase 2 speed lane: what does the 5x target cover? Two texts disagree. P2-6 (`docs/phase2-notes.md`) says "Preprocessing to solver hand-off no worse than 5x GAMS"; the p2-q5 row below says "from the loaded data to the finished JuMP model", and p2-q4 only fixed where the timed stretch ends. The first measurement of 27 Nov 2026 is of the generation step alone (about 34 times GAMS on OTCGEN and 55 on TIMES-NZ steady, one thread, provisional). (a) the three stages together: preprocessing, coefficients and generation; (b) the generation step alone. | (a), with each stage also reported alone | Open. Every figure is labelled "the generation step only" and none is published as the 5x result until James answers; the speed changes go on meanwhile (they are needed either way). |
-| 27 Nov 2026 | chat | p2-q5, the Phase 2 speed lane: is model generation timed on one thread, or on up to 12, for the 5x target? Asked on 26 Nov 2026 with p2-q1 to p2-q7; James answered the other six on 27 Nov 2026 and asked what this one times ("timed what?"). It times the generation of the model in TIMES.jl, from the loaded data to the finished JuMP model, against GAMS's generation, which runs on one thread. | one thread, until multi-threaded generation is built | Open. The timing script takes the thread count as a setting and uses one meanwhile; no figure is published as the 5x result until James answers. |
+
+None on 27 Nov 2026: James answered p2-q8 and p2-q5 the same day (the log of #208, rows 1 and 2).
 
 ### Not blocking
 
 | Asked | Where | Question | Recommended | Status |
 | --- | --- | --- | --- | --- |
-| 27 Nov 2026 | chat | p2-q9, the Phase 2 timing: TIMES.jl's generation time today includes reading GAMS's pre-solve dump from Arrow (about 50 s on OTCGEN, 13 s on TIMES-NZ steady); GAMS's `resGen` starts with the data in memory. Is the read inside the timed stretch? | no: time generation with the data in memory, and record the read time beside it | Open; `scripts/p2_timing.jl` times it inside meanwhile and the notes say so. |
 | 27 Nov 2026 | chat | m16-q8, the M1.6 harness: `gdx2veda` writes `.vd`, `.vde` and `.vds` on the workstation, and no `.vdt`. Compare those three and leave `.vdt` out? | yes | Open; harness 0.3.10 keeps the three files. |
 | 27 Nov 2026 | chat | m16-q9, the M1.6 harness: a stepped (myopic) run, a stochastic run with stages, MACRO and ECB runs get no dump of the solution before GAMS's report (`postsolve_skipped` in the manifest): the hook sits in one solve, and these solve several times. Their reports are then checked from GAMS's final dump and `.vd` only. Accept? | yes for now; a dump per step when M1.6 reaches stepped runs | Open; built so in harness 0.3.10. |
 | 27 Nov 2026 | chat | m16-q10, the M1.6 harness: a stochastic run's `.vd` is made with `times2veda_stc.vdd`, the others with `times2veda.vdd`. Add the stochastic one when the stochastic changes (71, 72, 74 to 76) are in? | yes | Open; not built. |
@@ -197,9 +196,9 @@ On 26 Nov 2026 James answered the question of 14 Nov 2026 on counting the workst
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
-| 1 | p2-q8: what the 5x target covers: (a) preprocessing, coefficients and generation together; (b) the generation step alone. Recommended (a). No built-in default. | Open (Open decisions). | |
-| 2 | p2-q5: generation timed on one thread or on up to 12. Recommended one thread. No built-in default for a published figure. | Open (Open decisions). | |
-| 3 | p2-q9: time generation with GAMS's dump already in memory. Recommended yes. Not built. | Open (Open decisions). | |
+| 1 | p2-q8: what the 5x target covers: (a) preprocessing, coefficients and generation together; (b) the generation step alone. Recommended (a). | (a) ("d1 a"): the 5x target covers preprocessing, coefficients and generation together, each stage also reported alone. | James, 27 Nov 2026 (the chat) |
+| 2 | p2-q5: generation timed on one thread or on up to 12. Recommended one thread. | One thread ("d2 one thread"). | James, 27 Nov 2026 (the chat) |
+| 3 | p2-q9: time generation with GAMS's dump already in memory. Recommended yes. | Yes ("d3 yes"): generation is timed with the data already in memory, the read time recorded beside it. `scripts/p2_timing.jl` is changed in a later daily PR. | James, 27 Nov 2026 (the chat) |
 | 4 | p2-q6: row and column names stay on for now (under 1% of generation in the profile of 27 Nov 2026). Built in. | A merge accepts it. | |
 | 5 | p2-q7: integer labels are decided once the first two speed changes are measured. Built in. | A merge accepts it. | |
 | 6 | m16-q8: compare `.vd`, `.vde` and `.vds`; no `.vdt` is written. Built in. | A merge accepts it. | |
