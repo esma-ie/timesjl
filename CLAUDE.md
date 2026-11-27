@@ -140,7 +140,7 @@ Any mismatch blocks the merge. Justified differences go in
   2026), for load management and comparable, fair resources across tests.
   Each model has a thread class (`threads` in `reference/suite.toml`): 6 for
   the small models, 12 for the large. A run reserves its class from its start
-  until its barrier ends, then fewer (4 during crossover, then 1); a run with
+  until its barrier ends, then fewer (2 during crossover, then 1); a run with
   several solves keeps its class to the end; nothing is re-acquired. A run
   starts only when its threads are free (of 48, 2 kept free, also by measured
   load) and the RAM of its last peak is free; there is no limit on the number
