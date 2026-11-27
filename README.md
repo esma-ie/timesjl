@@ -281,7 +281,7 @@ As of 27 Nov 2026 (`main`):
   See [Probes against GAMS](#probes-against-gams) below. TIMES.jl has not
   been run on a global model yet: the test suite has none, because a test
   model needs an open licence ([`docs/test-models.md`](docs/test-models.md)).
-- **CI.** Every pull request runs 36,084 tests (all pass on 27 Nov): demo12
+- **CI.** Every pull request runs 36,123 tests (all pass on 27 Nov): demo12
   and crafted variants of it that add features demo12 itself does not use,
   each against fixtures from GAMS.
 - **Features.** The core and VDA formulations are translated. The M1.3
