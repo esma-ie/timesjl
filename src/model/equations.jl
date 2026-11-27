@@ -111,16 +111,25 @@ end
 "The expressions `addterm!` gave an EPS term, by identity (see `gconstraint!`)."
 _eps_exprs(tm) = get!(() -> Base.IdSet{JuMP.AffExpr}(), tm.cache, "EPS_EXPRS")::Base.IdSet{JuMP.AffExpr}
 
-"Whether every coefficient of `lhs - rhs` is an exact zero (no term, or terms that cancel)."
+"""
+Whether every coefficient of `lhs - rhs` is an exact zero (no term, or terms that cancel).
+
+The coefficient of a variable is `(0.0 + its coefficient in lhs, if it has one) - (its coefficient in
+rhs, if it has one)`. An expression holds each variable once, so the two are read from the
+expressions themselves and the test stops at the first coefficient that is not zero, which in
+nearly every row is the first one looked at; a Dict of all of them was built for every row before
+(Phase 2, change 5). The same arithmetic and the same answer.
+"""
 function _all_cancel(lhs::JuMP.AffExpr, rhs::JuMP.AffExpr)
-    d = Dict{JuMP.VariableRef,Float64}()
-    for (v, c) in lhs.terms
-        d[v] = get(d, v, 0.0) + c
+    lt, rt = lhs.terms, rhs.terms
+    for (v, c) in lt                                  # in lhs: (0.0 + c) - its coefficient in rhs, or (0.0 + c)
+        c2 = get(rt, v, nothing)
+        iszero(c2 === nothing ? 0.0 + c : (0.0 + c) - c2) || return false
     end
-    for (v, c) in rhs.terms
-        d[v] = get(d, v, 0.0) - c
+    for (v, c) in rt                                  # in rhs only: 0.0 - c
+        haskey(lt, v) || iszero(0.0 - c) || return false
     end
-    return all(iszero, values(d))
+    return true
 end
 
 "Add a constant (data) term to `expr`; GAMS moves it to the right-hand side."
