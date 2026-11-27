@@ -652,8 +652,12 @@ MODLYEAR; PYR the past years.
 
 GAMS: cal_cap.mod L14-27, v4.9.7.
 """
-function cal_cap!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, io::String, r, t, c, s; pf=p -> GNum(1.0))
-    x = get!(tm.cache, "CAL_CAP") do
+cal_cap!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, io::String, r, t, c, s; pf=p -> GNum(1.0)) =
+    cal_cap!(expr, tm, cal_cap_context(tm), mult, io, r, t, c, s, pf)
+
+"The sets and parameters `cal_cap!` reads, built once per model (untyped out of `tm.cache`, see `combal_context`)."
+function cal_cap_context(tm::TimesModel)
+    get!(tm.cache, "CAL_CAP") do
         ncom = gparam(tm, "NCAP_COM")
         allyear = [k[1] for k in gset(tm, "ALLYEAR").keys]
         (capflo_of_rc = indexby(gset(tm, "RPC_CAPFLO"), (1, 4)),           # (r,c) -> RPC_CAPFLO(r,v,p,c)
@@ -665,6 +669,11 @@ function cal_cap!(expr::JuMP.AffExpr, tm::TimesModel, mult::GNum, io::String, r,
          g_yrfr = gparam(tm, "G_YRFR"), pasti = gparam(tm, "NCAP_PASTI"),
          modlyear = gset(tm, "MODLYEAR"), milestonyr = gset(tm, "MILESTONYR"), pyr = gset(tm, "PYR"))
     end
+end
+
+# `cal_cap!` with the context `x` as a typed argument (a function barrier, see `combal_context`; Phase 2,
+# change 3) and %3, `pf`, as a type parameter. GAMS: cal_cap.mod L14-27, v4.9.7.
+function cal_cap!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, mult::GNum, io::String, r, t, c, s, pf::PF) where {PF}
     yrfr = gv(x.g_yrfr, (r, s))
     # first term: the flows over the lifetime (NCAP_COM)
     for (_, v, p, _, i) in get(x.ncom_of_rc, (r, c), NTuple{5,String}[])
