@@ -10,7 +10,10 @@ writes, under ``<out>/<model>/<variant>/``:
     input/, init/,  M1.3 checkpoints, from the pre-solve run: the state before
     prep/, prelv/   maindrv.mod, after init_ext (maindrv.mod L55), at prep_ext
                     (preppm.mod L217) and at pp_prelv (ppmain.mod L615)
+    postsolve/      all symbols after the SOLVE, before the reports (solve.mod L44):
+                    the solution and the state the report code reads (layer 4 input)
     final/          all symbols at the end of the run       (layers 3-4)
+    vd/             gdx2veda's files from the end-of-run GDX (.vd, .vde, .vds; layer 4)
     matrix/         CONVERT DumpGDX + DictMap               (layer 2)
     steps/<k>/      stepped (myopic) runs only: final/, matrix/ and
                     matrix_dictmap/ of step k, in place of matrix/
@@ -28,6 +31,15 @@ solve.stp, each built on the levels of the step before. The first solve run
 dumps every symbol and a point file after each step; the CONVERT run exports
 each step's model and then loads that step's point, so its next step is the
 solve run's (reference/gams/www_in.cgi, www_out.cgi).
+
+postsolve/, final/ and vd/ come from one GAMS process, the first solve run (the
+other solvers' runs give final_<solver>/ and vd_<solver>/): layer 4 feeds
+postsolve/ to TIMES.jl's report code and compares the result with final/ and the
+.vd file, so the three must hold the same optimum. There is no ``--only`` pass
+for them; a reference made before harness 0.3.10 gets them by a full rerun.
+A stepped, stochastic (STAGES, SENSIS, SPINES) or MACRO run has no postsolve/
+(``postsolve_skipped`` in the manifest says why; www_out.cgi), and a stochastic
+or MACRO run no vd/ (``vd_skipped``).
 
 ``--only presolve`` runs just the pre-solve run and adds its dumps to an existing
 reference (the manifest's other runs and dumps are kept); where the reference
@@ -72,7 +84,7 @@ from runlimits import (DEFAULT_RAM_GB, GamsWatch, PoolRun, default_max_parallel,
                        default_slot_dir, limit_threads, model_threads, runfile_solves_once, threads_override)
 from gdx2arrow import convert_gdx, gams_system_directory  # noqa: E402
 
-HARNESS_VERSION = "0.3.9"  # 0.3.9 (26 Nov 2026): the run pool (runlimits.py: thread classes, phases, peak RAM); 0.3.8 (26 Nov 2026): TIMES v4.9.8; a --only pass refuses a reference made with another TIMES commit; 0.3.7 (20 Nov 2026): $ONIMPLICITASSIGN in the pre-solve run of a SENSIS run (runfile.py); 0.3.6 (19 Nov 2026): work_files, files copied into the work folder (the base prices of elastic demand); 0.3.5 (15 Nov 2026): parse_solves reads MODEL STATISTICS with "N projected"; 0.3.4 (14 Nov 2026): steps/<k>/ of stepped runs (www_in.cgi, www_out.cgi); 0.3.3 (14 Nov 2026): equ/, the checkpoint of stepped runs (equ_ext.tjlref); 0.3.2 (9 Nov 2026): raw/tjl_presolve_qa_check.log; 0.3.1 (5 Nov 2026): --only convert; 0.3.0 (31 Oct 2026): M1.3 checkpoints, --only presolve; 0.2.4 (29 Oct 2026): run limits (threads, parallel runs); 0.2.3: model overrides; 0.2.2: raw/tjl_<run>.run; 0.2.1: extra_dd_dirs; 0.2.0: pre-solve run
+HARNESS_VERSION = "0.3.10"  # 0.3.10 (27 Nov 2026): M1.6, postsolve/ (the solution before the reports, www_out.cgi) and vd/ (gdx2veda's files); 0.3.9 (26 Nov 2026): the run pool (runlimits.py: thread classes, phases, peak RAM); 0.3.8 (26 Nov 2026): TIMES v4.9.8; a --only pass refuses a reference made with another TIMES commit; 0.3.7 (20 Nov 2026): $ONIMPLICITASSIGN in the pre-solve run of a SENSIS run (runfile.py); 0.3.6 (19 Nov 2026): work_files, files copied into the work folder (the base prices of elastic demand); 0.3.5 (15 Nov 2026): parse_solves reads MODEL STATISTICS with "N projected"; 0.3.4 (14 Nov 2026): steps/<k>/ of stepped runs (www_in.cgi, www_out.cgi); 0.3.3 (14 Nov 2026): equ/, the checkpoint of stepped runs (equ_ext.tjlref); 0.3.2 (9 Nov 2026): raw/tjl_presolve_qa_check.log; 0.3.1 (5 Nov 2026): --only convert; 0.3.0 (31 Oct 2026): M1.3 checkpoints, --only presolve; 0.2.4 (29 Oct 2026): run limits (threads, parallel runs); 0.2.3: model overrides; 0.2.2: raw/tjl_<run>.run; 0.2.1: extra_dd_dirs; 0.2.0: pre-solve run
 EXPECTED_TIMES_VERSION = "4.9.8"  # v4.9.7 @ d9a6a25 until 26 Nov 2026 (CLAUDE.md, Baseline)
 EXPECTED_TIMES_COMMIT = "7064680"
 VARIANTS = {"reduce_off": {"REDUCE": "NO"}, "as_run": {}}
@@ -94,6 +106,25 @@ STEPPED_CHECKPOINT = "equ"
 # after step k the point of that step is loaded, and step k+1 reads its own option file (OPTFILEID).
 STEP_DUMP_FLAGS = ["--GAMS_CGI=WWW", "--TJL_STEPS=DUMP"]
 STEP_LOAD_FLAGS = ["--GAMS_CGI=WWW", "--TJL_STEPS=LOAD"]
+# M1.6 (harness 0.3.10; James, 27 Nov 2026, m16-q2): the solution before GAMS's report code runs.
+# The first solve run gets POSTSOLVE_FLAG with --GAMS_CGI=WWW, and www_out.cgi (solve.mod L44: after
+# the SOLVE of L37 and its status check of L41; the next statements executed are the reports',
+# maindrv.mod L120) writes every symbol to tjl_postsolve.gdx -> postsolve/. GAMS decides when that
+# point is not the state the reports read and writes the reason to tjl_postsolve_skip.txt instead:
+POSTSOLVE_FLAG = "--TJL_POSTSOLVE=1"
+POSTSOLVE_SKIPS = {
+    "stepped": "TIMESTEP or FIXBOH: solve.stp changes levels and marginals after its last SOLVE "
+               "(L299-301, L325-330); each step's solution is in steps/<k>/final",
+    "stages": "STAGES, SENSIS or SPINES: solve.stc has several SOLVEs, and SENSIS reports after each one (L56, L86)",
+    "macro": "MACRO (YES, MSA, CSA or MLF): its own solves and reports (rptmain.tm, rpt_ext.msa, rpt_ext.mlf)",
+    "ecb": "ECB (BENCOST): rpt_ext.ecb L67 solves again after the reports, which would replace the dump",
+}
+# The Veda files (m16-q2 b). No file of the TIMES source calls gdx2veda: it is run after GAMS, on the
+# end-of-run GDX, with times2veda.vdd of the TIMES source. The harness does that for each solve run's
+# tjl_final.gdx. Not for a stochastic run (which of times2veda.vdd and times2veda_stc.vdd applies
+# to STAGES, SENSIS and SPINES is not in the TIMES source) or a MACRO run.
+VDD_FILE = "times2veda.vdd"
+VD_SKIPS = ("stages", "macro")
 
 
 def optfile_name(solver: str, k: int) -> str:
@@ -367,7 +398,7 @@ def make_one(args, suite, model_name: str, variant: str, source_info: dict):
 
     if old_manifest is not None:
         # keep what the reference already has; this pass adds its runs' dumps
-        for key in ("runs", "dumps", "patch", "presolve_pass", "convert_pass"):
+        for key in ("runs", "dumps", "patch", "presolve_pass", "convert_pass", "postsolve_skipped", "vd", "vd_skipped"):
             if key in old_manifest:
                 manifest[key] = old_manifest[key]
         manifest["harness_version"] = old_manifest.get("harness_version")
@@ -390,7 +421,7 @@ def make_one(args, suite, model_name: str, variant: str, source_info: dict):
                                           args.limits["threads"])
         shutil.copy(work / runfile, out / "raw" / f"tjl_{tag}.run")
         manifest["patch"] = report
-        extra_k = [*extra, *STEP_DUMP_FLAGS] if k == 0 else [*extra, "--TJL_NODUMP=1"]
+        extra_k = [*extra, *STEP_DUMP_FLAGS, POSTSOLVE_FLAG] if k == 0 else [*extra, "--TJL_NODUMP=1"]
         print(f"[{model_name}/{variant}] GAMS solve with {solver} ...", flush=True)
         res = run_gams(args.gams, work, runfile, idirs, solver, extra_k, tag, final_gdx=True, limits=args.limits)
         res["gams_version"] = gams_version_line(work / f"tjl_{tag}.lst")
@@ -404,6 +435,9 @@ def make_one(args, suite, model_name: str, variant: str, source_info: dict):
         manifest["dumps"][final_dir] = convert(work / "tjl_final.gdx", out / final_dir, args.sysdir)
         if k == 0:
             keep_steps(work, out, manifest, tag, args.sysdir)
+            keep_postsolve(work, out, manifest, args.sysdir)
+        keep_vd(args.sysdir, work, out, manifest, "vd" if k == 0 else f"vd_{solver.lower()}",
+                Path(source_info["path"]) / VDD_FILE, model_name, args.limits)
         for f in work.glob(f"tjl_{tag}*"):
             shutil.copy(f, out / "raw" / f.name)
         if res["returncode"] != 0:
@@ -444,6 +478,69 @@ def keep_steps(work: Path, out: Path, manifest: dict, tag: str, sysdir: str | No
     manifest["steps"] = len(dumps)
     manifest["runs"][tag]["steps"] = parse_solves(work / f"tjl_{tag}.lst")
     return len(dumps)
+
+
+def keep_postsolve(work: Path, out: Path, manifest: dict, sysdir: str | None) -> str | None:
+    """postsolve/ after the first solve run: every symbol at solve.mod L44 (tjl_postsolve.gdx, written
+    by www_out.cgi), or, where GAMS wrote tjl_postsolve_skip.txt instead, ``postsolve_skipped`` in the
+    manifest with the reason (POSTSOLVE_SKIPS) and no dump. Returns the reason, None for a dump. A run
+    with neither (it ended before its SOLVE) has a missing dump, so the reference ends with CHECK."""
+    note = work / "tjl_postsolve_skip.txt"
+    if note.exists():
+        reason = note.read_text(errors="replace").strip().lower()
+        manifest["postsolve_skipped"] = {"reason": reason, "why": POSTSOLVE_SKIPS.get(reason, "")}
+        return reason
+    manifest["dumps"]["postsolve"] = convert(work / "tjl_postsolve.gdx", out / "postsolve", sysdir)
+    return None
+
+
+def vd_records(path: Path) -> int:
+    """The records of one of gdx2veda's files: its lines, less the empty ones and the header lines
+    (``*`` first) of a .vd file."""
+    with open(path, errors="replace") as f:
+        return sum(1 for ln in f if ln.strip() and not ln.startswith("*"))
+
+
+def keep_vd(sysdir: str | None, work: Path, out: Path, manifest: dict, name: str, vdd: Path, run_name: str,
+            limits: dict | None = None) -> dict | None:
+    """<name>/ (vd/, vd_<solver>/): the files gdx2veda writes from a solve run's end-of-run GDX:
+    ``gdx2veda tjl_final.gdx <TIMES source>/times2veda.vdd <run name>`` (its usage text), run in its own
+    folder and kept whole (<run name>.vd the values, .vde the descriptions of the elements, .vds the
+    set memberships). The manifest's ``vd.<name>`` records the command, the return code, the SHA-256
+    of the .vdd file and each file's size and records. Nothing for a run whose ``postsolve_skipped``
+    reason is in VD_SKIPS (``vd_skipped``). A run without tjl_final.gdx, a return code other than 0
+    or no .vd file ends the reference with CHECK (finish)."""
+    reason = (manifest.get("postsolve_skipped") or {}).get("reason")
+    if reason in VD_SKIPS:
+        manifest["vd_skipped"] = {"reason": reason, "why": "times2veda.vdd is the deterministic layout"}
+        return None
+    limits = limits or {}
+    rec = {"dir": name, "run": run_name, "vdd": vdd.name, "returncode": None, "files": {}}
+    manifest.setdefault("vd", {})[name] = rec
+    gdx = work / "tjl_final.gdx"
+    exe = shutil.which("gdx2veda", path=sysdir) if sysdir else shutil.which("gdx2veda")
+    if not gdx.exists() or not vdd.exists() or exe is None:
+        rec["error"] = "no tjl_final.gdx" if not gdx.exists() else f"no {vdd}" if not vdd.exists() else "gdx2veda not found"
+        return rec
+    rec["vdd_sha256"] = sha256(vdd)
+    folder = work / name
+    if folder.exists():
+        shutil.rmtree(folder)
+    folder.mkdir()
+    cmd = [exe, str(gdx), str(vdd), run_name]
+    # one thread of the run pool: gdx2veda reads the GDX and writes text, without a solver
+    with PoolRun(f"{work.parent.parent.name}/{work.parent.name} {name}", 1, 1.0, pool=limits.get("pool"),
+                 max_parallel=limits.get("max_parallel", 0), slot_dir=limits.get("slot_dir")):
+        proc = subprocess.run(cmd, cwd=folder, capture_output=True, text=True, errors="replace")
+    rec.update(command=cmd, returncode=proc.returncode, stdout_tail=proc.stdout[-2000:], stderr_tail=proc.stderr[-2000:])
+    dest = out / name
+    if dest.exists():
+        shutil.rmtree(dest)
+    dest.mkdir(parents=True)
+    for f in sorted(folder.iterdir()):
+        shutil.copy(f, dest / f.name)
+        rec["files"][f.name] = {"bytes": f.stat().st_size, "records": vd_records(f)}
+    return rec
 
 
 def presolve_run(args, model, overrides, idirs, extra, out, work_root, manifest, model_name, variant, ppm_coef_here):
@@ -552,6 +649,9 @@ def finish(out: Path, manifest: dict, model_name: str, variant: str) -> str:
     (out / "manifest.json").write_text(json.dumps(manifest, indent=1, default=str))
     missing = [k for k, v in manifest["dumps"].items() if v is None]
     runs = manifest["runs"].values()
+    # gdx2veda (harness 0.3.10): each solve run it was called for must have given a .vd file
+    missing += [k for k, v in manifest.get("vd", {}).items()
+                if v.get("returncode") != 0 or not any(f.lower().endswith(".vd") for f in v.get("files", {}))]
     status = "OK" if (not missing and all(r["returncode"] == 0 for r in runs)
                       and all(r.get("steps_match_solve", True) for r in runs)) else "CHECK"
     print(f"[{model_name}/{variant}] {status}" + (f" (missing: {', '.join(missing)})" if missing else ""), flush=True)
