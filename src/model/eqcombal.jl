@@ -58,12 +58,14 @@ function combal_context(tm::TimesModel)
         top = gset(tm, "TOP")
         rpc_ire = gset(tm, "RPC_IRE")
         com_agg = gparam(tm, "COM_AGG")
+        varf_of_rtpc = indexby(gset(tm, "RTPCS_VARF"), (1, 2, 3, 4))
+        ire_flosum = gparam(tm, "IRE_FLOSUM")
         (top_of_rcio = indexby(top, (1, 3, 4)),                       # (r,c,io) -> TOP(r,p,c,io)
          rp_flo = gset(tm, "RP_FLO"),
          rpc_emis = gset(tm, "RPC_EMIS"),
          fs_emit_of_rpc = indexby(gset(tm, "FS_EMIT"), (1, 2, 3)),     # (r,p,c) -> (r,p,c,cg3,com2)
          vint_of_rtp = indexby(gset(tm, "RTP_VNTBYR"), (1, 2, 3)),     # (r,t,p) -> (r,t,p,v)
-         varf_of_rtpc = indexby(gset(tm, "RTPCS_VARF"), (1, 2, 3, 4)), # (r,t,p,c) -> (r,t,p,c,ts)
+         varf_of_rtpc = varf_of_rtpc,                                  # (r,t,p,c) -> (r,t,p,c,ts)
          rs_fr = gparam(tm, "RS_FR"),
          rtcs_fr = gparam(tm, "RTCS_FR"),
          coef_ptran = gparam(tm, "COEF_PTRAN"),
@@ -71,10 +73,10 @@ function combal_context(tm::TimesModel)
          rtp_ffcs = gparam_opt(tm.data, "RTP_FFCS", 5),
          prc_vint = gset(tm, "PRC_VINT"),
          ire_of_rcie = indexby(rpc_ire, (1, 3, 4)),                    # (r,c,ie) -> RPC_IRE(r,p,c,ie)
-         ire_of_r = indexby(rpc_ire, (1,)),                            # r -> RPC_IRE(r,p,com,ie)
+         flosum_of_rtcio = ire_flosum_index(indexby(rpc_ire, (1,)), ire_flosum, varf_of_rtpc),   # (r,t,c,io) -> IRE_FLOSUM(r,t,p,com,ts,ie,c,io)
          rpc_aire = gset(tm, "RPC_AIRE"),
          prc_actflo = gparam(tm, "PRC_ACTFLO"),
-         ire_flosum = gparam(tm, "IRE_FLOSUM"),
+         ire_flosum = ire_flosum,
          agg_of_rtc = indexby(com_agg, (1, 2, 4)),                      # (r,t,c) -> COM_AGG(r,t,com,c)
          com_agg = com_agg,
          varc_of_rtc = indexby(gset(tm, "RTCS_VARC"), (1, 2, 3)),       # (r,t,com) -> (r,t,com,ts)
@@ -100,6 +102,50 @@ function combal_context(tm::TimesModel)
          bl_inp = gparam_opt(tm.data, "BL_INP", 3))
     end
 end
+
+"""
+    ire_flosum_index(ire_of_r, ire_flosum, varf_of_rtpc) -> Dict
+
+For the auxiliary flows of cal_ire.mod (L35-41), the sum
+
+    SUM((RPC_IRE(R,P,COM,IE),RTPCS_VARF(R,T,P,COM,TS))\$(IRE_FLOSUM(R,T,P,COM,TS,IE,C,'%2')\$RS_FR(R,S,TS)), ...)
+
+by the indices the row fixes: (r,t,c,io) -> the entries IRE_FLOSUM(r,t,p,com,ts,ie,c,io) that have
+an RPC_IRE(r,p,com,ie) and an RTPCS_VARF(r,t,p,com,ts), in the order the sum reaches them: RPC_IRE
+of the region in record order (`ire_of_r`: r -> RPC_IRE(r,p,com,ie)), then TS in the record order of
+RTPCS_VARF(r,t,p,com,.). `cal_ire!` then visits only the entries of its row instead of probing
+IRE_FLOSUM for every RPC_IRE of the region and every timeslice (Phase 2, change 2). The same terms
+in the same order: the index is built by walking that very double loop once per (r,t) that
+IRE_FLOSUM has, so a term's position does not depend on IRE_FLOSUM's own record order.
+
+GAMS: cal_ire.mod L35-41, v4.9.7.
+"""
+function ire_flosum_index(ire_of_r::Dict{NTuple{1,String},Vector{NTuple{4,String}}}, ire_flosum::GamsParam{8},
+                          varf_of_rtpc::Dict{NTuple{4,String},Vector{NTuple{5,String}}})
+    out = Dict{NTuple{4,String},Vector{NTuple{8,String}}}()
+    isempty(ire_flosum) && return out
+    # (r,t,p,com,ts,ie) -> the entries with those labels (one per (c,io)); `haskey` reads `.values`
+    of_flow = Dict{NTuple{6,String},Vector{NTuple{8,String}}}()
+    rts = NTuple{2,String}[]
+    seen = Set{NTuple{2,String}}()
+    for fs in ire_flosum.keys
+        haskey(ire_flosum, fs) || continue
+        push!(get!(() -> NTuple{8,String}[], of_flow, (fs[1], fs[2], fs[3], fs[4], fs[5], fs[6])), fs)
+        (fs[1], fs[2]) in seen || (push!(seen, (fs[1], fs[2])); push!(rts, (fs[1], fs[2])))
+    end
+    for (r, t) in rts
+        for (_, p, com, iex) in get(ire_of_r, (r,), NTuple{4,String}[])
+            for (_, _, _, _, ts) in get(varf_of_rtpc, (r, t, p, com), NTuple{5,String}[])
+                for fs in get(of_flow, (r, t, p, com, ts, iex), NO_FLOSUM)
+                    push!(get!(() -> NTuple{8,String}[], out, (r, t, fs[7], fs[8])), fs)
+                end
+            end
+        end
+    end
+    return out
+end
+
+const NO_FLOSUM = NTuple{8,String}[]
 
 "Per-term multiplier `%3`/`%4` of cal_fflo/cal_ire when the caller passes none: 1."
 _pk(pk, p, v, ts) = pk === nothing ? GNum(1.0) : pk(p, v, ts)::GNum
@@ -261,24 +307,24 @@ function cal_ire!(expr::JuMP.AffExpr, tm::TimesModel, x::NamedTuple, mult::GNum,
             end
         end
     end
-    # Auxiliary flows (L35-41), over every RPC_IRE(R,P,COM,IE) of the region.
+    # Auxiliary flows (L35-41), over every RPC_IRE(R,P,COM,IE) of the region and RTPCS_VARF(R,T,P,COM,TS):
+    # only those with an IRE_FLOSUM(R,T,P,COM,TS,IE,C,'%2') add a term, and `flosum_of_rtcio` holds
+    # them for the row's (r,t,c,io), in the order of that double sum (`ire_flosum_index`).
     isempty(x.ire_flosum) && return expr
-    for (_, p, com, iex) in get(x.ire_of_r, (r,), NTuple{4,String}[])
+    for fs in get(x.flosum_of_rtcio, (r, t, c, io), NO_FLOSUM)
+        (_, _, p, com, ts, iex, _, _) = fs
         pfilter === nothing || pfilter(p)::Bool || continue           # %6R,P%7
         vints = get(x.vint_of_rtp, (r, t, p), NTuple{4,String}[])
-        for (_, _, _, _, ts) in get(x.varf_of_rtpc, (r, t, p, com), NTuple{5,String}[])
-            fs = (r, t, p, com, ts, iex, c, io)
-            (haskey(x.ire_flosum, fs) && haskey(x.rs_fr, (r, s, ts))) || continue
-            w = gv(x.ire_flosum, fs)
-            tail = gv(x.rs_fr, (r, s, ts)) * (1 + gv(x.rtcs_fr, (r, t, com, s, ts)))
-            for (_, _, _, v) in vints
-                mx = 1 + gv(x.rtp_ffcs, (r, v, p, c, c))
-                k = mult * (w * mx * _pk(pk, p, v, ts) * tail)
-                if !((r, p, com) in x.rpc_aire)
-                    addterm!(expr, k, tm, "VAR_IRE", r, v, t, p, com, ts, iex)
-                else
-                    addterm!(expr, k * gv(x.prc_actflo, (r, v, p, com)), tm, "VAR_ACT", r, v, t, p, ts)
-                end
+        (haskey(x.ire_flosum, fs) && haskey(x.rs_fr, (r, s, ts))) || continue
+        w = gv(x.ire_flosum, fs)
+        tail = gv(x.rs_fr, (r, s, ts)) * (1 + gv(x.rtcs_fr, (r, t, com, s, ts)))
+        for (_, _, _, v) in vints
+            mx = 1 + gv(x.rtp_ffcs, (r, v, p, c, c))
+            k = mult * (w * mx * _pk(pk, p, v, ts) * tail)
+            if !((r, p, com) in x.rpc_aire)
+                addterm!(expr, k, tm, "VAR_IRE", r, v, t, p, com, ts, iex)
+            else
+                addterm!(expr, k * gv(x.prc_actflo, (r, v, p, com)), tm, "VAR_ACT", r, v, t, p, ts)
             end
         end
     end
