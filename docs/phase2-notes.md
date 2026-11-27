@@ -193,6 +193,44 @@ further from the target than generation (5.9 times): P2-2 is now part of
 the route. This path is not `run_model`'s (it starts from GAMS's input
 dump, not from DD files).
 
+## Changes 3 to 6: the other generators, the term path, the dump reader (27 Nov 2026)
+
+Sixteen commits, each with the LP bit for bit identical on 65 demo12
+fixtures, OTCGEN and TIMES-NZ steady (`p2_identity.jl --check`); the full
+suite passes at the end. Stepped and stochastic runs and `demo12_tsoff_disp`
+(which the fingerprint script cannot read) rest on the suite alone.
+
+| Change | What |
+| --- | --- |
+| 3 | The function barrier of change 1 for the objective, `cal_cap!`, `cal_red!`, `eq_ptrans!`, `eq_capact!`, `eq_actflo!`, `eq_peak!`, `eq_stgaux!` and the row loop of the commodity balance |
+| 4 | The term path: `addterm!` and `getvar!` specialised on the number of indices, the family looked up typed; a column name built in one allocation; `gset`/`gparam` look the name up as given before upper-casing |
+| 5 | Shared empty lists as `get` defaults; the cancellation test `_all_cancel` without a Dict per row |
+| 6 | The dump reader (`src/reference/dump.jl`): each Arrow column converted in its own function, and one String kept per distinct label of a symbol. Not in the change's brief; it changes no type or value of the records |
+
+The three stages together, the measure of #208 d1 to d3 (one thread, data
+in memory, the lowest of three warm repeats per stage, through the run
+pool with the other model's run beside it; GAMS as in the table above):
+
+| Seconds, TIMES.jl / GAMS | OTCGEN-gc_ref | TIMES-NZ-steady-v308 |
+| --- | --- | --- |
+| Preprocessing | 51.8 / 9.0 | 6.1 / 1.4 |
+| Coefficients | 38.1 / 5.2 | 6.8 / 1.3 |
+| Generation | 51.6 / 20.2 | 21.6 / 11.4 |
+| Together | 141 / 34.4, about 4.1 times | 34 / 14.2, about 2.4 times |
+| Whole builds | 144 to 152 s, 4.2 to 4.4 times | about 39 s, 2.7 to 2.8 times |
+
+Both are inside the 5x target on this path, which starts from GAMS's input
+dump and is not `run_model`'s. Still to measure: the other open models
+(p2-q2: the target holds for every one), and the path from DD files.
+On OTCGEN preprocessing (5.7 times) and the coefficients (7.3 times) are
+now the stages furthest from GAMS; neither has had a speed change of its
+own (P2-2).
+
+What is left in generation, from the profile after the last change:
+building the incidence maps (`indexby`, 27% on OTCGEN; the same map is
+rebuilt by several generators), loading sets and parameters (18%), hashing
+label strings (11%), garbage collection (a third of the time).
+
 ## Multi-threaded equation generation (P2-3, 31 Oct 2026)
 
 What can run in parallel:
