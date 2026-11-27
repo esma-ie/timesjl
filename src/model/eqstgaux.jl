@@ -80,8 +80,22 @@ function eq_stgaux!(tm::TimesModel)
            periodyr_of_t = indexby(gset(tm, "PERIODYR"), (1,)), y_eoh = gset(tm, "Y_EOH"))
     vx, tx = gset(tm, "MODLYEAR"), eq_periods(tm)                 # %R_V_T%: V, and SUBT in a stepped run (maindrv.mod L38-40)
     off = rts_off(tm)                    # RTS(S): S+NORTS(R,T,S) with dynamic timeslices (M1.3 change 67)
+    rtp_vintyr = gset(tm, "RTP_VINTYR")
+    return eq_stgaux!(tm, x,
+        (; one, half, lin, rpc_emis, com_gmap, g_yrfr, rs_stgprd, coef_ptran, aux_of_rp, ts_of_rp, ts_map, ptran_in, ptran_out,
+           varts_of, ipx, vx, tx, off, rtp_vintyr))
+end
+
+# `eq_stgaux!` with the storage context `x` (`stg_context`, untyped out of `tm.cache`) and the sets,
+# parameters and incidence maps of the outer method, `d`, as typed arguments: `gset` and `gparam` give
+# an abstract `GamsSet` or `GamsParam`, so the outer method does not know their types. Julia compiles
+# this method for the concrete types (a function barrier; Phase 2, change 3). The rows, the terms,
+# their arithmetic and their order are unchanged. GAMS: eqstgaux.mod L14-42; eqstgaux.lin L25-31, v4.9.7.
+function eq_stgaux!(tm::TimesModel, x::NamedTuple, d::NamedTuple)
+    (; one, half, lin, rpc_emis, com_gmap, g_yrfr, rs_stgprd, coef_ptran, aux_of_rp, ts_of_rp, ts_map, ptran_in, ptran_out,
+       varts_of, ipx, vx, tx, off, rtp_vintyr) = d
     n = 0
-    for (r, v, t, p) in gset(tm, "RTP_VINTYR")
+    for (r, v, t, p) in rtp_vintyr
         ((v,) in vx && (t,) in tx) || continue
         (r, p) in x.rp_stg || continue
         stk = (r, "STK", p) in x.prc_map
