@@ -106,6 +106,11 @@ Any mismatch blocks the merge. Record known, justified differences in
   are in the M1.3 gate; %OBJANN%, %VALIDATE%, %VINTOPT% 1, %WAVER%,
   %INTEXT_ONLY%, %PREP_ANS%, VAR_UC not YES and the trade bounds of an
   earlier run (bnd_ire.vda) move to M1.5 (docs/m13-plan.md, Gate audit).
+  James, 27 Nov 2026 (m16-q5): %VALIDATE%, %INTEXT_ONLY% and %PREP_ANS%
+  move on, after M1.7; they stay refused with their message. M1.6 may
+  start before the M1.5 gate, its harness change first (m16-q1); its gate
+  still waits for the M1.5 gate. Layer 4 compares `.vd` as parsed values
+  at 1e-6 (m16-q3).
   James, 22 Nov 2026: the stochastic extension (changes 71-76, after the
   move to v4.9.8; #192 d2) and damage costs from a base run (DAM_ELAST
   'N'; #192 d1) leave the M1.3 gate. They and the other post-gate

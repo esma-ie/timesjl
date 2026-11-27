@@ -47,6 +47,9 @@ Claude Code in the terminal, VS Code, or the desktop app).
   second Claude tab working in its own git worktree (`../TIMESjl-m14`). It is
   checked against the `input/` dumps, which do not depend on M1.3. Its gate
   still waits for the M1.3 gate.
+  A second exception (James, 27 Nov 2026; m16-q1): M1.6 may start before
+  the M1.5 gate, its harness change first; three M1.5 options read report
+  outputs. The M1.6 gate still waits for the M1.5 gate.
 - Approved plans (James, 3 Nov 2026): the Phase 1 plan is approved, with
   M1.3 in the order of `docs/m13-plan.md`. Work through it without waiting
   for a plan approval per change, and stop only to depart from it. James
@@ -65,7 +68,8 @@ Claude Code in the terminal, VS Code, or the desktop app).
   the discrete unit commitment, ETL, TIMES-Micro, %DAMAGE% NLP, the gas-grid
   pressure points and %SOLMIP%, the PTDF candidate lines) move after M1.7,
   with the ECB, CLI, ABS, MCA and IER extensions. They stay refused with
-  their message.
+  their message. The run options VALIDATE, PREP_ANS and INTEXT_ONLY move
+  with them (James, 27 Nov 2026; m16-q5).
 - Phase 2 lane (James, 26 Nov 2026): Phase 2 speed work runs alongside the
   rest of Phase 1, before M1.7, limited to changes that leave the generated
   LP identical (the exception above: layer 2 at 1e-9, same rows, columns and
