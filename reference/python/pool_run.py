@@ -136,11 +136,24 @@ def launch(cmd: list[str], threads: int, label: str, ram_gb: float = DEFAULT_RAM
                 keep = PHASES.get(m.group(1).decode()) if m else None
                 if keep is None or keep >= run.threads:    # not a phase, or it would not lower the hold
                     continue
-                try:
-                    run.set(keep, m.group(1).decode())
+                name, why = m.group(1).decode(), None
+                for _ in range(50):
+                    # On Windows the entry cannot be replaced while another program has it open (one that
+                    # reads the ledger without its lock): try again for a few seconds.
+                    try:
+                        run.set(keep, name)
+                        why = None
+                        break
+                    except TimeoutError as e:              # the ledger's lock, after its own long wait
+                        why = e
+                        break
+                    except OSError as e:
+                        why = e
+                        time.sleep(0.1)
+                if why is None:
                     phases.append((round(time.monotonic() - t0, 1), run.phase, run.threads))
-                except (OSError, TimeoutError) as e:       # the ledger could not be written: the hold stays
-                    say(f"phase {m.group(1).decode()} not recorded ({e})")
+                else:                                      # the ledger still shows the higher hold: the safe side
+                    say(f"phase {name} not written to the ledger ({why})")
 
         reader = threading.Thread(target=pump, daemon=True)
         reader.start()

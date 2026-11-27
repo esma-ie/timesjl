@@ -274,6 +274,33 @@ class InProcessTests(LauncherCase):
         self.assertEqual(dict(os.environ), before)
         self.assertEqual(self.entries(), [])
 
+    def test_a_ledger_entry_in_use_is_written_again(self):
+        # Windows: the entry cannot be replaced while a program that reads the ledger has it open
+        class Busy(PoolRun):
+            left = 2
+
+            def _write(self):
+                if self.phase != "start" and Busy.left > 0:
+                    Busy.left -= 1
+                    raise PermissionError("in use")
+                super()._write()
+
+        seen = []
+
+        def release():
+            seen.extend(self.until(lambda e: len(e) == 1 and e[0]["threads"] == 1, "reporting"))
+            self.go("a")
+
+        real, pool_run.PoolRun = pool_run.PoolRun, Busy
+        try:
+            t = threading.Thread(target=release, daemon=True)
+            t.start()
+            rc, out = self.launch("say:" + MARK + "reporting", self.w("a"))
+            t.join(timeout=5)
+        finally:
+            pool_run.PoolRun = real
+        self.assertEqual((rc, Busy.left, [x["phase"] for x in seen]), (0, 0, ["reporting"]))
+
     def test_interrupt_stops_the_command_and_releases(self):
         pidfile = self.tmp / "pid"
         seen = []
