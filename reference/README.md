@@ -201,7 +201,7 @@ in front of the usual command (PowerShell, from the repository folder):
 ```
 $py = "C:\git\esma\.timesjl-venv\Scripts\python.exe"
 & $py reference\python\pool_run.py --threads 6 --label "demo12 from DD" -- julia --project=test scripts\run_dd.jl ..\timesjl-sources\TIMES_Demo\model\demo12.run --solve
-& $py reference\python\pool_run.py --model OTUS9r-reference -- julia --project=test scripts\m13_gate.jl ..\timesjl-reference OTUS9r-reference --solve
+& $py reference\python\pool_run.py --model TIMES_Demo-demo12 -- julia --project=test scripts\m13_gate.jl ..\timesjl-reference --from-dd ..\timesjl-sources --solve TIMES_Demo-demo12
 ```
 
 - `--threads 6` (small model) or `--threads 12` (large) is the class; or
@@ -215,14 +215,16 @@ $py = "C:\git\esma\.timesjl-venv\Scripts\python.exe"
 - The command's output appears as usual, and its exit code is the launcher's.
   The launcher's own lines start `[pool_run]` and go to the error output: what
   it reserved, and at the end the exit code, the phases and the peak RAM
-  (`--quiet` leaves them out, `--record <file>.json` saves them).
+  (`--quiet` leaves them out, `--record <file>.json` saves them). In a script
+  that sends the error output to a file (`2>`), use `--quiet`: Windows
+  PowerShell 5.1 shows such lines as errors.
 - The reservation drops to 1 thread when the script prints
   `[timesjl-pool] phase=reporting`, which TIMES.jl does once the last solve of
   the process is over (`TIMES.pool_phase`, `src/pool.jl`): `run_dd.jl`,
   `m11_large.jl solve`, and `m11_probe.jl`, `m13_gate.jl --solve` and
   `parity_report.jl` after their last model. A stepped run in `m13_gate.jl`, or
   a run that fails before its last solve, prints nothing and keeps its class to
-  its end. The launcher also knows `phase=after-barrier` (4 threads), but
+  its end. The launcher also knows `phase=after-barrier` (the hold after barrier, as for a GAMS run), but
   TIMES.jl does not print it: HiGHS, as the scripts call it, does not say when
   its interior point method ends, so a HiGHS run keeps its class until the
   solve returns.
