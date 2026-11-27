@@ -208,7 +208,7 @@ const PIPELINE = [
 // cuOpt lane (scripts/cuopt/README.md), the last slide: what the embedded reports cannot say. Written by hand; check it
 // against `gh run list --workflow nightly-gpu.yml` when the gpu-cuopt-* blocks are refreshed.
 const CUOPT_NOTES = {
-  github:"GitHub T4 nightly: no failure, 23 to 26 Nov (demo12_off); 27 Nov, the 66 CI cases at the full GPU: no PDLP failure, barrier fails on 24, so the run is red. PDLP is its check from 28 Nov (issue #100); its reference runs wait until they pass locally.",
+  github:"GitHub T4 nightly: no failure, 23 to 26 Nov (demo12_off); 27 Nov, the 66 CI cases at the full GPU: red; PDLP fails on 2 (bndcst, tsoff_gg2), barrier on 24. PDLP is its check from 28 Nov (issue #100); its reference runs wait until they pass locally.",
 };
 // key dates on slide 1: highlights only, one line each (update with each dashboard PR)
 const KEY_DATES = [
@@ -376,7 +376,7 @@ const PLANNED_RUNS = [
 // scripts/m13_probe.jl on James's workstation against the GAMS 54.6.1 references: GAMS records compared per step,
 // the same for reduce_off and as_run, every step PASS (init_ext to ppmain_rtp: probe at change 5; preppm: 6a; prep_ext, every symbol at prep: 6b; preppm_shape, ppmain_topo: 7a; ppmain_tslvl: 7b; ppmain_life: 8a; pp_prelv, every symbol at prelv: 8b; pp_qafs, ppmain_dflt: 9; ppmain_tsattr: 10; ppmain_flo: 11a; ppmain_flofs: 11b; ppmain_ire: 12; ppmain_bnd: 13a; ppmain_cum: 13b; ppmain_stg: 14; ppmain_uc: 15a; ppmain_ucmap: 15b; ppmain_blend: 16; ppmain_reduce: 17a; ppm_ext_actef: 18a; ppm_ext, every symbol at ppm: 18b, probes of 5 Nov 2026 on the 18a/18b branches; for these the reduce_off counts, as as_run leaves out RPC_PKC under REDUCE)
 const M13_PROBE = {
-  meta:"27 Nov 2026 pass, main 5e35806 · 6 runs × 2 variants: 420 of 420 steps PASS; demo12: 26 Nov pass, 70 of 70 · 27 shown",
+  meta:"27 Nov pass, main 5e35806 · 6 runs × 2 variants: 420 of 420 steps PASS · demo12: 26 Nov, 70 of 70 · 27 shown",
   steps:["init_ext","ppmain_head","ppmain_years","timslice","ppmain_rtp","preppm","prep_ext","preppm_shape","ppmain_topo","ppmain_tslvl","ppmain_life","pp_prelv","pp_qafs","ppmain_dflt","ppmain_tsattr","ppmain_flo","ppmain_flofs","ppmain_ire","ppmain_bnd","ppmain_cum","ppmain_stg","ppmain_uc","ppmain_ucmap","ppmain_blend","ppmain_reduce","ppm_ext_actef","ppm_ext"],
   runs:[
     {model:"TIMES_Demo-demo12", licence:"CC-BY-4.0", rec:[9324,4393,190,253,2162,8985,23004,55,2981,6555,15812,45311,15,1853,8739,3456,843,5089,701,48,3195,59,1777,2,9969,3641,66473]},
