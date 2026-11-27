@@ -3,7 +3,8 @@
 A Julia/JuMP translation of the IEA-ETSAP TIMES model generator, validated
 against the GAMS code for numerical parity.
 
-> **Status: Phase 1 (M1.0 to M1.2 passed; M1.3, M1.4 and M1.5 under way).**
+> **Status (27 Nov 2026): Phase 1. M1.0 to M1.4 passed; M1.5 and M1.6 under
+> way; the Phase 2 speed work has started alongside.**
 > TIMES.jl reads a TIMES model from its own `.run` and DD files,
 > preprocesses it, builds it and solves it without GAMS. It runs city,
 > national and multi-regional models: New York City (OTNYC, OTCGEN), New
@@ -13,7 +14,8 @@ against the GAMS code for numerical parity.
 > ([Probes against GAMS](#probes-against-gams)). It has no release yet, it
 > does not write TIMES's report parameters or VEDA files yet (M1.6), a few
 > TIMES features are not translated yet, and its interfaces may still
-> change. See [Progress](#progress).
+> change. It is still much slower than GAMS at building a model; that is
+> the Phase 2 work. See [Progress](#progress).
 >
 > TIMES.jl is an independent project of ESMA Ltd. It is not an official
 > IEA-ETSAP product and is not endorsed by IEA-ETSAP or the TIMES maintainers.
@@ -185,8 +187,10 @@ stacks, when every step must reproduce the original's results?
 - **Who writes the code.** Almost all of the code, tests and documentation
   here are written by AI models (Anthropic's Claude), working from the TIMES
   v4.9.8 GAMS source under the rules in [`CONTRIBUTING.md`](CONTRIBUTING.md)
-  and [`CLAUDE.md`](CLAUDE.md). Commits authored by `Claude` are AI-written,
-  and the model used is named in each commit's `Co-Authored-By` line. A human
+  and [`CLAUDE.md`](CLAUDE.md). An AI-written commit ends with a
+  `Co-Authored-By: Claude ...` line, as Claude Code supplies it; where that
+  line names a model (for example `Claude Fable 5.2`), that model wrote the
+  commit. A human
   directs the work, reviews every pull request and decides what is merged.
   The first commit is the exception: it holds the pre-publication work of
   17-30 Oct 2026 in one piece (see below).
@@ -234,23 +238,34 @@ CC BY 4.0, IEA-ETSAP) come the same way (`TIMES.times_demo_dir()`).
 equations and coefficients as GAMS, with GAMS names kept. Ported from the
 equations outwards:
 
-| Milestone | Scope | Status (19 Nov 2026) |
+| Milestone | Scope | Status (27 Nov 2026) |
 | --- | --- | --- |
 | M1.0 | Repository, CI, GAMS reference harness, comparison tool | passed 18 Oct |
 | M1.1 | Variables, core + VDA equations, bounds, objective, built from GAMS-dumped data | passed 21 Oct |
 | M1.2 | Coefficients (`coefmain.mod`, `coef_*.mod`) | passed 31 Oct |
-| M1.3 | Preprocessing (`ppmain.mod`, `pp_*.mod`, VDA prep, REDUCE) | translated and matching GAMS on the open test models; the gate waits for the last linear features (elastic demand, the stochastic extension) |
-| M1.4 | GAMS-free DD and `.run` reader | built and matching GAMS; the gate follows M1.3's |
-| M1.5 | Run options (OBJ variants, MID_YEAR, DSCAUTO, VAR_UC, FIXBOH, ...) | started 14 Nov: stepped (myopic) runs merged 15 Nov |
-| M1.6 | Reporting and Veda `.vd` output | not started |
+| M1.3 | Preprocessing (`ppmain.mod`, `pp_*.mod`, VDA prep, REDUCE) | passed 25 Nov; the stochastic extension, moved out of the gate, is being translated (2 of its 7 changes merged) |
+| M1.4 | GAMS-free DD and `.run` reader | passed 25 Nov |
+| M1.5 | Run options (OBJ variants, MID_YEAR, DSCAUTO, VAR_UC, FIXBOH, ...) | under way since 14 Nov: stepped (myopic) runs, the solver option file; more options remain |
+| M1.6 | Reporting and Veda `.vd` output | started 27 Nov, with the reference harness (GAMS's solution before its report, and its `.vd` files) |
 | M1.7 | Phase 1 release and baseline benchmarks | not started |
 
 **Phase 2 — performance.** Faster preprocessing, generation and solver
-hand-off, each change held to parity with GAMS.
+hand-off, each change held to parity with GAMS. Since 26 Nov the speed work
+runs alongside the rest of Phase 1, limited to changes that leave the
+generated LP identical (the same rows, columns and order). The target is
+model generation within five times GAMS's time on every open model, aimed
+for 2 Dec 2026 ([`docs/phase2-notes.md`](docs/phase2-notes.md)). It started
+on 27 Nov with the measuring tools: an exact identity check of the LP, a
+timing script and a profile.
+
+**Baseline move.** The TIMES source moved from v4.9.7 to v4.9.8 on 26 Nov.
+The source download is re-pinned; the v4.9.8 changes to five GAMS files
+are still to be translated, and the GAMS reference runs are being redone
+with v4.9.8. Until then the results below are against v4.9.7.
 
 ## Progress
 
-As of 19 Nov 2026 (`main`):
+As of 27 Nov 2026 (`main`):
 
 - **Runs without GAMS.** `run_model` ([`src/run.jl`](src/run.jl); see
   [Quick start](#quick-start)) takes a model's `.run` file and DD files,
@@ -266,11 +281,11 @@ As of 19 Nov 2026 (`main`):
   See [Probes against GAMS](#probes-against-gams) below. TIMES.jl has not
   been run on a global model yet: the test suite has none, because a test
   model needs an open licence ([`docs/test-models.md`](docs/test-models.md)).
-- **CI.** Every pull request runs 35,350 tests (all pass on 18 Nov): demo12
+- **CI.** Every pull request runs 36,054 tests (all pass on 27 Nov): demo12
   and crafted variants of it that add features demo12 itself does not use,
   each against fixtures from GAMS.
 - **Features.** The core and VDA formulations are translated. The M1.3
-  changes merged up to 18 Nov (changes 28 to 64) added features that had
+  changes merged up to 27 Nov (changes 28 to 70, and 73) added features that had
   been refused, each checked on a crafted demo12 case: trade and storage in
   ASHAR, ANNCOST LEV, stepped (myopic) runs, exchange bounds (IREBND, XBND,
   grid bounds EQ_GR_XBND), commodity and flow bounds as equations (BNDNET,
@@ -281,31 +296,40 @@ As of 19 Nov 2026 (`main`):
   market-based trade, storage flexibility, commodity flows tied to
   capacity (NCAP_ICOM, NCAP_OCOM, NCAP_COM), residual load curves, damage
   costs (linear form), PTDF power grids, gas grids, dynamic timeslice trees
-  (TS_OFF) and costs on commodity balances (COM_CSTBAL).
+  (TS_OFF), costs on commodity balances (COM_CSTBAL) and elastic demand
+  (the linear form). Of the stochastic extension, the DD reader and the
+  scenario tags of every equation are in; the stochastic model itself is
+  not.
 - **Not translated yet.** These features stop generation with an error
-  that names the GAMS file. Before the M1.3 gate: elastic demand and the
-  stochastic extension. After it: MACRO; ETL, the DSC lumpy investments and
-  discrete unit commitment (MIPs); TIMES-Micro (nonlinear); and the other
-  extensions (climate, ABS, ECB, IER, ...)
-  ([`docs/m13-plan.md`](docs/m13-plan.md)).
-- **Discrepancies.** 44 places where the GAMS code and the documentation
+  that names the GAMS file. Still to come in Phase 1: the stochastic
+  model, the remaining run options (M1.5), TIMES's report parameters and
+  VEDA files (M1.6), and the v4.9.8 changes. Moved after the Phase 1
+  release (26 and 27 Nov): MACRO; the mixed-integer and nonlinear
+  features (ETL, the DSC lumpy investments, discrete unit commitment,
+  TIMES-Micro, nonlinear damage costs); the other extensions (climate,
+  ABS, ECB, IER, ...); and the run options VALIDATE, PREP_ANS and
+  INTEXT_ONLY ([`docs/m13-plan.md`](docs/m13-plan.md)).
+- **Discrepancies.** 46 places where the GAMS code and the documentation
   disagree are logged in [`docs/discrepancies.md`](docs/discrepancies.md).
-  Three known differences between TIMES.jl
+  Four known differences between TIMES.jl
   and GAMS are listed in [`docs/known-differences.md`](docs/known-differences.md).
 - **Dashboard.** [`docs/dashboard/index.html`](docs/dashboard/index.html),
   opened in a browser, shows these results in slides
   ([`docs/dashboard/README.md`](docs/dashboard/README.md)).
 
-Speed is not a Phase 1 aim; timings are recorded and compared with GAMS for
-Phase 2.
+Speed was not a Phase 1 aim, and TIMES.jl is slow at building large models
+today. Timings are recorded and compared with GAMS for Phase 2
+([`docs/timings.md`](docs/timings.md)).
 
 ### Probes against GAMS
 
 The probes run TIMES.jl beside GAMS on the same model and compare the
 two at each stage, from the DD files to the optimum. Each open model is
-run twice, with REDUCE off and as its run file sets it. Results of the
-workstation's nightly batch of 18-19 Nov 2026, on `main` with every M1.3
-change up to 64 merged (GAMS 54.6.1, CPLEX; TIMES.jl with HiGHS):
+run twice, with REDUCE off and as its run file sets it. The table is from
+the workstation's nightly batch of 18-19 Nov 2026 (GAMS 54.6.1, CPLEX;
+TIMES.jl with HiGHS; TIMES v4.9.7). The batch of 23 Nov 2026, on the code
+the M1.3 and M1.4 gates were passed on, gave the same verdicts: every
+preprocessing step, all 14 matrices and all 281 checks.
 
 | Model | Scale | Based on | Rows (REDUCE off) | Preprocessing steps | Matrix | Optimum vs GAMS/CPLEX |
 | --- | --- | --- | ---: | --- | --- | --- |
@@ -322,7 +346,7 @@ What each column checks:
 - **Preprocessing steps** ([`scripts/m13_probe.jl`](scripts/m13_probe.jl)):
   each of TIMES's 35 preprocessing steps, run from GAMS's own data before
   the step and compared with GAMS's data after it, at 1e-9. 490 of 490
-  steps match (batch of 17 Nov).
+  steps match (batches of 17 and 23 Nov).
 - **Matrix** ([`scripts/m13_gate.jl`](scripts/m13_gate.jl) `--from-dd`):
   the whole run from the model's DD files, with every set and parameter
   compared with GAMS at six checkpoints along the way, then every row,
@@ -357,7 +381,7 @@ Every change is checked against reference runs of the GAMS code:
 | Data | Preprocessed sets and parameters vs GAMS dump | 1e-9 |
 | Matrix | Rows, columns, coefficients, RHS, bounds vs CONVERT dump | 1e-9 |
 | Solution | Objective; each optimum checked in the other model | 1e-6 |
-| Reporting | Report parameters vs GAMS outputs | 1e-6 |
+| Reporting | Report parameters and `.vd` files vs GAMS outputs (from M1.6) | 1e-6 |
 
 Reference runs are produced with the harness in [`reference/`](reference/),
 and only from test models with a clearly stated open-source or open-data
@@ -398,7 +422,8 @@ TIMES.jl builds on two earlier pieces of work:
   subset of TIMES functional equations running in JuMP from GAMS-exported
   data. The previous experiments were led by Antti Lehtilä and completed in
   2018. Olex's prototype provided a conceptual starting point for this
-  translation; the code here is a new implementation against TIMES v4.9.7,
+  translation; the code here is a new implementation against TIMES v4.9.7
+  (v4.9.8 from 26 Nov 2026),
   starting from a blank skeleton, and components of the TIMES2JuMP prototype
   may be ported into it in future.
 
