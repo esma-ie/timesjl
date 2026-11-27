@@ -446,8 +446,11 @@ retirement is on, PRC_RCAP(r,p) and VNTRT(v,t).
 
 GAMS: prepret.dsc L87 (and L88, %RCAPSBM%, with MODLYEAR controlled), v4.9.7.
 """
-function rcapsub!(expr::JuMP.AffExpr, c::GNum, tm::TimesModel, r, v, t, p)
-    x = rcap_ctx(tm)
+rcapsub!(expr::JuMP.AffExpr, c::GNum, tm::TimesModel, r, v, t, p) = rcapsub!(expr, c, tm, rcap_ctx(tm), r, v, t, p)
+
+# `rcapsub!` with the context `x` (`rcap_ctx`, untyped out of `tm.cache`) as a typed argument: a
+# function barrier, as for `combal_context` (Phase 2, change 3). GAMS: prepret.dsc L87-88, v4.9.7.
+function rcapsub!(expr::JuMP.AffExpr, c::GNum, tm::TimesModel, x::NamedTuple, r, v, t, p)
     x.on && (r, p) in x.prc_rcap && (v, t) in x.vntrt && addterm!(expr, -c, tm, "VAR_SCAP", r, v, t, p; at=t)   # %VART%
     return expr
 end

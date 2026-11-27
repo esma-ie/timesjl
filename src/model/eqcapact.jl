@@ -259,6 +259,21 @@ function eq_capact!(tm::TimesModel, eqtype::AbstractString, bd::AbstractString, 
         push!(get!(() -> String[], k_of_rtp, (r, t, p)), k)
     end
 
+    return eq_capact!(tm,
+        (; name, rtp_vintyr, rps_caflac, ts_map, rp_stg, prc_vint, milestonyr, modlyear, tx, pastyear, coef_cpt, coef_af, prc_capact,
+           g_yrfr, ncap_pasti, rs_fr, prc_sc, rs_stgprd, stl_bd, s_of_rtpbd, ts_of_rp, k_of_rtp),
+        eqtype, bd)
+end
+
+# One include of eqcapact.mod with the sets, parameters and incidence maps of the outer method, `d`,
+# as a typed argument: `gset` and `gparam` give an abstract `GamsSet` or `GamsParam`, so the outer
+# method does not know their types, and every membership test and lookup in the row loop was a dynamic
+# call. Julia compiles this method for the concrete types (a function barrier; Phase 2, change 3). The
+# rows, the terms, their arithmetic and their order are unchanged. GAMS: eqcapact.mod L22-52, v4.9.7.
+function eq_capact!(tm::TimesModel, d::NamedTuple, eqtype::AbstractString, bd::AbstractString)
+    (; name, rtp_vintyr, rps_caflac, ts_map, rp_stg, prc_vint, milestonyr, modlyear, tx, pastyear, coef_cpt, coef_af, prc_capact,
+       g_yrfr, ncap_pasti, rs_fr, prc_sc, rs_stgprd, stl_bd, s_of_rtpbd, ts_of_rp, k_of_rtp) = d
+
     # One capacity term, coefficient `c`: VAR_NCAP(r,k,p)$T(k) + NCAP_PASTI(r,k,p)$PASTYEAR(k)
     # with %RCAPSBM% (L37) or %RCAPSUB% (L45), k controlled in both (prepret.jl).
     function add_capacity!(rhs, r, k, t, p, c::GNum)
