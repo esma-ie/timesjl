@@ -116,12 +116,13 @@ POSTSOLVE_SKIPS = {
     "stepped": "TIMESTEP or FIXBOH: solve.stp changes levels and marginals after its last SOLVE "
                "(L299-301, L325-330); each step's solution is in steps/<k>/final",
     "stages": "STAGES, SENSIS or SPINES: solve.stc has several SOLVEs, and SENSIS reports after each one (L56, L86)",
-    "macro": "MACRO: its own solve and reports (rptmain.tm)",
+    "macro": "MACRO (YES, MSA, CSA or MLF): its own solves and reports (rptmain.tm, rpt_ext.msa, rpt_ext.mlf)",
+    "ecb": "ECB (BENCOST): rpt_ext.ecb L67 solves again after the reports, which would replace the dump",
 }
-# The Veda files (m16-q2 b). TIMES does not call gdx2veda: Veda does, after GAMS, on the end-of-run
-# GDX with times2veda.vdd of the TIMES source. The harness does the same for each solve run's
-# tjl_final.gdx. Not for a stochastic run (which of times2veda.vdd and times2veda_stc.vdd Veda
-# takes for STAGES, SENSIS and SPINES is not in the TIMES source) or a MACRO run.
+# The Veda files (m16-q2 b). No file of the TIMES source calls gdx2veda: it is run after GAMS, on the
+# end-of-run GDX, with times2veda.vdd of the TIMES source. The harness does that for each solve run's
+# tjl_final.gdx. Not for a stochastic run (which of times2veda.vdd and times2veda_stc.vdd applies
+# to STAGES, SENSIS and SPINES is not in the TIMES source) or a MACRO run.
 VDD_FILE = "times2veda.vdd"
 VD_SKIPS = ("stages", "macro")
 
@@ -502,8 +503,8 @@ def vd_records(path: Path) -> int:
 
 def keep_vd(sysdir: str | None, work: Path, out: Path, manifest: dict, name: str, vdd: Path, run_name: str,
             limits: dict | None = None) -> dict | None:
-    """<name>/ (vd/, vd_<solver>/): the files gdx2veda writes from a solve run's end-of-run GDX, as
-    Veda makes them: ``gdx2veda tjl_final.gdx <TIMES source>/times2veda.vdd <run name>``, run in its own
+    """<name>/ (vd/, vd_<solver>/): the files gdx2veda writes from a solve run's end-of-run GDX:
+    ``gdx2veda tjl_final.gdx <TIMES source>/times2veda.vdd <run name>`` (its usage text), run in its own
     folder and kept whole (<run name>.vd the values, .vde the descriptions of the elements, .vds the
     set memberships). The manifest's ``vd.<name>`` records the command, the return code, the SHA-256
     of the .vdd file and each file's size and records. Nothing for a run whose ``postsolve_skipped``

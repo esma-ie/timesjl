@@ -129,31 +129,42 @@ manifest records it as `postsolve_skipped`, and the reference has no
 | --- | --- | --- |
 | `stepped` | `%STEPPED%` set (TIMESTEP or FIXBOH) | `solve.stp` changes levels and marginals after its last SOLVE (L299-301, L325-330) and there is no hook between that and the reports. Each step's solution is in `steps/<k>/final/` |
 | `stages` | `%STAGES%` YES (stochastic, SENSIS, SPINES) | `solve.stc` has several SOLVEs, and a SENSIS run reports after each one (L56, L86) |
-| `macro` | `%MACRO%` YES | its own solve and reports (`rptmain.tm`) |
+| `macro` | `%MACRO%` YES, MSA, CSA or MLF | its own solves and reports (`rptmain.tm`, `rpt_ext.msa`, `rpt_ext.mlf`) |
+| `ecb` | `%ECB%` YES (BENCOST) | `rpt_ext.ecb` L67 solves again after the reports, which would replace the dump |
+
+Only `stepped` and `stages` runs are in the suite; MACRO and BENCOST runs are
+refused by TIMES.jl in Phase 1.
 
 A run with elastic demand (`TIMESED YES`) has one SOLVE from `solve.mod`
 like any other, and `wrtbprice.mod` (`maindrv.mod` L122) comes after the
 reports, so it has its `postsolve/`.
 
-**`vd/`.** TIMES does not call `gdx2veda`; Veda does, after GAMS has ended,
-on the run's GDX file with `times2veda.vdd` of the TIMES source. The harness
-does the same after each solve run: `gdx2veda tjl_final.gdx
-<times_source>/times2veda.vdd <model>` (`tjl_final.gdx` is the file `final/`
-is made from), and keeps every file it writes. With GAMS 54.6.1 those are
-`.vd`, `.vde` and `.vds`; a `.vdt` file (topology) is Veda's own and
-`gdx2veda` writes none. The manifest's `vd` records the command, the return
+**`vd/`.** No file of the TIMES source and no run file of the suite calls
+`gdx2veda`: it is run after GAMS has ended, on the run's GDX file, with a
+`.vdd` file of the TIMES source (`times2veda.vdd`, "TIMES GDX2VEDA Set
+Directives"). The harness does that after each solve run, in the form of
+`gdx2veda`'s own usage text (`gdx2veda gdx vdd [run]`): `gdx2veda
+tjl_final.gdx <times_source>/times2veda.vdd <model>` (`tjl_final.gdx` is the
+file `final/` is made from), and keeps every file it writes. With GAMS
+54.6.1 those are `.vd`, `.vde` and `.vds`, the three its `--help` names; it
+writes no `.vdt` file. The `.vd` file has fewer records than the "DataRecords"
+`gdx2veda` prints (on demo12 `reduce_off` 9,615 of 10,637), which fits the
+`not-0` line of `times2veda.vdd`, the attributes whose zero values are left
+out; not checked record by record. The manifest's `vd` records the command, the return
 code, the SHA-256 of the `.vdd` file and each file's size and records. A
 stochastic or MACRO run has none (`vd_skipped`): `times2veda.vdd` is the
-deterministic layout, and which file Veda takes for the others is not in
-the TIMES source. [`python/vdparse.py`](python/vdparse.py) reads a `.vd` file
+deterministic layout (`times2veda_stc.vdd` has a `Sow` dimension), and
+which of them applies to a SENSIS or SPINES run is not in the TIMES source. [`python/vdparse.py`](python/vdparse.py) reads a `.vd` file
 into (attribute, index, value) records for the comparison at 1e-6.
 
 `postsolve/`, `final/` and `vd/` must come from one GAMS process: a second
 solve can end at another optimum of the same LP. So there is no `--only`
 pass for them, and a reference made with an earlier harness gets them by a
-full rerun (`scripts\run_references.ps1 -Postsolve -Resume` reruns the
-references that lack them). A missing dump with no reason, or a `gdx2veda`
-that fails, ends the reference with `CHECK`.
+full rerun, with licensed solves (`scripts\run_references.ps1 -Postsolve
+-Resume` reruns the references of its `-Out` folder that lack them; a folder
+of v4.9.7 references is refused, harness 0.3.8, so the v4.9.8 references,
+made with this harness, have both from the start). A missing dump with no
+reason, or a `gdx2veda` that fails, ends the reference with `CHECK`.
 
 Checked with GAMS 54.6.1 and TIMES v4.9.8 on TIMES_Demo demo12, both
 variants (27 Nov 2026): against a reference made with harness 0.3.9 just

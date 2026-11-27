@@ -17,7 +17,10 @@
 *            not the state the reports read
 *   stages   %STAGES% YES (stochastic, SENSIS, SPINES): solve.stc has several
 *            SOLVEs, and SENSIS reports after each one (L56, L86)
-*   macro    %MACRO% YES: its reports are rptmain.tm's
+*   macro    %MACRO% YES, MSA, CSA or MLF (initmty.mod L462-464): MACRO's own
+*            solves and reports (rptmain.tm, rpt_ext.msa, rpt_ext.mlf)
+*   ecb      %ECB% YES (BENCOST): rpt_ext.ecb L67 includes solve.mod again
+*            after the reports, which would replace the dump
 *
 * Part 2, the steps of a stepped run (--TJL_STEPS):
 *   DUMP: every symbol as step TJL_STEP left it, to tjl_step<k>.gdx.
@@ -37,6 +40,14 @@ $IFI %STAGES%==YES $ECHO stages > tjl_postsolve_skip.txt
 $IFI %STAGES%==YES $GOTO TJL_STEPS_PART
 $IFI %MACRO%==YES $ECHO macro > tjl_postsolve_skip.txt
 $IFI %MACRO%==YES $GOTO TJL_STEPS_PART
+$IFI %MACRO%==MSA $ECHO macro > tjl_postsolve_skip.txt
+$IFI %MACRO%==MSA $GOTO TJL_STEPS_PART
+$IFI %MACRO%==CSA $ECHO macro > tjl_postsolve_skip.txt
+$IFI %MACRO%==CSA $GOTO TJL_STEPS_PART
+$IFI %MACRO%==MLF $ECHO macro > tjl_postsolve_skip.txt
+$IFI %MACRO%==MLF $GOTO TJL_STEPS_PART
+$IFI %ECB%==YES $ECHO ecb > tjl_postsolve_skip.txt
+$IFI %ECB%==YES $GOTO TJL_STEPS_PART
 execute_unload 'tjl_postsolve.gdx';
 $LABEL TJL_STEPS_PART
 $IF NOT SET STEPPED $EXIT

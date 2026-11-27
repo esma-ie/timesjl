@@ -67,6 +67,9 @@
     that gives final/, so there is no pass that adds them alone. A reference
     whose manifest says why it has none (postsolve_skipped, vd_skipped: stepped,
     stochastic) is done. Without -Postsolve, -Resume does not ask for them.
+    Licensed solves. The references of -Out must be of the TIMES version of
+    this script's source (v4.9.8): make_reference.py refuses to rerun into a
+    folder of v4.9.7 references, so give those their own -Out.
 
 .PARAMETER Solvers
     The GAMS solvers of the solve runs, comma-separated, the reference solver
