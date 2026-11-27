@@ -3,8 +3,8 @@
 # its results stay on this machine (they may include TIM, CLAUDE.md).
 #
 # Started each night by the Windows scheduled task "TIMESjl cuOpt nightly
-# (WSL2)" (register_nightly.ps1 -> nightly_task.py, which holds one of the
-# workstation's four run slots while this runs). By hand:
+# (WSL2)" (register_nightly.ps1 -> nightly_task.py, which reserves 2 threads in the
+# workstation's run pool while this runs). By hand:
 #
 #   bash ~/git/TIMESjl/scripts/cuopt/wsl2/nightly_local.sh [--conf FILE]
 #

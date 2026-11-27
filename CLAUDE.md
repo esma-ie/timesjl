@@ -124,8 +124,9 @@ Any mismatch blocks the merge. Justified differences go in
   layer 3 with NVIDIA cuOpt on the GPU, never a merge gate. Nightly on a
   GitHub T4 runner for the public fixtures (GPU-share sweep 25/50/100% with
   MPS), and in WSL2 on James's workstation for local runs (TIM allowed, results
-  stay there). cuOpt's CPU side keeps the 12-thread limit; the GPU is not
-  limited by it. The local WSL2 nightly runs until 8 Dec 2026, then is
+  stay there). A cuOpt run on the GPU has no limit on its CPU threads and reserves 2 in
+  the run pool; a cuOpt run that solves on the CPU keeps the 12-thread limit
+  (James, 27 Nov 2026). The local WSL2 nightly runs until 8 Dec 2026, then is
   stopped and reassessed (James, 11 Nov 2026; `register_nightly.ps1 -Until`).
 - Single model by hand, from the repo root: pass a `--root` for every
   placeholder that model uses (see `reference/suite.toml`), e.g.

@@ -119,7 +119,7 @@ def main(d: Path) -> int:
 
     md = ["## cuOpt GPU-share sweep\n"]
     md.append(f"GPU: {meta.get('gpu', 'unknown')}. cuOpt {meta.get('cuopt_version', '?')}, commit "
-              f"`{meta.get('commit', '?')}`, {meta.get('threads', '?')} CPU threads. Levels "
+              f"`{meta.get('commit', '?')}`, CPU threads not limited (a CPU solve: {meta.get('threads', '?')}). Levels "
               f"{', '.join(f'{p}%' for p in shares)}, run one at a time. Times are cuOpt's own solve time "
               "(no Julia start-up or model generation).\n")
     if keys:

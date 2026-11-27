@@ -29,7 +29,7 @@ It runs every night in two places (James, 10 Nov 2026):
 | Method | `barrier` and `pdlp`, one solve each, both with crossover; `dual_simplex` on request | cuOpt's default, *concurrent*, returns whichever method finishes first, so two nights would not compare. Crossover gives a vertex, as CPLEX's crossover does for the references. |
 | PDLP tolerances | 1e-6 (`--pdlp-tol`) | cuOpt's default is 1e-4, too loose for a 1e-6 objective check. |
 | Barrier | cuDSS deterministic mode | The same factorisation every night. |
-| CPU threads | `TIMESJL_THREADS`, default 12 (4 on the GitHub runner) | The local run limits (CLAUDE.md). They bound cuOpt's CPU side only: presolve, the host side of barrier's factorisation, crossover. The GPU is never limited by them. |
+| CPU threads | no limit for `barrier` and `pdlp`, which solve on the GPU; `TIMESJL_THREADS`, default 12 (4 on the GitHub runner), for `dual_simplex`, which solves on the CPU | James, 27 Nov 2026 (#207 d10). A GPU run's CPU side (presolve, the host side of barrier's factorisation, crossover) keeps cuOpt's default thread count; a CPU solve keeps the local run limit (CLAUDE.md). |
 | GPU share | 100% unless `sweep.sh` sets a lower one | See below. |
 | Gate | `barrier` (`--gate`) | Only its failures set the exit code; PDLP is reported, as evidence for Phase 2. |
 
@@ -170,7 +170,7 @@ powershell -ExecutionPolicy Bypass -File scripts\cuopt\wsl2\setup_wsl2.ps1 -Regi
    in `~/git/TIMESjl`, a small LP on the GPU (objective 205) and demo12.
 3. With `-RegisterNightly`, `register_nightly.ps1` registers the Windows
    scheduled task "TIMESjl cuOpt nightly (WSL2)", every night at 01:17
-   (`-NightlyAt`). It runs `nightly_task.py`, which reserves 12 threads in the
+   (`-NightlyAt`). It runs `nightly_task.py`, which reserves 2 threads in the
    workstation's run pool (`reference/python/runlimits.py`, as
    `make_reference.py` does) and runs `nightly_local.sh` in WSL. The task wakes
    the computer, runs while James is logged on, and catches up after a
@@ -193,8 +193,9 @@ Notes for the workstation:
   provides the GPU there; the script warns if it finds one.
 - **Keep data on the Linux side.** `/mnt/c` is slow; the nightly copies
   reference runs with `rsync` before solving them.
-- **Run limits.** A cuOpt run uses at most 12 CPU threads. The scheduled
-  nightly reserves 12 threads in the Windows run pool; a run started by hand
+- **Run limits.** A cuOpt run on the GPU has no limit on its CPU threads; a
+  cuOpt run that solves on the CPU (`dual_simplex`) uses at most 12. The scheduled
+  nightly reserves 2 threads in the Windows run pool (James, 27 Nov 2026); a run started by hand
   in WSL does not, so the pool sees it only through the measured load.
 - **Timings from WSL are indicative.** Compare them only with each other.
 - **The Quadro RTX 4000 has 8 GB.** PDLP needs little memory; barrier's
