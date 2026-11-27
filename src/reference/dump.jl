@@ -190,20 +190,31 @@ function _read_records(d::ReferenceDump, info::SymbolInfo, ::Val{N}) where {N}
     cols = [Tables.getcolumn(t, Symbol("d", i)) for i in 1:N]
     n = N == 0 ? length(Tables.getcolumn(t, Tables.columnnames(t)[1])) : length(cols[1])
     resize!(keys, n)
-    @inbounds for r in 1:n
-        keys[r] = ntuple(i -> String(cols[i][r]), Val(N))
-    end
+    _key_columns!(keys, cols)
     names = Set(Tables.columnnames(t))
     for col in VALUE_COLUMNS[info.kind]
         s = Symbol(col)
         s in names || continue
-        values[col] = Float64[Float64(x) for x in Tables.getcolumn(t, s)]
+        values[col] = _float_column(Tables.getcolumn(t, s))
         svs = Symbol(col, "__sv")
-        special[col] = svs in names ? SpecialValue[SpecialValue(Int8(x)) for x in Tables.getcolumn(t, svs)] :
-                       fill(SV_NONE, n)
+        special[col] = svs in names ? _special_column(Tables.getcolumn(t, svs)) : fill(SV_NONE, n)
     end
     if info.kind == :set && :element_text in names
-        text = String[string(x) for x in Tables.getcolumn(t, :element_text)]
+        text = _text_column(Tables.getcolumn(t, :element_text))
     end
     return SymbolRecords{N}(info, keys, values, special, text)
 end
+
+# A column of an Arrow table has a type `_read_records` cannot know (the table holds its columns
+# untyped), so a loop over one there is a dynamic call per record. Each column is therefore converted
+# in a function of its own, which Julia compiles for the column's type (a function barrier; Phase 2,
+# change 6). The vectors hold the same values in the same order.
+function _key_columns!(keys::Vector{NTuple{N,String}}, cols::Vector) where {N}
+    @inbounds for r in 1:length(keys)
+        keys[r] = ntuple(i -> String(cols[i][r]), Val(N))
+    end
+    return keys
+end
+_float_column(col) = Float64[Float64(x) for x in col]
+_special_column(col) = SpecialValue[SpecialValue(Int8(x)) for x in col]
+_text_column(col) = String[string(x) for x in col]
