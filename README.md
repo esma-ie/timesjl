@@ -3,16 +3,17 @@
 A Julia/JuMP translation of the IEA-ETSAP TIMES model generator, validated
 against the GAMS code for numerical parity.
 
-> **Status (27 Nov 2026): Phase 1. M1.0 to M1.4 passed; M1.5 and M1.6 under
-> way; the Phase 2 speed work has started alongside.**
+> **Status (28 Nov 2026): Phase 1. M1.0 to M1.4 passed; M1.5 and M1.6 under
+> way; the Phase 2 speed work runs alongside, on its own branch.**
 > TIMES.jl reads a TIMES model from its own `.run` and DD files,
 > preprocesses it, builds it and solves it without GAMS. It runs city,
 > national and multi-regional models: New York City (OTNYC, OTCGEN), New
 > Zealand (TIMES-NZ) and the United States in nine regions (OTUS9r, 2.5
 > million rows). On every open test model it builds the same matrix as GAMS,
 > and its optimum agrees with GAMS's
-> ([Probes against GAMS](#probes-against-gams)). It has no release yet, it
-> does not write TIMES's report parameters or VEDA files yet (M1.6), a few
+> ([Probes against GAMS](#probes-against-gams)). It has no release yet (a
+> tagged pre-release of 27 Nov marks the translation before any speed
+> change; see [Phases](#phases)), it does not write TIMES's report parameters or VEDA files yet (M1.6), a few
 > TIMES features are not translated yet, and its interfaces may still
 > change. It is still much slower than GAMS at building a model; that is
 > the Phase 2 work. See [Progress](#progress).
@@ -238,7 +239,7 @@ CC BY 4.0, IEA-ETSAP) come the same way (`TIMES.times_demo_dir()`).
 equations and coefficients as GAMS, with GAMS names kept. Ported from the
 equations outwards:
 
-| Milestone | Scope | Status (27 Nov 2026) |
+| Milestone | Scope | Status (28 Nov 2026) |
 | --- | --- | --- |
 | M1.0 | Repository, CI, GAMS reference harness, comparison tool | passed 18 Oct |
 | M1.1 | Variables, core + VDA equations, bounds, objective, built from GAMS-dumped data | passed 21 Oct |
@@ -275,7 +276,7 @@ with v4.9.8. Until then the results below are against v4.9.7.
 
 ## Progress
 
-As of 27 Nov 2026 (`main`):
+As of 28 Nov 2026 (`main`):
 
 - **Runs without GAMS.** `run_model` ([`src/run.jl`](src/run.jl); see
   [Quick start](#quick-start)) takes a model's `.run` file and DD files,
@@ -291,7 +292,7 @@ As of 27 Nov 2026 (`main`):
   See [Probes against GAMS](#probes-against-gams) below. TIMES.jl has not
   been run on a global model yet: the test suite has none, because a test
   model needs an open licence ([`docs/test-models.md`](docs/test-models.md)).
-- **CI.** Every pull request runs 36,123 tests (all pass on 27 Nov): demo12
+- **CI.** Every pull request runs 36,123 tests (all pass on 28 Nov): demo12
   and crafted variants of it that add features demo12 itself does not use,
   each against fixtures from GAMS.
 - **Features.** The core and VDA formulations are translated. The M1.3
@@ -339,7 +340,9 @@ run twice, with REDUCE off and as its run file sets it. The table is from
 the workstation's nightly batch of 18-19 Nov 2026 (GAMS 54.6.1, CPLEX;
 TIMES.jl with HiGHS; TIMES v4.9.7). The batch of 23 Nov 2026, on the code
 the M1.3 and M1.4 gates were passed on, gave the same verdicts: every
-preprocessing step, all 14 matrices and all 281 checks.
+preprocessing step, all 14 matrices and all 281 checks. So did the batch
+of 27 Nov, and the night of 27-28 Nov, on `main` as tagged
+`faithful-2026-11-27`, passed all 281 checks again.
 
 | Model | Scale | Based on | Rows (REDUCE off) | Preprocessing steps | Matrix | Optimum vs GAMS/CPLEX |
 | --- | --- | --- | ---: | --- | --- | --- |
@@ -356,7 +359,7 @@ What each column checks:
 - **Preprocessing steps** ([`scripts/m13_probe.jl`](scripts/m13_probe.jl)):
   each of TIMES's 35 preprocessing steps, run from GAMS's own data before
   the step and compared with GAMS's data after it, at 1e-9. 490 of 490
-  steps match (batches of 17 and 23 Nov).
+  steps match (batches of 17, 23 and 27 Nov).
 - **Matrix** ([`scripts/m13_gate.jl`](scripts/m13_gate.jl) `--from-dd`):
   the whole run from the model's DD files, with every set and parameter
   compared with GAMS at six checkpoints along the way, then every row,
