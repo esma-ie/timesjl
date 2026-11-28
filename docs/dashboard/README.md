@@ -241,7 +241,7 @@ slides, "Primary" on dark ones), embedded unaltered. It is ESMA's mark
   in them must have `redistribute = "public"` (the CI fixtures and the open
   reference runs; TIM never goes in). They hold cuOpt's own times and
   objectives, and GAMS's objectives only: no CPLEX time. Now embedded: the
-  night of 27 Nov 2026 (TIMES.jl b7ddff3, cuOpt 26.10.0). Their ids do not
+  night of 28 Nov 2026 (TIMES.jl 95b3249, cuOpt 26.10.0). Their ids do not
   start with `cuopt-`: the local board reads every `cuopt-*` block for its own
   cuOpt slide, which stays beside this one. `CUOPT_NOTES` (the GitHub T4
   nightly) is written by hand from `gh run list --workflow nightly-gpu.yml`;
