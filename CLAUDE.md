@@ -75,7 +75,14 @@ Claude Code in the terminal, VS Code, or the desktop app).
   LP identical (the exception above: layer 2 at 1e-9, same rows, columns and
   order). Target: Phase 2 complete by Wednesday 2 Dec 2026, which means
   model generation within 5x GAMS, warm (P2-6), while aiming for 5x faster
-  than GAMS.
+  than GAMS. The target covers preprocessing, coefficients and generation
+  together, on one thread, with the data in memory (James, 27 Nov 2026;
+  #208 d1 to d3).
+- Speed work stays off `main` until the Phase 1 release (James, 28 Nov
+  2026): it is developed and gated on the branch `phase2-speed`, which
+  takes `main` in by merge and joins `main` after M1.7. No PR to `main`
+  carries a change made for speed. The tag `faithful-2026-11-27` (`main`
+  after #208) marks the source before any speed change.
 - Decision log (James, 11 Nov 2026): every question in a PR's "Decisions for
   you" list or at a check-in goes into `docs/decisions.md` with its outcome.
   A merge accepts a recommendation the PR already builds in. A question with

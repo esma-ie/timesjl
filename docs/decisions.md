@@ -38,11 +38,8 @@ None on 27 Nov 2026: James answered p2-q8 and p2-q5 the same day (the log of #20
 
 | Asked | Where | Question | Recommended | Status |
 | --- | --- | --- | --- | --- |
-| 27 Nov 2026 | chat | m16-q8, the M1.6 harness: `gdx2veda` writes `.vd`, `.vde` and `.vds` on the workstation, and no `.vdt`. Compare those three and leave `.vdt` out? | yes | Open; harness 0.3.10 keeps the three files. |
-| 27 Nov 2026 | chat | m16-q9, the M1.6 harness: a stepped (myopic) run, a stochastic run with stages, MACRO and ECB runs get no dump of the solution before GAMS's report (`postsolve_skipped` in the manifest): the hook sits in one solve, and these solve several times. Their reports are then checked from GAMS's final dump and `.vd` only. Accept? | yes for now; a dump per step when M1.6 reaches stepped runs | Open; built so in harness 0.3.10. |
 | 27 Nov 2026 | chat | m16-q10, the M1.6 harness: a stochastic run's `.vd` is made with `times2veda_stc.vdd`, the others with `times2veda.vdd`. Add the stochastic one when the stochastic changes (71, 72, 74 to 76) are in? | yes | Open; not built. |
 | 27 Nov 2026 | chat | m16-q11, disk space: the `postsolve/` dump and the `vd/` files add to every reference; `timesjl-reference` holds 285 GB on C: today. Write the v4.9.8 references to `D:\workspace\timesjl-reference-v498`, as the command of 27 Nov 2026 does, and keep the v4.9.7 ones until the v4.9.8 diff is translated? | yes | Open; the command given to James already writes to D:. |
-| 27 Nov 2026 | chat | pool-q1, the run pool: a TIMES.jl run with HiGHS keeps its thread class (6 or 12) until the solve returns, because HiGHS does not report its phases as CPLEX's log does. Accept? | yes | Open; built so (`reference/python/pool_run.py`). |
 | 27 Nov 2026 | chat | pool-q2, the run pool: the workstation's batch scripts beside the repository (`run_overnight.ps1` and the others) start their Julia runs through `pool_run.py`? They are James's files, outside the repository. | yes, in one edit James reviews | Open; not changed. |
 | 27 Nov 2026 | chat | pool-q3, the run pool: the launcher remembers each model's peak RAM from its last run and reserves that, in place of a fixed 16 GB default? | yes, a later small change | Open; not built. |
 | 27 Nov 2026 | chat | The colour of GAMS on the dashboard. James, 27 Nov 2026, on #139 d1: "the dashboard colours should follow ESMA branding guidelines". TIMES.jl's yellow `#eaaa00` and dark green `#004539` are the brand's primary colours; GAMS's orange `#e06000` is not a brand colour (the brand has no orange). James then asked for GAMS's own orange: its website's stylesheet has `--gams-orange:#f4961a`, which is close to the yellow TIMES.jl has on dark slides. GAMS's own `#f4961a` on every slide, with TIMES.jl in another brand colour on dark slides (white or bright green `#00c463`) so the two can be told apart; or GAMS in the brand's Blue `#00a3cb`? | GAMS's own `#f4961a`, and TIMES.jl in bright green `#00c463` on dark slides, checked for contrast before it is built | Open; GAMS stays `#e06000` until it is built. |
@@ -78,6 +75,8 @@ On 26 Nov 2026 James answered the question of 14 Nov 2026 on counting the workst
 
 | Date | Decision | Where it is recorded |
 | --- | --- | --- |
+| 28 Nov 2026 | A release of the translation before any speed change, and where the speed work lives (rule-level; James's explicit answer: "a, tag main after #208 merges. agreed on b also, as recommended. I don't think M1.7 will take more than a few days."). Read as both: (a) `main` after #208 (`95b3249`) is tagged `faithful-2026-11-27` and published as a pre-release, its notes saying Phase 1 is unfinished; (b) the Phase 2 speed changes stay off `main` until the Phase 1 release (M1.7), on the branch `phase2-speed`. This narrows the rule of 26 Nov 2026 (the Phase 2 lane): the lane still runs alongside Phase 1, on its branch. Asked by Claude after James wrote "we should have a release where the times.jl code reflects the times.gams code before any performance related reformulation". | the tag and pre-release `faithful-2026-11-27`; `CLAUDE.md` (How to work), `docs/translation-guide.md`, `README.md` in the daily PR |
+| 28 Nov 2026 | The audit of the Phase 2 plan James asked for (reported in the chat): P2-6 is met on the five open core models from GAMS's input dump (2.4 to 4.2 times GAMS, provisional, on `phase2-speed`), not yet shown on the path from DD files, the REDUCE-on variants or the milestone-tier scenarios; P2-1, P2-2, P2-3, P2-5 and P2-7 are not started; P2-4 stays the informational cuOpt lane. Phase 2 is not called complete. | this row; `docs/phase2-notes.md` on `phase2-speed` |
 | 27 Nov 2026 | The GitHub GPU runner and the public fixtures. James: "if that is correct allow the GPU runner in github to start with the smaller Open Models for CI testing". Checked in the local WSL2 nightly of 27 Nov 2026 (cuOpt 26.10.0, Quadro RTX 4000): with PDLP and crossover every public demo12 fixture passes layer 3 except demo12_bndcst and demo12_tsoff_gg2; barrier with crossover misses 1e-6 on about a third; the reference runs of OTNYC and OTCGEN solve with neither method. So the scheduled GitHub nightly runs every public fixture at 100% of the GPU (repository variables `CUOPT_FIXTURES=all`, `CUOPT_GPU_SHARES=100`, set 27 Nov 2026; #90 d2), and PDLP is the method that turns it red (issue #100; `CUOPT_GATE`). The rule of 22 Nov 2026 stays for the reference runs of the open models (input `ref_release`): none until they pass locally. | this row; `.github/workflows/nightly-gpu.yml` |
 | 27 Nov 2026 | The colour of GAMS on the dashboard: James asked for the orange of GAMS's own website. Its stylesheet defines `--gams-orange:#f4961a` (and `--gams-light-orange:#ffa937`); the logo file uses `#F39619` (www.gams.com, read 27 Nov 2026). Not built: `#f4961a` is close to the brand yellow `#eaaa00` that TIMES.jl has on dark slides, so the question stays on the Open decisions list with this finding. | this row |
 | 27 Nov 2026 | The Phase 2 speed lane (questions of 26 Nov 2026). p2-q1 "as recommended": change 0 starts (the bit-for-bit identity check of the LP and of the pre-solve state, the timing script, the warm profile of TIMES-NZ and OTCGEN). p2-q2 "every open model, prioritise TIMES-NZ steady and OTCGEN": the 5x target holds for every open model. p2-q3 "as recommended": where there is no GAMS/HiGHS run, GAMS's generation time is taken from the CONVERT run plus the pre-solve run and may be published, the method stated. p2-q4 "as recommended": the timed stretch ends at the finished JuMP model. p2-q6 and p2-q7 "as recommended": row and column names, and integer labels, are decided after the profile. p2-q5 stays open (Open decisions). Answered by James in the chat, 27 Nov 2026. | this row; `docs/phase2-notes.md` in the daily PR |
@@ -192,25 +191,25 @@ On 26 Nov 2026 James answered the question of 14 Nov 2026 on counting the workst
 
 ## Log by pull request
 
-### #208 Daily PR, 28 Nov 2026: the answers of 27 Nov 2026 built, the M1.6 harness, Phase 2 change 0 (open)
+### #208 Daily PR, 28 Nov 2026: the answers of 27 Nov 2026 built, the M1.6 harness, Phase 2 change 0 (merged 27 Nov 2026)
 
 | # | Question | Decided | How |
 | --- | --- | --- | --- |
 | 1 | p2-q8: what the 5x target covers: (a) preprocessing, coefficients and generation together; (b) the generation step alone. Recommended (a). | (a) ("d1 a"): the 5x target covers preprocessing, coefficients and generation together, each stage also reported alone. | James, 27 Nov 2026 (the chat) |
 | 2 | p2-q5: generation timed on one thread or on up to 12. Recommended one thread. | One thread ("d2 one thread"). | James, 27 Nov 2026 (the chat) |
 | 3 | p2-q9: time generation with GAMS's dump already in memory. Recommended yes. | Yes ("d3 yes"): generation is timed with the data already in memory, the read time recorded beside it. `scripts/p2_timing.jl` is changed in a later daily PR. | James, 27 Nov 2026 (the chat) |
-| 4 | p2-q6: row and column names stay on for now (under 1% of generation in the profile of 27 Nov 2026). Built in. | A merge accepts it. | |
-| 5 | p2-q7: integer labels are decided once the first two speed changes are measured. Built in. | A merge accepts it. | |
-| 6 | m16-q8: compare `.vd`, `.vde` and `.vds`; no `.vdt` is written. Built in. | A merge accepts it. | |
-| 7 | m16-q9: stepped, staged stochastic, MACRO and ECB runs get no dump of the solution before GAMS's report. Built in. | A merge accepts it. | |
+| 4 | p2-q6: row and column names stay on for now (under 1% of generation in the profile of 27 Nov 2026). Built in. | Accepted. | The merge, 27 Nov 2026 |
+| 5 | p2-q7: integer labels are decided once the first two speed changes are measured. Built in. | Accepted. | The merge, 27 Nov 2026 |
+| 6 | m16-q8: compare `.vd`, `.vde` and `.vds`; no `.vdt` is written. Built in. | Accepted. | The merge, 27 Nov 2026 |
+| 7 | m16-q9: stepped, staged stochastic, MACRO and ECB runs get no dump of the solution before GAMS's report. Built in. | Accepted. | The merge, 27 Nov 2026 |
 | 8 | m16-q10: the stochastic `.vd` (`times2veda_stc.vdd`) when the stochastic changes are in. Not built. | Open (Open decisions). | |
 | 9 | m16-q11: the v4.9.8 references go to `D:\workspace\timesjl-reference-v498`; the v4.9.7 ones are kept until the v4.9.8 diff is translated. A choice about the workstation. | Open (Open decisions). | |
-| 10 | pool-q1: a TIMES.jl run with HiGHS keeps its thread class until the solve returns. Built in. | A merge accepts it. | |
+| 10 | pool-q1: a TIMES.jl run with HiGHS keeps its thread class until the solve returns. Built in. | Accepted. | The merge, 27 Nov 2026 |
 | 11 | pool-q2: the workstation's batch scripts start their Julia runs through `pool_run.py`. James's files; not changed. | Open (Open decisions). | |
 | 12 | pool-q3: the launcher remembers each model's peak RAM. Not built. | Open (Open decisions). | |
 | 13 | The colour of GAMS on the dashboard: (a) GAMS's orange `#f4961a`; (b) the brand's Blue `#00a3cb`. Recommended (a). Not built. | Open (Open decisions). | |
 | 14 | The seven reports to ETSAP (#156 d3, #155 d2, #137 d1, #132 d2, #131 d2, #129 d4, #122 d4). Rule-level: each needs an explicit yes. | Open (Open decisions). | |
-| 15 | README: "It is still much slower than GAMS at building a model". Recommended: keep. Built in. | A merge accepts it. | |
+| 15 | README: "It is still much slower than GAMS at building a model". Recommended: keep. Built in. | Accepted. | The merge, 27 Nov 2026 |
 
 ### #207 Daily PR, 27 Nov 2026: M1.3 change 73 (the SOW tags), the run pool, the decision log (merged 27 Nov 2026)
 

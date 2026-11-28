@@ -133,7 +133,10 @@ Any mismatch blocks the merge. Record known, justified differences in
   James, 26 Nov 2026: MACRO with MSA and the mixed-integer and nonlinear
   features move after M1.7, with the other extensions; a Phase 2 speed
   lane (LP-identical changes only) runs alongside the rest of Phase 1
-  (docs/decisions.md; CLAUDE.md, How to work).
+  (docs/decisions.md; CLAUDE.md, How to work). James, 28 Nov 2026: the
+  lane's changes stay on the branch `phase2-speed` and join `main` after
+  M1.7, so the Phase 1 release holds the source as translated; the tag
+  `faithful-2026-11-27` marks `main` before any speed change.
 
 ## Status
 Entries up to 22 Oct 2026 summarise the pre-publication work. Until 27 Oct
